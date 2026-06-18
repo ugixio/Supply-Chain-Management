@@ -54,6 +54,12 @@ export * from './10-risk-management/domain/BusinessContinuityPlan';
 export * from './11-finance-controlling/domain/Invoice';
 export * from './11-finance-controlling/domain/CashFlowMetrics';
 
+// ── 12 S&OP Planning ─────────────────────────────────────────────────────────
+export * from './12-sop-planning/domain/SOPCycle';
+export * from './12-sop-planning/domain/ConsensusItem';
+export * from './12-sop-planning/domain/SOPScenario';
+export * from './12-sop-planning/domain/PlanAttainment';
+
 // ── 13 Order Management ──────────────────────────────────────────────────────
 export * from './13-order-management/domain/SalesOrder';
 

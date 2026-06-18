@@ -1,0 +1,54 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git *)",
+      "Bash(npm *)",
+      "Bash(npx *)",
+      "Bash(python *)",
+      "Bash(pip *)",
+      "Bash(pytest *)",
+      "Bash(docker *)",
+      "Bash(docker-compose *)",
+      "Bash(psql *)",
+      "Bash(ls *)",
+      "Bash(cat *)",
+      "Bash(grep *)",
+      "Bash(find *)",
+      "Bash(curl -s *)",
+      "Bash(jq *)",
+      "Bash(node *)",
+      "Bash(yarn *)",
+      "Bash(pnpm *)",
+      "Bash(make *)"
+    ],
+    "deny": [
+      "Bash(rm -rf /)",
+      "Bash(DROP TABLE *)",
+      "Bash(DELETE FROM * WHERE 1=1)"
+    ]
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo '[SCM Hook] Running: $CLAUDE_TOOL_INPUT' | grep -E '(DROP|TRUNCATE|DELETE.*WHERE 1)' && echo 'BLOCKED: Destructive DB operation' && exit 1 || exit 0"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo '[SCM] File modified. Run /code-review before merging to main.'"
+          }
+        ]
+      }
+    ]
+  }
+}

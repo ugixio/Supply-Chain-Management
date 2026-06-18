@@ -1,52 +1,29 @@
 /**
- * Supply Chain Management System — Public API surface
+ * Supply Chain Management System — Public API
  *
- * SCOR-DS aligned | ISO 28000:2022 compliant | Incoterms 2020
+ * SCOR-DS aligned | ISO 28000:2022 | Incoterms® 2020
  *
- * Modules:
- *  Procurement      — Purchase Orders, Suppliers, RFQ, Approval Workflow
- *  Inventory        — Stock Movements (event-sourced), Item Master, ABC-XYZ
- *  Logistics        — Shipments, Incoterms 2020, Customs, Hazmat
- *  Demand Planning  — Forecasting (SMA/SES/Holt/Holt-Winters), Safety Stock, EOQ
- *  Supplier Mgmt    — Scorecard (OTD/OTIF/PPM/DPMO), Kraljic Matrix
- *  Quality          — Incoming Inspection (AQL ISO 2859-1), NCR, DPMO
- *  Warehouse        — WMS, FEFO, ABC Velocity Slotting, CPOI
- *  Compliance       — CSDDD 2024, UFLPA 2021, EU REACH, C-TPAT/AEO
- *  Risk             — Risk Matrix, HHI, Bullwhip Effect, Expected Annual Loss
+ * All domain logic lives under src/departments/.
+ * Each department owns its data, domain rules, and algorithms.
+ * When business rules change, update the responsible department module.
+ *
+ * Department ownership:
+ *  01-procurement           → POs, Suppliers, Contracts, RFQ
+ *  02-supplier-management   → Scorecards (OTD/OTIF/PPM/DPMO)
+ *  03-demand-planning       → Forecasting, Safety Stock, EOQ
+ *  04-supply-planning       → MRP/MPS netting
+ *  05-inventory-management  → Item master (ABC-XYZ), Stock movements (event-sourced)
+ *  06-warehouse-management  → WMS, FEFO, Slotting
+ *  07-logistics-transportation → Shipments, Incoterms 2020, Hazmat, Customs
+ *  08-quality-management    → AQL Inspection, DPMO, NCR
+ *  09-compliance-regulatory → CSDDD, UFLPA, REACH
+ *  10-risk-management       → Risk matrix, HHI, Bullwhip, BCP
+ *  11-finance-controlling   → Invoice 3-way match, Cash-to-Cash
+ *  12-sop-planning          → S&OP / IBP cycle
+ *  13-order-management      → Sales orders, OTIF, Perfect Order Rate
+ *  14-supplier-development  → ESG / Sustainability assessment
  */
 
-// ── Shared ──────────────────────────────────────────────────────────────────
 export * from './shared/types';
 export * from './shared/events';
-
-// ── Procurement ──────────────────────────────────────────────────────────────
-export * from './procurement/domain/PurchaseOrder';
-export * from './procurement/domain/Supplier';
-
-// ── Inventory ────────────────────────────────────────────────────────────────
-export * from './inventory/domain/InventoryItem';
-export * from './inventory/domain/StockMovement';
-
-// ── Demand Planning ──────────────────────────────────────────────────────────
-export * from './demand-planning/algorithms/SafetyStock';
-export * from './demand-planning/algorithms/Forecasting';
-
-// ── Supplier Management ───────────────────────────────────────────────────────
-export * from './supplier-management/domain/SupplierScorecard';
-
-// ── Logistics ────────────────────────────────────────────────────────────────
-export * from './logistics/domain/Shipment';
-
-// ── Quality ──────────────────────────────────────────────────────────────────
-export * from './quality/domain/InspectionRecord';
-
-// ── Warehouse ────────────────────────────────────────────────────────────────
-export * from './warehouse/domain/Warehouse';
-
-// ── Compliance ───────────────────────────────────────────────────────────────
-export * from './compliance/regulations/CSDDD';
-export * from './compliance/regulations/UFLPA';
-export * from './compliance/regulations/REACH';
-
-// ── Risk ──────────────────────────────────────────────────────────────────────
-export * from './risk/models/RiskModel';
+export * from './departments';

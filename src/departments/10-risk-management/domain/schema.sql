@@ -556,3 +556,45 @@ ORDER BY
     days_since_last_drill DESC NULLS FIRST;
 
 COMMENT ON VIEW risk_management.v_bcp_readiness IS 'Per-BCP drill readiness dashboard. RED = never drilled, >365 days since last drill, or open CRITICAL findings. AMBER = 181-365 days. GREEN = drilled within 180 days with no open critical findings. Feeds bcp_readiness_score() in risk_model.py.';
+
+
+-- ---------------------------------------------------------------------------
+-- VIEW: v_risk_register
+-- Open HIGH / CRITICAL risk register entries with their treatment (mitigation)
+-- status and financial exposure. Drives the active risk register dashboard.
+-- "Open" = not CLOSED and not TRANSFERRED.
+-- ---------------------------------------------------------------------------
+
+CREATE OR REPLACE VIEW risk_management.v_risk_register AS
+SELECT
+    ri.id                                       AS risk_id,
+    ri.risk_number,
+    ri.risk_category,
+    ri.title,
+    ri.probability_score,
+    ri.impact_score,
+    ri.risk_score,
+    ri.risk_level,
+    ri.financial_impact_cents,
+    ri.eal_cents,
+    ri.probability_annual,
+    ri.owner_department,
+    ri.owner_name,
+    ri.mitigation_status,
+    ri.review_date,
+    CASE
+        WHEN ri.review_date < CURRENT_DATE THEN TRUE
+        ELSE FALSE
+    END                                         AS review_overdue,
+    CASE
+        WHEN ri.mitigation_status IN ('IDENTIFIED','ASSESSED') THEN 'UNTREATED'
+        WHEN ri.mitigation_status = 'MITIGATION_IN_PROGRESS'   THEN 'IN_PROGRESS'
+        ELSE 'TREATED'
+    END                                         AS treatment_state
+FROM risk_management.risk_items ri
+WHERE ri.is_deleted = FALSE
+  AND ri.risk_level IN ('HIGH','CRITICAL')
+  AND ri.mitigation_status NOT IN ('CLOSED','TRANSFERRED')
+ORDER BY ri.risk_score DESC, ri.eal_cents DESC NULLS LAST, ri.review_date ASC;
+
+COMMENT ON VIEW risk_management.v_risk_register IS 'Active risk register: open HIGH and CRITICAL risk_items (not CLOSED/TRANSFERRED) with mitigation/treatment status, EAL, owner, and review-overdue flag. UNTREATED items (IDENTIFIED/ASSESSED) on the highest risk_score require immediate treatment.';

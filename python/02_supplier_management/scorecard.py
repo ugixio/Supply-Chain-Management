@@ -132,3 +132,143 @@ def smooth_score(current_score: float, previous_score: float, alpha: float = 0.3
 def requires_corrective_action_plan(rating: SupplierRating) -> bool:
     """Triggers CAP for CONDITIONAL, PROBATION, DISQUALIFIED ratings."""
     return rating in ("CONDITIONAL", "PROBATION", "DISQUALIFIED")
+
+
+# ─── Supplier segmentation & risk scoring ──────────────────────────────────────
+
+def segment_suppliers(suppliers: list[dict], n_clusters: int = 4) -> list[dict]:
+    """
+    Cluster suppliers into performance segments via K-means on standardised
+    performance features (overall_score, ppm, otd_pct, spend).
+
+    Segments are named by ranking cluster centroids on a composite desirability
+    score (high overall_score, high otd_pct, low ppm). The best-ranked centroid
+    is labelled STRATEGIC, then PERFORMER, DEVELOP, and AT_RISK.
+
+    Args:
+        suppliers: list of dicts, each with keys 'supplier_id', 'overall_score'
+            (0-100), 'ppm' (defects per million), 'otd_pct' (0-100), and 'spend'
+            (annual spend in cents).
+        n_clusters: number of segments (default 4). Segment naming assumes 4;
+            with other values, generic SEGMENT_<rank> labels are used.
+
+    Returns:
+        list of dicts — each input supplier augmented with 'cluster' (int label)
+        and 'segment' (str name). Order matches the input list.
+
+    Raises:
+        ImportError: if scikit-learn is not installed (guarded with a clear msg).
+        ValueError: if fewer suppliers than clusters are supplied.
+
+    Ref: Chopra & Meindl Ch.14 (supplier segmentation); Kraljic (1983).
+    """
+    try:
+        from sklearn.cluster import KMeans
+        from sklearn.preprocessing import StandardScaler
+    except ImportError as exc:  # pragma: no cover - environment guard
+        raise ImportError(
+            "segment_suppliers requires scikit-learn (BSD-3). "
+            "Install with `pip install scikit-learn`."
+        ) from exc
+
+    if not suppliers:
+        return []
+    if len(suppliers) < n_clusters:
+        raise ValueError(
+            f"need at least n_clusters={n_clusters} suppliers, got {len(suppliers)}"
+        )
+
+    feature_keys = ("overall_score", "ppm", "otd_pct", "spend")
+    features = np.array(
+        [[float(s.get(k, 0.0)) for k in feature_keys] for s in suppliers],
+        dtype=float,
+    )
+
+    scaled = StandardScaler().fit_transform(features)
+    model = KMeans(n_clusters=n_clusters, n_init=10, random_state=42)
+    labels = model.fit_predict(scaled)
+
+    # Rank clusters by desirability from centroids (in original feature space).
+    centroids = model.cluster_centers_  # standardised space
+    # Desirability: + overall_score, + otd_pct, - ppm (indices 0, 2, 1).
+    desirability = centroids[:, 0] + centroids[:, 2] - centroids[:, 1]
+    ranked_clusters = list(np.argsort(desirability)[::-1])  # best first
+
+    default_names = ["STRATEGIC", "PERFORMER", "DEVELOP", "AT_RISK"]
+    segment_for_cluster: dict[int, str] = {}
+    for rank, cluster_id in enumerate(ranked_clusters):
+        if n_clusters == 4 and rank < len(default_names):
+            segment_for_cluster[int(cluster_id)] = default_names[rank]
+        else:
+            segment_for_cluster[int(cluster_id)] = f"SEGMENT_{rank + 1}"
+
+    result: list[dict] = []
+    for supplier, label in zip(suppliers, labels):
+        enriched = dict(supplier)
+        enriched["cluster"] = int(label)
+        enriched["segment"] = segment_for_cluster[int(label)]
+        result.append(enriched)
+    return result
+
+
+def supplier_risk_score(
+    financial_score: float,
+    geographic_risk: float,
+    single_source: bool,
+    capacity_utilization_pct: float,
+    compliance_flags: int,
+) -> dict:
+    """
+    Composite supplier risk score (0-100, higher = riskier).
+
+    Weighted components:
+        Financial instability   35%  (1 - financial_score/100)
+        Geographic risk         25%  (geographic_risk, 0-100)
+        Single-source exposure  15%  (100 if single_source else 0)
+        Capacity strain         15%  (severity above 85% utilisation)
+        Compliance flags        10%  (capped at 5 flags = 100)
+
+    Args:
+        financial_score: supplier financial health 0-100 (higher = healthier).
+        geographic_risk: country/region risk index 0-100 (higher = riskier).
+        single_source: True if this is the only qualified source for its parts.
+        capacity_utilization_pct: current capacity utilisation 0-100.
+        compliance_flags: count of open compliance issues (CSDDD/UFLPA/REACH).
+
+    Returns:
+        dict with 'risk_score' (float 0-100), 'risk_level'
+        ('LOW'|'MEDIUM'|'HIGH'|'CRITICAL'), and 'components' breakdown.
+
+    Ref: Chopra & Meindl Ch.6 (risk in supply chains); ISO 31000 risk framework.
+    """
+    fin = max(0.0, min(100.0, 100.0 - financial_score))
+    geo = max(0.0, min(100.0, geographic_risk))
+    single = 100.0 if single_source else 0.0
+    # Capacity strain only contributes above 85% utilisation; full above 100%.
+    util = max(0.0, min(100.0, capacity_utilization_pct))
+    capacity = max(0.0, min(100.0, (util - 85.0) / 15.0 * 100.0))
+    compliance = max(0.0, min(100.0, (compliance_flags / 5.0) * 100.0))
+
+    components = {
+        "financial": round(fin * 0.35, 2),
+        "geographic": round(geo * 0.25, 2),
+        "single_source": round(single * 0.15, 2),
+        "capacity": round(capacity * 0.15, 2),
+        "compliance": round(compliance * 0.10, 2),
+    }
+    risk_score = round(sum(components.values()), 2)
+
+    if risk_score >= 75:
+        risk_level = "CRITICAL"
+    elif risk_score >= 50:
+        risk_level = "HIGH"
+    elif risk_score >= 25:
+        risk_level = "MEDIUM"
+    else:
+        risk_level = "LOW"
+
+    return {
+        "risk_score": risk_score,
+        "risk_level": risk_level,
+        "components": components,
+    }

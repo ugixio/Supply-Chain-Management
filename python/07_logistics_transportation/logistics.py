@@ -273,3 +273,209 @@ def carrier_performance_score(
     claim_score = (1 - min(claim_rate_pct / 5, 1)) * 25
     variance_score = max(0.0, (1 - abs(transit_variance_days) / 3)) * 15
     return round(otd_score + claim_score + variance_score, 4)
+
+
+# ── Vehicle Routing Problem with Time Windows (VRPTW) ─────────────────────────
+
+def vrp_time_windows(
+    depot: dict,
+    stops: list[dict],
+    vehicle_capacity: float,
+    num_vehicles: int,
+) -> dict:
+    """
+    Capacitated Vehicle Routing Problem with Time Windows (VRPTW) solved with
+    Google OR-Tools (ortools, Apache-2.0) constraint-programming routing solver.
+
+    Each stop must be visited exactly once, within its [ready_time, due_time]
+    window, by a vehicle whose accumulated demand never exceeds vehicle_capacity.
+    The objective minimises total travel distance across all vehicles. Travel
+    time is approximated as Euclidean distance (scaled to integers) plus the
+    stop's service_time; OR-Tools requires integer arc costs and dimensions.
+
+    Parameters
+    ----------
+    depot : dict with keys
+        x, y                  (float) — depot coordinates (route start & end)
+        due_time              (float, optional) — depot closing time (default large)
+    stops : list of dicts, each with keys
+        id                    (hashable) — stop identifier
+        demand                (float) — load picked up / delivered at the stop
+        x, y                  (float) — stop coordinates
+        ready_time            (float) — earliest service start (time units)
+        due_time              (float) — latest service start (time units)
+        service_time          (float) — dwell time at the stop (time units)
+    vehicle_capacity : float — maximum load per vehicle (same unit as demand).
+    num_vehicles     : int   — fleet size available from the depot.
+
+    Returns
+    -------
+    dict with keys:
+      routes        : list — one entry per used vehicle:
+          {vehicle, stops: [stop_id, ...], load, distance}
+      total_distance: float — sum of route distances (original coordinate units)
+      dropped_stops : list  — stop ids the solver could not feasibly serve
+      num_vehicles_used : int
+
+    Raises
+    ------
+    ImportError : if ortools is not installed (with an install hint).
+    ValueError  : on malformed input.
+
+    Ref: Solomon, M.M. (1987) "Algorithms for the Vehicle Routing and Scheduling
+         Problems with Time Window Constraints", Operations Research 35(2).
+         Google OR-Tools routing library (developers.google.com/optimization).
+    """
+    try:
+        from ortools.constraint_solver import pywrapcp, routing_enums_pb2
+    except ImportError as exc:  # pragma: no cover - environment dependent
+        raise ImportError(
+            "vrp_time_windows requires Google OR-Tools. "
+            "Install it with `pip install ortools` (Apache-2.0)."
+        ) from exc
+
+    if num_vehicles < 1:
+        raise ValueError("num_vehicles must be >= 1")
+    if vehicle_capacity <= 0:
+        raise ValueError("vehicle_capacity must be > 0")
+    if not stops:
+        return {
+            "routes": [],
+            "total_distance": 0.0,
+            "dropped_stops": [],
+            "num_vehicles_used": 0,
+        }
+
+    required = {"id", "demand", "x", "y", "ready_time", "due_time", "service_time"}
+    for i, s in enumerate(stops):
+        missing = required - s.keys()
+        if missing:
+            raise ValueError(f"stop {i} is missing required keys: {missing}")
+
+    # Node 0 is the depot; nodes 1..n are the stops.
+    coords: list[tuple[float, float]] = [(float(depot["x"]), float(depot["y"]))]
+    coords += [(float(s["x"]), float(s["y"])) for s in stops]
+    n_nodes = len(coords)
+
+    # Scale factor turns float coordinates into the integer costs OR-Tools needs
+    # while preserving enough precision for routing decisions.
+    SCALE = 100
+
+    def euclidean(a: int, b: int) -> float:
+        ax, ay = coords[a]
+        bx, by = coords[b]
+        return float(np.hypot(ax - bx, ay - by))
+
+    service_times = [0.0] + [float(s["service_time"]) for s in stops]
+    depot_due = float(depot.get("due_time", 10 ** 9))
+    ready = [0.0] + [float(s["ready_time"]) for s in stops]
+    due = [depot_due] + [float(s["due_time"]) for s in stops]
+    demands = [0] + [int(round(float(s["demand"]))) for s in stops]
+
+    manager = pywrapcp.RoutingIndexManager(n_nodes, num_vehicles, 0)
+    routing = pywrapcp.RoutingModel(manager)
+
+    # Distance (arc cost) callback.
+    def distance_callback(from_index: int, to_index: int) -> int:
+        from_node = manager.IndexToNode(from_index)
+        to_node = manager.IndexToNode(to_index)
+        return int(round(euclidean(from_node, to_node) * SCALE))
+
+    transit_idx = routing.RegisterTransitCallback(distance_callback)
+    routing.SetArcCostEvaluatorOfAllVehicles(transit_idx)
+
+    # Capacity dimension.
+    def demand_callback(from_index: int) -> int:
+        return demands[manager.IndexToNode(from_index)]
+
+    demand_idx = routing.RegisterUnaryTransitCallback(demand_callback)
+    routing.AddDimensionWithVehicleCapacity(
+        demand_idx,
+        0,                                        # no slack
+        [int(round(vehicle_capacity))] * num_vehicles,
+        True,                                     # start cumul at zero
+        "Capacity",
+    )
+
+    # Time dimension (travel + service time), integer-scaled.
+    def time_callback(from_index: int, to_index: int) -> int:
+        from_node = manager.IndexToNode(from_index)
+        to_node = manager.IndexToNode(to_index)
+        travel = euclidean(from_node, to_node) * SCALE
+        return int(round(travel + service_times[from_node] * SCALE))
+
+    time_idx = routing.RegisterTransitCallback(time_callback)
+    horizon = int(round(max(due) * SCALE)) + 1
+    routing.AddDimension(
+        time_idx,
+        horizon,    # allow waiting (slack) up to the horizon
+        horizon,    # max time per vehicle
+        False,      # don't force start cumul to zero (vehicles may wait)
+        "Time",
+    )
+    time_dimension = routing.GetDimensionOrDie("Time")
+
+    # Apply per-stop time windows.
+    for node in range(1, n_nodes):
+        index = manager.NodeToIndex(node)
+        time_dimension.CumulVar(index).SetRange(
+            int(round(ready[node] * SCALE)),
+            int(round(due[node] * SCALE)),
+        )
+
+    # Allow dropping infeasible stops at a high penalty rather than failing.
+    penalty = horizon * 10
+    for node in range(1, n_nodes):
+        routing.AddDisjunction([manager.NodeToIndex(node)], penalty)
+
+    search_params = pywrapcp.DefaultRoutingSearchParameters()
+    search_params.first_solution_strategy = (
+        routing_enums_pb2.FirstSolutionStrategy.PATH_CHEAPEST_ARC
+    )
+    search_params.local_search_metaheuristic = (
+        routing_enums_pb2.LocalSearchMetaheuristic.GUIDED_LOCAL_SEARCH
+    )
+    search_params.time_limit.FromSeconds(5)
+
+    solution = routing.SolveWithParameters(search_params)
+    if solution is None:
+        raise ValueError("OR-Tools found no feasible VRPTW solution for the given inputs.")
+
+    stop_ids = [s["id"] for s in stops]
+    routes: list[dict] = []
+    total_distance = 0.0
+
+    for vehicle in range(num_vehicles):
+        index = routing.Start(vehicle)
+        route_nodes: list = []
+        route_load = 0
+        route_distance = 0.0
+        while not routing.IsEnd(index):
+            node = manager.IndexToNode(index)
+            if node != 0:  # skip depot in the reported stop list
+                route_nodes.append(stop_ids[node - 1])
+                route_load += demands[node]
+            next_index = solution.Value(routing.NextVar(index))
+            route_distance += euclidean(
+                node, manager.IndexToNode(next_index)
+            )
+            index = next_index
+
+        if route_nodes:
+            routes.append({
+                "vehicle": vehicle,
+                "stops": route_nodes,
+                "load": route_load,
+                "distance": round(route_distance, 4),
+            })
+            total_distance += route_distance
+
+    served = {sid for r in routes for sid in r["stops"]}
+    dropped = [sid for sid in stop_ids if sid not in served]
+
+    return {
+        "routes": routes,
+        "total_distance": round(total_distance, 4),
+        "dropped_stops": dropped,
+        "num_vehicles_used": len(routes),
+    }

@@ -228,3 +228,238 @@ def select_algorithm(demand: list[float], season_length: int = 12, horizon: int 
     if name == "Holt":
         return holts_linear_method(demand, 0.3, 0.1, horizon)
     return holt_winters(demand, 0.3, 0.1, 0.1, season_length, horizon)
+
+
+# ── Intermittent Demand ───────────────────────────────────────────────────────
+
+def croston(demand: list[float], alpha: float = 0.1) -> dict:
+    """
+    Croston's method for intermittent (lumpy) demand forecasting.
+
+    Decouples demand size from the inter-demand interval and smooths each
+    independently with simple exponential smoothing:
+
+      When demand occurs at period t:
+        z_t = α × size_t      + (1 - α) × z_{t-1}      (demand size)
+        p_t = α × interval_t  + (1 - α) × p_{t-1}      (inter-demand interval)
+      Otherwise both estimates carry forward unchanged.
+
+    The per-period demand-rate forecast is:
+
+      forecast = z_t / p_t
+
+    Best for: spare parts, slow-moving SKUs, and any series with frequent zeros
+    where SES/Holt over-react to the gaps.
+
+    Parameters
+    ----------
+    demand : list of demand observations (zeros allowed and expected).
+    alpha  : smoothing constant in (0, 1). Croston (1972) recommends 0.1-0.2.
+
+    Returns
+    -------
+    dict with keys:
+      forecast      : float — per-period demand rate (z / p)
+      avg_size      : float — smoothed estimate of demand size when it occurs (z)
+      avg_interval  : float — smoothed estimate of inter-demand interval (p)
+      n_demands     : int   — number of non-zero demand periods observed
+
+    Ref: Croston, J.D. (1972) "Forecasting and Stock Control for Intermittent
+         Demands", Operational Research Quarterly 23(3): 289-303.
+    """
+    if not 0 < alpha < 1:
+        raise ValueError(f"alpha must be in (0, 1), got {alpha}")
+    d = np.asarray(demand, dtype=float)
+    if d.size == 0:
+        raise ValueError("demand must be non-empty")
+    if np.any(d < 0):
+        raise ValueError("demand values must be non-negative")
+
+    nonzero_idx = np.flatnonzero(d > 0)
+    if nonzero_idx.size == 0:
+        # No demand ever occurred → forecast is zero.
+        return {
+            "forecast": 0.0,
+            "avg_size": 0.0,
+            "avg_interval": float(d.size),
+            "n_demands": 0,
+        }
+
+    # Initialise with the first non-zero observation.
+    first = int(nonzero_idx[0])
+    z = float(d[first])                       # demand size estimate
+    p = float(first + 1)                      # interval since series start
+    q = 1                                     # periods since last demand
+
+    for t in range(first + 1, d.size):
+        if d[t] > 0:
+            z = alpha * float(d[t]) + (1 - alpha) * z
+            p = alpha * float(q) + (1 - alpha) * p
+            q = 1
+        else:
+            q += 1
+
+    forecast = z / p if p > 0 else 0.0
+    return {
+        "forecast": round(float(forecast), 6),
+        "avg_size": round(float(z), 6),
+        "avg_interval": round(float(p), 6),
+        "n_demands": int(nonzero_idx.size),
+    }
+
+
+def sba_croston(demand: list[float], alpha: float = 0.1) -> dict:
+    """
+    Syntetos-Boylan Approximation (SBA) — bias-corrected Croston's method.
+
+    Croston's estimator is known to be positively biased because E[z/p] is not
+    equal to E[z]/E[p]. Syntetos & Boylan (2005) derived a multiplicative
+    correction factor that removes the leading bias term:
+
+      forecast_SBA = (1 - α/2) × forecast_Croston
+
+    The size and interval estimates are inherited unchanged from Croston; only
+    the per-period rate is de-biased.
+
+    Parameters
+    ----------
+    demand : list of demand observations (zeros allowed).
+    alpha  : smoothing constant in (0, 1).
+
+    Returns
+    -------
+    dict with keys:
+      forecast      : float — bias-corrected per-period demand rate
+      avg_size      : float — smoothed demand size (from Croston)
+      avg_interval  : float — smoothed inter-demand interval (from Croston)
+      n_demands     : int   — number of non-zero demand periods
+      correction    : float — applied correction factor (1 - α/2)
+
+    Ref: Syntetos, A.A. & Boylan, J.E. (2005) "The accuracy of intermittent
+         demand estimates", International Journal of Forecasting 21(2): 303-314.
+    """
+    base = croston(demand, alpha)
+    correction = 1.0 - alpha / 2.0
+    return {
+        "forecast": round(base["forecast"] * correction, 6),
+        "avg_size": base["avg_size"],
+        "avg_interval": base["avg_interval"],
+        "n_demands": base["n_demands"],
+        "correction": round(correction, 6),
+    }
+
+
+# ── Forecast Quality / Bias Monitoring ────────────────────────────────────────
+
+def tracking_signal(actual: list[float], forecast: list[float]) -> dict:
+    """
+    Tracking Signal for forecast bias detection.
+
+      TS = cumulative_error / MAD
+         = Σ(A_t - F_t) / mean(|A_t - F_t|)
+
+    A well-behaved forecast oscillates around zero. Persistent drift drives the
+    cumulative error in one direction, inflating |TS|. The classical control
+    limit is ±4 MAD (Brown 1959): |TS| > 4 flags a biased / out-of-control
+    forecast that should be re-fitted.
+
+    Parameters
+    ----------
+    actual   : list of realised demand values.
+    forecast : list of forecast values (same length as actual).
+
+    Returns
+    -------
+    dict with keys:
+      tracking_signal  : float — cumulative_error / MAD (signed)
+      mad              : float — Mean Absolute Deviation
+      cumulative_error : float — Σ(actual - forecast)
+      is_biased        : bool  — True when |tracking_signal| > 4
+
+    Ref: Brown, R.G. (1959) "Statistical Forecasting for Inventory Control";
+         Silver, Pyke & Peterson (1998) Ch.4.
+    """
+    a = np.asarray(actual, dtype=float)
+    f = np.asarray(forecast, dtype=float)
+    if a.shape != f.shape:
+        raise ValueError("actual and forecast must have the same length")
+    if a.size == 0:
+        raise ValueError("actual and forecast must be non-empty")
+
+    errors = a - f
+    cumulative_error = float(np.sum(errors))
+    mad = float(np.mean(np.abs(errors)))
+
+    if mad == 0.0:
+        ts = 0.0
+    else:
+        ts = cumulative_error / mad
+
+    return {
+        "tracking_signal": round(ts, 6),
+        "mad": round(mad, 6),
+        "cumulative_error": round(cumulative_error, 6),
+        "is_biased": bool(abs(ts) > 4.0),
+    }
+
+
+def forecast_bias(actual: list[float], forecast: list[float]) -> dict:
+    """
+    Forecast bias diagnostics (mean error and mean percentage error).
+
+      ME  = mean(A_t - F_t)                       (Mean Error / bias)
+      MPE = mean((A_t - F_t) / A_t) × 100         (Mean Percentage Error)
+
+    Sign convention (A - F):
+      ME > 0  → forecast is too LOW  (under-forecasting; demand exceeded plan)
+      ME < 0  → forecast is too HIGH (over-forecasting; plan exceeded demand)
+      ME ≈ 0  → forecast is UNBIASED
+
+    MPE excludes periods with zero actuals to avoid division by zero.
+
+    Parameters
+    ----------
+    actual   : list of realised demand values.
+    forecast : list of forecast values (same length as actual).
+
+    Returns
+    -------
+    dict with keys:
+      mean_error             : float — mean(A - F)
+      mean_percentage_error  : float — MPE in % (inf if all actuals are zero)
+      bias_direction         : str   — 'UNDER_FORECAST' | 'OVER_FORECAST' | 'UNBIASED'
+
+    Ref: Hyndman & Athanasopoulos (2021) "Forecasting: Principles and Practice".
+    """
+    a = np.asarray(actual, dtype=float)
+    f = np.asarray(forecast, dtype=float)
+    if a.shape != f.shape:
+        raise ValueError("actual and forecast must have the same length")
+    if a.size == 0:
+        raise ValueError("actual and forecast must be non-empty")
+
+    errors = a - f
+    mean_error = float(np.mean(errors))
+
+    mask = a != 0
+    if mask.any():
+        mpe = float(np.mean(errors[mask] / a[mask]) * 100)
+    else:
+        mpe = float("inf")
+
+    # Tolerance band: ±0.5% of mean actual demand treated as unbiased.
+    tol = 0.005 * float(np.mean(np.abs(a))) if a.size else 0.0
+    if mean_error > tol:
+        direction = "UNDER_FORECAST"
+    elif mean_error < -tol:
+        direction = "OVER_FORECAST"
+    else:
+        direction = "UNBIASED"
+
+    return {
+        "mean_error": round(mean_error, 6),
+        "mean_percentage_error": (
+            round(mpe, 6) if np.isfinite(mpe) else float("inf")
+        ),
+        "bias_direction": direction,
+    }

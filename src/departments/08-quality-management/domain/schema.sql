@@ -304,3 +304,126 @@ WHERE status NOT IN ('CLOSED')
 ORDER BY days_open DESC;
 
 COMMENT ON VIEW quality.v_ncr_aging IS 'Open NCRs by aging bucket. CRITICAL severity NCRs over 7 days should trigger supplier escalation. Feeds supplier scorecard NCR rate KPI.';
+
+
+-- ---------------------------------------------------------------------------
+-- scar_records — Supplier Corrective Action Requests (8-D)
+-- One record per SCAR issued to a supplier. Tracks D1–D8 progress, severity-
+-- based SLA deadlines, and effectiveness verification. Aligns with SCAR.ts.
+-- ---------------------------------------------------------------------------
+CREATE TABLE quality.scar_records (
+    id                       UUID         PRIMARY KEY DEFAULT gen_random_uuid(),
+    scar_number              VARCHAR(50)  NOT NULL UNIQUE,
+    -- References procurement.suppliers(id) — cross-schema FK (advisory only)
+    supplier_id              UUID         NOT NULL,
+    -- Originating NCR (quality.ncr_records.id) when SCAR derived from an NCR
+    ncr_id                   UUID         REFERENCES quality.ncr_records(id),
+    sku_id                   VARCHAR(50)  NOT NULL,
+    po_id                    UUID,
+    severity                 VARCHAR(10)  NOT NULL
+                                 CHECK (severity IN ('CRITICAL','MAJOR','MINOR')),
+    status                   VARCHAR(25)  NOT NULL DEFAULT 'ISSUED'
+                                 CHECK (status IN (
+                                     'ISSUED','SUPPLIER_ACKNOWLEDGED','CONTAINMENT',
+                                     'ROOT_CAUSE','CORRECTIVE_ACTION','VERIFICATION',
+                                     'CLOSED','ESCALATED','REJECTED'
+                                 )),
+    issue_description        TEXT         NOT NULL,
+    defect_qty               INTEGER      NOT NULL CHECK (defect_qty > 0),
+    -- Issuance & SLA -------------------------------------------------------
+    issued_date              TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+    issued_by                VARCHAR(100) NOT NULL,
+    acknowledgement_due_date TIMESTAMPTZ  NOT NULL,   -- D1 SLA deadline
+    response_required_by     DATE         NOT NULL,   -- full 8-D SLA deadline
+    -- Supplier engagement --------------------------------------------------
+    supplier_contact         VARCHAR(200),
+    acknowledged_date        TIMESTAMPTZ,
+    -- 8-D progress (D1–D8 boolean + completion dates) ----------------------
+    d1_team_completed        BOOLEAN      NOT NULL DEFAULT FALSE,
+    d2_problem_completed     BOOLEAN      NOT NULL DEFAULT FALSE,
+    d3_containment_completed BOOLEAN      NOT NULL DEFAULT FALSE,
+    d3_containment_date      DATE,
+    d4_rootcause_completed   BOOLEAN      NOT NULL DEFAULT FALSE,
+    d4_rootcause_date        DATE,
+    root_cause_category      VARCHAR(15)
+                                 CHECK (root_cause_category IS NULL OR root_cause_category IN (
+                                     'MAN','MACHINE','METHOD','MATERIAL',
+                                     'MEASUREMENT','ENVIRONMENT','UNKNOWN'
+                                 )),
+    d5_corrective_completed  BOOLEAN      NOT NULL DEFAULT FALSE,
+    d6_implement_completed   BOOLEAN      NOT NULL DEFAULT FALSE,
+    d6_implement_date        DATE,
+    d7_prevent_completed     BOOLEAN      NOT NULL DEFAULT FALSE,
+    d8_close_completed       BOOLEAN      NOT NULL DEFAULT FALSE,
+    disciplines_completed    SMALLINT     GENERATED ALWAYS AS (
+                                 (d1_team_completed)::INT + (d2_problem_completed)::INT
+                               + (d3_containment_completed)::INT + (d4_rootcause_completed)::INT
+                               + (d5_corrective_completed)::INT + (d6_implement_completed)::INT
+                               + (d7_prevent_completed)::INT + (d8_close_completed)::INT
+                             ) STORED,
+    -- Verification & closure ----------------------------------------------
+    effectiveness_verified   BOOLEAN,
+    recurrence_prevented     BOOLEAN,
+    closed_date              DATE,
+    escalation_reason        TEXT,
+    rejection_reason         TEXT,
+    -- Audit ----------------------------------------------------------------
+    is_deleted               BOOLEAN      NOT NULL DEFAULT FALSE,
+    created_at               TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+    updated_at               TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+    CONSTRAINT scar_close_requires_verification
+        CHECK (status <> 'CLOSED' OR effectiveness_verified = TRUE),
+    CONSTRAINT scar_closed_date_check
+        CHECK (closed_date IS NULL OR closed_date >= issued_date::DATE)
+);
+
+COMMENT ON TABLE  quality.scar_records                          IS 'Supplier Corrective Action Requests (8-D) directed at suppliers. Tracks D1–D8 progress, severity-based SLA deadlines, and effectiveness verification. Aligns with SCAR.ts.';
+COMMENT ON COLUMN quality.scar_records.ncr_id                   IS 'Originating NCR (quality.ncr_records.id) when the SCAR is raised from an internal non-conformance.';
+COMMENT ON COLUMN quality.scar_records.acknowledgement_due_date IS 'D1 acknowledgement SLA deadline. CRITICAL=24h, MAJOR=72h, MINOR=120h from issued_date.';
+COMMENT ON COLUMN quality.scar_records.response_required_by     IS 'Full 8-D response SLA deadline. CRITICAL=15d, MAJOR=30d, MINOR=45d from issued_date.';
+COMMENT ON COLUMN quality.scar_records.disciplines_completed    IS 'Auto-computed count (0–8) of completed 8-D disciplines. Drives v_scar_aging progress reporting.';
+COMMENT ON COLUMN quality.scar_records.effectiveness_verified   IS 'TRUE once D7 verification confirms the corrective action is effective. Required before status can become CLOSED (see scar_close_requires_verification).';
+COMMENT ON COLUMN quality.scar_records.root_cause_category      IS '4M/5M Ishikawa root-cause category (D4). Shared vocabulary with quality.ncr_records.';
+
+
+CREATE INDEX idx_scar_supplier          ON quality.scar_records(supplier_id) WHERE is_deleted = FALSE;
+CREATE INDEX idx_scar_status_severity   ON quality.scar_records(status, severity) WHERE is_deleted = FALSE;
+CREATE INDEX idx_scar_ncr               ON quality.scar_records(ncr_id) WHERE ncr_id IS NOT NULL;
+CREATE INDEX idx_scar_response_due      ON quality.scar_records(response_required_by) WHERE status <> 'CLOSED' AND is_deleted = FALSE;
+
+
+-- Open SCARs with SLA breach flags and aging buckets
+CREATE OR REPLACE VIEW quality.v_scar_aging AS
+SELECT
+    scar_number,
+    supplier_id,
+    sku_id,
+    severity,
+    status,
+    issued_date,
+    acknowledgement_due_date,
+    response_required_by,
+    disciplines_completed,
+    effectiveness_verified,
+    (CURRENT_DATE - issued_date::DATE)                         AS days_open,
+    CASE
+        WHEN (CURRENT_DATE - issued_date::DATE) <= 7   THEN '0-7_DAYS'
+        WHEN (CURRENT_DATE - issued_date::DATE) <= 15  THEN '8-15_DAYS'
+        WHEN (CURRENT_DATE - issued_date::DATE) <= 30  THEN '16-30_DAYS'
+        WHEN (CURRENT_DATE - issued_date::DATE) <= 45  THEN '31-45_DAYS'
+        ELSE 'OVER_45_DAYS'
+    END                                                        AS aging_bucket,
+    CASE
+        WHEN acknowledged_date IS NULL AND NOW() > acknowledgement_due_date
+        THEN TRUE ELSE FALSE
+    END                                                        AS ack_overdue,
+    CASE
+        WHEN CURRENT_DATE > response_required_by
+        THEN TRUE ELSE FALSE
+    END                                                        AS response_overdue
+FROM quality.scar_records
+WHERE status NOT IN ('CLOSED')
+  AND is_deleted = FALSE
+ORDER BY response_required_by ASC;
+
+COMMENT ON VIEW quality.v_scar_aging IS 'Open SCARs with SLA breach flags (ack_overdue, response_overdue) and aging buckets aligned to severity SLAs. CRITICAL SCARs breaching acknowledgement (24h) should trigger immediate supplier escalation. Feeds supplier scorecard quality KPI.';

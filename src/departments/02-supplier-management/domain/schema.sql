@@ -460,3 +460,103 @@ COMMENT ON VIEW supplier_mgmt.v_scorecard_trend IS
     'Rolling scorecard history with derived trend features. '
     'score_3p_avg and score_6p_std are direct ML features for LightGBM predict_rating(). '
     'rank_in_period enables percentile-based benchmarking across the supply base.';
+
+
+-- ---------------------------------------------------------------------------
+-- supplier_onboarding — supplier qualification workflow
+-- One record per supplier qualification lifecycle. Aligns with
+-- SupplierOnboarding.ts. The qualification checklist lives in the child table
+-- supplier_mgmt.onboarding_checklist_items.
+-- ---------------------------------------------------------------------------
+CREATE TABLE supplier_mgmt.supplier_onboarding (
+    id                  UUID         PRIMARY KEY DEFAULT gen_random_uuid(),
+    -- References procurement.suppliers(id) — cross-schema FK (advisory only)
+    supplier_id         UUID         NOT NULL,
+    status              VARCHAR(20)  NOT NULL DEFAULT 'INITIATED'
+                            CHECK (status IN (
+                                'INITIATED','DOCUMENTATION','ASSESSMENT',
+                                'APPROVAL_PENDING','APPROVED','REJECTED','ON_HOLD'
+                            )),
+    qualification_score NUMERIC(5,2) CHECK (qualification_score IS NULL
+                                            OR qualification_score BETWEEN 0 AND 100),
+    approved_by         VARCHAR(100),
+    approved_date       DATE,
+    rejection_reason    TEXT,
+    hold_reason         TEXT,
+    is_deleted          BOOLEAN      NOT NULL DEFAULT FALSE,
+    created_at          TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+    updated_at          TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+    CONSTRAINT onboarding_approved_requires_approver
+        CHECK (status <> 'APPROVED' OR (approved_by IS NOT NULL AND qualification_score IS NOT NULL))
+);
+
+COMMENT ON TABLE  supplier_mgmt.supplier_onboarding                     IS 'Supplier qualification workflow lifecycle. One record per supplier onboarding. Aligns with SupplierOnboarding.ts. Required checklist items must all be completed before status APPROVAL_PENDING/APPROVED.';
+COMMENT ON COLUMN supplier_mgmt.supplier_onboarding.qualification_score IS 'Final qualification score 0-100, set at approval. May be seeded from scorecard.py supplier_risk_score / segment_suppliers outputs.';
+COMMENT ON COLUMN supplier_mgmt.supplier_onboarding.status             IS 'Workflow state: INITIATED→DOCUMENTATION→ASSESSMENT→APPROVAL_PENDING→APPROVED/REJECTED. ON_HOLD pauses pending external audit.';
+
+
+-- ---------------------------------------------------------------------------
+-- onboarding_checklist_items — qualification checklist (one row per item)
+-- Standard items generated on initiate(): legal, financial, quality,
+-- compliance, technical, ESG. Required items gate submission for approval.
+-- ---------------------------------------------------------------------------
+CREATE TABLE supplier_mgmt.onboarding_checklist_items (
+    id              UUID         PRIMARY KEY DEFAULT gen_random_uuid(),
+    onboarding_id   UUID         NOT NULL REFERENCES supplier_mgmt.supplier_onboarding(id) ON DELETE CASCADE,
+    item_code       VARCHAR(50)  NOT NULL,
+    category        VARCHAR(15)  NOT NULL
+                        CHECK (category IN ('LEGAL','FINANCIAL','QUALITY','COMPLIANCE','TECHNICAL','ESG')),
+    description     TEXT         NOT NULL,
+    required        BOOLEAN      NOT NULL DEFAULT TRUE,
+    completed       BOOLEAN      NOT NULL DEFAULT FALSE,
+    completed_date  DATE,
+    document_ref    VARCHAR(500),
+    verified_by     VARCHAR(100),
+    created_at      TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+    updated_at      TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+    CONSTRAINT onboarding_item_unique UNIQUE (onboarding_id, item_code),
+    CONSTRAINT onboarding_item_completed_requires_evidence
+        CHECK (completed = FALSE OR (document_ref IS NOT NULL AND verified_by IS NOT NULL))
+);
+
+COMMENT ON TABLE  supplier_mgmt.onboarding_checklist_items             IS 'Qualification checklist items per onboarding. Standard set generated on initiate(): business registration, tax ID, financial statements, ISO 9001, insurance, CSDDD self-assessment, UFLPA declaration, NDA, code of conduct, bank details, sample approval.';
+COMMENT ON COLUMN supplier_mgmt.onboarding_checklist_items.required    IS 'TRUE if the item must be completed before submitForApproval(). Required-incomplete items block approval.';
+COMMENT ON COLUMN supplier_mgmt.onboarding_checklist_items.document_ref IS 'Reference to the supporting document in the DMS. Mandatory when completed=TRUE (see onboarding_item_completed_requires_evidence).';
+
+
+CREATE INDEX idx_onboarding_supplier        ON supplier_mgmt.supplier_onboarding(supplier_id) WHERE is_deleted = FALSE;
+CREATE INDEX idx_onboarding_status          ON supplier_mgmt.supplier_onboarding(status) WHERE is_deleted = FALSE;
+CREATE INDEX idx_onboarding_items_onboarding ON supplier_mgmt.onboarding_checklist_items(onboarding_id);
+CREATE INDEX idx_onboarding_items_pending   ON supplier_mgmt.onboarding_checklist_items(onboarding_id) WHERE required = TRUE AND completed = FALSE;
+
+
+-- Onboarding status with checklist completion progress
+CREATE OR REPLACE VIEW supplier_mgmt.v_onboarding_status AS
+SELECT
+    o.id                                                         AS onboarding_id,
+    o.supplier_id,
+    o.status,
+    o.qualification_score,
+    o.approved_by,
+    o.approved_date,
+    COUNT(i.id)                                                  AS total_items,
+    COUNT(i.id) FILTER (WHERE i.completed)                       AS completed_items,
+    COUNT(i.id) FILTER (WHERE i.required)                        AS required_items,
+    COUNT(i.id) FILTER (WHERE i.required AND NOT i.completed)    AS pending_required_items,
+    ROUND(
+        CASE WHEN COUNT(i.id) = 0 THEN 100
+        ELSE COUNT(i.id) FILTER (WHERE i.completed)::NUMERIC / COUNT(i.id) * 100 END
+    , 2)                                                         AS completion_pct,
+    CASE
+        WHEN COUNT(i.id) FILTER (WHERE i.required AND NOT i.completed) = 0
+        THEN TRUE ELSE FALSE
+    END                                                          AS ready_for_approval,
+    o.created_at,
+    o.updated_at
+FROM supplier_mgmt.supplier_onboarding o
+LEFT JOIN supplier_mgmt.onboarding_checklist_items i ON i.onboarding_id = o.id
+WHERE o.is_deleted = FALSE
+GROUP BY o.id
+ORDER BY o.updated_at DESC;
+
+COMMENT ON VIEW supplier_mgmt.v_onboarding_status IS 'Supplier onboarding lifecycle with checklist completion progress. ready_for_approval=TRUE when all required items are complete (mirrors submitForApproval() gate in SupplierOnboarding.ts).';

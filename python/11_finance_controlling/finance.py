@@ -493,3 +493,223 @@ def period_end_fx_revaluation(
         "by_currency": by_currency,
         "target_currency": target_currency,
     }
+
+
+# =============================================================================
+# LANDED COST & CAPITAL PROJECT EVALUATION
+# =============================================================================
+
+def landed_cost(
+    goods_cents: int,
+    freight_cents: int,
+    insurance_cents: int,
+    duty_cents: int,
+    broker_cents: int,
+    handling_cents: int,
+    quantity: float,
+    nonrecoverable_tax_cents: int = 0,
+) -> dict[str, int | float]:
+    """
+    Roll all import cost elements into a true per-unit landed cost.
+
+    Total landed cost = goods + freight + insurance + duty + broker + handling
+                        + non-recoverable tax.
+    Recoverable VAT/GST is NOT a parameter here: it is reclaimed and excluded
+    from the capitalised (landed) cost per IAS 2 §11.
+
+    Parameters
+    ----------
+    goods_cents              : int    Ex-works / FOB goods value (cents).
+    freight_cents            : int    Carriage cost (cents).
+    insurance_cents          : int    Cargo insurance premium (cents).
+    duty_cents               : int    Customs import duty (cents).
+    broker_cents             : int    Customs broker / clearance fee (cents).
+    handling_cents           : int    Terminal handling, drayage (cents).
+    quantity                 : float  Units the landed cost covers (> 0).
+    nonrecoverable_tax_cents : int    Import VAT/GST that cannot be reclaimed (cents).
+
+    Returns
+    -------
+    dict with keys:
+        total_landed_cents      — sum of all non-recoverable cost elements
+        unit_landed_cost_cents  — round(total / quantity), integer cents
+        duty_and_tax_cents      — duty + non-recoverable tax
+        freight_per_unit_cents  — round(freight / quantity)
+        breakdown               — dict of individual cost elements in cents
+
+    Ref: IAS 2 "Inventories" §10-11 — cost of purchase.
+    """
+    if quantity <= 0:
+        raise ValueError("quantity must be positive.")
+
+    elements = [
+        goods_cents, freight_cents, insurance_cents, duty_cents,
+        broker_cents, handling_cents, nonrecoverable_tax_cents,
+    ]
+    for v in elements:
+        if not isinstance(v, int) or v < 0:
+            raise ValueError(f"All cost inputs must be non-negative integers (got {v!r}).")
+
+    total_landed_cents = sum(elements)
+    unit_landed_cost_cents = round(total_landed_cents / quantity)
+
+    return {
+        "total_landed_cents": total_landed_cents,
+        "unit_landed_cost_cents": unit_landed_cost_cents,
+        "duty_and_tax_cents": duty_cents + nonrecoverable_tax_cents,
+        "freight_per_unit_cents": round(freight_cents / quantity),
+        "breakdown": {
+            "goods_cents": goods_cents,
+            "freight_cents": freight_cents,
+            "insurance_cents": insurance_cents,
+            "duty_cents": duty_cents,
+            "broker_cents": broker_cents,
+            "handling_cents": handling_cents,
+            "nonrecoverable_tax_cents": nonrecoverable_tax_cents,
+        },
+    }
+
+
+def allocate_landed_cost(
+    total_landed_cents: int,
+    lines: list[dict],
+    method: str = "BY_VALUE",
+) -> list[dict]:
+    """
+    Allocate a total landed cost across SKU lines, reconciling to the cent.
+
+    The rounding remainder (positive or negative) is assigned to the line with
+    the largest allocation basis so the sum of allocated cents equals
+    total_landed_cents exactly (no lost cents).
+
+    Parameters
+    ----------
+    total_landed_cents : int
+        Total landed cost to spread (integer cents).
+    lines : list[dict]
+        Each line: {sku, value_cents, quantity, weight_kg}. Only the basis
+        required by `method` must be present and positive.
+    method : str
+        'BY_VALUE'    — spread by value_cents
+        'BY_QUANTITY' — spread by quantity
+        'BY_WEIGHT'   — spread by weight_kg
+
+    Returns
+    -------
+    list[dict], one per input line, each with added keys:
+        allocated_cents          — portion of total (integer cents)
+        unit_landed_cost_cents   — round(allocated / quantity)
+
+    Ref: IAS 2 §11 — allocation of import costs to inventory items.
+    """
+    if not lines:
+        return []
+
+    basis_key = {
+        "BY_VALUE": "value_cents",
+        "BY_QUANTITY": "quantity",
+        "BY_WEIGHT": "weight_kg",
+    }.get(method)
+    if basis_key is None:
+        raise ValueError(f"Unknown allocation method: {method!r}")
+
+    bases = [float(line.get(basis_key, 0) or 0) for line in lines]
+    basis_total = sum(bases)
+
+    if basis_total <= 0:
+        # Even split fallback when no basis is available.
+        per = total_landed_cents // len(lines)
+        allocated = [per for _ in lines]
+    else:
+        allocated = [round(total_landed_cents * b / basis_total) for b in bases]
+
+    remainder = total_landed_cents - sum(allocated)
+    if remainder != 0:
+        largest_idx = max(range(len(bases)), key=lambda i: bases[i])
+        allocated[largest_idx] += remainder
+
+    result = []
+    for line, alloc in zip(lines, allocated):
+        qty = float(line.get("quantity", 0) or 0)
+        result.append({
+            **line,
+            "allocated_cents": alloc,
+            "unit_landed_cost_cents": round(alloc / qty) if qty > 0 else 0,
+        })
+    return result
+
+
+def npv(cashflows_cents: list[int], discount_rate: float) -> int:
+    """
+    Net Present Value of a cashflow stream (capital project evaluation).
+
+    NPV = Σ_t CF_t / (1 + r)^t   for t = 0, 1, 2, ...
+
+    cashflows_cents[0] is the period-0 flow (typically a negative investment).
+    Result is rounded to integer cents.
+
+    Parameters
+    ----------
+    cashflows_cents : list[int]  Periodic cashflows in integer cents.
+    discount_rate   : float      Per-period discount rate (e.g. 0.10 = 10%).
+
+    Ref: Brealey, Myers & Allen "Principles of Corporate Finance" Ch.2.
+    """
+    if not cashflows_cents:
+        raise ValueError("cashflows_cents must not be empty.")
+    if discount_rate <= -1.0:
+        raise ValueError("discount_rate must be > -1.")
+
+    flows = np.array(cashflows_cents, dtype=float)
+    periods = np.arange(len(flows))
+    discounted = flows / np.power(1.0 + discount_rate, periods)
+    return int(round(float(discounted.sum())))
+
+
+def irr(cashflows_cents: list[int]) -> float:
+    """
+    Internal Rate of Return — the discount rate r where NPV(r) = 0.
+
+    Solved via scipy.optimize.brentq when SciPy is available (robust bracketed
+    root); otherwise falls back to the smallest real positive root of the
+    polynomial in x = 1/(1+r) found with numpy.roots.
+
+    Parameters
+    ----------
+    cashflows_cents : list[int]  Periodic cashflows in integer cents; the stream
+                                 must contain at least one sign change.
+
+    Returns
+    -------
+    float — per-period IRR (e.g. 0.1234 = 12.34%). NaN if no real root exists.
+
+    Ref: Brealey, Myers & Allen "Principles of Corporate Finance" Ch.5.
+    """
+    if not cashflows_cents:
+        raise ValueError("cashflows_cents must not be empty.")
+    flows = np.array(cashflows_cents, dtype=float)
+    if not (np.any(flows > 0) and np.any(flows < 0)):
+        raise ValueError("IRR requires at least one positive and one negative cashflow.")
+
+    def _npv_at(rate: float) -> float:
+        periods = np.arange(len(flows))
+        return float((flows / np.power(1.0 + rate, periods)).sum())
+
+    try:
+        from scipy.optimize import brentq  # type: ignore
+        try:
+            return float(brentq(_npv_at, -0.9999, 1e6, xtol=1e-9, maxiter=1000))
+        except (ValueError, RuntimeError):
+            return float("nan")
+    except ImportError:
+        # numpy fallback: NPV is a polynomial in x = 1/(1+r).
+        # cashflows_cents[t] are coefficients with highest power = t.
+        coeffs = flows[::-1]  # numpy.roots expects highest power first
+        roots = np.roots(coeffs)
+        real_roots = roots[np.abs(roots.imag) < 1e-9].real
+        rates = [1.0 / x - 1.0 for x in real_roots if x > 0]
+        rates = [r for r in rates if r > -1.0]
+        if not rates:
+            return float("nan")
+        # Return the rate nearest zero (most economically meaningful).
+        return float(min(rates, key=abs))

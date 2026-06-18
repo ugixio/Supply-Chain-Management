@@ -150,3 +150,101 @@ def carrying_cost(inventory_value: float, carrying_rate: float = 0.25) -> float:
     carrying_rate ≈ 0.20-0.30 (capital + storage + obsolescence + insurance).
     """
     return round(inventory_value * carrying_rate, 2)
+
+
+# ── Inventory Valuation (FIFO / WAC) ──────────────────────────────────────────
+
+def fifo_valuation(layers: list[dict], issue_qty: float) -> dict:
+    """
+    FIFO Cost of Goods Sold — consume oldest cost layers first.
+
+    Each layer: {layer_id, receipt_date, remaining_qty, unit_cost_cents}.
+    Layers are consumed in chronological order (receipt_date ascending, then
+    list order as a tie-breaker). COGS is accumulated in integer cents.
+
+    Parameters
+    ----------
+    layers    : list[dict]  Cost layers with remaining_qty and unit_cost_cents.
+    issue_qty : float       Quantity to issue (> 0, <= total remaining).
+
+    Returns
+    -------
+    dict with keys:
+        cogs_cents       — total cost of the issued quantity (integer cents)
+        remaining_layers — layers after consumption (fully consumed dropped)
+        layers_consumed  — [{layer_id, qty, unit_cost_cents}] draws made
+
+    Raises
+    ------
+    ValueError if issue_qty exceeds total remaining (no negative inventory).
+
+    Ref: IAS 2 §27 — first-in first-out cost formula.
+    """
+    if issue_qty <= 0:
+        raise ValueError("issue_qty must be positive.")
+
+    total_remaining = sum(float(l["remaining_qty"]) for l in layers)
+    if issue_qty > total_remaining:
+        raise ValueError(
+            f"Cannot issue {issue_qty}: only {total_remaining} on hand "
+            f"(negative inventory forbidden)."
+        )
+
+    ordered = sorted(
+        enumerate(layers),
+        key=lambda pair: (pair[1].get("receipt_date", ""), pair[0]),
+    )
+
+    consumed: dict[int, float] = {}
+    layers_consumed: list[dict] = []
+    cogs_cents = 0
+    remaining = issue_qty
+
+    for idx, layer in ordered:
+        if remaining <= 0:
+            break
+        avail = float(layer["remaining_qty"])
+        take = min(remaining, avail)
+        if take <= 0:
+            continue
+        unit_cost = int(layer["unit_cost_cents"])
+        cogs_cents += round(take * unit_cost)
+        consumed[idx] = take
+        layers_consumed.append({
+            "layer_id": layer.get("layer_id"),
+            "qty": take,
+            "unit_cost_cents": unit_cost,
+        })
+        remaining -= take
+
+    remaining_layers = []
+    for idx, layer in enumerate(layers):
+        new_remaining = float(layer["remaining_qty"]) - consumed.get(idx, 0.0)
+        if new_remaining > 0:
+            remaining_layers.append({**layer, "remaining_qty": new_remaining})
+
+    return {
+        "cogs_cents": int(cogs_cents),
+        "remaining_layers": remaining_layers,
+        "layers_consumed": layers_consumed,
+    }
+
+
+def weighted_average_cost(layers: list[dict]) -> int:
+    """
+    Weighted-Average Cost (WAC) unit cost in integer cents.
+
+    WAC = round(Σ(remaining_qty × unit_cost_cents) / Σ remaining_qty)
+
+    Each layer: {remaining_qty, unit_cost_cents}.
+    Returns 0 when total quantity is zero.
+
+    Ref: IAS 2 §27 — weighted average cost formula.
+    """
+    total_qty = sum(float(l["remaining_qty"]) for l in layers)
+    if total_qty <= 0:
+        return 0
+    total_value = sum(
+        float(l["remaining_qty"]) * int(l["unit_cost_cents"]) for l in layers
+    )
+    return int(round(total_value / total_qty))

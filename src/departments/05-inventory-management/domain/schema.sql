@@ -613,3 +613,91 @@ COMMENT ON VIEW inventory.v_lot_fefo_priority IS
     'expiry_alert=TRUE flags lots expiring within 30 days for proactive disposition. '
     'Used by warehouse module FEFO picking algorithm and python/06_warehouse/fefo.py. '
     'Mandatory for lot-tracked SKUs with shelf_life_days set (chilled, frozen, pharma).';
+
+-- ---------------------------------------------------------------------------
+-- cost_layers
+-- FIFO / LIFO / WAC cost layers per SKU per warehouse.
+-- Aligns with: InventoryValuation.ts (CostLayer).
+-- remaining_qty is decremented as layers are consumed on issue.
+-- For WAC the layers are collapsed into a single blended layer on each receipt.
+-- Ref: IAS 2 §23-27 — FIFO and weighted-average cost formulas.
+-- ---------------------------------------------------------------------------
+CREATE TABLE inventory.cost_layers (
+    id                    UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    layer_id              UUID NOT NULL UNIQUE,                 -- domain layerId
+    sku_id                VARCHAR(50) NOT NULL REFERENCES inventory.inventory_items(sku_id),
+    warehouse_id          VARCHAR(50) NOT NULL,
+    method                CHAR(4) NOT NULL CHECK (method IN ('FIFO','LIFO','WAC')),
+    receipt_date          DATE NOT NULL,
+    qty                   NUMERIC(18,4) NOT NULL CHECK (qty > 0),        -- original received qty
+    remaining_qty         NUMERIC(18,4) NOT NULL CHECK (remaining_qty >= 0),
+    unit_cost_cents       BIGINT NOT NULL CHECK (unit_cost_cents >= 0),  -- integer cents
+    source_movement_id    UUID NOT NULL,                        -- FK to stock_movements
+    is_deleted            BOOLEAN NOT NULL DEFAULT FALSE,
+    created_at            TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at            TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    CHECK (remaining_qty <= qty)
+);
+CREATE INDEX ON inventory.cost_layers (sku_id, warehouse_id, receipt_date)
+    WHERE is_deleted = FALSE AND remaining_qty > 0;
+CREATE INDEX ON inventory.cost_layers (source_movement_id);
+COMMENT ON TABLE inventory.cost_layers IS
+    'FIFO/LIFO/WAC cost layers per SKU/warehouse. remaining_qty decremented on '
+    'issue; layers with remaining_qty=0 are exhausted. Aligns with InventoryValuation.ts.';
+
+-- ---------------------------------------------------------------------------
+-- valuation_snapshots
+-- Point-in-time inventory valuation per SKU/warehouse for period-end reporting.
+-- Performance aid only — the SOURCE OF TRUTH is cost_layers (and stock_movements).
+-- ---------------------------------------------------------------------------
+CREATE TABLE inventory.valuation_snapshots (
+    id                      UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    sku_id                  VARCHAR(50) NOT NULL REFERENCES inventory.inventory_items(sku_id),
+    warehouse_id            VARCHAR(50) NOT NULL,
+    method                  CHAR(4) NOT NULL CHECK (method IN ('FIFO','LIFO','WAC')),
+    snapshot_date           DATE NOT NULL,
+    total_qty               NUMERIC(18,4) NOT NULL CHECK (total_qty >= 0),
+    total_value_cents       BIGINT NOT NULL CHECK (total_value_cents >= 0),
+    -- GENERATED: weighted-average unit cost = round(total_value / total_qty)
+    average_unit_cost_cents BIGINT GENERATED ALWAYS AS (
+        CASE WHEN total_qty > 0
+             THEN ROUND(total_value_cents::NUMERIC / total_qty)
+             ELSE 0 END
+    ) STORED,
+    layer_count             INTEGER NOT NULL DEFAULT 0,
+    is_deleted              BOOLEAN NOT NULL DEFAULT FALSE,
+    created_at              TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    UNIQUE (sku_id, warehouse_id, snapshot_date, method)
+);
+CREATE INDEX ON inventory.valuation_snapshots (sku_id, warehouse_id, snapshot_date DESC);
+COMMENT ON TABLE inventory.valuation_snapshots IS
+    'Point-in-time inventory valuation per SKU/warehouse. average_unit_cost_cents '
+    'is GENERATED. Performance aid — cost_layers remains the source of truth. '
+    'Mirrors valuationSnapshot() in InventoryValuation.ts.';
+
+-- ---------------------------------------------------------------------------
+-- VIEW: v_inventory_valuation
+-- Live valuation aggregated from open cost layers per SKU/warehouse/method.
+-- ---------------------------------------------------------------------------
+CREATE OR REPLACE VIEW inventory.v_inventory_valuation AS
+SELECT
+    cl.sku_id,
+    cl.warehouse_id,
+    cl.method,
+    SUM(cl.remaining_qty)                               AS total_qty,
+    SUM(cl.remaining_qty * cl.unit_cost_cents)          AS total_value_cents,
+    ROUND(
+        SUM(cl.remaining_qty * cl.unit_cost_cents)::NUMERIC
+        / NULLIF(SUM(cl.remaining_qty), 0)
+    )                                                   AS average_unit_cost_cents,
+    COUNT(*) FILTER (WHERE cl.remaining_qty > 0)        AS open_layer_count
+FROM inventory.cost_layers cl
+WHERE cl.is_deleted = FALSE
+  AND cl.remaining_qty > 0
+GROUP BY cl.sku_id, cl.warehouse_id, cl.method;
+
+COMMENT ON VIEW inventory.v_inventory_valuation IS
+    'Live inventory valuation aggregated from open cost layers. '
+    'total_value_cents = Σ(remaining_qty × unit_cost_cents); '
+    'average_unit_cost_cents = round(total_value / total_qty). '
+    'Mirrors recompute() in InventoryValuation.ts. Ref: IAS 2 §23-27.';

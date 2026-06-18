@@ -377,3 +377,88 @@ SELECT
 FROM finance.period_close pc
 WHERE pc.is_deleted = FALSE
 ORDER BY pc.period_month DESC;
+
+-- =============================================================================
+-- LANDED COST
+-- Aligns with: LandedCost.ts
+-- Rolls all import cost elements into a true per-unit landed cost (IAS 2 §10-11).
+-- Recoverable VAT/GST is flagged is_recoverable=TRUE and excluded from the total.
+-- =============================================================================
+
+CREATE TABLE finance.landed_costs (
+    id                      UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    sku_id                  VARCHAR(50) NOT NULL,
+    po_id                   UUID REFERENCES procurement.purchase_orders(id),
+    shipment_id             UUID,
+    quantity                NUMERIC(18,4) NOT NULL CHECK (quantity > 0),
+    currency                CHAR(3) NOT NULL DEFAULT 'USD',
+    allocation_method       VARCHAR(20) NOT NULL DEFAULT 'BY_VALUE' CHECK (allocation_method IN (
+        'BY_VALUE','BY_QUANTITY','BY_WEIGHT','BY_VOLUME'
+    )),
+    -- Computed totals (maintained from components by the application / compute())
+    total_landed_cost_cents BIGINT NOT NULL DEFAULT 0 CHECK (total_landed_cost_cents >= 0),
+    -- GENERATED: per-unit landed cost = round(total / quantity)
+    unit_landed_cost_cents  BIGINT GENERATED ALWAYS AS (
+        ROUND(total_landed_cost_cents::NUMERIC / NULLIF(quantity, 0))
+    ) STORED,
+    is_deleted              BOOLEAN NOT NULL DEFAULT FALSE,
+    created_at              TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at              TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX ON finance.landed_costs (sku_id) WHERE is_deleted = FALSE;
+CREATE INDEX ON finance.landed_costs (po_id);
+CREATE INDEX ON finance.landed_costs (shipment_id);
+COMMENT ON TABLE finance.landed_costs IS
+    'Per-SKU landed cost roll-up (goods + freight + insurance + duty + broker + '
+    'handling + non-recoverable tax). unit_landed_cost_cents is GENERATED. '
+    'Aligns with LandedCost.ts. Ref: IAS 2 §10-11 cost of purchase.';
+
+-- Landed cost components (one row per cost element)
+CREATE TABLE finance.landed_cost_components (
+    id                  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    landed_cost_id      UUID NOT NULL REFERENCES finance.landed_costs(id) ON DELETE CASCADE,
+    component_type      VARCHAR(20) NOT NULL CHECK (component_type IN (
+        'GOODS','FREIGHT','INSURANCE','DUTY','BROKER_FEE','HANDLING','TAX_NONRECOVERABLE','OTHER'
+    )),
+    amount_cents        BIGINT NOT NULL CHECK (amount_cents >= 0),
+    -- Recoverable components (e.g. reclaimable VAT) are EXCLUDED from landed cost
+    is_recoverable      BOOLEAN NOT NULL DEFAULT FALSE,
+    description         VARCHAR(255),
+    created_at          TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX ON finance.landed_cost_components (landed_cost_id);
+COMMENT ON TABLE finance.landed_cost_components IS
+    'Individual import cost elements for a landed cost. Components with '
+    'is_recoverable=TRUE (reclaimable VAT/GST) are excluded from the landed total.';
+
+-- View: landed cost per SKU with duty/tax and freight-per-unit breakdown
+CREATE OR REPLACE VIEW finance.v_landed_cost_by_sku AS
+SELECT
+    lc.id,
+    lc.sku_id,
+    lc.po_id,
+    lc.shipment_id,
+    lc.quantity,
+    lc.currency,
+    lc.allocation_method,
+    lc.total_landed_cost_cents,
+    lc.unit_landed_cost_cents,
+    COALESCE(SUM(comp.amount_cents) FILTER (
+        WHERE comp.component_type IN ('DUTY','TAX_NONRECOVERABLE')
+        AND comp.is_recoverable = FALSE
+    ), 0)                                       AS duty_and_tax_cents,
+    COALESCE(SUM(comp.amount_cents) FILTER (
+        WHERE comp.component_type = 'FREIGHT' AND comp.is_recoverable = FALSE
+    ), 0)                                       AS freight_cents,
+    ROUND(
+        COALESCE(SUM(comp.amount_cents) FILTER (
+            WHERE comp.component_type = 'FREIGHT' AND comp.is_recoverable = FALSE
+        ), 0)::NUMERIC / NULLIF(lc.quantity, 0)
+    )                                           AS freight_per_unit_cents
+FROM finance.landed_costs lc
+LEFT JOIN finance.landed_cost_components comp ON comp.landed_cost_id = lc.id
+WHERE lc.is_deleted = FALSE
+GROUP BY lc.id;
+COMMENT ON VIEW finance.v_landed_cost_by_sku IS
+    'Landed cost per SKU with duty+tax and freight-per-unit breakdown. '
+    'Mirrors dutyAndTaxCents() and freightPerUnitCents() in LandedCost.ts.';

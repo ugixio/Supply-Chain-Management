@@ -132,3 +132,248 @@ SELECT
     ROUND(CAST(avg_inventory_cents AS NUMERIC) / 100, 2) AS avg_inventory_usd
 FROM finance.working_capital_snapshots
 ORDER BY snapshot_date DESC;
+
+-- =============================================================================
+-- BUDGET VARIANCE, PERIOD CLOSE, COST-TO-SERVE, ACCRUALS
+-- Ref: Bragg "Controller's Handbook" (Wiley, 2022)
+--      IAS 21 (FX), IAS 37 (Provisions / Accruals), IFRS 15 (Revenue)
+--      Christopher (2022) Ch.4 — Customer Profitability / Cost-to-Serve
+-- =============================================================================
+
+-- Budget entries — planned spend per month per category
+CREATE TABLE finance.budget_records (
+    id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    period_month    DATE NOT NULL,       -- first day of the fiscal month
+    category        VARCHAR(20) NOT NULL CHECK (category IN (
+        'PROCUREMENT','WAREHOUSING','TRANSPORTATION','CUSTOMS',
+        'QUALITY','RETURNS','OVERHEAD','TOTAL'
+    )),
+    budget_cents    BIGINT NOT NULL CHECK (budget_cents >= 0),
+    note            TEXT,
+    created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    UNIQUE (period_month, category)
+);
+CREATE INDEX ON finance.budget_records (period_month DESC);
+
+-- Budget variance — actual vs budget with GENERATED columns
+CREATE TABLE finance.budget_variance (
+    id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    period_month    DATE NOT NULL,
+    category        VARCHAR(20) NOT NULL CHECK (category IN (
+        'PROCUREMENT','WAREHOUSING','TRANSPORTATION','CUSTOMS',
+        'QUALITY','RETURNS','OVERHEAD','TOTAL'
+    )),
+    budget_cents    BIGINT NOT NULL CHECK (budget_cents >= 0),
+    actual_cents    BIGINT NOT NULL CHECK (actual_cents >= 0),
+    -- variance = actual - budget; negative = favorable
+    variance_cents  BIGINT GENERATED ALWAYS AS (actual_cents - budget_cents) STORED,
+    -- variance_pct rounded to 4 decimal places
+    variance_pct    NUMERIC(10,4) GENERATED ALWAYS AS (
+        CASE WHEN budget_cents = 0 THEN NULL
+             ELSE ROUND(CAST(actual_cents - budget_cents AS NUMERIC) / budget_cents * 100, 4)
+        END
+    ) STORED,
+    status          VARCHAR(12) GENERATED ALWAYS AS (
+        CASE
+            WHEN budget_cents = 0 THEN 'ON_BUDGET'
+            WHEN ABS(CAST(actual_cents - budget_cents AS NUMERIC) / budget_cents * 100) < 2
+                 THEN 'ON_BUDGET'
+            WHEN actual_cents < budget_cents THEN 'FAVORABLE'
+            ELSE 'UNFAVORABLE'
+        END
+    ) STORED,
+    explanation     TEXT,
+    action_required BOOLEAN GENERATED ALWAYS AS (
+        budget_cents > 0 AND
+        ABS(CAST(actual_cents - budget_cents AS NUMERIC) / budget_cents * 100) > 10
+    ) STORED,
+    created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    UNIQUE (period_month, category)
+);
+COMMENT ON TABLE finance.budget_variance IS
+    'Budget vs actual per cost category. variance<0=favorable. |pct|>10 requires explanation.';
+CREATE INDEX ON finance.budget_variance (period_month DESC, status);
+
+-- Period-end close checklist and state
+CREATE TABLE finance.period_close (
+    id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    period_month    DATE NOT NULL UNIQUE,   -- first day of the fiscal month
+    fiscal_year     SMALLINT NOT NULL,
+    status          VARCHAR(20) NOT NULL DEFAULT 'OPEN' CHECK (status IN (
+        'OPEN','IN_PROGRESS','PENDING_APPROVAL','APPROVED','CLOSED'
+    )),
+    checklist       JSONB NOT NULL DEFAULT '[]',
+    -- Each element: {task: string, completed: boolean, completedBy?: string, completedAt?: timestamptz}
+    opened_at       TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    closed_at       TIMESTAMPTZ,
+    approved_by     VARCHAR(100),
+    approved_at     TIMESTAMPTZ,
+    is_deleted      BOOLEAN NOT NULL DEFAULT FALSE,
+    created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    CONSTRAINT period_close_approved_before_closed
+        CHECK (closed_at IS NULL OR approved_at IS NOT NULL),
+    CONSTRAINT period_close_closed_requires_approved
+        CHECK (status != 'CLOSED' OR approved_by IS NOT NULL)
+);
+COMMENT ON TABLE finance.period_close IS
+    'Period-end close checklist. All tasks must complete before approval; approval required before close.';
+CREATE INDEX ON finance.period_close (fiscal_year, period_month DESC);
+
+-- Cost-to-Serve — customer / SKU profitability
+CREATE TABLE finance.cost_to_serve (
+    id                      UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    customer_id             UUID,
+    sku_id                  UUID,
+    period_month            DATE NOT NULL,
+    order_processing_cents  BIGINT NOT NULL DEFAULT 0 CHECK (order_processing_cents >= 0),
+    picking_cents           BIGINT NOT NULL DEFAULT 0 CHECK (picking_cents >= 0),
+    packing_cents           BIGINT NOT NULL DEFAULT 0 CHECK (packing_cents >= 0),
+    transportation_cents    BIGINT NOT NULL DEFAULT 0 CHECK (transportation_cents >= 0),
+    returns_cents           BIGINT NOT NULL DEFAULT 0 CHECK (returns_cents >= 0),
+    customer_support_cents  BIGINT NOT NULL DEFAULT 0 CHECK (customer_support_cents >= 0),
+    credit_risk_cents       BIGINT NOT NULL DEFAULT 0 CHECK (credit_risk_cents >= 0),
+    total_cost_cents        BIGINT GENERATED ALWAYS AS (
+        order_processing_cents + picking_cents + packing_cents +
+        transportation_cents + returns_cents + customer_support_cents + credit_risk_cents
+    ) STORED,
+    revenue_cents           BIGINT NOT NULL CHECK (revenue_cents >= 0),
+    gross_margin_cents      BIGINT GENERATED ALWAYS AS (
+        revenue_cents - (
+            order_processing_cents + picking_cents + packing_cents +
+            transportation_cents + returns_cents + customer_support_cents + credit_risk_cents
+        )
+    ) STORED,
+    gross_margin_pct        NUMERIC(8,4) GENERATED ALWAYS AS (
+        CASE WHEN revenue_cents = 0 THEN NULL
+             ELSE ROUND(
+                 CAST(
+                     revenue_cents - (
+                         order_processing_cents + picking_cents + packing_cents +
+                         transportation_cents + returns_cents + customer_support_cents + credit_risk_cents
+                     ) AS NUMERIC
+                 ) / revenue_cents * 100, 4)
+        END
+    ) STORED,
+    created_at              TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    UNIQUE (customer_id, sku_id, period_month)
+);
+COMMENT ON TABLE finance.cost_to_serve IS
+    'Customer/SKU cost-to-serve. Ref: Christopher (2022) Ch.4.';
+CREATE INDEX ON finance.cost_to_serve (period_month DESC, gross_margin_pct);
+
+-- Accruals and deferrals (IAS 37)
+CREATE TABLE finance.accruals (
+    id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    period_month    DATE NOT NULL,          -- first day of the month the accrual belongs to
+    description     VARCHAR(500) NOT NULL,
+    amount_cents    BIGINT NOT NULL,        -- positive = expense accrual; negative = deferral credit
+    accrual_type    VARCHAR(10) NOT NULL CHECK (accrual_type IN ('ACCRUAL', 'DEFERRAL')),
+    gl_account      VARCHAR(20) NOT NULL,   -- General Ledger account code
+    reversed_at     TIMESTAMPTZ,            -- when the reversing entry was posted
+    is_reversed     BOOLEAN NOT NULL DEFAULT FALSE,
+    created_by      VARCHAR(100),
+    created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    CONSTRAINT accruals_reversed_consistency
+        CHECK (is_reversed = (reversed_at IS NOT NULL))
+);
+COMMENT ON TABLE finance.accruals IS
+    'Accruals (expenses incurred not yet invoiced) and deferrals (cash received / paid not yet earned/expensed). Ref: IAS 37.';
+CREATE INDEX ON finance.accruals (period_month DESC, is_reversed);
+
+-- =============================================================================
+-- VIEWS
+-- =============================================================================
+
+-- P&L summary by month: revenue, SC cost breakdown, margin
+CREATE OR REPLACE VIEW finance.v_pl_summary AS
+SELECT
+    sc.period_month,
+    SUM(CASE WHEN sc.cost_category = 'PROCUREMENT'    THEN sc.amount_cents ELSE 0 END) AS procurement_cents,
+    SUM(CASE WHEN sc.cost_category = 'WAREHOUSING'    THEN sc.amount_cents ELSE 0 END) AS warehousing_cents,
+    SUM(CASE WHEN sc.cost_category = 'TRANSPORTATION' THEN sc.amount_cents ELSE 0 END) AS transportation_cents,
+    SUM(CASE WHEN sc.cost_category = 'QUALITY'        THEN sc.amount_cents ELSE 0 END) AS quality_cents,
+    SUM(sc.amount_cents)                                                                  AS total_sc_cost_cents,
+    MAX(sc.revenue_cents)                                                                 AS revenue_cents,
+    MAX(sc.revenue_cents) - SUM(sc.amount_cents)                                         AS gross_margin_cents,
+    ROUND(
+        CAST(SUM(sc.amount_cents) AS NUMERIC) / NULLIF(MAX(sc.revenue_cents), 0) * 100, 2
+    )                                                                                     AS sc_cost_pct_revenue
+FROM finance.sc_cost_tracking sc
+GROUP BY sc.period_month
+ORDER BY sc.period_month DESC;
+COMMENT ON VIEW finance.v_pl_summary IS
+    'Monthly P&L summary: revenue, SC cost by category, gross margin, SC cost as % of revenue.';
+
+-- Budget variance dashboard — current month, by category
+CREATE OR REPLACE VIEW finance.v_budget_variance_dashboard AS
+SELECT
+    bv.period_month,
+    bv.category,
+    bv.budget_cents,
+    bv.actual_cents,
+    bv.variance_cents,
+    bv.variance_pct,
+    bv.status,
+    bv.action_required,
+    bv.explanation,
+    CASE WHEN bv.status = 'FAVORABLE'   THEN TRUE
+         WHEN bv.status = 'UNFAVORABLE' THEN FALSE
+         ELSE NULL END                        AS is_favorable,
+    bv.created_at
+FROM finance.budget_variance bv
+ORDER BY bv.period_month DESC, bv.status, ABS(bv.variance_pct) DESC NULLS LAST;
+COMMENT ON VIEW finance.v_budget_variance_dashboard IS
+    'Budget vs actual by category — current period. Flagged unfavorable and requires_explanation rows.';
+
+-- Customer profitability ranking (gross margin % descending)
+CREATE OR REPLACE VIEW finance.v_cost_to_serve_by_customer AS
+SELECT
+    cts.customer_id,
+    cts.period_month,
+    SUM(cts.revenue_cents)              AS total_revenue_cents,
+    SUM(cts.total_cost_cents)           AS total_cost_cents,
+    SUM(cts.gross_margin_cents)         AS total_gross_margin_cents,
+    ROUND(
+        CAST(SUM(cts.gross_margin_cents) AS NUMERIC)
+        / NULLIF(SUM(cts.revenue_cents), 0) * 100, 4
+    )                                   AS gross_margin_pct,
+    SUM(cts.revenue_cents) > SUM(cts.total_cost_cents) AS is_profitable,
+    COUNT(DISTINCT cts.sku_id)          AS sku_count
+FROM finance.cost_to_serve cts
+WHERE cts.customer_id IS NOT NULL
+GROUP BY cts.customer_id, cts.period_month
+ORDER BY gross_margin_pct DESC NULLS LAST;
+COMMENT ON VIEW finance.v_cost_to_serve_by_customer IS
+    'Customer profitability ranking by gross margin %. Ref: Christopher (2022) Ch.4.';
+
+-- Period close status: checklist completion and blocking tasks
+CREATE OR REPLACE VIEW finance.v_period_close_status AS
+SELECT
+    pc.id,
+    pc.period_month,
+    pc.fiscal_year,
+    pc.status,
+    pc.opened_at,
+    pc.closed_at,
+    pc.approved_by,
+    pc.approved_at,
+    jsonb_array_length(pc.checklist)                    AS total_tasks,
+    (
+        SELECT COUNT(*)
+        FROM jsonb_array_elements(pc.checklist) AS item
+        WHERE (item->>'completed')::boolean = TRUE
+    )                                                   AS completed_tasks,
+    ROUND(
+        CAST(
+            (SELECT COUNT(*) FROM jsonb_array_elements(pc.checklist) AS item
+             WHERE (item->>'completed')::boolean = TRUE) AS NUMERIC
+        ) / NULLIF(jsonb_array_length(pc.checklist), 0) * 100, 1
+    )                                                   AS completion_pct,
+    (
+        SELECT jsonb_agg(item->>'task')
+        FROM jsonb_array_elements(pc.checklist) AS item
+        WHERE (item->>'completed')::boolean = FALSE
+    )                                                   AS blocking_tasks
+FROM finance.period_close pc
+WHERE pc.is_deleted = FALSE
+ORDER BY pc.period_month DESC;

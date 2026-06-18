@@ -10,3 +10,4 @@
 export * from './MaterialRequirement';
 export * from './BillOfMaterials';
 export * from './MasterProductionSchedule';
+export * from './CapacityPlan';

@@ -52,6 +52,78 @@ Domain-Driven Design bounded contexts · Immutable domain objects
 
 ---
 
+## Tech Stack (mandatory — OSI open source only)
+
+### Languages
+- **TypeScript** — all domain logic, aggregates, business rules (`src/departments/`)
+- **Python ≥ 3.11** — all mathematical models, algorithms, and ML (`python/`)
+
+### Python Libraries (all OSI-licensed)
+
+| Category | Library | License | Use |
+|----------|---------|---------|-----|
+| Numerics | `numpy` | BSD-3 | Arrays, linear algebra |
+| Numerics | `scipy` | BSD-3 | Stats, optimization, signal |
+| Data | `pandas` | BSD-3 | Time series, DataFrames |
+| Stats | `statsmodels` | BSD-3 | ARIMA, regression, SPC |
+| ML | `scikit-learn` | BSD-3 | Classification, clustering, anomaly |
+| ML | `xgboost` | Apache-2.0 | Gradient boosting |
+| ML | `lightgbm` | MIT | Gradient boosting (fast) |
+| Deep Learning | `torch` (PyTorch) | BSD-3 | LSTM, Autoencoder, GNN |
+| Deep Learning | `tensorflow` | Apache-2.0 | LSTM, CNN, Keras API |
+| Forecasting | `prophet` | MIT | Time series with seasonality |
+| Forecasting | `statsforecast` | Apache-2.0 | SMA, ETS, ARIMA at scale |
+| RL | `stable-baselines3` | MIT | PPO, DQN, SAC agents |
+| RL | `ray[rllib]` | Apache-2.0 | Distributed RL |
+| Optimization | `pulp` | MIT | Linear programming |
+| Optimization | `scipy.optimize` | BSD-3 | Non-linear optimization |
+| Optimization | `ortools` | Apache-2.0 | VRP, scheduling (Google OR-Tools) |
+| Graph | `networkx` | BSD-3 | Graph analysis, HHI, cascade |
+| Graph | `torch-geometric` | MIT | Graph Neural Networks |
+| NLP | `transformers` | Apache-2.0 | BERT, DistilBERT (HuggingFace) |
+| NLP | `spacy` | MIT | NLP pipeline, NER |
+| Computer Vision | `ultralytics` | AGPL-3.0 | YOLOv8 |
+| Computer Vision | `opencv-python` | Apache-2.0 | Image processing |
+| Geo/Satellite | `rasterio` | BSD-3 | Raster satellite imagery |
+| Geo/Satellite | `geopandas` | BSD-3 | Geospatial data |
+| OCR | `pytesseract` | Apache-2.0 | OCR (wraps Tesseract OSI) |
+| Simulation | `simpy` | MIT | Discrete event simulation (Digital Twin) |
+
+### Prohibited (non-OSI or proprietary)
+- ❌ AWS Textract → use `pytesseract` + `pdfplumber`
+- ❌ Google Earth Engine (commercial) → use `rasterio` + Copernicus open API
+- ❌ AnyLogic (commercial) → use `simpy`
+- ❌ Neo4j (SSPL, non-OSI from v4+) → use `networkx` + `torch-geometric`
+- ❌ Elasticsearch v7.11+ (SSPL) → use `opensearch-py` (Apache-2.0)
+- ❌ SageMaker → use local PyTorch / TensorFlow
+
+### Node.js / TypeScript Libraries
+All existing dependencies in `package.json` are OSI-compliant (MIT/BSD/Apache).
+
+---
+
+## Project Structure
+
+```
+Supply-Chain-Management/
+├── src/
+│   ├── shared/          # Shared types, Event Store
+│   └── departments/     # 14 departments (TypeScript domain logic)
+│       ├── 01-procurement/
+│       │   ├── domain/       # PurchaseOrder.ts, Supplier.ts, Contract.ts, RFQ.ts
+│       │   └── README.md
+│       └── ... (02-14)
+├── python/              # Python mathematical models and ML
+│   ├── shared/          # Common utilities (dates, money, logging)
+│   ├── 01_procurement/
+│   ├── 02_supplier_management/
+│   └── ... (03-14)
+├── tests/               # TypeScript unit tests (Jest)
+└── requirements.txt     # Python OSI dependencies
+```
+
+---
+
 ## Code Standards
 - **Money**: integer cents only — `Money.amount` is always `number` (integer). No floats.
 - **Dates**: ISO 8601 (YYYY-MM-DD); timestamps in UTC (`ISOTimestamp`)
@@ -59,6 +131,8 @@ Domain-Driven Design bounded contexts · Immutable domain objects
 - **SKU codes**: immutable once created — use `status` flags (ACTIVE/DISCONTINUED/BLOCKED)
 - **Inventory transactions**: idempotent via `idempotencyKey` — safe to retry
 - **Deletes**: soft-delete only (`isDeleted: boolean`) — never hard-delete financial records
+- **Python**: type hints mandatory (`def foo(x: float) -> float:`), docstrings for public functions
+- **Python tests**: `pytest` (MIT) — mirror TypeScript test coverage
 
 ---
 

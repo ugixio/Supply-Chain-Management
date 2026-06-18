@@ -109,15 +109,16 @@ export type RiskItem = {
 
 /**
  * Map a 5×5 risk score (1-25) to a qualitative risk level.
- *   LOW       1-4
- *   MEDIUM    5-9
- *   HIGH     10-15
- *   CRITICAL 16-25
+ * Bands match the risk_items SQL generated column and risk_model.py exactly:
+ *   LOW       1-8
+ *   MEDIUM    9-14
+ *   HIGH     15-19
+ *   CRITICAL 20-25
  */
 function computeRiskLevel(score: number): RiskLevel {
-  if (score >= 16) return 'CRITICAL';
-  if (score >= 10) return 'HIGH';
-  if (score >= 5) return 'MEDIUM';
+  if (score >= 20) return 'CRITICAL';
+  if (score >= 15) return 'HIGH';
+  if (score >= 9) return 'MEDIUM';
   return 'LOW';
 }
 

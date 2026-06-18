@@ -399,3 +399,369 @@ def deforestation_risk_gate(
                     "provide certification or geo-location evidence to complete due diligence."
                 ),
             }
+
+
+# ---------------------------------------------------------------------------
+# EUDR Risk Classification
+# Ref: EU Regulation 2023/1115, Annex I & Art. 10 (enhanced due diligence)
+#      EU EUDR standard risk benchmark (implementing guidance 2024)
+# ---------------------------------------------------------------------------
+
+# EUDR cutoff date — land must not have been deforested after this date
+_EUDR_CUTOFF_DATE = "2020-12-31"
+
+# Inherently high-risk commodities (cattle, palm_oil, soya, wood drive most
+# tropical deforestation — Global Forest Watch / IPCC AR6 WG3)
+_HIGH_RISK_COMMODITIES: frozenset[str] = frozenset(
+    {"cattle", "palm_oil", "soya", "wood"}
+)
+
+# Illustrative set of tropical/high-risk countries based on EU EUDR
+# standard country benchmarking guidance (2024).  Replace with the
+# official EU published benchmark when available.
+_TROPICAL_HIGH_RISK_COUNTRIES: frozenset[str] = frozenset({
+    "BR",  # Brazil
+    "ID",  # Indonesia
+    "MY",  # Malaysia
+    "PG",  # Papua New Guinea
+    "CD",  # Dem. Republic of Congo
+    "NG",  # Nigeria
+    "CM",  # Cameroon
+    "BO",  # Bolivia
+    "PY",  # Paraguay
+    "AR",  # Argentina
+    "CO",  # Colombia
+    "PE",  # Peru
+    "GH",  # Ghana
+    "CI",  # Côte d'Ivoire
+    "LA",  # Laos
+    "MM",  # Myanmar
+})
+
+
+def eudr_risk_classification(
+    commodity: str,
+    country_code: str,
+    production_date: str,
+    satellite_verified: bool,
+    forest_cover_change_pct: float | None = None,
+) -> dict:
+    """
+    EUDR risk classification per commodity and country.
+
+    Decision logic:
+      1. production_date ≤ EUDR cutoff (2020-12-31) → automatically NON_COMPLIANT
+         (Art. 2(1): deforestation must not have occurred after 2020-12-31).
+      2. High-risk commodities (cattle, palm_oil, soya, wood) from tropical/high-risk
+         countries → HIGH risk by default.
+      3. Other regulated commodities from high-risk countries → MEDIUM risk.
+      4. Any regulated commodity from standard-risk country → LOW risk.
+      5. Non-regulated commodity → NEGLIGIBLE risk.
+      6. satellite_verified = True reduces HIGH → MEDIUM, MEDIUM → LOW.
+      7. forest_cover_change_pct ≥ 10 % overrides to HIGH risk (significant deforestation).
+
+    Regulated commodities (EUDR Annex I):
+      cattle, cocoa, coffee, palm_oil, soya, wood, rubber, maize
+
+    Args:
+        commodity:              Commodity name (case-insensitive).
+        country_code:           ISO 3166-1 alpha-2 country code.
+        production_date:        ISO 8601 date string (YYYY-MM-DD) of production start.
+        satellite_verified:     Whether satellite imagery confirms no deforestation.
+        forest_cover_change_pct: Optional % of forest cover lost (0–100). None = unknown.
+
+    Returns:
+        {
+            risk_level         : str  — 'NEGLIGIBLE' | 'LOW' | 'MEDIUM' | 'HIGH',
+            is_compliant       : bool — False if NON_COMPLIANT due to cutoff or HIGH risk
+                                        without satellite verification,
+            requires_satellite : bool — True for MEDIUM and HIGH risk,
+            action_required    : str  — recommended next step,
+        }
+
+    Ref: EU Regulation 2023/1115, Annex I; EU EUDR implementing guidance 2024
+    """
+    _REGULATED = frozenset(
+        {"cattle", "cocoa", "coffee", "palm_oil", "soya", "wood", "rubber", "maize"}
+    )
+
+    commodity_norm = commodity.lower().replace(" ", "_")
+    cc_upper = country_code.upper()
+
+    # Step 1: EUDR cutoff date check
+    if production_date <= _EUDR_CUTOFF_DATE:
+        return {
+            "risk_level": "HIGH",
+            "is_compliant": False,
+            "requires_satellite": True,
+            "action_required": (
+                f"Production date {production_date} is on or before the EUDR cutoff "
+                f"({_EUDR_CUTOFF_DATE}). Product cannot be placed on EU market "
+                "(EU Reg. 2023/1115 Art. 3)."
+            ),
+        }
+
+    # Step 2: Scope check — is this a regulated commodity?
+    if commodity_norm not in _REGULATED:
+        return {
+            "risk_level": "NEGLIGIBLE",
+            "is_compliant": True,
+            "requires_satellite": False,
+            "action_required": (
+                f"'{commodity}' is not a regulated commodity under EUDR 2023/1115 Annex I. "
+                "No due diligence required."
+            ),
+        }
+
+    # Step 3: Forest cover change override
+    if forest_cover_change_pct is not None and forest_cover_change_pct >= 10.0:
+        risk_level = "HIGH"
+    elif commodity_norm in _HIGH_RISK_COMMODITIES and cc_upper in _TROPICAL_HIGH_RISK_COUNTRIES:
+        risk_level = "HIGH"
+    elif cc_upper in _TROPICAL_HIGH_RISK_COUNTRIES:
+        risk_level = "MEDIUM"
+    else:
+        risk_level = "LOW"
+
+    # Step 4: Satellite verification reduces risk level
+    if satellite_verified:
+        if risk_level == "HIGH":
+            risk_level = "MEDIUM"
+        elif risk_level == "MEDIUM":
+            risk_level = "LOW"
+
+    requires_satellite = risk_level in ("HIGH", "MEDIUM")
+
+    # Step 5: Compliance determination
+    is_compliant = risk_level in ("LOW", "NEGLIGIBLE")
+
+    if risk_level == "HIGH":
+        action = (
+            f"{commodity} from {country_code} — HIGH deforestation risk. "
+            "Obtain satellite verification and certified due diligence statement (EUDR Art. 10)."
+        )
+    elif risk_level == "MEDIUM":
+        action = (
+            f"{commodity} from {country_code} — MEDIUM risk. "
+            "Satellite imagery recommended; obtain geolocation and supply chain traceability data."
+        )
+    elif risk_level == "LOW":
+        action = (
+            f"{commodity} from {country_code} — LOW risk. "
+            "Maintain standard due diligence documentation (EUDR Art. 8)."
+        )
+    else:
+        action = "No action required."
+
+    return {
+        "risk_level": risk_level,
+        "is_compliant": is_compliant,
+        "requires_satellite": requires_satellite,
+        "action_required": action,
+    }
+
+
+# ---------------------------------------------------------------------------
+# Tier 2 ESG Aggregation
+# Ref: GHG Protocol Scope 3 (2011); SBTi Corporate Manual v2.0; CDP Supply Chain
+#      EU CSDDD 2024/1760 Art. 7-9 (indirect business relationships)
+# ---------------------------------------------------------------------------
+
+
+def tier2_esg_aggregation(
+    tier1_esg_score: float,
+    tier2_assessments: list[dict],
+    cascade_coverage_pct: float,
+) -> dict:
+    """
+    Aggregate Tier 1 + Tier 2 ESG scores into an extended supply chain ESG score.
+
+    Extended score formula:
+      weighted_tier2_avg = Σ(weight_pct_i × esg_score_i) / Σ(weight_pct_i)
+      coverage_penalty   = 1 − (cascade_coverage_pct / 100)
+      extended_esg_score = tier1_score × 0.6
+                         + weighted_tier2_avg × 0.4 × (cascade_coverage_pct / 100)
+
+    Rationale:
+      - Tier 1 carries 60 % weight (directly contracted, auditable).
+      - Tier 2 carries 40 % but is penalised proportionally for uncovered spend:
+        at 0 % coverage the Tier 2 contribution is 0 (maximum penalty);
+        at 100 % coverage the full 40 % weight applies.
+      - This incentivises improving Tier 2 cascade coverage.
+
+    Args:
+        tier1_esg_score:     Tier 1 supplier ESG score (0–100).
+        tier2_assessments:   List of dicts: [{weight_pct: float, esg_score: float}, ...]
+                             weight_pct  — proportion of Tier 2 spend (should sum to ~100).
+                             esg_score   — Tier 2 supplier ESG score (0–100).
+        cascade_coverage_pct: Percentage of Tier 2 spend with ESG data (0–100).
+
+    Returns:
+        {
+            extended_esg_score : float — combined score (0–100),
+            tier2_weighted_avg : float — spend-weighted Tier 2 average score
+                                         (0.0 if no assessments),
+            coverage_penalty   : float — fraction of Tier 2 weight forfeited (0–1),
+            risk_gaps          : list[str] — human-readable gaps / warnings,
+        }
+
+    Raises:
+        ValueError: If scores or coverage_pct are out of range.
+
+    Ref: GHG Protocol Scope 3 (2011) Ch.5; SBTi Corporate Manual v2.0 Sec. 4.3
+    """
+    if not (0.0 <= tier1_esg_score <= 100.0):
+        raise ValueError(f"tier1_esg_score must be 0–100, got {tier1_esg_score}.")
+    if not (0.0 <= cascade_coverage_pct <= 100.0):
+        raise ValueError(f"cascade_coverage_pct must be 0–100, got {cascade_coverage_pct}.")
+
+    risk_gaps: list[str] = []
+
+    # Spend-weighted Tier 2 average
+    if tier2_assessments:
+        total_weight = sum(float(a["weight_pct"]) for a in tier2_assessments)
+        if total_weight <= 0:
+            raise ValueError("Sum of weight_pct must be > 0.")
+        for i, a in enumerate(tier2_assessments):
+            s = float(a["esg_score"])
+            if not (0.0 <= s <= 100.0):
+                raise ValueError(f"tier2_assessments[{i}].esg_score must be 0–100, got {s}.")
+        weighted_sum = sum(
+            float(a["weight_pct"]) * float(a["esg_score"]) for a in tier2_assessments
+        )
+        tier2_weighted_avg = weighted_sum / total_weight
+    else:
+        tier2_weighted_avg = 0.0
+
+    coverage_fraction = cascade_coverage_pct / 100.0
+    coverage_penalty = 1.0 - coverage_fraction  # 0 = no penalty; 1 = full penalty
+
+    # Extended score
+    extended_esg_score = float(np.clip(
+        tier1_esg_score * 0.6 + tier2_weighted_avg * 0.4 * coverage_fraction,
+        0.0,
+        100.0,
+    ))
+
+    # Risk gap analysis
+    if cascade_coverage_pct < 50.0:
+        risk_gaps.append(
+            f"Low Tier 2 cascade coverage ({cascade_coverage_pct:.1f} %). "
+            "EU CSDDD requires indirect business relationship due diligence (Art. 7)."
+        )
+    if tier2_weighted_avg < 50.0 and tier2_assessments:
+        risk_gaps.append(
+            f"Tier 2 weighted ESG average ({tier2_weighted_avg:.1f}) below threshold of 50. "
+            "Develop supplier improvement program (SBTi supply chain engagement)."
+        )
+    if not tier2_assessments:
+        risk_gaps.append(
+            "No Tier 2 ESG assessments received. Initiate cascade data request "
+            "via Tier 1 suppliers (CDP Supply Chain Module)."
+        )
+
+    return {
+        "extended_esg_score": round(extended_esg_score, 4),
+        "tier2_weighted_avg": round(tier2_weighted_avg, 4),
+        "coverage_penalty": round(coverage_penalty, 4),
+        "risk_gaps": risk_gaps,
+    }
+
+
+# ---------------------------------------------------------------------------
+# Scope 3 Category 1 Intensity
+# Ref: GHG Protocol Scope 3 Standard (2011) Ch. 5 — Category 1
+#      Tier hierarchy: 1=primary supplier data, 2=industry avg, 3=spend-based
+# ---------------------------------------------------------------------------
+
+# Data quality score mapping:
+#   1 = primary supplier data (Tier 1 GHG Protocol — most accurate)
+#   2 = industry average physical data
+#   3 = spend-based with sector-specific EF
+#   4 = spend-based with economy-wide EF
+#   5 = rough estimate (least accurate)
+
+
+def scope3_category1_intensity(
+    spend_cents: int,
+    emission_factor_kg_per_dollar: float,
+    physical_qty: float | None = None,
+    physical_ef_kg_per_unit: float | None = None,
+) -> dict:
+    """
+    Scope 3 Category 1 (Purchased Goods and Services) emissions.
+
+    Prefers the physical-based method (Tier 1 in the GHG Protocol hierarchy)
+    when both physical_qty and physical_ef_kg_per_unit are provided.
+    Falls back to the spend-based method when physical data is unavailable.
+
+    Physical-based method (preferred):
+      emissions_kgco2e = physical_qty × physical_ef_kg_per_unit
+      data_quality_score = 2  (industry average physical data)
+      — If using primary supplier-verified data, caller should override to 1.
+
+    Spend-based method (fallback):
+      spend_dollars = spend_cents / 100
+      emissions_kgco2e = spend_dollars × emission_factor_kg_per_dollar
+      data_quality_score = 3  (spend-based with sector EF)
+
+    Args:
+        spend_cents:                 Total spend in integer cents (≥ 0).
+        emission_factor_kg_per_dollar: Spend-based emission factor (kgCO2e per USD).
+                                       Used only in spend-based fallback.
+        physical_qty:                Optional physical quantity (kg, units, etc.).
+        physical_ef_kg_per_unit:     Optional physical emission factor (kgCO2e per unit).
+                                     Both physical params must be provided together.
+
+    Returns:
+        {
+            method            : str   — 'physical' | 'spend_based',
+            emissions_kgco2e  : float — total emissions in kg CO2e,
+            data_quality_score: int   — 1 (best) to 5 (worst), per GHG Protocol,
+        }
+
+    Raises:
+        ValueError: If spend_cents is not a non-negative integer,
+                    if emission factors are negative,
+                    or if only one of physical_qty / physical_ef_kg_per_unit is given.
+
+    Ref: GHG Protocol Scope 3 Standard (2011) Category 1, Table 5.1 (data quality)
+    """
+    if not isinstance(spend_cents, int) or spend_cents < 0:
+        raise ValueError(
+            f"spend_cents must be a non-negative integer, got {spend_cents!r}."
+        )
+    if emission_factor_kg_per_dollar < 0:
+        raise ValueError(
+            f"emission_factor_kg_per_dollar must be ≥ 0, got {emission_factor_kg_per_dollar}."
+        )
+
+    physical_provided = (physical_qty is not None, physical_ef_kg_per_unit is not None)
+    if physical_provided[0] != physical_provided[1]:
+        raise ValueError(
+            "Both physical_qty and physical_ef_kg_per_unit must be provided together, "
+            "or both must be None."
+        )
+
+    if physical_qty is not None and physical_ef_kg_per_unit is not None:
+        if physical_qty < 0:
+            raise ValueError(f"physical_qty must be ≥ 0, got {physical_qty}.")
+        if physical_ef_kg_per_unit < 0:
+            raise ValueError(
+                f"physical_ef_kg_per_unit must be ≥ 0, got {physical_ef_kg_per_unit}."
+            )
+        emissions_kgco2e = physical_qty * physical_ef_kg_per_unit
+        return {
+            "method": "physical",
+            "emissions_kgco2e": round(emissions_kgco2e, 6),
+            "data_quality_score": 2,  # industry average physical data; 1 = primary supplier
+        }
+
+    # Spend-based fallback
+    spend_dollars = spend_cents / 100.0
+    emissions_kgco2e = spend_dollars * emission_factor_kg_per_dollar
+    return {
+        "method": "spend_based",
+        "emissions_kgco2e": round(emissions_kgco2e, 6),
+        "data_quality_score": 3,  # spend-based with sector-specific EF
+    }

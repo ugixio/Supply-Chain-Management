@@ -1,179 +1,337 @@
-# 05 — Inventory Management (Event-Sourced)
+# 05 — Inventory Management
 
 ## Overview
 
-Custodio del inventario físico y financiero de la cadena de suministro. Implementa **Event Sourcing**: cada movimiento es un evento inmutable; el balance se proyecta reproduciendo el log. Cubre clasificación ABC-XYZ, contabilidad de doble entrada por movimiento, y el proceso SCOR Return (RETURN_FROM_CUSTOMER).
+The Inventory Management department owns the **item master** and the **stock movement event log** — the authoritative, append-only ledger of every unit entering or leaving the system. Built on **Event Sourcing + CQRS**, current stock balances are never stored as mutable fields; instead they are derived by replaying the ordered sequence of `StockMovement` events. This guarantees a complete, tamper-evident audit trail compliant with **GAAP / IFRS IAS 2** and **US UCC Article 2**.
+
+Every movement type — from purchase receipts to customer returns — generates a **double-entry GL journal entry** (debit / credit), ensuring the inventory sub-ledger reconciles with the general ledger at all times. Items are classified using the **9-box ABC-XYZ matrix**: ABC ranks SKUs by annual consumption value (Pareto 80/20); XYZ ranks by demand variability (Coefficient of Variation). The intersection drives replenishment strategy, safety stock policy, and warehouse slotting priority.
+
+SCOR mapping: **Return** (RETURN_FROM_CUSTOMER movement type).
 
 ---
 
-## KPIs del Departamento
+## KPIs
 
-| KPI | Benchmark | Fuente |
-|-----|-----------|--------|
-| Inventory Turnover | ≥ 8-12× (FMCG) | Chopra & Meindl Ch.11 |
-| DIO | < 45 días | APICS CPIM |
-| Fill Rate | ≥ 98% | Walmart standard |
-| Stockout Rate | < 2% | Christopher (2022) |
-| Shrinkage % | < 0.5% | NRF benchmark |
-| Dead Stock % | < 3% portfolio | Interno |
-
----
-
-## Estándares
-
-| Estándar | Alcance |
-|----------|---------|
-| GS1 Gen. Specs. v23.0 | GTIN, SSCC, UOM, lot tracking |
-| IFRS IAS 2 | Valoración de inventarios |
-| GAAP ASC 330 | Capitalización de costos |
-| ISO 28000:2022 | Seguridad en almacén |
-| US UCC Article 2 | Quantity in goods |
+| KPI | Definition | World-Class Target |
+|-----|------------|--------------------|
+| **Inventory Turnover Ratio (ITR)** | COGS / Average Inventory Value | ≥ 8–12× (FMCG) |
+| **DIO — Days Inventory Outstanding** | 365 / ITR | < 45 days (fast-moving) |
+| **Fill Rate** | Orders fulfilled without backorder / Total orders | ≥ 98% |
+| **Stockout Rate** | SKUs stocked-out at any point / Total active SKUs | < 2% |
+| **Shrinkage %** | (Book inventory − Physical count) / Book inventory | < 0.5% (retail) |
+| **Dead Stock %** | Zero-movement SKUs >90 days / Total active SKUs | < 3% |
 
 ---
 
-## Archivos del Departamento
+## Standards
 
-| Archivo | Responsabilidad |
-|---------|----------------|
-| `domain/InventoryItem.ts` | Item master: ABC/XYZ class, lot tracking, REACH SVHC, storageCondition, ABC_XYZ_MATRIX (9 estrategias) |
-| `domain/StockMovement.ts` | 15 MovementType, GL doble entrada, idempotencyKey, projectStockBalance() |
-
----
-
-## Reglas de Negocio Críticas
-
-1. **Nunca inventario negativo** sin `backorderAllowed = true`
-2. **Soft-delete únicamente** — eventos inmutables, jamás se eliminan
-3. **Idempotencia** via `idempotencyKey` — reintentos seguros
-4. **Lot tracking obligatorio** para `storageCondition !== AMBIENT` o `reachSVHC = true`
-5. **Doble entrada contable**: cada movimiento genera Dr/Cr en `GL_ACCOUNTS`
-6. **Balance por replay**: no existe campo `onHandQty` mutable — se calcula desde eventos
+| Standard | Scope | Implementation |
+|----------|-------|----------------|
+| **GS1 General Specifications v23.0** | GTIN (item identification), SSCC (pallet/lot), UOM codes | `shared/types.ts` — `UOM` constant; all domain objects |
+| **ISO 28000:2022** | Supply chain security management system | `Supplier.certifications`; lot-tracked items |
+| **US UCC Article 2** | Sale of goods — quantity must be specified | `POLineItem.quantity`; movement quantity validation |
+| **GAAP / IFRS IAS 2** | Inventory valuation (FIFO / weighted avg), disclosure | Double-entry GL mapping in `StockMovement.ts` |
 
 ---
 
-## MovementTypes (15)
+## Domain Files
 
-`PURCHASE_RECEIPT` · `SALE_SHIPMENT` · `TRANSFER_IN` · `TRANSFER_OUT` · `ADJUSTMENT_POSITIVE` · `ADJUSTMENT_NEGATIVE` · `RETURN_FROM_CUSTOMER` · `RETURN_TO_SUPPLIER` · `PRODUCTION_CONSUMPTION` · `PRODUCTION_OUTPUT` · `SCRAP` · `WRITE_OFF` · `CYCLE_COUNT_ADJUSTMENT` · `QUARANTINE_IN` · `QUARANTINE_RELEASE`
+### `domain/InventoryItem.ts` — Item Master
+
+The central master record for every stockkeeping unit. Key fields and logic:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `sku` | `string` | Immutable once created. Status flags used instead of deletion. |
+| `gtin` | `string` | GS1 GTIN-14 global trade item number |
+| `abcClass` | `'A' \| 'B' \| 'C'` | Pareto classification by annual consumption value |
+| `xyzClass` | `'X' \| 'Y' \| 'Z'` | Variability classification by CV of demand |
+| `lotTracked` | `boolean` | Required when `storageCondition !== AMBIENT` or `reachSVHC = true` |
+| `reachSVHC` | `boolean` | EU REACH 1907/2006 — Substance of Very High Concern flag |
+| `storageCondition` | `AMBIENT \| REFRIGERATED \| FROZEN \| CONTROLLED` | Drives lot tracking requirement |
+| `status` | `ACTIVE \| DISCONTINUED \| BLOCKED` | Soft-delete via status; never hard-delete |
+| `unitCost` | `Money` | Integer cents only — no floats |
+
+**9-box ABC-XYZ Strategy Matrix:**
+
+| | X (stable) | Y (moderate) | Z (volatile) |
+|--|-----------|-------------|-------------|
+| **A** | Lean replenishment, min safety stock | SES forecasting, moderate SS | Holt-Winters, high SS buffer |
+| **B** | Periodic review, standard SS | Balanced approach | Review cycle + contingency stock |
+| **C** | Infrequent reorder, min space | Low priority, batch order | Evaluate discontinuation |
+
+### `domain/StockMovement.ts` — Event Log
+
+Append-only movement record. Every record is immutable after creation.
+
+**MovementType union (15 types):**
+
+| Movement Type | Direction | GL Entry |
+|--------------|-----------|----------|
+| `PURCHASE_RECEIPT` | INBOUND | Dr Inventory / Cr Accounts Payable |
+| `RETURN_FROM_CUSTOMER` | INBOUND | Dr Inventory / Cr Customer Returns |
+| `PRODUCTION_OUTPUT` | INBOUND | Dr Inventory / Cr WIP |
+| `POSITIVE_ADJUSTMENT` | INBOUND | Dr Inventory / Cr Inventory Adjustment |
+| `TRANSFER_IN` | INBOUND | Dr Inventory (destination) / Cr Inventory (source) |
+| `SALE_SHIPMENT` | OUTBOUND | Dr COGS / Cr Inventory |
+| `RETURN_TO_SUPPLIER` | OUTBOUND | Dr Accounts Payable / Cr Inventory |
+| `PRODUCTION_CONSUMPTION` | OUTBOUND | Dr WIP / Cr Inventory |
+| `NEGATIVE_ADJUSTMENT` | OUTBOUND | Dr Inventory Adjustment / Cr Inventory |
+| `WRITE_OFF` | OUTBOUND | Dr Inventory Adjustment / Cr Inventory |
+| `TRANSFER_OUT` | OUTBOUND | Dr Inventory (destination) / Cr Inventory (source) |
+| `SCRAPPED` | OUTBOUND | Dr Scrap Expense / Cr Inventory |
+| `SAMPLE_ISSUE` | OUTBOUND | Dr Sample Expense / Cr Inventory |
+| `CONSIGNMENT_OUT` | OUTBOUND | Dr Consignment Asset / Cr Inventory |
+| `CYCLE_COUNT_ADJUSTMENT` | INBOUND/OUTBOUND | Dr/Cr Inventory Adjustment |
+
+Key fields: `idempotencyKey` (UUID) prevents duplicate processing on retry. `projectStockBalance()` replays the full event log for a given SKU+location and sums INBOUND movements minus OUTBOUND. Negative balance is blocked unless `backorderAllowed = true` on the item.
+
+---
+
+## Business Rules
+
+1. **Never allow negative inventory** without `backorderAllowed = true` on the `InventoryItem`.
+2. **All stock movements** generate a double-entry GL journal entry (debit/credit) — no movement without a journal entry.
+3. **Lot tracking is mandatory** for items where `storageCondition !== AMBIENT` or `reachSVHC = true`.
+4. **Idempotency key** (`idempotencyKey: UUID`) must be provided by the caller; duplicate keys are rejected — safe to retry on network failure.
+5. **Soft-delete only** — `StockMovement` records are never deleted; `InventoryItem` uses `status: DISCONTINUED | BLOCKED` flags.
+6. **SKU codes are immutable** once created — name/description changes allowed, SKU code is not.
+7. **RETURN_FROM_CUSTOMER** movements must reference the originating `SalesOrderId` for SCOR Return process traceability.
 
 ---
 
 ## Modelos Matemáticos Aplicados
 
-### 1. Proyección de Stock (Event Sourcing)
+### 1. Proyección de Stock por Event Sourcing
+
+Current balance is derived entirely from the event log — there is no mutable balance field:
 
 ```
-Balance_t = Σ qty_i [type ∈ INBOUND] − Σ qty_j [type ∈ OUTBOUND]
+Balance(SKU, Location, t) = Σ qty_i  for all movements i where:
+    - movementType ∈ INBOUND_TYPES  → +qty
+    - movementType ∈ OUTBOUND_TYPES → -qty
+    - timestamp_i ≤ t
 ```
 
-Replay completo del log garantiza auditoría total. Ref: Vernon (2013) *Implementing DDD*.
+**INBOUND_TYPES** = { PURCHASE_RECEIPT, RETURN_FROM_CUSTOMER, PRODUCTION_OUTPUT, POSITIVE_ADJUSTMENT, TRANSFER_IN, CYCLE_COUNT_ADJUSTMENT(+) }
 
-### 2. Clasificación ABC por Valor (Pareto)
+Replaying the entire event log to any point in time guarantees a complete audit trail. Time-travel queries ("what was the stock on date X?") are native to the model.
 
-```
-ACV_i = Demand_i × Unit_cost_i
+> Reference: Fowler, M. — *Event Sourcing* pattern (martinfowler.com, 2005); Vernon, V. — *Implementing Domain-Driven Design* (Addison-Wesley, 2013).
 
-A = top 80% valor (~20% SKUs)
-B = siguiente 15% valor (~30% SKUs)
-C = último 5% valor (~50% SKUs)
-```
+---
 
-Ref: Silver, Pyke & Peterson (1998).
+### 2. ABC por Valor (Pareto 80/20)
 
-### 3. Clasificación XYZ por Coeficiente de Variación
+Rank all active SKUs by **Annual Consumption Value**:
 
 ```
-CV_i = σ_demand_i / μ_demand_i
+ACV_i = Annual_Demand_i × Unit_Cost_i
 
-X: CV < 0.10  → estable       → EOQ fijo
-Y: 0.10–0.25  → moderado      → revisión periódica
-Z: CV ≥ 0.25  → alta variab.  → MTO / reposición dinámica
+Sorted descending: ACV_1 ≥ ACV_2 ≥ ... ≥ ACV_n
+
+Cumulative_Value_% up to rank k = Σ(ACV_1..k) / Σ(ACV_all) × 100
+
+A-class:  Cumulative_Value_% ≤ 80%   (~20% of SKUs)
+B-class:  80% < Cumulative_Value_% ≤ 95%  (~30% of SKUs)
+C-class:  Cumulative_Value_% > 95%   (~50% of SKUs)
 ```
 
-Ref: Chopra & Meindl (2016) Ch.11.
+> Reference: Silver, E.A., Pyke, D.F. & Peterson, R. — *Inventory Management and Production Planning and Scheduling*, 3rd Ed. (Wiley, 1998), Ch. 3.
 
-### 4. Inventory Turnover Ratio
+---
+
+### 3. XYZ por Coeficiente de Variación
+
+Classify SKUs by demand predictability over a rolling 12-month window:
+
+```
+μ_demand = mean(monthly_demand_1..12)
+σ_demand = std_dev(monthly_demand_1..12)
+
+CV = σ_demand / μ_demand
+
+X-class:  CV < 0.10   → very stable, highly predictable
+Y-class:  0.10 ≤ CV < 0.25  → moderate variability
+Z-class:  CV ≥ 0.25   → highly variable, difficult to forecast
+```
+
+> Reference: Chopra, S. & Meindl, P. — *Supply Chain Management*, 6th Ed. (Pearson, 2016), Ch. 11.
+
+---
+
+### 4. Inventory Turnover Ratio (ITR)
 
 ```
 ITR = COGS / Average_Inventory_Value
-Average_Inventory = (Opening + Closing) / 2
+
+Average_Inventory_Value = (Opening_Balance + Closing_Balance) / 2
 ```
 
-Benchmark: FMCG 8-12×, Automotive 15-20×.
+| Sector | World-Class ITR |
+|--------|----------------|
+| FMCG / Grocery | 8–12× |
+| Automotive | 12–20× |
+| Electronics | 6–10× |
+| Industrial MRO | 3–6× |
+
+High ITR indicates efficient capital deployment; excessively high ITR (>20×) signals stockout risk.
+
+> Reference: Ballou, R.H. — *Business Logistics / Supply Chain Management*, 5th Ed. (Pearson, 2004), Ch. 9.
+
+---
 
 ### 5. DIO — Days Inventory Outstanding
 
 ```
-DIO = 365 / ITR  =  (Avg_Inventory / COGS) × 365
+DIO = 365 / ITR
+
+or equivalently:
+
+DIO = (Average_Inventory_Value / COGS) × 365
 ```
 
-Componente C2C Cycle (Dept 11). Target: < 45 días.
+DIO measures how many days of COGS are tied up in inventory. Lower is better for working capital. Target: < 45 days for fast-moving consumer goods.
 
-### 6. Contabilidad de Doble Entrada (IAS 2)
+---
 
-| Movimiento | Débito | Crédito |
-|-----------|--------|---------|
-| PURCHASE_RECEIPT | Inventory (1300) | Accounts Payable (2000) |
-| SALE_SHIPMENT | COGS (5000) | Inventory (1300) |
-| RETURN_FROM_CUSTOMER | Inventory (1300) | Sales Returns (4100) |
-| SCRAP / WRITE_OFF | Inv. Adjustment (5100) | Inventory (1300) |
+### 6. Contabilidad de Doble Entrada para Movimientos de Inventario
 
-### 7. Inventory Carrying Cost
+Every `StockMovement` record generates an immutable GL journal entry per **GAAP / IFRS IAS 2**:
 
 ```
-ICC = Inventory_Value × Carrying_Rate
-Carrying_Rate ≈ 20–30%/año (capital + storage + obsolescence + insurance)
+PURCHASE_RECEIPT:
+    Dr  Inventory Asset (1400)         qty × unit_cost
+    Cr  Accounts Payable (2100)                      qty × unit_cost
+
+SALE_SHIPMENT:
+    Dr  Cost of Goods Sold (5000)      qty × unit_cost
+    Cr  Inventory Asset (1400)                       qty × unit_cost
+
+WRITE_OFF / SCRAPPED:
+    Dr  Inventory Adjustment Expense (5200)  qty × unit_cost
+    Cr  Inventory Asset (1400)                           qty × unit_cost
+
+RETURN_FROM_CUSTOMER:
+    Dr  Inventory Asset (1400)         qty × unit_cost
+    Cr  Customer Returns Reserve (4800)              qty × unit_cost
 ```
+
+All amounts in integer cents (`Money.amount: number`). No floating-point arithmetic.
+
+> Reference: International Accounting Standards Board — *IAS 2 Inventories* (IFRS Foundation, 2003); FASB ASC 330 Inventory.
 
 ---
 
 ## Modelos de Machine Learning Recomendados
 
-### 1. CNN + LSTM — Reclasificación ABC-XYZ Dinámica
+### 1. CNN + LSTM para Clasificación ABC-XYZ Dinámica
 
-**Tipo**: Clasificación supervisada híbrida  
-**Funcionamiento**: CNN extrae patrones locales en 52 semanas de demanda; LSTM captura dependencias temporales. Predice clase ABC-XYZ del próximo trimestre y activa reclasificación automática sin intervención humana.  
-**Output**: `{sku_id, predicted_class: "AX"|"BZ"|..., confidence}`  
-**Librería**: TensorFlow/Keras — `tf.keras.layers.Conv1D + LSTM`  
-**Ref**: Goodfellow et al. (2016) *Deep Learning*, MIT Press.
+**Problem:** Static ABC-XYZ classification done quarterly misses mid-quarter demand shifts (promotions, seasonality, new product launches).
 
-### 2. Isolation Forest — Detección de Shrinkage
+**Architecture:** Hybrid CNN-LSTM model.
+- **Input:** 52-week rolling demand time series per SKU (1D signal, shape `[52, 1]`)
+- **CNN layers:** Extract local temporal patterns (e.g., weekly seasonality peaks)
+- **LSTM layers:** Capture long-range dependencies and trend
+- **Output:** Softmax over 9 ABC-XYZ classes (A-X, A-Y, A-Z, B-X, ..., C-Z)
 
-**Tipo**: Anomalía no supervisada  
-**Funcionamiento**: Aprende patrones normales de movimiento por ubicación. Aisla puntos anómalos (ajustes negativos excesivos sin justificación) indicativos de robo o error de conteo.  
-**Output**: `anomaly_score` por ubicación y turno. Flag automático para auditoría.  
-**Librería**: `sklearn.ensemble.IsolationForest`  
-**Ref**: Liu, Ting & Zhou (2008) ICDM.
+**Training:** Supervised — historical ABC-XYZ labels computed from ground truth.
+**Benefit:** Enables dynamic weekly reclassification; proactive replenishment policy adjustment.
 
-### 3. Autoencoder — Dead Stock
+```python
+# Pseudocode
+model = Sequential([
+    Conv1D(64, kernel_size=4, activation='relu'),
+    MaxPooling1D(2),
+    LSTM(128, return_sequences=False),
+    Dense(64, activation='relu'),
+    Dense(9, activation='softmax')  # 9 ABC-XYZ classes
+])
+```
 
-**Tipo**: Representación no supervisada  
-**Funcionamiento**: Entrenado sobre SKUs activos. Alta pérdida de reconstrucción en un SKU = patrón de movimiento anormal (muy bajo) → candidato a obsolescencia.  
-**Output**: `reconstruction_error` ranking por SKU.  
-**Librería**: PyTorch, Keras  
-**Ref**: Hinton & Salakhutdinov (2006) Science.
-
-### 4. LightGBM — Predicción de Stockout
-
-**Tipo**: Clasificación supervisada  
-**Features**: stock actual, forecast 14 días, lead time, CV histórico, clase ABC-XYZ, días sin movimiento.  
-**Output**: `P(stockout_7d)`, `P(stockout_14d)`, `P(stockout_30d)` — activa reorden automático.  
-**Librería**: LightGBM, XGBoost  
-**Ref**: Chen & Guestrin (2016) KDD.
-
-### 5. Reinforcement Learning — Política de Reabastecimiento
-
-**Tipo**: RL (MDP)  
-**Funcionamiento**: Estado `(I_t, D̂_t, LT_t, costs)`. Acción `q_t ∈ [0, Q_max]`. Recompensa `-(h·I_t + p·max(0, D_t−I_t))`. Aprende política (s,S) dinámica que supera reglas estáticas en demanda no estacionaria.  
-**Output**: política adaptativa por SKU.  
-**Librería**: Ray RLlib, Stable-Baselines3  
-**Ref**: Oroojlooy et al. (2022) Transportation Research Part E.
+**Libraries:** TensorFlow / Keras, scikit-learn (label encoding).
 
 ---
 
-## Referencias
+### 2. Isolation Forest para Detección de Shrinkage Anómalo
 
-- Silver, Pyke & Peterson (1998) *Inventory Management and Production Planning*, 3rd Ed.
-- Chopra & Meindl (2016) *Supply Chain Management*, 6th Ed. Ch.11
-- IAS 2 — Inventories (IFRS Foundation)
-- GS1 General Specifications v23.0
-- Liu, Ting & Zhou (2008) *Isolation Forest*, ICDM
+**Problem:** Shrinkage (theft, damage, counting errors) is detected only at periodic physical counts — often months late.
+
+**Architecture:** Unsupervised anomaly detection on stock movement sequences.
+- **Features per location/period:** movement frequency, average quantity, variance ratio, time-between-movements, adjustment ratio
+- **Isolation Forest:** Anomaly score based on path length in random tree ensembles
+- **Output:** Anomaly score per location × week; alert if score > threshold
+
+**Benefit:** Real-time shrinkage detection — flag suspicious locations for cycle count before loss accumulates.
+
+**Libraries:** `scikit-learn.ensemble.IsolationForest`
+
+---
+
+### 3. Autoencoder para Detección de Stock Obsoleto
+
+**Problem:** Dead stock (zero movement >90 days) consumes warehouse space and ties up capital; often not caught until year-end.
+
+**Architecture:** Undercomplete autoencoder trained on **normal** (active) item movement patterns.
+- **Input:** Encoded movement vector per SKU over 12 weeks (frequency, recency, monetary value)
+- **Encoder:** Compresses to latent representation
+- **Decoder:** Reconstructs expected movement pattern
+- **Anomaly signal:** High reconstruction error (MSE) → item moving abnormally slowly → dead stock candidate
+
+**Output:** Ranked list of SKUs by obsolescence risk score.
+
+**Libraries:** PyTorch (`nn.Module`); can also use TensorFlow Keras `Autoencoder`.
+
+---
+
+### 4. Gradient Boosting para Predicción de Stockout
+
+**Problem:** Stockouts cause lost sales, emergency procurement, and customer dissatisfaction. Need 7/14/30-day early warning.
+
+**Features:**
+| Feature | Source |
+|---------|--------|
+| Current stock level (units) | Event sourcing balance |
+| Demand forecast (SMA/SES/Holt) | `demand-planning/` |
+| Lead time (days, mean + σ) | Supplier scorecard |
+| Supplier OTD reliability | `supplier-management/` |
+| ABC-XYZ class | Item master |
+| Days since last receipt | Movement log |
+
+**Output:** P(stockout within 7 / 14 / 30 days) — triggers reorder alert.
+
+**Libraries:** LightGBM (`lgb.LGBMClassifier`), XGBoost (`xgb.XGBClassifier`).
+**Calibration:** Platt scaling or isotonic regression for probability calibration.
+
+---
+
+### 5. Reinforcement Learning para Política de Reabastecimiento Dinámica
+
+**Problem:** Fixed (s, S) reorder policies cannot adapt to changing demand patterns and supply variability.
+
+**Formulation:** Markov Decision Process (MDP)
+```
+State  s_t = (inventory_level_t, demand_obs_t, lead_time_obs_t, forecast_t)
+Action a_t = order_quantity ∈ {0, EOQ, 2×EOQ, ...}
+Reward r_t = −(holding_cost × inventory_t + stockout_penalty × max(0, demand_t − inventory_t))
+```
+
+**Algorithm:** Proximal Policy Optimization (PPO) or Deep Q-Network (DQN).
+**Benefit:** Learns a non-stationary reorder policy that outperforms static (s, S) by 10–20% in holding cost reduction.
+
+**Libraries:** Ray RLlib (`rllib.algorithms.ppo`), Stable-Baselines3 (`sb3.PPO`).
+
+---
+
+## References
+
+1. Chopra, S. & Meindl, P. — *Supply Chain Management*, 6th Ed. (Pearson, 2016)
+2. Silver, E.A., Pyke, D.F. & Peterson, R. — *Inventory Management and Production Planning and Scheduling*, 3rd Ed. (Wiley, 1998)
+3. Ballou, R.H. — *Business Logistics / Supply Chain Management*, 5th Ed. (Pearson, 2004)
+4. Fowler, M. — *Patterns of Enterprise Application Architecture* (Addison-Wesley, 2002)
+5. Vernon, V. — *Implementing Domain-Driven Design* (Addison-Wesley, 2013)
+6. IFRS Foundation — *IAS 2 Inventories* (2003)
+7. GS1 — *General Specifications v23.0* (GS1, 2023)
+8. ISO 28000:2022 — *Security and resilience — Supply chain security management systems*
+9. Mnih, V. et al. — *Human-level control through deep reinforcement learning* (Nature, 2015)
+10. Liu, F.T., Ting, K.M. & Zhou, Z.H. — *Isolation Forest* (IEEE ICDM, 2008)

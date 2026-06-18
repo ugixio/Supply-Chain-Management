@@ -1,7 +1,9 @@
 """
-OTIF, Perfect Order Rate, ATP, Fill Rate, Order Cycle Time.
+OTIF, Perfect Order Rate, ATP, Fill Rate, Order Cycle Time,
+Return Rate, Refund Calculation, Reverse Logistics Cost.
 OSI libs: numpy, pandas
-Ref: Chopra & Meindl Ch.3, Walmart OTIF Policy 2018
+Ref: Chopra & Meindl Ch.3 & Ch.13, Walmart OTIF Policy 2018,
+     SCOR-DS Return process (SR/DR), EU Consumer Rights Dir. 2011/83/EU
 """
 from dataclasses import dataclass
 import numpy as np
@@ -236,3 +238,175 @@ def order_cycle_time_summary(orders: list[SalesOrderResult]) -> pd.DataFrame:
         )
 
     return pd.DataFrame(rows)
+
+
+# ---------------------------------------------------------------------------
+# Reverse Logistics / Returns
+# Ref: Chopra & Meindl Ch.13 — Returns Management; SCOR-DS Return process
+# ---------------------------------------------------------------------------
+
+# Reason codes that attract zero restocking fee (fault-based returns)
+_ZERO_FEE_REASONS = {"DEFECTIVE", "DAMAGED_IN_TRANSIT", "WRONG_ITEM", "QUALITY_ISSUE", "NEAR_EXPIRY"}
+
+
+def return_rate(returns: int, total_orders: int) -> float:
+    """
+    Return Rate % = returns / total_orders × 100.
+
+    Measures the percentage of orders that resulted in a return.
+    Industry target: < 2 % for FMCG; e-commerce fashion can reach 30 %+.
+
+    Args:
+        returns:       Number of return authorizations (RMAs) in the period.
+        total_orders:  Total orders shipped in the same period.
+
+    Returns:
+        Return rate as a percentage (0 – 100).
+
+    Raises:
+        ValueError: If total_orders ≤ 0 or returns < 0.
+
+    Ref: APICS CPIM; Chopra & Meindl Ch.13
+    """
+    if total_orders <= 0:
+        raise ValueError("total_orders must be > 0.")
+    if returns < 0:
+        raise ValueError("returns must be ≥ 0.")
+    return (returns / total_orders) * 100.0
+
+
+def refund_amount(
+    lines: list[dict],
+) -> dict:
+    """
+    Calculate refund per line and total refund amount.
+
+    For each line dict:
+      qty              (int/float)  — returned and accepted quantity
+      unit_price_cents (int)        — credit value per unit in integer cents
+      reason           (str)        — ReturnReason code
+      restocking_fee_pct (float)    — override; ignored if reason is fault-based
+                                      (DEFECTIVE, DAMAGED_IN_TRANSIT, WRONG_ITEM,
+                                       QUALITY_ISSUE, NEAR_EXPIRY → always 0 %)
+                                      Default 15 % for CUSTOMER_CHANGED_MIND /
+                                      EXCESS_QUANTITY if key absent.
+
+    Refund per line = round(qty × unit_price_cents × (1 − fee_pct / 100))
+    All amounts in integer cents.
+
+    Args:
+        lines: List of line dicts as described above.
+
+    Returns:
+        {
+            by_line              : list[int]  — refund per line in cents,
+            total_refund_cents   : int        — sum of by_line,
+            restocking_fees_cents: int        — total fees withheld (gross − net),
+        }
+
+    Raises:
+        ValueError: If any unit_price_cents is not a non-negative integer,
+                    or qty is negative.
+
+    Ref: EU Consumer Rights Dir. 2011/83/EU; SCOR-DS SR process
+    """
+    by_line: list[int] = []
+    total_gross = 0
+    total_net = 0
+
+    for i, line in enumerate(lines):
+        qty: float = line["qty"]
+        unit_price_cents: int = line["unit_price_cents"]
+        reason: str = line.get("reason", "").upper()
+
+        if qty < 0:
+            raise ValueError(f"Line {i}: qty must be ≥ 0, got {qty}.")
+        if not isinstance(unit_price_cents, int) or unit_price_cents < 0:
+            raise ValueError(
+                f"Line {i}: unit_price_cents must be a non-negative integer, "
+                f"got {unit_price_cents!r}."
+            )
+
+        # Fault-based returns: zero restocking fee regardless of input
+        if reason in _ZERO_FEE_REASONS:
+            fee_pct = 0.0
+        else:
+            fee_pct = float(line.get("restocking_fee_pct", 15.0))
+
+        gross_cents = round(qty * unit_price_cents)
+        line_refund = round(gross_cents * (1.0 - fee_pct / 100.0))
+
+        by_line.append(line_refund)
+        total_gross += gross_cents
+        total_net += line_refund
+
+    restocking_fees_cents = total_gross - total_net
+    return {
+        "by_line": by_line,
+        "total_refund_cents": total_net,
+        "restocking_fees_cents": restocking_fees_cents,
+    }
+
+
+def reverse_logistics_cost(
+    return_shipment_cost_cents: int,
+    inspection_cost_cents: int,
+    disposition_cost_cents: int,
+    refund_cents: int,
+) -> dict:
+    """
+    Total cost of a single return event.
+
+    Reverse logistics cost components:
+      1. Return shipment cost  — freight back to DC/supplier
+      2. Inspection cost       — labour + QC testing on receipt
+      3. Disposition cost      — restock handling, scrap disposal, refurbishment
+      4. Refund amount         — credit issued to customer
+
+    total_cents = shipment + inspection + disposition + refund
+
+    as_pct_of_refund: how much the total cost represents relative to the refund
+    issued (useful for profitability analysis — when > 100 %, the return costs
+    more than the refund itself).
+
+    Args:
+        return_shipment_cost_cents:  Integer cents — inbound freight cost.
+        inspection_cost_cents:       Integer cents — QC/receiving labour.
+        disposition_cost_cents:      Integer cents — restock/scrap/refurbish cost.
+        refund_cents:                Integer cents — refund value issued.
+
+    Returns:
+        {
+            total_cents      : int   — total reverse logistics cost,
+            as_pct_of_refund : float — total / refund × 100 (0 if refund=0),
+        }
+
+    Raises:
+        ValueError: If any argument is negative or not an integer.
+
+    Ref: Chopra & Meindl Ch.13; APICS CPIM — Reverse Logistics
+    """
+    components = {
+        "return_shipment_cost_cents": return_shipment_cost_cents,
+        "inspection_cost_cents": inspection_cost_cents,
+        "disposition_cost_cents": disposition_cost_cents,
+        "refund_cents": refund_cents,
+    }
+    for name, value in components.items():
+        if not isinstance(value, int):
+            raise ValueError(f"{name} must be an integer, got {value!r}.")
+        if value < 0:
+            raise ValueError(f"{name} must be ≥ 0, got {value}.")
+
+    total_cents = (
+        return_shipment_cost_cents
+        + inspection_cost_cents
+        + disposition_cost_cents
+        + refund_cents
+    )
+    as_pct_of_refund = (total_cents / refund_cents * 100.0) if refund_cents > 0 else 0.0
+
+    return {
+        "total_cents": total_cents,
+        "as_pct_of_refund": round(as_pct_of_refund, 4),
+    }

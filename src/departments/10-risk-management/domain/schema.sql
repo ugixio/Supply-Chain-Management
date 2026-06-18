@@ -370,3 +370,189 @@ WHERE ri.is_deleted = FALSE
 ORDER BY ri.risk_score DESC, ri.eal_cents DESC NULLS LAST;
 
 COMMENT ON VIEW risk_management.v_bcp_coverage_gaps IS 'CRITICAL and HIGH risk items not covered by a tested, active Business Continuity Plan. These represent unmitigated continuity exposure requiring BCP development or update.';
+
+
+-- =============================================================================
+-- BCP DRILL / TESTING FRAMEWORK
+-- Ref: ISO 22301:2019 §8.5 — Exercising and testing
+--      FEMA HSEEP (Homeland Security Exercise and Evaluation Program)
+-- =============================================================================
+
+CREATE TABLE risk_management.bcp_drills (
+    id                  UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+    bcp_id              UUID        NOT NULL
+                            REFERENCES risk_management.business_continuity_plans(id),
+    drill_type          VARCHAR(20) NOT NULL
+                            CHECK (drill_type IN (
+                                'TABLETOP','FUNCTIONAL','FULL_SCALE',
+                                'COMMUNICATION','EVACUATION'
+                            )),
+    status              VARCHAR(15) NOT NULL DEFAULT 'PLANNED'
+                            CHECK (status IN (
+                                'PLANNED','IN_PROGRESS','COMPLETE','FAILED','CANCELLED'
+                            )),
+    scheduled_date      DATE        NOT NULL,
+    conducted_at        TIMESTAMPTZ,
+    facilitator         VARCHAR(200) NOT NULL,
+    participant_count   INTEGER     CHECK (participant_count >= 0),
+
+    -- RTO / RPO objectives copied from the parent BCP at scheduling time
+    rto_target_hours    NUMERIC(10,2) NOT NULL CHECK (rto_target_hours > 0),
+    rpo_target_hours    NUMERIC(10,2) NOT NULL CHECK (rpo_target_hours > 0),
+
+    -- Actual results — populated on COMPLETE
+    rto_achieved_hours  NUMERIC(10,2) CHECK (rto_achieved_hours > 0),
+    rpo_achieved_hours  NUMERIC(10,2) CHECK (rpo_achieved_hours > 0),
+
+    -- Computed: did the drill meet its objectives?
+    rto_met             BOOLEAN GENERATED ALWAYS AS
+                            (rto_achieved_hours <= rto_target_hours) STORED,
+    rpo_met             BOOLEAN GENERATED ALWAYS AS
+                            (rpo_achieved_hours <= rpo_target_hours) STORED,
+
+    overall_score       NUMERIC(5,2) CHECK (overall_score BETWEEN 0 AND 100),
+    fail_reason         TEXT,
+    next_drill_date     DATE,                     -- recommended +6 months
+    is_deleted          BOOLEAN     NOT NULL DEFAULT FALSE,
+    created_at          TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at          TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+COMMENT ON TABLE  risk_management.bcp_drills IS 'BCP exercise/drill records per ISO 22301:2019 §8.5. rto_met and rpo_met are database-generated from achieved vs target values. next_drill_date set to +6 months on completion.';
+COMMENT ON COLUMN risk_management.bcp_drills.drill_type         IS 'TABLETOP=discussion only, FUNCTIONAL=partial activation, FULL_SCALE=complete simulation, COMMUNICATION=notification tree test, EVACUATION=physical facility drill.';
+COMMENT ON COLUMN risk_management.bcp_drills.rto_met            IS 'Auto-computed: TRUE when rto_achieved_hours <= rto_target_hours. NULL until rto_achieved_hours is populated on completion.';
+COMMENT ON COLUMN risk_management.bcp_drills.rpo_met            IS 'Auto-computed: TRUE when rpo_achieved_hours <= rpo_target_hours. NULL until rpo_achieved_hours is populated on completion.';
+COMMENT ON COLUMN risk_management.bcp_drills.overall_score      IS '0-100 composite drill quality score. Feeds bcp_readiness_score() in risk_model.py.';
+COMMENT ON COLUMN risk_management.bcp_drills.next_drill_date    IS 'Recommended date for the next drill: +6 calendar months from conducted_at. ISO 22301 recommends at least annual exercises; best practice is semi-annual.';
+
+
+CREATE TABLE risk_management.drill_findings (
+    id              UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+    drill_id        UUID        NOT NULL
+                        REFERENCES risk_management.bcp_drills(id),
+    finding_id      UUID        NOT NULL DEFAULT gen_random_uuid() UNIQUE,
+    severity        VARCHAR(10) NOT NULL
+                        CHECK (severity IN ('CRITICAL','MAJOR','MINOR')),
+    description     TEXT        NOT NULL,
+    owner           VARCHAR(200) NOT NULL,
+    due_date        DATE        NOT NULL,
+    resolved_at     TIMESTAMPTZ,
+    -- CRITICAL findings must be resolved within 30 days (ISO 22301 §10.1)
+    is_overdue      BOOLEAN GENERATED ALWAYS AS (
+                        resolved_at IS NULL AND CURRENT_DATE > due_date
+                    ) STORED,
+    created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+COMMENT ON TABLE  risk_management.drill_findings IS 'Individual findings identified during BCP drills. CRITICAL severity findings must be resolved within 30 days per ISO 22301:2019 §10.1. is_overdue auto-computed from due_date vs current date.';
+COMMENT ON COLUMN risk_management.drill_findings.severity   IS 'CRITICAL: systemic BCP failure, requires 30-day resolution. MAJOR: significant gap, within 90 days. MINOR: improvement opportunity, within 180 days.';
+COMMENT ON COLUMN risk_management.drill_findings.is_overdue IS 'Auto-computed TRUE when resolved_at IS NULL AND CURRENT_DATE > due_date. Feeds readiness dashboard and corrective action reports.';
+
+
+-- Indexes for drill tables
+CREATE INDEX idx_bcp_drills_bcp_id     ON risk_management.bcp_drills(bcp_id, scheduled_date DESC)
+    WHERE is_deleted = FALSE;
+CREATE INDEX idx_bcp_drills_status     ON risk_management.bcp_drills(status)
+    WHERE is_deleted = FALSE;
+CREATE INDEX idx_drill_findings_drill  ON risk_management.drill_findings(drill_id);
+CREATE INDEX idx_drill_findings_overdue ON risk_management.drill_findings(is_overdue)
+    WHERE is_overdue = TRUE;
+CREATE INDEX idx_drill_findings_severity ON risk_management.drill_findings(severity, due_date)
+    WHERE resolved_at IS NULL;
+
+
+-- ---------------------------------------------------------------------------
+-- VIEW: v_bcp_readiness
+-- Per-BCP readiness dashboard showing last drill date, RTO compliance,
+-- open critical findings, and an overall traffic-light status.
+--
+-- Readiness status rules (aligned with bcp_readiness_score() in risk_model.py):
+--   RED   — last drill > 365 days ago, OR any open critical finding
+--   AMBER — last drill 181–365 days ago (no open critical findings)
+--   GREEN — last drill ≤ 180 days ago, no open critical findings
+-- ---------------------------------------------------------------------------
+
+CREATE OR REPLACE VIEW risk_management.v_bcp_readiness AS
+WITH last_drill AS (
+    -- Most-recent COMPLETE drill per BCP
+    SELECT DISTINCT ON (bcp_id)
+        bcp_id,
+        id                  AS drill_id,
+        conducted_at,
+        overall_score,
+        rto_met,
+        rpo_met
+    FROM risk_management.bcp_drills
+    WHERE status = 'COMPLETE'
+      AND is_deleted = FALSE
+    ORDER BY bcp_id, conducted_at DESC NULLS LAST
+),
+rto_stats AS (
+    -- RTO met percentage across all COMPLETE drills per BCP
+    SELECT
+        bcp_id,
+        COUNT(*)                                                   AS total_drills,
+        ROUND(
+            SUM(CASE WHEN rto_met THEN 1 ELSE 0 END)::NUMERIC
+            / NULLIF(COUNT(*), 0) * 100, 2
+        )                                                          AS rto_met_pct
+    FROM risk_management.bcp_drills
+    WHERE status = 'COMPLETE'
+      AND is_deleted = FALSE
+    GROUP BY bcp_id
+),
+open_critical AS (
+    -- Count of unresolved CRITICAL findings per BCP (across all drills)
+    SELECT
+        d.bcp_id,
+        COUNT(f.id)  AS open_critical_count
+    FROM risk_management.drill_findings f
+    JOIN risk_management.bcp_drills d ON d.id = f.drill_id
+    WHERE f.severity = 'CRITICAL'
+      AND f.resolved_at IS NULL
+      AND d.is_deleted = FALSE
+    GROUP BY d.bcp_id
+)
+SELECT
+    bcp.id                                          AS bcp_id,
+    bcp.plan_number,
+    bcp.title,
+    bcp.status                                      AS bcp_status,
+    ld.conducted_at                                 AS last_drill_date,
+    CASE
+        WHEN ld.conducted_at IS NULL THEN NULL
+        ELSE DATE_PART('day', NOW() - ld.conducted_at)::INTEGER
+    END                                             AS days_since_last_drill,
+    rs.total_drills,
+    COALESCE(rs.rto_met_pct, 0)                    AS rto_met_pct,
+    COALESCE(oc.open_critical_count, 0)             AS open_critical_findings,
+    ld.overall_score                                AS last_drill_score,
+    CASE
+        -- RED: never drilled, or > 365 days since last drill, or open critical findings
+        WHEN ld.conducted_at IS NULL
+             OR DATE_PART('day', NOW() - ld.conducted_at) > 365
+             OR COALESCE(oc.open_critical_count, 0) > 0
+            THEN 'RED'
+        -- AMBER: 181–365 days since last drill
+        WHEN DATE_PART('day', NOW() - ld.conducted_at) > 180
+            THEN 'AMBER'
+        -- GREEN: drilled within 180 days, no open critical findings
+        ELSE 'GREEN'
+    END                                             AS readiness_status
+FROM risk_management.business_continuity_plans bcp
+LEFT JOIN last_drill  ld ON ld.bcp_id = bcp.id
+LEFT JOIN rto_stats   rs ON rs.bcp_id = bcp.id
+LEFT JOIN open_critical oc ON oc.bcp_id = bcp.id
+WHERE bcp.is_deleted = FALSE
+ORDER BY
+    CASE
+        WHEN ld.conducted_at IS NULL THEN 0
+        WHEN DATE_PART('day', NOW() - ld.conducted_at) > 365 THEN 1
+        WHEN COALESCE(oc.open_critical_count, 0) > 0 THEN 1
+        WHEN DATE_PART('day', NOW() - ld.conducted_at) > 180 THEN 2
+        ELSE 3
+    END,
+    days_since_last_drill DESC NULLS FIRST;
+
+COMMENT ON VIEW risk_management.v_bcp_readiness IS 'Per-BCP drill readiness dashboard. RED = never drilled, >365 days since last drill, or open CRITICAL findings. AMBER = 181-365 days. GREEN = drilled within 180 days with no open critical findings. Feeds bcp_readiness_score() in risk_model.py.';

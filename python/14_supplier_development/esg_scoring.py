@@ -1,7 +1,10 @@
 """
-ESG scoring E(40%) + S(40%) + G(20%), GHG Scope 3, LTIFR, deforestation risk, living wage gap.
+ESG scoring E(40%) + S(40%) + G(20%), GHG Scope 3, LTIFR, deforestation risk, living wage gap,
+EUDR risk classification, Tier 2 ESG aggregation, Scope 3 Category 1 intensity.
 OSI libs: numpy, dataclasses
-Ref: GHG Protocol (2011), GRI Standards, ISO 45001:2018
+Ref: GHG Protocol (2011), GRI Standards, ISO 45001:2018,
+     EU Regulation 2023/1115 (EUDR), EU CSDDD 2024/1760,
+     SBTi Corporate Manual v2.0
 """
 from dataclasses import dataclass
 import numpy as np

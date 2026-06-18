@@ -251,3 +251,187 @@ def validate_bcp_objectives(obj: BCPObjectives) -> list[str]:
         )
 
     return violations
+
+
+def bcp_readiness_score(
+    days_since_last_drill: int,
+    rto_met_pct: float,
+    rpo_met_pct: float,
+    open_critical_findings: int,
+) -> dict:
+    """
+    BCP readiness score (0-100) aligned with ISO 22301:2019 Business
+    Continuity Management exercising requirements (§8.5).
+
+    Scoring components
+    ------------------
+    Recency (30 pts):
+      - > 365 days since last drill (or never drilled):  0 pts
+      - 180–365 days:                                   15 pts
+      - < 180 days:                                     30 pts
+
+    RTO met (35 pts):
+      rto_met_pct / 100 × 35
+
+    RPO met (25 pts):
+      rpo_met_pct / 100 × 25
+
+    No critical findings (10 pts):
+      0 open critical findings → 10 pts; any open critical → 0 pts
+
+    Overall rating:
+      GREEN  ≥ 75
+      AMBER  50–74
+      RED    < 50
+
+    Parameters
+    ----------
+    days_since_last_drill   : Days elapsed since the most recent completed
+                              drill.  Pass a large number (e.g. 9999) to
+                              represent "never drilled".
+    rto_met_pct             : Percentage of drills that met the RTO target
+                              (0.0–100.0).
+    rpo_met_pct             : Percentage of drills that met the RPO target
+                              (0.0–100.0).
+    open_critical_findings  : Number of unresolved CRITICAL drill findings.
+
+    Returns
+    -------
+    dict with keys:
+      score       : float  — composite readiness score 0-100
+      rating      : str    — 'RED' | 'AMBER' | 'GREEN'
+      components  : dict   — breakdown of each scoring component
+    """
+    if not (0.0 <= rto_met_pct <= 100.0):
+        raise ValueError(f"rto_met_pct must be in [0, 100], got {rto_met_pct}")
+    if not (0.0 <= rpo_met_pct <= 100.0):
+        raise ValueError(f"rpo_met_pct must be in [0, 100], got {rpo_met_pct}")
+    if open_critical_findings < 0:
+        raise ValueError(f"open_critical_findings must be >= 0, got {open_critical_findings}")
+    if days_since_last_drill < 0:
+        raise ValueError(f"days_since_last_drill must be >= 0, got {days_since_last_drill}")
+
+    # Recency component (30 pts)
+    if days_since_last_drill > 365:
+        recency_pts = 0.0
+    elif days_since_last_drill > 180:
+        recency_pts = 15.0
+    else:
+        recency_pts = 30.0
+
+    # RTO component (35 pts)
+    rto_pts = (rto_met_pct / 100.0) * 35.0
+
+    # RPO component (25 pts)
+    rpo_pts = (rpo_met_pct / 100.0) * 25.0
+
+    # Critical findings component (10 pts)
+    critical_pts = 10.0 if open_critical_findings == 0 else 0.0
+
+    score = recency_pts + rto_pts + rpo_pts + critical_pts
+
+    if score >= 75.0:
+        rating = "GREEN"
+    elif score >= 50.0:
+        rating = "AMBER"
+    else:
+        rating = "RED"
+
+    return {
+        "score": round(score, 2),
+        "rating": rating,
+        "components": {
+            "recency_pts": recency_pts,
+            "rto_pts": round(rto_pts, 2),
+            "rpo_pts": round(rpo_pts, 2),
+            "critical_findings_pts": critical_pts,
+        },
+    }
+
+
+def scenario_impact_analysis(
+    base_revenue_cents: int,
+    disruption_scenarios: list[dict],
+) -> dict:
+    """
+    Expected impact of disruption scenarios using probability-weighted analysis.
+
+    For each scenario the expected annual loss is computed as:
+
+      expected_loss_cents = base_revenue_cents
+                          × (revenue_impact_pct / 100)
+                          × (duration_days / 365)
+                          × probability
+
+    The worst-case loss (probability = 1.0) is also reported.
+
+    Parameters
+    ----------
+    base_revenue_cents      : Annual revenue baseline in integer cents.
+    disruption_scenarios    : List of scenario dicts, each with:
+        name                  (str)   — scenario label
+        probability           (float) — annual probability of occurrence [0, 1]
+        revenue_impact_pct    (float) — % of daily revenue lost during event [0, 100]
+        duration_days         (float) — expected duration of the disruption
+
+    Returns
+    -------
+    dict with keys:
+      scenarios                      : list of per-scenario results
+        name                           : str
+        expected_loss_cents            : int  — probability-weighted annual loss
+        worst_case_cents               : int  — full impact (probability=1.0)
+      total_expected_annual_loss_cents : int  — sum of expected losses
+      top_risk                         : str  — name of scenario with highest EAL
+
+    Ref: ISO 31000:2018 — Risk assessment; probability-weighted impact analysis.
+    """
+    if not isinstance(base_revenue_cents, int) or base_revenue_cents < 0:
+        raise ValueError(
+            f"base_revenue_cents must be a non-negative integer, got {base_revenue_cents}"
+        )
+    if not disruption_scenarios:
+        raise ValueError("disruption_scenarios must be a non-empty list.")
+
+    required_keys = {"name", "probability", "revenue_impact_pct", "duration_days"}
+    scenario_results: list[dict] = []
+
+    for i, s in enumerate(disruption_scenarios):
+        missing = required_keys - s.keys()
+        if missing:
+            raise ValueError(f"Scenario {i} is missing required keys: {missing}")
+
+        prob: float = float(s["probability"])
+        impact_pct: float = float(s["revenue_impact_pct"])
+        duration: float = float(s["duration_days"])
+        name: str = str(s["name"])
+
+        if not (0.0 <= prob <= 1.0):
+            raise ValueError(f"Scenario '{name}': probability must be in [0, 1], got {prob}")
+        if not (0.0 <= impact_pct <= 100.0):
+            raise ValueError(
+                f"Scenario '{name}': revenue_impact_pct must be in [0, 100], got {impact_pct}"
+            )
+        if duration < 0:
+            raise ValueError(f"Scenario '{name}': duration_days must be >= 0, got {duration}")
+
+        worst_case_cents = int(base_revenue_cents * (impact_pct / 100.0) * (duration / 365.0))
+        expected_loss_cents = int(worst_case_cents * prob)
+
+        scenario_results.append(
+            {
+                "name": name,
+                "expected_loss_cents": expected_loss_cents,
+                "worst_case_cents": worst_case_cents,
+            }
+        )
+
+    total_expected_annual_loss_cents = sum(r["expected_loss_cents"] for r in scenario_results)
+
+    top_risk = max(scenario_results, key=lambda r: r["expected_loss_cents"])["name"]
+
+    return {
+        "scenarios": scenario_results,
+        "total_expected_annual_loss_cents": total_expected_annual_loss_cents,
+        "top_risk": top_risk,
+    }

@@ -332,3 +332,307 @@ WHERE cd.expiry_date <= CURRENT_DATE + INTERVAL '90 days'
 ORDER BY cd.expiry_date ASC;
 
 COMMENT ON VIEW compliance.v_expiring_documents IS 'Compliance documents expiring within 90 days. Includes already-expired documents. Drives renewal workflow alerts. Urgency buckets: 30/60/90 days.';
+
+
+-- =============================================================================
+-- EXTENSION: Evidence Management, Grievance Mechanism, Exception Workflow
+-- Added to support:
+--   ComplianceEvidence.ts — regulatory document storage (CSDDD Art.23 5-yr retention)
+--   GrievanceMechanism.ts — CSDDD Art.9 / LkSG §8 grievance tracking
+--   ComplianceException.ts — exception approval workflow
+-- =============================================================================
+
+-- ---------------------------------------------------------------------------
+-- EVIDENCE RECORDS
+-- ---------------------------------------------------------------------------
+
+CREATE TABLE compliance.evidence_records (
+    id                  UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+    supplier_id         UUID        NOT NULL,
+    regulation_ref      VARCHAR(20) NOT NULL
+                            CHECK (regulation_ref IN (
+                                'CSDDD','UFLPA','REACH','LKSG','EUDR','UK_MSA','C_TPAT','ISO_28000'
+                            )),
+    evidence_type       VARCHAR(30) NOT NULL
+                            CHECK (evidence_type IN (
+                                'AUDIT_REPORT','SUPPLIER_DECLARATION','CERTIFICATE','CONTRACT',
+                                'PHOTO','TEST_RESULT','THIRD_PARTY_ASSESSMENT',
+                                'GRIEVANCE_RESPONSE','CORRECTIVE_ACTION','OTHER'
+                            )),
+    title               VARCHAR(300) NOT NULL,
+    document_ref        VARCHAR(1000) NOT NULL,
+    mime_type           VARCHAR(100),
+    assessment_date     DATE        NOT NULL,
+    -- Retention deadline computed per regulation:
+    --   CSDDD/LKSG/EUDR: +5 years | UK_MSA: +3 years | others: +2 years
+    -- Stored (not generated) to allow regulation-specific logic via application layer.
+    retention_until     DATE        NOT NULL,
+    uploaded_by         VARCHAR(100) NOT NULL,
+    verified_by         VARCHAR(100),
+    verified_at         TIMESTAMPTZ,
+    is_deleted          BOOLEAN     NOT NULL DEFAULT FALSE,
+    created_at          TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    CONSTRAINT evidence_retention_minimum CHECK (
+        retention_until >= assessment_date + INTERVAL '2 years'
+    ),
+    CONSTRAINT evidence_verified_requires_verifier CHECK (
+        verified_at IS NULL OR verified_by IS NOT NULL
+    )
+);
+
+COMMENT ON TABLE  compliance.evidence_records                    IS 'Regulatory defence documents. Minimum retention enforced per Art.23 CSDDD (5 years), EUDR Art.9 (5 years), UK MSA (3 years), others (2 years). Soft-delete only — never hard-delete before retention_until.';
+COMMENT ON COLUMN compliance.evidence_records.document_ref       IS 'File system path, S3 key, SharePoint URL, or other external reference to the actual document.';
+COMMENT ON COLUMN compliance.evidence_records.assessment_date    IS 'Date of the underlying assessment or document. Drives retention_until computation.';
+COMMENT ON COLUMN compliance.evidence_records.retention_until    IS 'Minimum retention deadline. Must not be soft-deleted before this date. CSDDD/LKSG/EUDR: +5 yr; UK_MSA: +3 yr; others: +2 yr.';
+COMMENT ON COLUMN compliance.evidence_records.verified_by        IS 'User who independently verified the document (e.g. second reviewer for CSDDD audit reports).';
+
+CREATE INDEX idx_evidence_supplier         ON compliance.evidence_records(supplier_id) WHERE is_deleted = FALSE;
+CREATE INDEX idx_evidence_regulation       ON compliance.evidence_records(regulation_ref) WHERE is_deleted = FALSE;
+CREATE INDEX idx_evidence_retention_until  ON compliance.evidence_records(retention_until) WHERE is_deleted = FALSE;
+CREATE INDEX idx_evidence_assessment_date  ON compliance.evidence_records(assessment_date DESC);
+
+
+-- ---------------------------------------------------------------------------
+-- GRIEVANCE RECORDS
+-- ---------------------------------------------------------------------------
+
+CREATE TABLE compliance.grievance_records (
+    id                      UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+    reference_number        VARCHAR(30) NOT NULL UNIQUE,
+    supplier_id             UUID,
+    category                VARCHAR(30) NOT NULL
+                                CHECK (category IN (
+                                    'FORCED_LABOUR','CHILD_LABOUR','DISCRIMINATION',
+                                    'UNSAFE_CONDITIONS','ENVIRONMENTAL','LAND_RIGHTS',
+                                    'CORRUPTION','SUPPLY_CHAIN_DISRUPTION','OTHER'
+                                )),
+    severity                VARCHAR(10) NOT NULL
+                                CHECK (severity IN ('LOW','MEDIUM','HIGH','CRITICAL')),
+    status                  VARCHAR(20) NOT NULL DEFAULT 'RECEIVED'
+                                CHECK (status IN (
+                                    'RECEIVED','ACKNOWLEDGED','INVESTIGATING',
+                                    'REMEDIATION','RESOLVED','CLOSED','ESCALATED'
+                                )),
+    description             TEXT        NOT NULL,
+    reporter_anonymous      BOOLEAN     NOT NULL DEFAULT FALSE,
+    reporter_contact        VARCHAR(500),
+    received_at             TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    acknowledged_at         TIMESTAMPTZ,
+    target_resolution_date  DATE,
+    resolved_at             TIMESTAMPTZ,
+    resolution_summary      TEXT,
+    regulation_refs         TEXT[]      NOT NULL DEFAULT '{}',
+    escalated_to            VARCHAR(200),
+    root_cause              TEXT,
+    -- CSDDD Art.9 / LkSG §8: CRITICAL grievances must be acknowledged within 24 hours.
+    overdue_acknowledgement BOOLEAN GENERATED ALWAYS AS (
+        severity = 'CRITICAL'
+        AND acknowledged_at IS NULL
+        AND received_at < NOW() - INTERVAL '24 hours'
+    ) STORED,
+    is_deleted              BOOLEAN     NOT NULL DEFAULT FALSE,
+    created_at              TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at              TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    CONSTRAINT grievance_resolution_requires_summary CHECK (
+        status NOT IN ('RESOLVED','CLOSED') OR resolution_summary IS NOT NULL
+    ),
+    CONSTRAINT grievance_anonymous_contact CHECK (
+        reporter_anonymous = FALSE OR reporter_contact IS NULL
+    ),
+    CONSTRAINT grievance_non_anonymous_requires_contact CHECK (
+        reporter_anonymous = TRUE OR reporter_contact IS NOT NULL
+    )
+);
+
+COMMENT ON TABLE  compliance.grievance_records                        IS 'Grievance records per CSDDD Art.9 and LkSG §8. Accessible to affected persons and their representatives. Anonymous submissions supported.';
+COMMENT ON COLUMN compliance.grievance_records.overdue_acknowledgement IS 'Auto-computed: TRUE when a CRITICAL grievance has not been acknowledged within 24 hours (CSDDD Art.9 SLA).';
+COMMENT ON COLUMN compliance.grievance_records.regulation_refs        IS 'Array of regulation identifiers relevant to this grievance (e.g. {''CSDDD'',''LKSG''}).';
+COMMENT ON COLUMN compliance.grievance_records.resolution_summary     IS 'Mandatory when status is RESOLVED or CLOSED. Must describe remediation taken and outcome (CSDDD Art.9).';
+
+CREATE INDEX idx_grievance_supplier     ON compliance.grievance_records(supplier_id) WHERE supplier_id IS NOT NULL;
+CREATE INDEX idx_grievance_status       ON compliance.grievance_records(status) WHERE is_deleted = FALSE;
+CREATE INDEX idx_grievance_severity     ON compliance.grievance_records(severity) WHERE is_deleted = FALSE;
+CREATE INDEX idx_grievance_received_at  ON compliance.grievance_records(received_at DESC);
+CREATE INDEX idx_grievance_overdue      ON compliance.grievance_records(overdue_acknowledgement)
+    WHERE overdue_acknowledgement = TRUE AND is_deleted = FALSE;
+
+
+-- ---------------------------------------------------------------------------
+-- GRIEVANCE ACTIONS (audit log per grievance)
+-- ---------------------------------------------------------------------------
+
+CREATE TABLE compliance.grievance_actions (
+    id              UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+    grievance_id    UUID        NOT NULL REFERENCES compliance.grievance_records(id),
+    action_type     VARCHAR(50) NOT NULL,
+    description     TEXT        NOT NULL,
+    performed_by    VARCHAR(100) NOT NULL,
+    performed_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+COMMENT ON TABLE  compliance.grievance_actions              IS 'Immutable audit log of all actions taken on a grievance (acknowledgements, status changes, evidence added, remediation steps).';
+COMMENT ON COLUMN compliance.grievance_actions.action_type  IS 'E.g. ACKNOWLEDGED, INVESTIGATION_STARTED, REMEDIATION_ASSIGNED, ESCALATED, RESOLVED, EVIDENCE_ADDED.';
+
+CREATE INDEX idx_grievance_actions_grievance ON compliance.grievance_actions(grievance_id, performed_at DESC);
+
+
+-- ---------------------------------------------------------------------------
+-- EXCEPTION RECORDS
+-- ---------------------------------------------------------------------------
+
+CREATE TABLE compliance.exception_records (
+    id              UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+    supplier_id     UUID        NOT NULL,
+    regulation_ref  VARCHAR(20) NOT NULL
+                        CHECK (regulation_ref IN (
+                            'CSDDD','UFLPA','REACH','LKSG','EUDR','UK_MSA','C_TPAT','ISO_28000'
+                        )),
+    description     TEXT        NOT NULL,
+    justification   TEXT        NOT NULL,
+    risk            VARCHAR(15) NOT NULL
+                        CHECK (risk IN ('ACCEPTABLE','CONDITIONAL','UNACCEPTABLE')),
+    requested_by    VARCHAR(100) NOT NULL,
+    requested_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    approved_by     VARCHAR(100),
+    approved_at     TIMESTAMPTZ,
+    valid_until     DATE,
+    conditions      TEXT[],
+    status          VARCHAR(10) NOT NULL DEFAULT 'PENDING'
+                        CHECK (status IN ('PENDING','APPROVED','REJECTED','EXPIRED')),
+    is_deleted      BOOLEAN     NOT NULL DEFAULT FALSE,
+    created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    -- Business rule: UNACCEPTABLE risk cannot be approved
+    CONSTRAINT exception_unacceptable_not_approved CHECK (
+        risk <> 'UNACCEPTABLE' OR status NOT IN ('APPROVED')
+    ),
+    -- Approved exceptions must have a validity date and approver
+    CONSTRAINT exception_approval_requires_fields CHECK (
+        status <> 'APPROVED'
+        OR (approved_by IS NOT NULL AND valid_until IS NOT NULL AND approved_at IS NOT NULL)
+    ),
+    -- valid_until must be after requested_at date
+    CONSTRAINT exception_valid_until_future CHECK (
+        valid_until IS NULL OR valid_until > requested_at::DATE
+    )
+);
+
+COMMENT ON TABLE  compliance.exception_records                IS 'Time-bound exception approvals for compliance deviations. UNACCEPTABLE risk exceptions are blocked from approval at DB and application layers.';
+COMMENT ON COLUMN compliance.exception_records.risk           IS 'ACCEPTABLE=low residual risk, CONDITIONAL=approved with mandatory conditions, UNACCEPTABLE=cannot be approved — must remediate.';
+COMMENT ON COLUMN compliance.exception_records.conditions     IS 'Array of conditions the requester must satisfy for the exception to remain valid (e.g. {''Monthly audit required'', ''Clearance doc submitted within 30 days''}).';
+COMMENT ON COLUMN compliance.exception_records.valid_until    IS 'Exception expires on this date. Application layer should set status=EXPIRED after this date and re-assess compliance.';
+
+CREATE INDEX idx_exception_supplier     ON compliance.exception_records(supplier_id) WHERE is_deleted = FALSE;
+CREATE INDEX idx_exception_regulation   ON compliance.exception_records(regulation_ref) WHERE is_deleted = FALSE;
+CREATE INDEX idx_exception_status       ON compliance.exception_records(status) WHERE is_deleted = FALSE;
+CREATE INDEX idx_exception_valid_until  ON compliance.exception_records(valid_until) WHERE status = 'APPROVED' AND is_deleted = FALSE;
+
+
+-- ---------------------------------------------------------------------------
+-- ADDITIONAL VIEWS
+-- ---------------------------------------------------------------------------
+
+-- Evidence records approaching end of retention period (within 90 days)
+CREATE OR REPLACE VIEW compliance.v_evidence_expiring_soon AS
+SELECT
+    er.id,
+    er.supplier_id,
+    er.regulation_ref,
+    er.evidence_type,
+    er.title,
+    er.document_ref,
+    er.assessment_date,
+    er.retention_until,
+    er.retention_until - CURRENT_DATE   AS days_to_expiry,
+    er.uploaded_by,
+    er.verified_by,
+    CASE
+        WHEN er.retention_until < CURRENT_DATE              THEN 'EXPIRED'
+        WHEN er.retention_until < CURRENT_DATE + 30         THEN 'EXPIRING_30_DAYS'
+        WHEN er.retention_until < CURRENT_DATE + 60         THEN 'EXPIRING_60_DAYS'
+        ELSE 'EXPIRING_90_DAYS'
+    END                                                     AS expiry_urgency
+FROM compliance.evidence_records er
+WHERE er.retention_until < CURRENT_DATE + INTERVAL '90 days'
+  AND er.is_deleted = FALSE
+ORDER BY er.retention_until ASC;
+
+COMMENT ON VIEW compliance.v_evidence_expiring_soon IS 'Evidence records whose retention_until is within 90 days (or already past). Drives archival/renewal workflow. Buckets: EXPIRED, 30/60/90 days.';
+
+
+-- Open grievances with overdue flag and days open
+CREATE OR REPLACE VIEW compliance.v_open_grievances AS
+SELECT
+    gr.id,
+    gr.reference_number,
+    gr.supplier_id,
+    gr.category,
+    gr.severity,
+    gr.status,
+    gr.received_at,
+    gr.acknowledged_at,
+    gr.target_resolution_date,
+    gr.regulation_refs,
+    gr.escalated_to,
+    gr.overdue_acknowledgement,
+    EXTRACT(DAY FROM (NOW() - gr.received_at))::INTEGER     AS days_open,
+    CASE
+        WHEN gr.target_resolution_date IS NOT NULL
+             AND gr.target_resolution_date < CURRENT_DATE   THEN TRUE
+        ELSE FALSE
+    END                                                     AS resolution_overdue
+FROM compliance.grievance_records gr
+WHERE gr.status NOT IN ('CLOSED')
+  AND gr.is_deleted = FALSE
+ORDER BY
+    gr.severity DESC,
+    gr.received_at ASC;
+
+COMMENT ON VIEW compliance.v_open_grievances IS 'All non-closed grievances. Includes days_open, overdue_acknowledgement (CRITICAL 24-h SLA), and resolution_overdue flags. Used for CSDDD Art.9 / LkSG §8 monitoring.';
+
+
+-- Compliance dashboard: counts by regulation and status
+CREATE OR REPLACE VIEW compliance.v_compliance_dashboard AS
+SELECT
+    'EVIDENCE'          AS domain,
+    er.regulation_ref,
+    COUNT(*)            AS total_records,
+    COUNT(*) FILTER (WHERE er.retention_until >= CURRENT_DATE)  AS active_count,
+    COUNT(*) FILTER (WHERE er.retention_until < CURRENT_DATE)   AS expired_count,
+    NULL::BIGINT        AS pending_count,
+    NULL::BIGINT        AS critical_count
+FROM compliance.evidence_records er
+WHERE er.is_deleted = FALSE
+GROUP BY er.regulation_ref
+
+UNION ALL
+
+SELECT
+    'GRIEVANCE'         AS domain,
+    unnest(gr.regulation_refs) AS regulation_ref,
+    COUNT(*)            AS total_records,
+    COUNT(*) FILTER (WHERE gr.status NOT IN ('CLOSED','RESOLVED')) AS active_count,
+    COUNT(*) FILTER (WHERE gr.status IN ('CLOSED','RESOLVED'))     AS expired_count,
+    COUNT(*) FILTER (WHERE gr.status = 'RECEIVED')                 AS pending_count,
+    COUNT(*) FILTER (WHERE gr.severity = 'CRITICAL' AND gr.status NOT IN ('CLOSED','RESOLVED')) AS critical_count
+FROM compliance.grievance_records gr
+WHERE gr.is_deleted = FALSE
+GROUP BY unnest(gr.regulation_refs)
+
+UNION ALL
+
+SELECT
+    'EXCEPTION'         AS domain,
+    ex.regulation_ref,
+    COUNT(*)            AS total_records,
+    COUNT(*) FILTER (WHERE ex.status = 'APPROVED' AND ex.valid_until >= CURRENT_DATE)  AS active_count,
+    COUNT(*) FILTER (WHERE ex.status IN ('REJECTED','EXPIRED')
+                        OR (ex.status = 'APPROVED' AND ex.valid_until < CURRENT_DATE)) AS expired_count,
+    COUNT(*) FILTER (WHERE ex.status = 'PENDING')                                      AS pending_count,
+    COUNT(*) FILTER (WHERE ex.risk = 'UNACCEPTABLE')                                   AS critical_count
+FROM compliance.exception_records ex
+WHERE ex.is_deleted = FALSE
+GROUP BY ex.regulation_ref
+
+ORDER BY domain, regulation_ref;
+
+COMMENT ON VIEW compliance.v_compliance_dashboard IS 'Aggregated compliance dashboard across evidence, grievances, and exceptions. Groups by domain and regulation_ref with active/expired/pending/critical breakdowns.';

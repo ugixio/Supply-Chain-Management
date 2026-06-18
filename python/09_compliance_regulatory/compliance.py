@@ -211,6 +211,194 @@ def days_to_retention_expiry(
     return (expiry - today).days
 
 
+def retention_date(assessment_date: str, regulation: str) -> str:
+    """
+    Compute document retention deadline per regulation.
+
+    Retention periods:
+      CSDDD / EUDR / LKSG : +5 years  (Art.23 CSDDD; EUDR Art.9; LkSG §24 minimum)
+      UK_MSA               : +3 years  (Modern Slavery Act 2015 §54 recommended)
+      all others           : +2 years  (internal minimum)
+
+    Args:
+        assessment_date: ISO 8601 date string (YYYY-MM-DD) of the assessment.
+        regulation: Regulation identifier string (case-insensitive).
+
+    Returns:
+        ISO 8601 date string (YYYY-MM-DD) representing the retention deadline.
+
+    Examples:
+        >>> retention_date("2024-01-15", "CSDDD")
+        '2029-01-15'
+        >>> retention_date("2024-06-01", "UK_MSA")
+        '2027-06-01'
+    """
+    RETENTION_YEARS: dict[str, int] = {
+        "CSDDD":    5,
+        "EUDR":     5,
+        "LKSG":     5,
+        "UK_MSA":   3,
+    }
+    reg_upper = regulation.upper()
+    years = RETENTION_YEARS.get(reg_upper, 2)
+
+    base = date.fromisoformat(assessment_date)
+    try:
+        deadline = base.replace(year=base.year + years)
+    except ValueError:
+        # Edge case: Feb 29 leap day — roll to Mar 1
+        deadline = base.replace(year=base.year + years, day=28) + timedelta(days=1)
+    return deadline.isoformat()
+
+
+def grievance_resolution_sla(received_at: str, severity: str) -> dict:
+    """
+    SLA targets by severity (CSDDD Art.9, LkSG §8).
+
+    SLA table:
+      CRITICAL : acknowledge 24 h,   resolve 30 days
+      HIGH     : acknowledge 72 h,   resolve 60 days
+      MEDIUM   : acknowledge 7 days, resolve 90 days
+      LOW      : acknowledge 14 days, resolve 180 days
+
+    Args:
+        received_at: ISO 8601 timestamp string when the grievance was received.
+        severity:    One of CRITICAL | HIGH | MEDIUM | LOW (case-insensitive).
+
+    Returns:
+        dict with keys:
+          - sla_acknowledge_hours (int)  : target acknowledgement window in hours
+          - sla_resolve_days (int)       : target resolution window in days
+          - is_overdue_ack (bool)        : True if acknowledgement SLA has already passed
+          - hours_since_received (float) : elapsed hours since receipt
+          - days_to_resolve (int)        : calendar days from today to resolve deadline
+
+    Raises:
+        ValueError: if severity is not one of the four recognised values.
+    """
+    SLA: dict[str, dict] = {
+        "CRITICAL": {"ack_hours": 24,      "resolve_days": 30},
+        "HIGH":     {"ack_hours": 72,      "resolve_days": 60},
+        "MEDIUM":   {"ack_hours": 7 * 24,  "resolve_days": 90},
+        "LOW":      {"ack_hours": 14 * 24, "resolve_days": 180},
+    }
+    sev = severity.upper()
+    if sev not in SLA:
+        raise ValueError(
+            f"Unknown severity '{severity}'. Expected one of {list(SLA.keys())}."
+        )
+
+    from datetime import datetime, timezone
+    received_dt = datetime.fromisoformat(received_at.replace("Z", "+00:00"))
+    now_dt = datetime.now(timezone.utc)
+
+    hours_elapsed = (now_dt - received_dt).total_seconds() / 3600.0
+    ack_hours = SLA[sev]["ack_hours"]
+    resolve_days = SLA[sev]["resolve_days"]
+
+    resolve_deadline = received_dt + timedelta(days=resolve_days)
+    days_to_resolve = (resolve_deadline.date() - now_dt.date()).days
+
+    return {
+        "sla_acknowledge_hours": ack_hours,
+        "sla_resolve_days": resolve_days,
+        "is_overdue_ack": hours_elapsed > ack_hours,
+        "hours_since_received": round(hours_elapsed, 2),
+        "days_to_resolve": days_to_resolve,
+    }
+
+
+def compliance_risk_score(supplier_id: str, assessments: list[dict]) -> dict:
+    """
+    Composite compliance risk score across all regulations.
+
+    Regulation weights:
+      CSDDD   : 30%
+      UFLPA   : 25%
+      REACH   : 20%
+      EUDR    : 15%
+      other   : 10% (shared equally across remaining regulations)
+
+    Each assessment dict must contain:
+      - ``regulation`` (str) : one of CSDDD | UFLPA | REACH | EUDR | LKSG | UK_MSA | …
+      - ``score`` (float)    : compliance score 0–100 (100 = fully compliant)
+
+    Args:
+        supplier_id:  Identifier of the supplier being scored.
+        assessments:  List of per-regulation assessment dicts.
+
+    Returns:
+        dict with keys:
+          - supplier_id (str)
+          - overall_score (float)   : weighted composite 0–100
+          - by_regulation (dict)    : {regulation: score} for each input
+          - risk_level (str)        : CRITICAL | HIGH | MEDIUM | LOW
+          - assessed_regulations (list[str])
+
+    Raises:
+        ValueError: if assessments is empty or a score is outside 0–100.
+    """
+    if not assessments:
+        raise ValueError("assessments must contain at least one entry.")
+
+    PRIMARY_WEIGHTS: dict[str, float] = {
+        "CSDDD": 0.30,
+        "UFLPA": 0.25,
+        "REACH": 0.20,
+        "EUDR":  0.15,
+    }
+    OTHER_POOL = 0.10  # distributed equally among regulations not in PRIMARY_WEIGHTS
+
+    by_regulation: dict[str, float] = {}
+    for a in assessments:
+        reg = a["regulation"].upper()
+        score = float(a["score"])
+        if not (0.0 <= score <= 100.0):
+            raise ValueError(
+                f"Score for '{reg}' must be in [0, 100], got {score}."
+            )
+        by_regulation[reg] = score
+
+    # Identify "other" regulations (not in primary weight map)
+    other_regs = [r for r in by_regulation if r not in PRIMARY_WEIGHTS]
+    per_other_weight = (OTHER_POOL / len(other_regs)) if other_regs else 0.0
+
+    # Compute effective weights for present regulations only (normalise if primaries absent)
+    effective: dict[str, float] = {}
+    for reg in by_regulation:
+        if reg in PRIMARY_WEIGHTS:
+            effective[reg] = PRIMARY_WEIGHTS[reg]
+        else:
+            effective[reg] = per_other_weight
+
+    total_weight = sum(effective[r] for r in by_regulation)
+    if total_weight == 0:
+        overall = 0.0
+    else:
+        weighted_sum = sum(
+            by_regulation[r] * effective[r] for r in by_regulation
+        )
+        overall = round(weighted_sum / total_weight, 4)
+
+    # Risk banding
+    if overall >= 80:
+        risk_level = "LOW"
+    elif overall >= 60:
+        risk_level = "MEDIUM"
+    elif overall >= 40:
+        risk_level = "HIGH"
+    else:
+        risk_level = "CRITICAL"
+
+    return {
+        "supplier_id": supplier_id,
+        "overall_score": overall,
+        "by_regulation": by_regulation,
+        "risk_level": risk_level,
+        "assessed_regulations": list(by_regulation.keys()),
+    }
+
+
 def due_diligence_score(
     criteria: dict[str, bool], weights: dict[str, float]
 ) -> float:

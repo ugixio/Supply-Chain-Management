@@ -230,3 +230,198 @@ def mps_stability_index(original_mps: np.ndarray, revised_mps: np.ndarray) -> fl
     if total_original == 0:
         return 1.0
     return float(1.0 - np.abs(revised - original).sum() / total_original)
+
+
+# ── BOM Explosion / Low-Level Codes / Pegging ───────────────────────────────────
+
+_MAX_BOM_DEPTH = 50
+
+
+def bom_explosion(
+    bom_tree: dict[str, list[dict]],
+    parent_sku: str,
+    required_qty: float,
+    level: int = 0,
+) -> list[dict]:
+    """
+    Recursive multi-level BOM explosion.
+
+    Walks the bill-of-materials tree from ``parent_sku`` downward, multiplying
+    quantities at each level and inflating each line for its scrap allowance.
+
+    Effective gross requirement of a component at a given level::
+
+        component_req = parent_req * qty_per * (1 + scrap_pct / 100)
+
+    Args:
+        bom_tree: Mapping of parent SKU -> list of component dicts. Each
+            component dict has keys:
+              - ``component_sku`` (str): child SKU.
+              - ``qty_per`` (float): quantity of child per 1 unit of parent.
+              - ``scrap_pct`` (float, optional): scrap allowance %, default 0.
+            A SKU absent from the mapping (or with an empty list) is a leaf
+            (purchased) part.
+        parent_sku: Top item being exploded.
+        required_qty: Quantity of ``parent_sku`` to build.
+        level: BOM indenture level of ``parent_sku`` (0 = top end item). Used
+            internally for the recursion and reported on each output row.
+
+    Returns:
+        Flattened list of requirement rows (parent's own line is not emitted),
+        one per component occurrence, each a dict with:
+        ``component_sku``, ``level``, ``qty_per``, ``scrap_pct``,
+        ``required_qty`` (scrap-inflated), ``parent_sku``.
+
+    Raises:
+        ValueError: if the BOM nesting exceeds ``_MAX_BOM_DEPTH`` (likely a
+            circular reference) or a SKU appears on its own ancestor path.
+
+    Ref: Orlicky (2022) Ch.5 "Bill of Material Structuring".
+    """
+
+    def _recurse(sku: str, qty: float, lvl: int, ancestors: frozenset[str]) -> list[dict]:
+        if lvl > _MAX_BOM_DEPTH:
+            raise ValueError(
+                f"bom_explosion: max depth {_MAX_BOM_DEPTH} exceeded at '{sku}' "
+                "(possible circular BOM)"
+            )
+        rows: list[dict] = []
+        for comp in bom_tree.get(sku, []):
+            child = comp["component_sku"]
+            if child in ancestors or child == sku:
+                raise ValueError(
+                    f"bom_explosion: circular reference — '{child}' appears in its "
+                    f"own ancestor path under '{parent_sku}'"
+                )
+            qty_per = float(comp["qty_per"])
+            scrap_pct = float(comp.get("scrap_pct", 0.0))
+            child_req = qty * qty_per * (1.0 + scrap_pct / 100.0)
+            rows.append({
+                "component_sku": child,
+                "level": lvl + 1,
+                "qty_per": qty_per,
+                "scrap_pct": scrap_pct,
+                "required_qty": child_req,
+                "parent_sku": sku,
+            })
+            rows.extend(
+                _recurse(child, child_req, lvl + 1, ancestors | {sku})
+            )
+        return rows
+
+    return _recurse(parent_sku, float(required_qty), level, frozenset())
+
+
+def low_level_code(bom_tree: dict[str, list[dict]]) -> dict[str, int]:
+    """
+    Assign each SKU its Low-Level Code (LLC): the lowest (deepest) indenture
+    level at which the part appears anywhere in the BOM tree.
+
+    MRP must net requirements for a part only after every parent that consumes
+    it has been processed; processing SKUs in ascending LLC order guarantees
+    this. A part used at multiple levels takes the maximum (deepest) level.
+
+    Args:
+        bom_tree: Mapping of parent SKU -> list of component dicts, each with
+            at least ``component_sku`` (see :func:`bom_explosion`).
+
+    Returns:
+        Mapping of SKU -> LLC integer. Top-level end items that are never a
+        component default to 0; their components are 1, and so on.
+
+    Ref: Orlicky (2022) Ch.3 "Low-Level Coding".
+    """
+    all_skus: set[str] = set(bom_tree.keys())
+    children: set[str] = set()
+    for comps in bom_tree.values():
+        for comp in comps:
+            all_skus.add(comp["component_sku"])
+            children.add(comp["component_sku"])
+
+    # Roots are SKUs that are never anyone's component.
+    roots = [sku for sku in all_skus if sku not in children]
+    llc: dict[str, int] = {sku: 0 for sku in all_skus}
+
+    def _visit(sku: str, level: int, path: frozenset[str]) -> None:
+        if sku in path or level > _MAX_BOM_DEPTH:
+            raise ValueError(f"low_level_code: circular reference at '{sku}'")
+        if level > llc[sku]:
+            llc[sku] = level
+        for comp in bom_tree.get(sku, []):
+            _visit(comp["component_sku"], level + 1, path | {sku})
+
+    for root in roots:
+        _visit(root, 0, frozenset())
+    # Handle pure cycles (no root) defensively — every SKU still gets a code.
+    for sku in all_skus:
+        if sku not in llc:
+            llc[sku] = 0
+    return llc
+
+
+def pegging(
+    planned_orders: list[dict],
+    demand_sources: list[dict],
+) -> list[dict]:
+    """
+    Single-level pegging: trace each planned order back to the gross-demand
+    record(s) that originated it, for the same SKU and period.
+
+    Pegging answers "why does this order exist?" by linking supply (planned
+    orders) to demand (sales orders, dependent demand from parents, forecast).
+
+    Args:
+        planned_orders: List of order dicts, each with:
+              - ``sku`` (str)
+              - ``period`` (hashable, e.g. ISO date or week index)
+              - ``quantity`` (float)
+            Optional ``order_id`` is carried through if present.
+        demand_sources: List of demand dicts, each with:
+              - ``sku`` (str)
+              - ``period`` (matching the order period bucket)
+              - ``quantity`` (float gross demand)
+              - ``source`` (str, e.g. 'SALES_ORDER', 'PARENT:SKU123', 'FORECAST')
+
+    Returns:
+        List of peg rows (one per planned order x matching demand source) with:
+        ``sku``, ``period``, ``planned_qty``, ``order_id`` (or None),
+        ``demand_source``, ``demand_qty``, ``pegged_qty`` (min of order and
+        demand, allocated greedily in demand-list order). Orders with no
+        matching demand still emit a single row with ``demand_source=None``.
+    """
+    # Index demand by (sku, period), preserving input order for allocation.
+    demand_index: dict[tuple, list[dict]] = {}
+    for d in demand_sources:
+        demand_index.setdefault((d["sku"], d["period"]), []).append(d)
+
+    pegs: list[dict] = []
+    for order in planned_orders:
+        key = (order["sku"], order["period"])
+        order_id = order.get("order_id")
+        remaining = float(order["quantity"])
+        matches = demand_index.get(key, [])
+        if not matches:
+            pegs.append({
+                "sku": order["sku"],
+                "period": order["period"],
+                "planned_qty": float(order["quantity"]),
+                "order_id": order_id,
+                "demand_source": None,
+                "demand_qty": 0.0,
+                "pegged_qty": 0.0,
+            })
+            continue
+        for d in matches:
+            demand_qty = float(d["quantity"])
+            pegged = min(remaining, demand_qty) if remaining > 0 else 0.0
+            pegs.append({
+                "sku": order["sku"],
+                "period": order["period"],
+                "planned_qty": float(order["quantity"]),
+                "order_id": order_id,
+                "demand_source": d.get("source"),
+                "demand_qty": demand_qty,
+                "pegged_qty": pegged,
+            })
+            remaining = max(0.0, remaining - pegged)
+    return pegs

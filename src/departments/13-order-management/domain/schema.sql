@@ -352,3 +352,132 @@ FROM order_management.return_authorizations ra
 JOIN order_management.rma_lines rl ON rl.rma_id = ra.id
 WHERE ra.is_deleted = FALSE
 GROUP BY 1, 2, 3;
+
+
+-- =============================================================================
+-- AVAILABLE-TO-PROMISE (ATP) — order-promising engine
+-- Ref: APICS CPIM 9.0 — Master Scheduling / ATP; Chopra & Meindl Ch.14
+--      Vollmann, Berry & Whybark — Manufacturing Planning & Control (MPC)
+-- =============================================================================
+
+-- ATP calculation header — one per SKU / warehouse / method / run
+CREATE TABLE order_management.atp_calculations (
+    id                  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    sku_id              UUID NOT NULL REFERENCES inventory.sku_master(id),
+    warehouse_id        UUID NOT NULL REFERENCES warehouse.warehouses(id),
+    calculation_date    DATE NOT NULL DEFAULT CURRENT_DATE,
+    method              VARCHAR(12) NOT NULL CHECK (method IN ('DISCRETE','CUMULATIVE','CTP')),
+    is_deleted          BOOLEAN NOT NULL DEFAULT FALSE,
+    created_at          TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at          TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX ON order_management.atp_calculations (sku_id, warehouse_id, calculation_date DESC);
+CREATE INDEX ON order_management.atp_calculations (method);
+COMMENT ON TABLE order_management.atp_calculations IS
+    'ATP run header. DISCRETE: ATP only in supply periods (supply − commitments before next supply). '
+    'CUMULATIVE: running availability carried forward. CTP: ATP + production capability. Mirrors AvailableToPromise.ts.';
+
+-- ATP time buckets — one row per period on the horizon
+CREATE TABLE order_management.atp_buckets (
+    id                      UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    atp_calculation_id      UUID NOT NULL REFERENCES order_management.atp_calculations(id),
+    period_date             DATE NOT NULL,
+    on_hand_qty             NUMERIC(18,4) NOT NULL DEFAULT 0,
+    scheduled_receipts_qty  NUMERIC(18,4) NOT NULL DEFAULT 0 CHECK (scheduled_receipts_qty >= 0),
+    committed_qty           NUMERIC(18,4) NOT NULL DEFAULT 0 CHECK (committed_qty >= 0),
+    -- atp_qty / cumulative_atp_qty are computed by the domain engine and stored
+    atp_qty                 NUMERIC(18,4) NOT NULL DEFAULT 0,
+    cumulative_atp_qty      NUMERIC(18,4) NOT NULL DEFAULT 0,
+    created_at              TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    UNIQUE (atp_calculation_id, period_date)
+);
+CREATE INDEX ON order_management.atp_buckets (atp_calculation_id, period_date);
+COMMENT ON COLUMN order_management.atp_buckets.atp_qty IS
+    'Computed available-to-promise for the period (DISCRETE: supply − commitments before next supply; '
+    'CUMULATIVE: net supply − committed). Floored at 0.';
+COMMENT ON COLUMN order_management.atp_buckets.cumulative_atp_qty IS
+    'Running cumulative ATP up to and including this period — used by canPromise() to find the earliest covering date.';
+
+
+-- =============================================================================
+-- ORDER ALLOCATION — rationing supply when demand > supply
+-- Ref: APICS CPIM 9.0 — Allocation / Fair-Share; Chopra & Meindl Ch.11
+--      Silver, Pyke & Peterson — Inventory Management & Production Planning
+-- =============================================================================
+
+-- Allocation header — one per constrained SKU / warehouse
+CREATE TABLE order_management.order_allocations (
+    id                  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    sku_id              UUID NOT NULL REFERENCES inventory.sku_master(id),
+    warehouse_id        UUID NOT NULL REFERENCES warehouse.warehouses(id),
+    available_qty       NUMERIC(18,4) NOT NULL CHECK (available_qty >= 0),
+    allocation_method   VARCHAR(12) NOT NULL CHECK (allocation_method IN ('FCFS','FAIR_SHARE','PRIORITY','PRO_RATA')),
+    status              VARCHAR(10) NOT NULL DEFAULT 'DRAFT' CHECK (status IN ('DRAFT','CONFIRMED')),
+    is_deleted          BOOLEAN NOT NULL DEFAULT FALSE,
+    created_at          TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at          TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX ON order_management.order_allocations (sku_id, warehouse_id, status);
+COMMENT ON TABLE order_management.order_allocations IS
+    'Supply rationing when demand > supply. PRO_RATA: proportional to request. PRIORITY: highest priority first. '
+    'FAIR_SHARE: equalize fill rate (water-filling). FCFS: arrival order. Mirrors OrderAllocation.ts. '
+    'Invariant: Σ allocated_qty ≤ available_qty.';
+
+-- Allocation demands — competing orders for the scarce supply
+CREATE TABLE order_management.allocation_demands (
+    id                  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    allocation_id       UUID NOT NULL REFERENCES order_management.order_allocations(id),
+    order_id            UUID NOT NULL REFERENCES order_management.sales_orders(id),
+    customer_id         UUID NOT NULL REFERENCES order_management.customers(id),
+    requested_qty       NUMERIC(18,4) NOT NULL CHECK (requested_qty > 0),
+    priority            INTEGER NOT NULL DEFAULT 1 CHECK (priority >= 1),  -- 1 = highest
+    allocated_qty       NUMERIC(18,4) NOT NULL DEFAULT 0 CHECK (allocated_qty >= 0),
+    -- fill_rate_pct = allocated_qty / requested_qty × 100
+    fill_rate_pct       NUMERIC(6,2) GENERATED ALWAYS AS (
+        CASE WHEN requested_qty > 0 THEN ROUND(allocated_qty / requested_qty * 100, 2) ELSE 0 END
+    ) STORED,
+    created_at          TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    CONSTRAINT allocation_demands_allocated_lte_requested
+        CHECK (allocated_qty <= requested_qty)
+);
+CREATE INDEX ON order_management.allocation_demands (allocation_id);
+CREATE INDEX ON order_management.allocation_demands (order_id);
+COMMENT ON COLUMN order_management.allocation_demands.priority IS
+    'Allocation priority, 1 = highest. Used only by the PRIORITY method.';
+COMMENT ON COLUMN order_management.allocation_demands.fill_rate_pct IS
+    'Auto-computed: allocated_qty / requested_qty × 100. World-class fill rate ≥ 98%.';
+
+
+-- ---------------------------------------------------------------------------
+-- VIEW: v_atp_availability
+-- Latest ATP profile per SKU / warehouse with earliest covering period and
+-- total promisable quantity (peak cumulative ATP on the horizon).
+-- ---------------------------------------------------------------------------
+
+CREATE OR REPLACE VIEW order_management.v_atp_availability AS
+WITH latest_calc AS (
+    SELECT DISTINCT ON (sku_id, warehouse_id)
+        id, sku_id, warehouse_id, calculation_date, method
+    FROM order_management.atp_calculations
+    WHERE is_deleted = FALSE
+    ORDER BY sku_id, warehouse_id, calculation_date DESC, created_at DESC
+)
+SELECT
+    lc.sku_id,
+    lc.warehouse_id,
+    lc.calculation_date,
+    lc.method,
+    MIN(b.period_date)                                      AS horizon_start,
+    MAX(b.period_date)                                      AS horizon_end,
+    -- Total promisable = peak cumulative ATP across the horizon
+    MAX(b.cumulative_atp_qty)                               AS total_promisable_qty,
+    -- Earliest period where any ATP becomes available
+    MIN(b.period_date) FILTER (WHERE b.atp_qty > 0)         AS first_available_period,
+    SUM(b.committed_qty)                                    AS total_committed_qty,
+    SUM(b.scheduled_receipts_qty)                           AS total_scheduled_receipts_qty
+FROM latest_calc lc
+JOIN order_management.atp_buckets b ON b.atp_calculation_id = lc.id
+GROUP BY lc.sku_id, lc.warehouse_id, lc.calculation_date, lc.method;
+
+COMMENT ON VIEW order_management.v_atp_availability IS
+    'Latest ATP profile per SKU/warehouse: total promisable qty (peak cumulative ATP), earliest available period, committed and scheduled-receipt totals over the horizon.';

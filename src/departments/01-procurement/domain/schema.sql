@@ -590,3 +590,192 @@ ORDER BY c.end_date;
 COMMENT ON VIEW procurement.v_contracts_expiring_soon IS
     'Contracts expiring within 90 days. Triggers renewal workflow in procurement module. '
     'auto_renewal = TRUE contracts are renewed automatically; others require manual action.';
+
+-- ---------------------------------------------------------------------------
+-- goods_receipts (GRN / UN/EDIFACT RECADV)
+-- Receiving record against a purchase order. The "GR" leg of the 3-way match
+-- (PO ↔ GRN ↔ Invoice). Aligns with GoodsReceipt.ts.
+-- Soft-delete only (is_deleted) — feeds the 3-way match, a financial control.
+-- Status flow: DRAFT → RECEIVED → INSPECTION_PENDING → POSTED → CLOSED
+--                                                    ↘ REVERSED
+-- Note: finance.goods_receipt_notes is a downstream AP read-model; this table
+--       is the system-of-record receiving document owned by procurement.
+-- ---------------------------------------------------------------------------
+CREATE TABLE procurement.goods_receipts (
+    id                  UUID         PRIMARY KEY DEFAULT gen_random_uuid(),
+    grn_number          VARCHAR(30)  NOT NULL UNIQUE,
+    po_id               UUID         NOT NULL REFERENCES procurement.purchase_orders(id) ON DELETE RESTRICT,
+    supplier_id         UUID         NOT NULL REFERENCES procurement.suppliers(id) ON DELETE RESTRICT,
+    warehouse_id        UUID         NOT NULL,
+    status              VARCHAR(20)  NOT NULL DEFAULT 'RECEIVED'
+                            CHECK (status IN (
+                                'DRAFT', 'RECEIVED', 'INSPECTION_PENDING',
+                                'POSTED', 'CLOSED', 'REVERSED'
+                            )),
+    received_date       DATE         NOT NULL DEFAULT CURRENT_DATE,
+    received_by         VARCHAR(100) NOT NULL,
+    -- UN/EDIFACT RECADV / shipping references
+    carrier_ref         VARCHAR(50),
+    packing_slip_ref    VARCHAR(50),
+    -- Reversal (POSTED -> REVERSED) requires a reason
+    reversal_reason     TEXT,
+    -- Record control
+    is_deleted          BOOLEAN      NOT NULL DEFAULT FALSE,
+    created_at          TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+    updated_at          TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+    -- Reversed GRNs must carry a reason
+    CONSTRAINT chk_grn_reversal CHECK (
+        status <> 'REVERSED' OR reversal_reason IS NOT NULL
+    )
+);
+
+COMMENT ON TABLE procurement.goods_receipts IS
+    'Goods Receipt Note (GRN) header — maps to UN/EDIFACT RECADV. '
+    'The GR leg of the 3-way match (PO ↔ GRN ↔ Invoice). Soft-delete only. '
+    'POSTED transition writes stock movements (inventory module) and feeds '
+    'finance 3-way match. Partial receipts allowed: a PO line may be received '
+    'across multiple GRNs (see v_open_receipts for remaining quantity).';
+COMMENT ON COLUMN procurement.goods_receipts.status IS
+    'DRAFT → RECEIVED → INSPECTION_PENDING → POSTED → CLOSED, or REVERSED. '
+    'Cannot reach POSTED until every line is inspected (accepted_qty set).';
+
+-- ---------------------------------------------------------------------------
+-- goods_receipt_lines
+-- Line items within a GRN. over_receipt_pct is a GENERATED column.
+-- CHECK enforces accepted_qty + rejected_qty <= received_qty.
+-- ---------------------------------------------------------------------------
+CREATE TABLE procurement.goods_receipt_lines (
+    id                 UUID          PRIMARY KEY DEFAULT gen_random_uuid(),
+    grn_id             UUID          NOT NULL REFERENCES procurement.goods_receipts(id) ON DELETE RESTRICT,
+    po_line_id         UUID          NOT NULL REFERENCES procurement.po_lines(id) ON DELETE RESTRICT,
+    sku_id             VARCHAR(50)   NOT NULL,
+    ordered_qty        NUMERIC(15,4) NOT NULL CHECK (ordered_qty > 0),
+    received_qty       NUMERIC(15,4) NOT NULL CHECK (received_qty > 0),
+    -- Inspection outcome (set during INSPECTION_PENDING; NULL = not yet inspected)
+    accepted_qty       NUMERIC(15,4) CHECK (accepted_qty >= 0),
+    rejected_qty       NUMERIC(15,4) CHECK (rejected_qty >= 0),
+    quantity_uom       CHAR(3)       NOT NULL,   -- GS1 UN/ECE Rec 20 UOM code
+    -- Lot / batch (required for non-ambient storage or REACH SVHC items)
+    lot_number         VARCHAR(50),
+    expiry_date        DATE,
+    -- Generated: drift-free over-receipt percentage vs ordered qty
+    over_receipt_pct   NUMERIC(7,2)  GENERATED ALWAYS AS (
+                           ROUND((received_qty - ordered_qty) / ordered_qty * 100, 2)
+                       ) STORED,
+    -- Over-receipt beyond tolerance (default 5%) flags approval requirement
+    requires_approval  BOOLEAN       NOT NULL DEFAULT FALSE,
+    unit_price_cents   INTEGER       NOT NULL CHECK (unit_price_cents >= 0),
+    created_at         TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
+    -- accepted + rejected may not exceed received; once inspected they must equal
+    -- received_qty (enforced at the application layer in GoodsReceipt.ts).
+    CONSTRAINT chk_grn_line_inspection CHECK (
+        COALESCE(accepted_qty, 0) + COALESCE(rejected_qty, 0) <= received_qty
+    )
+);
+
+COMMENT ON TABLE procurement.goods_receipt_lines IS
+    'GRN line items. over_receipt_pct is a GENERATED column '
+    '((received - ordered)/ordered * 100). unit_price_cents is integer cents. '
+    'accepted_qty + rejected_qty <= received_qty (CHECK); when inspected they '
+    'equal received_qty. requires_approval flags over-receipt beyond tolerance.';
+COMMENT ON COLUMN procurement.goods_receipt_lines.over_receipt_pct IS
+    'GENERATED: percentage received above (positive) or below (negative) ordered. '
+    'requires_approval = TRUE when over the 5% over-receipt tolerance band.';
+COMMENT ON COLUMN procurement.goods_receipt_lines.quantity_uom IS
+    'GS1 UN/ECE Rec 20 UOM code. Examples: EA=Each, KGM=Kilogram, LTR=Litre.';
+
+-- ---------------------------------------------------------------------------
+-- Indexes
+-- ---------------------------------------------------------------------------
+CREATE INDEX idx_grn_po                ON procurement.goods_receipts(po_id);
+CREATE INDEX idx_grn_supplier          ON procurement.goods_receipts(supplier_id);
+CREATE INDEX idx_grn_status            ON procurement.goods_receipts(status)        WHERE is_deleted = FALSE;
+CREATE INDEX idx_grn_received_date     ON procurement.goods_receipts(received_date);
+CREATE INDEX idx_grn_lines_grn         ON procurement.goods_receipt_lines(grn_id);
+CREATE INDEX idx_grn_lines_po_line     ON procurement.goods_receipt_lines(po_line_id);
+CREATE INDEX idx_grn_lines_sku         ON procurement.goods_receipt_lines(sku_id);
+
+-- ---------------------------------------------------------------------------
+-- VIEW: v_open_receipts
+-- GRNs (and PO lines) with remaining quantity still to be received.
+-- Partial receipts leave a PO line open until cumulative received >= ordered.
+-- ---------------------------------------------------------------------------
+CREATE VIEW procurement.v_open_receipts AS
+SELECT
+    pol.id                              AS po_line_id,
+    po.id                               AS po_id,
+    po.po_number,
+    po.supplier_id,
+    pol.sku_id,
+    pol.quantity_value                  AS ordered_qty,
+    COALESCE(rcv.received_qty, 0)       AS received_qty,
+    (pol.quantity_value - COALESCE(rcv.received_qty, 0)) AS remaining_qty,
+    pol.quantity_uom
+FROM procurement.po_lines pol
+JOIN procurement.purchase_orders po ON pol.po_id = po.id
+LEFT JOIN (
+    SELECT grl.po_line_id,
+           SUM(grl.received_qty) AS received_qty
+    FROM procurement.goods_receipt_lines grl
+    JOIN procurement.goods_receipts grn ON grl.grn_id = grn.id
+    WHERE grn.is_deleted = FALSE
+      AND grn.status NOT IN ('REVERSED')
+    GROUP BY grl.po_line_id
+) rcv ON rcv.po_line_id = pol.id
+WHERE po.is_deleted = FALSE
+  AND po.status NOT IN ('CANCELLED', 'CLOSED')
+  AND pol.quantity_value > COALESCE(rcv.received_qty, 0);
+
+COMMENT ON VIEW procurement.v_open_receipts IS
+    'PO lines with quantity still outstanding (ordered > cumulative received). '
+    'Drives expediting and PARTIALLY_RECEIVED status. REVERSED GRNs are excluded '
+    'from received totals so reversed receipts re-open the line.';
+
+-- ---------------------------------------------------------------------------
+-- VIEW: v_three_way_match_exceptions
+-- GRN lines whose received quantity diverges from the ordered quantity beyond
+-- tolerance, or that are flagged for over-receipt approval. Feeds the AP
+-- 3-way match (PO ↔ GRN ↔ Invoice) in the finance module and
+-- python/01_procurement/receiving.py three_way_match_status().
+-- ---------------------------------------------------------------------------
+CREATE VIEW procurement.v_three_way_match_exceptions AS
+SELECT
+    grn.grn_number,
+    grn.po_id,
+    po.po_number,
+    grn.supplier_id,
+    s.supplier_code,
+    grl.sku_id,
+    grl.ordered_qty,
+    grl.received_qty,
+    grl.accepted_qty,
+    grl.rejected_qty,
+    grl.over_receipt_pct,
+    grl.requires_approval,
+    grl.unit_price_cents,
+    ROUND((grl.received_qty - grl.ordered_qty) * grl.unit_price_cents)::BIGINT
+                                        AS qty_variance_value_cents,
+    grn.status                          AS grn_status,
+    CASE
+        WHEN grl.requires_approval               THEN 'OVER_RECEIPT'
+        WHEN grl.received_qty < grl.ordered_qty  THEN 'SHORT_RECEIPT'
+        WHEN grl.rejected_qty > 0                THEN 'QUALITY_REJECTION'
+        ELSE 'OTHER'
+    END                                 AS exception_type
+FROM procurement.goods_receipt_lines grl
+JOIN procurement.goods_receipts grn ON grl.grn_id = grn.id
+JOIN procurement.purchase_orders po ON grn.po_id = po.id
+JOIN procurement.suppliers s        ON grn.supplier_id = s.id
+WHERE grn.is_deleted = FALSE
+  AND grn.status NOT IN ('REVERSED')
+  AND (
+        grl.requires_approval
+     OR grl.received_qty <> grl.ordered_qty
+     OR COALESCE(grl.rejected_qty, 0) > 0
+      );
+
+COMMENT ON VIEW procurement.v_three_way_match_exceptions IS
+    'GRN lines that break the 3-way match: over-receipts requiring approval, '
+    'short receipts, or quality rejections. Read by the finance AP module and '
+    'python/01_procurement/receiving.py three_way_match_status() to hold payment '
+    'until the discrepancy is cleared. qty_variance_value_cents is integer cents.';

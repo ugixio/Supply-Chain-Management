@@ -410,3 +410,320 @@ def reverse_logistics_cost(
         "total_cents": total_cents,
         "as_pct_of_refund": round(as_pct_of_refund, 4),
     }
+
+
+# ---------------------------------------------------------------------------
+# Order Allocation / Fair-Share Distribution
+# Ref: APICS CPIM 9.0 — Allocation; Chopra & Meindl Ch.11 (rationing);
+#      Silver, Pyke & Peterson — Inventory Management & Production Planning
+# ---------------------------------------------------------------------------
+
+
+def fair_share_allocation(
+    available: float,
+    demands: list[dict],
+    method: str = "PRO_RATA",
+) -> list[dict]:
+    """
+    Ration a scarce ``available`` quantity across competing demands.
+
+    Allocation policies (matches OrderAllocation.ts):
+      - ``PRO_RATA``   : split proportionally to requested_qty.
+      - ``PRIORITY``   : fill lowest priority number first (1 = highest);
+                         ties keep input order.
+      - ``FAIR_SHARE`` : equalize fill rate (water-filling) — every demand is
+                         filled to the same proportion of its request, with
+                         requests below the equal share fully filled and the
+                         freed supply re-spread across the rest.
+      - ``FCFS``       : First-Come-First-Served in input order until supply
+                         is exhausted.
+
+    Edge cases:
+      - ``available >= Σ requested_qty`` → every demand is fully allocated.
+      - ``available <= 0``               → every demand allocated 0.
+
+    Args:
+        available: Quantity on hand to distribute (units, ≥ 0).
+        demands:   List of dicts, each with keys:
+                     order_id      (str)
+                     requested_qty (float, > 0)
+                     priority      (int, optional; default 1, 1 = highest)
+        method:    One of 'PRO_RATA', 'PRIORITY', 'FAIR_SHARE', 'FCFS'.
+
+    Returns:
+        New list (same order as input) of dicts, each the original demand
+        plus:
+          allocated_qty (float) — units granted (≤ requested_qty),
+          fill_rate_pct (float) — allocated_qty / requested_qty × 100.
+
+    Raises:
+        ValueError: If available < 0, any requested_qty ≤ 0, or method
+                    is not recognised.
+
+    Invariants: Σ allocated_qty ≤ available; allocated_qty ≤ requested_qty.
+    """
+    method = method.upper()
+    if method not in {"PRO_RATA", "PRIORITY", "FAIR_SHARE", "FCFS"}:
+        raise ValueError(f"Unknown allocation method: {method!r}.")
+    if available < 0:
+        raise ValueError(f"available must be ≥ 0, got {available}.")
+
+    n = len(demands)
+    requested = np.empty(n, dtype=float)
+    priorities = np.empty(n, dtype=float)
+    for i, d in enumerate(demands):
+        req = float(d["requested_qty"])
+        if req <= 0:
+            raise ValueError(f"Demand {i}: requested_qty must be > 0, got {req}.")
+        requested[i] = req
+        priorities[i] = float(d.get("priority", 1))
+
+    allocated = np.zeros(n, dtype=float)
+    total_requested = float(requested.sum())
+
+    if n == 0 or available <= 0:
+        pass
+    elif available >= total_requested:
+        allocated = requested.copy()
+    elif method == "PRO_RATA":
+        allocated = requested / total_requested * available
+    elif method == "FCFS":
+        remaining = available
+        for i in range(n):
+            give = min(requested[i], remaining)
+            allocated[i] = give
+            remaining -= give
+            if remaining <= 0:
+                break
+    elif method == "PRIORITY":
+        # Stable sort by priority ascending (1 = highest), preserving input order.
+        order = sorted(range(n), key=lambda i: (priorities[i], i))
+        remaining = available
+        for i in order:
+            give = min(requested[i], remaining)
+            allocated[i] = give
+            remaining -= give
+            if remaining <= 0:
+                break
+    elif method == "FAIR_SHARE":
+        remaining = available
+        pending = list(range(n))
+        while pending and remaining > 0:
+            pending_req = sum(requested[i] for i in pending)
+            ratio = remaining / pending_req
+            if ratio >= 1:
+                for i in pending:
+                    allocated[i] = requested[i]
+                pending = []
+                break
+            still: list[int] = []
+            consumed = 0.0
+            moved = False
+            for i in pending:
+                share = ratio * requested[i]
+                if requested[i] <= share:
+                    allocated[i] = requested[i]
+                    consumed += requested[i]
+                    moved = True
+                else:
+                    still.append(i)
+            if not moved:
+                for i in still:
+                    allocated[i] = ratio * requested[i]
+                pending = []
+                break
+            remaining -= consumed
+            pending = still
+
+    # Cap at request (defensive against float drift) and build result.
+    allocated = np.minimum(allocated, requested)
+    out: list[dict] = []
+    for i, d in enumerate(demands):
+        give = float(allocated[i])
+        out.append(
+            {
+                **d,
+                "allocated_qty": give,
+                "fill_rate_pct": (give / requested[i] * 100.0) if requested[i] > 0 else 0.0,
+            }
+        )
+    return out
+
+
+# ---------------------------------------------------------------------------
+# Discrete Available-to-Promise (per period)
+# Ref: APICS CPIM — Master Scheduling / ATP; Vollmann, Berry & Whybark (MPC)
+# ---------------------------------------------------------------------------
+
+
+def discrete_atp(periods: list[dict]) -> list[dict]:
+    """
+    Discrete Available-to-Promise per period.
+
+    Discrete ATP algorithm (APICS MPC):
+      ATP is computed only in periods that receive supply. Period 0 always
+      qualifies because it carries on-hand inventory. For each supply period
+      ``t`` the ATP equals the supply available in that period minus the sum
+      of customer commitments from period ``t`` up to — but not including —
+      the next period that receives supply:
+
+        supply_t   = on_hand + supply_0           (t = 0)
+                   = supply_t                      (t > 0, supply_t > 0)
+
+        ATP_t      = max( supply_t − Σ committed_k , 0 )
+                     for k = t .. (next supply period − 1)
+
+      Periods with no supply have ATP = 0. The cumulative ATP is the running
+      sum of the per-period discrete ATP values.
+
+    Args:
+        periods: Ordered list of dicts, each with keys:
+                   period    (str/date) — bucket label, echoed back,
+                   supply    (float)    — scheduled receipts in the period;
+                                          for period 0 add on-hand here OR pass
+                                          an 'on_hand' key (added to period 0),
+                   committed (float)    — firm commitments due in the period,
+                   on_hand   (float, optional) — on-hand for period 0 only.
+
+    Returns:
+        New list (same order) of dicts, each period plus:
+          atp_qty            (float) — discrete ATP for the period,
+          cumulative_atp_qty (float) — running sum of atp_qty.
+    """
+    n = len(periods)
+    if n == 0:
+        return []
+
+    supply = np.array([float(p.get("supply", 0.0)) for p in periods], dtype=float)
+    committed = np.array([float(p.get("committed", 0.0)) for p in periods], dtype=float)
+    on_hand0 = float(periods[0].get("on_hand", 0.0))
+
+    def is_supply_period(i: int) -> bool:
+        return i == 0 or supply[i] > 0
+
+    atp = np.zeros(n, dtype=float)
+    for i in range(n):
+        if not is_supply_period(i):
+            continue
+        avail = (on_hand0 + supply[0]) if i == 0 else supply[i]
+        commit = 0.0
+        for j in range(i, n):
+            if j > i and is_supply_period(j):
+                break
+            commit += committed[j]
+        atp[i] = max(avail - commit, 0.0)
+
+    cumulative = np.cumsum(atp)
+    return [
+        {
+            **periods[i],
+            "atp_qty": float(atp[i]),
+            "cumulative_atp_qty": float(cumulative[i]),
+        }
+        for i in range(n)
+    ]
+
+
+# ---------------------------------------------------------------------------
+# Capable-to-Promise (CTP)
+# Ref: APICS CPIM — Capable-to-Promise; Chopra & Meindl Ch.14
+# ---------------------------------------------------------------------------
+
+
+def capable_to_promise(
+    requested_qty: float,
+    requested_date: date,
+    atp_schedule: list[dict],
+    production_lead_time_days: int,
+) -> dict:
+    """
+    Capable-to-Promise: promise from ATP if possible, otherwise check whether
+    production can cover the shortfall by the requested date.
+
+    Logic:
+      1. Find the earliest ATP bucket whose ``cumulative_atp_qty`` covers
+         ``requested_qty``. If that bucket's period ≤ requested_date, the order
+         is promised from stock (source = 'ATP').
+      2. Otherwise consider production: if today + production_lead_time_days
+         ≤ requested_date, the order is promised from production
+         (source = 'CTP') with promise_date = production completion date.
+      3. If neither stock nor production can meet the date, the order is
+         UNAVAILABLE; promise_date is the best achievable date (the earlier of
+         the ATP covering date, if any, and the production completion date).
+
+    Args:
+        requested_qty:             Units requested (> 0).
+        requested_date:            Customer's required date.
+        atp_schedule:              Ordered list of dicts with keys
+                                   'period' (date) and 'cumulative_atp_qty'
+                                   (float), e.g. output of ``discrete_atp``.
+        production_lead_time_days: Days to produce/replenish the shortfall.
+
+    Returns:
+        {
+          'can_fulfill' : bool,
+          'promise_date': date,
+          'source'      : 'ATP' | 'CTP' | 'UNAVAILABLE',
+          'shortfall_qty': float,   # unmet qty vs best ATP coverage
+        }
+
+    Raises:
+        ValueError: If requested_qty ≤ 0 or production_lead_time_days < 0.
+    """
+    if requested_qty <= 0:
+        raise ValueError(f"requested_qty must be > 0, got {requested_qty}.")
+    if production_lead_time_days < 0:
+        raise ValueError(
+            f"production_lead_time_days must be ≥ 0, got {production_lead_time_days}."
+        )
+
+    # Best ATP coverage.
+    atp_covering_date: date | None = None
+    best_cumulative = 0.0
+    for bucket in atp_schedule:
+        cum = float(bucket["cumulative_atp_qty"])
+        if cum > best_cumulative:
+            best_cumulative = cum
+        bucket_period = bucket["period"]
+        if atp_covering_date is None and cum >= requested_qty:
+            atp_covering_date = bucket_period
+
+    shortfall_qty = max(requested_qty - best_cumulative, 0.0)
+
+    # 1. Promise from stock.
+    if atp_covering_date is not None and atp_covering_date <= requested_date:
+        return {
+            "can_fulfill": True,
+            "promise_date": atp_covering_date,
+            "source": "ATP",
+            "shortfall_qty": 0.0,
+        }
+
+    # 2. Promise from production.
+    production_date = _add_days(date.today(), production_lead_time_days)
+    if production_date <= requested_date:
+        return {
+            "can_fulfill": True,
+            "promise_date": production_date,
+            "source": "CTP",
+            "shortfall_qty": shortfall_qty,
+        }
+
+    # 3. Neither meets the date — return best achievable date.
+    candidates = [production_date]
+    if atp_covering_date is not None:
+        candidates.append(atp_covering_date)
+    best_date = min(candidates)
+    return {
+        "can_fulfill": False,
+        "promise_date": best_date,
+        "source": "UNAVAILABLE",
+        "shortfall_qty": shortfall_qty,
+    }
+
+
+def _add_days(start: date, days: int) -> date:
+    """Add a number of calendar days to a date."""
+    from datetime import timedelta
+
+    return start + timedelta(days=days)

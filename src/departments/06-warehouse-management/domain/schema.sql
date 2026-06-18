@@ -362,3 +362,362 @@ WHERE pt.status = 'COMPLETED'
 GROUP BY pt.picker_id, pt.warehouse_id, DATE_TRUNC('day', pt.started_at);
 
 COMMENT ON VIEW warehouse.v_picking_productivity IS 'Picker productivity aggregated by person and shift day. Key WMS KPI: lines-per-hour. Supports labour planning and performance management.';
+
+
+-- =============================================================================
+-- EXTENDED WMS TABLES: Wave Picking, Dock Scheduling, Cycle Count, Labor Tasks
+-- Added: 2026-06-18
+-- Aligns with: PickingWave.ts, DockAppointment.ts, CycleCount.ts, LaborTask.ts
+-- =============================================================================
+
+-- ---------------------------------------------------------------------------
+-- WAVE PICKING
+-- ---------------------------------------------------------------------------
+
+CREATE TABLE warehouse.picking_waves (
+    id                  UUID          PRIMARY KEY DEFAULT gen_random_uuid(),
+    wave_number         VARCHAR(30)   NOT NULL UNIQUE,
+    warehouse_id        UUID          NOT NULL REFERENCES warehouse.warehouses(id),
+    wave_type           VARCHAR(20)   NOT NULL
+                            CHECK (wave_type IN ('SINGLE_ORDER','MULTI_ORDER','ZONE','CLUSTER','BATCH')),
+    status              VARCHAR(20)   NOT NULL DEFAULT 'PLANNED'
+                            CHECK (status IN ('PLANNED','RELEASED','PICKING','CONSOLIDATING','COMPLETE','CANCELLED')),
+    assigned_picker_id  VARCHAR(100),
+    planned_lines       INTEGER       NOT NULL DEFAULT 0 CHECK (planned_lines >= 0),
+    picked_lines        INTEGER       NOT NULL DEFAULT 0 CHECK (picked_lines >= 0),
+    total_units         INTEGER       NOT NULL DEFAULT 0 CHECK (total_units >= 0),
+    started_at          TIMESTAMPTZ,
+    completed_at        TIMESTAMPTZ,
+    is_deleted          BOOLEAN       NOT NULL DEFAULT FALSE,
+    created_at          TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
+    updated_at          TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
+    CONSTRAINT picking_waves_lines_check CHECK (picked_lines <= planned_lines)
+);
+
+COMMENT ON TABLE  warehouse.picking_waves                  IS 'Wave picking aggregates. Groups multiple orders into a single pick run. Wave type drives the pick strategy (zone, cluster, batch, etc.).';
+COMMENT ON COLUMN warehouse.picking_waves.wave_number      IS 'Human-readable wave identifier, e.g. WV-M5X2. Unique per warehouse.';
+COMMENT ON COLUMN warehouse.picking_waves.wave_type        IS 'Pick strategy: SINGLE_ORDER=discrete, MULTI_ORDER=multi-order batch, ZONE=zone-based, CLUSTER=multi-tote, BATCH=sort-then-pack.';
+COMMENT ON COLUMN warehouse.picking_waves.planned_lines    IS 'Total pick lines across all orders in the wave. Set at wave creation.';
+COMMENT ON COLUMN warehouse.picking_waves.picked_lines     IS 'Lines completed so far. Incremented by completeLine() domain method.';
+
+
+-- Junction table: which orders (and which lines within those orders) are in each wave
+CREATE TABLE warehouse.wave_order_lines (
+    id              UUID          PRIMARY KEY DEFAULT gen_random_uuid(),
+    wave_id         UUID          NOT NULL REFERENCES warehouse.picking_waves(id),
+    order_id        UUID          NOT NULL,
+    order_line_id   UUID          NOT NULL,
+    sku_id          VARCHAR(50)   NOT NULL,
+    location_id     UUID          REFERENCES warehouse.warehouse_locations(id),
+    qty_to_pick     NUMERIC(15,4) NOT NULL CHECK (qty_to_pick > 0),
+    qty_picked      NUMERIC(15,4) NOT NULL DEFAULT 0 CHECK (qty_picked >= 0),
+    pick_sequence   INTEGER,
+    status          VARCHAR(15)   NOT NULL DEFAULT 'PENDING'
+                        CHECK (status IN ('PENDING','PICKED','SHORT','CANCELLED')),
+    is_deleted      BOOLEAN       NOT NULL DEFAULT FALSE,
+    created_at      TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
+    updated_at      TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
+    UNIQUE (wave_id, order_line_id)
+);
+
+COMMENT ON TABLE  warehouse.wave_order_lines             IS 'Individual pick lines allocated to a wave. One row per order line. pick_sequence from s_shape_travel_distance() in slotting.py.';
+COMMENT ON COLUMN warehouse.wave_order_lines.pick_sequence IS 'Walk-path sequence within the wave (optimised by wave_optimizer.py batch_pick_sequence).';
+COMMENT ON COLUMN warehouse.wave_order_lines.status      IS 'PENDING=not yet picked, PICKED=completed, SHORT=insufficient stock, CANCELLED=excluded from wave.';
+
+
+-- ---------------------------------------------------------------------------
+-- DOCK DOORS AND APPOINTMENTS
+-- ---------------------------------------------------------------------------
+
+CREATE TABLE warehouse.dock_doors (
+    id              UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+    warehouse_id    UUID        NOT NULL REFERENCES warehouse.warehouses(id),
+    door_code       VARCHAR(20) NOT NULL,
+    door_type       VARCHAR(15) NOT NULL
+                        CHECK (door_type IN ('INBOUND','OUTBOUND','CROSS_DOCK')),
+    is_active       BOOLEAN     NOT NULL DEFAULT TRUE,
+    notes           TEXT,
+    created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    UNIQUE (warehouse_id, door_code)
+);
+
+COMMENT ON TABLE  warehouse.dock_doors           IS 'Physical dock doors at each warehouse facility. Door type constrains which appointment types can be scheduled.';
+COMMENT ON COLUMN warehouse.dock_doors.door_code IS 'Facility-scoped door identifier, e.g. D-01, D-IN-03. Immutable once assigned.';
+COMMENT ON COLUMN warehouse.dock_doors.door_type IS 'INBOUND=receiving only, OUTBOUND=shipping only, CROSS_DOCK=both directions (for flow-through operations).';
+
+
+CREATE TABLE warehouse.dock_appointments (
+    id                    UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+    dock_door_id          UUID        NOT NULL REFERENCES warehouse.dock_doors(id),
+    warehouse_id          UUID        NOT NULL REFERENCES warehouse.warehouses(id),
+    dock_type             VARCHAR(15) NOT NULL
+                              CHECK (dock_type IN ('INBOUND','OUTBOUND','CROSS_DOCK')),
+    carrier_id            UUID,
+    po_id                 UUID,
+    shipment_id           UUID,
+    scheduled_arrival     TIMESTAMPTZ NOT NULL,
+    scheduled_departure   TIMESTAMPTZ NOT NULL,
+    actual_arrival        TIMESTAMPTZ,
+    actual_departure      TIMESTAMPTZ,
+    status                VARCHAR(15) NOT NULL DEFAULT 'SCHEDULED'
+                              CHECK (status IN ('SCHEDULED','CONFIRMED','ARRIVED','LOADING','COMPLETE','NO_SHOW','CANCELLED')),
+    truck_license_plate   VARCHAR(30),
+    dwell_time_minutes    NUMERIC(8,2) GENERATED ALWAYS AS (
+                              EXTRACT(EPOCH FROM (actual_departure - actual_arrival)) / 60.0
+                          ) STORED,
+    on_time_arrival       BOOLEAN GENERATED ALWAYS AS (
+                              actual_arrival <= scheduled_arrival + INTERVAL '15 minutes'
+                          ) STORED,
+    is_deleted            BOOLEAN     NOT NULL DEFAULT FALSE,
+    created_at            TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at            TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    CONSTRAINT dock_appt_departure_after_arrival
+        CHECK (scheduled_departure > scheduled_arrival)
+);
+
+COMMENT ON TABLE  warehouse.dock_appointments                   IS 'Dock door appointments for inbound receipts, outbound shipments, and cross-dock operations.';
+COMMENT ON COLUMN warehouse.dock_appointments.dwell_time_minutes IS 'Auto-computed: minutes between actual arrival and departure. KPI: target dwell ≤ 90 min for LTL, ≤ 60 min for FTL.';
+COMMENT ON COLUMN warehouse.dock_appointments.on_time_arrival   IS 'Auto-computed: TRUE if truck arrived within 15 minutes of scheduled_arrival.';
+
+
+-- ---------------------------------------------------------------------------
+-- CYCLE COUNTING
+-- ---------------------------------------------------------------------------
+
+CREATE TABLE warehouse.cycle_counts (
+    id                    UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+    warehouse_id          UUID        NOT NULL REFERENCES warehouse.warehouses(id),
+    status                VARCHAR(20) NOT NULL DEFAULT 'PLANNED'
+                              CHECK (status IN ('PLANNED','IN_PROGRESS','COUNT_COMPLETE','VARIANCE_REVIEW','APPROVED','POSTED')),
+    assigned_counter_id   VARCHAR(100),
+    scheduled_date        DATE        NOT NULL,
+    started_at            TIMESTAMPTZ,
+    completed_at          TIMESTAMPTZ,
+    requires_approval     BOOLEAN     NOT NULL DEFAULT FALSE,
+    is_deleted            BOOLEAN     NOT NULL DEFAULT FALSE,
+    created_at            TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+COMMENT ON TABLE  warehouse.cycle_counts                    IS 'Cycle count header. A count covers one or more warehouse locations and flows through PLANNED → IN_PROGRESS → COUNT_COMPLETE → VARIANCE_REVIEW → APPROVED → POSTED.';
+COMMENT ON COLUMN warehouse.cycle_counts.requires_approval  IS 'Set TRUE when any count line variance exceeds ±5%. Posting blocked until a manager approves (ISO 9001:2015 §8.5.2, SOX control).';
+COMMENT ON COLUMN warehouse.cycle_counts.scheduled_date     IS 'Planned date for the physical count. Actual start recorded in started_at.';
+
+
+-- Locations included in each cycle count header
+CREATE TABLE warehouse.cycle_count_locations (
+    cycle_count_id  UUID NOT NULL REFERENCES warehouse.cycle_counts(id),
+    location_id     UUID NOT NULL REFERENCES warehouse.warehouse_locations(id),
+    PRIMARY KEY (cycle_count_id, location_id)
+);
+
+COMMENT ON TABLE warehouse.cycle_count_locations IS 'Junction table: which warehouse locations are in scope for each cycle count.';
+
+
+-- Individual count lines (one per SKU/lot within a location)
+CREATE TABLE warehouse.cycle_count_lines (
+    id              UUID          PRIMARY KEY DEFAULT gen_random_uuid(),
+    cycle_count_id  UUID          NOT NULL REFERENCES warehouse.cycle_counts(id),
+    location_id     UUID          NOT NULL REFERENCES warehouse.warehouse_locations(id),
+    sku_id          VARCHAR(50)   NOT NULL,
+    lot_id          UUID,
+    system_qty      NUMERIC(15,4) NOT NULL DEFAULT 0 CHECK (system_qty >= 0),
+    counted_qty     NUMERIC(15,4) CHECK (counted_qty >= 0),
+    variance_qty    NUMERIC(15,4) GENERATED ALWAYS AS (counted_qty - system_qty) STORED,
+    variance_pct    NUMERIC(10,4) GENERATED ALWAYS AS (
+                        CASE
+                            WHEN system_qty = 0 AND counted_qty = 0 THEN 0
+                            WHEN system_qty = 0 THEN 100
+                            ELSE ((counted_qty - system_qty) / system_qty) * 100
+                        END
+                    ) STORED,
+    counted_at      TIMESTAMPTZ,
+    counted_by      VARCHAR(100),
+    created_at      TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
+    updated_at      TIMESTAMPTZ   NOT NULL DEFAULT NOW()
+);
+
+COMMENT ON TABLE  warehouse.cycle_count_lines             IS 'Individual count lines: one row per SKU/lot per location within a cycle count. variance_qty and variance_pct are auto-computed.';
+COMMENT ON COLUMN warehouse.cycle_count_lines.system_qty  IS 'Snapshot of system on-hand at time of cycle count creation. Used as baseline for variance calculation.';
+COMMENT ON COLUMN warehouse.cycle_count_lines.variance_pct IS 'Auto-computed percentage variance. |variance_pct| > 5% sets requires_approval on the parent cycle_count.';
+
+
+-- ---------------------------------------------------------------------------
+-- LABOR TASKS
+-- ---------------------------------------------------------------------------
+
+CREATE TABLE warehouse.labor_tasks (
+    id                  UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+    warehouse_id        UUID        NOT NULL REFERENCES warehouse.warehouses(id),
+    task_type           VARCHAR(20) NOT NULL
+                            CHECK (task_type IN ('PICKING','PACKING','RECEIVING','PUTAWAY',
+                                                 'REPLENISHMENT','CYCLE_COUNT','LOADING','HOUSEKEEPING')),
+    status              VARCHAR(15) NOT NULL DEFAULT 'QUEUED'
+                            CHECK (status IN ('QUEUED','ASSIGNED','IN_PROGRESS','COMPLETE','CANCELLED')),
+    assigned_to         VARCHAR(100),
+    priority            SMALLINT    NOT NULL DEFAULT 3
+                            CHECK (priority BETWEEN 1 AND 5),
+    reference_id        UUID,
+    location_id         UUID        REFERENCES warehouse.warehouse_locations(id),
+    started_at          TIMESTAMPTZ,
+    completed_at        TIMESTAMPTZ,
+    estimated_minutes   NUMERIC(8,2) CHECK (estimated_minutes > 0),
+    actual_minutes      NUMERIC(8,2) GENERATED ALWAYS AS (
+                            EXTRACT(EPOCH FROM (completed_at - started_at)) / 60.0
+                        ) STORED,
+    lines_completed     INTEGER     NOT NULL DEFAULT 0 CHECK (lines_completed >= 0),
+    units_completed     INTEGER     NOT NULL DEFAULT 0 CHECK (units_completed >= 0),
+    lines_per_hour      NUMERIC(10,2) GENERATED ALWAYS AS (
+                            CASE
+                                WHEN started_at IS NULL OR completed_at IS NULL THEN NULL
+                                WHEN EXTRACT(EPOCH FROM (completed_at - started_at)) = 0 THEN NULL
+                                ELSE lines_completed /
+                                     (EXTRACT(EPOCH FROM (completed_at - started_at)) / 3600.0)
+                            END
+                        ) STORED,
+    is_deleted          BOOLEAN     NOT NULL DEFAULT FALSE,
+    created_at          TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+COMMENT ON TABLE  warehouse.labor_tasks                   IS 'Individual warehouse labor assignments. Tracks productivity (lines_per_hour) for workforce management and engineered labour standards.';
+COMMENT ON COLUMN warehouse.labor_tasks.priority          IS '1=highest urgency (outbound deadline), 5=lowest (housekeeping). Used by task dispatcher to queue work.';
+COMMENT ON COLUMN warehouse.labor_tasks.reference_id      IS 'Cross-reference to the wave_id, dock_appointment_id, or cycle_count_id that spawned this task.';
+COMMENT ON COLUMN warehouse.labor_tasks.lines_per_hour    IS 'Auto-computed LPH productivity metric. Benchmark: manual pick 80–120, RF-assisted 100–150, voice 120–180.';
+COMMENT ON COLUMN warehouse.labor_tasks.actual_minutes    IS 'Auto-computed elapsed minutes from started_at to completed_at.';
+
+
+-- ---------------------------------------------------------------------------
+-- INDEXES — extended tables
+-- ---------------------------------------------------------------------------
+
+CREATE INDEX idx_picking_waves_warehouse_status  ON warehouse.picking_waves(warehouse_id, status) WHERE is_deleted = FALSE;
+CREATE INDEX idx_picking_waves_picker            ON warehouse.picking_waves(assigned_picker_id) WHERE status IN ('RELEASED','PICKING');
+CREATE INDEX idx_wave_order_lines_wave           ON warehouse.wave_order_lines(wave_id);
+CREATE INDEX idx_wave_order_lines_order          ON warehouse.wave_order_lines(order_id);
+CREATE INDEX idx_wave_order_lines_status         ON warehouse.wave_order_lines(status) WHERE is_deleted = FALSE;
+
+CREATE INDEX idx_dock_doors_warehouse            ON warehouse.dock_doors(warehouse_id) WHERE is_active = TRUE;
+CREATE INDEX idx_dock_appointments_door          ON warehouse.dock_appointments(dock_door_id, scheduled_arrival);
+CREATE INDEX idx_dock_appointments_warehouse     ON warehouse.dock_appointments(warehouse_id, scheduled_arrival);
+CREATE INDEX idx_dock_appointments_status        ON warehouse.dock_appointments(status) WHERE is_deleted = FALSE;
+
+CREATE INDEX idx_cycle_counts_warehouse          ON warehouse.cycle_counts(warehouse_id, scheduled_date) WHERE is_deleted = FALSE;
+CREATE INDEX idx_cycle_counts_status             ON warehouse.cycle_counts(status) WHERE is_deleted = FALSE;
+CREATE INDEX idx_cycle_count_lines_count         ON warehouse.cycle_count_lines(cycle_count_id);
+CREATE INDEX idx_cycle_count_lines_location_sku  ON warehouse.cycle_count_lines(location_id, sku_id);
+
+CREATE INDEX idx_labor_tasks_warehouse_status    ON warehouse.labor_tasks(warehouse_id, status) WHERE is_deleted = FALSE;
+CREATE INDEX idx_labor_tasks_assigned_to         ON warehouse.labor_tasks(assigned_to) WHERE status IN ('ASSIGNED','IN_PROGRESS');
+CREATE INDEX idx_labor_tasks_reference           ON warehouse.labor_tasks(reference_id) WHERE reference_id IS NOT NULL;
+
+
+-- ---------------------------------------------------------------------------
+-- VIEWS — extended analytics
+-- ---------------------------------------------------------------------------
+
+-- Wave productivity: pick rate and on-time completion
+CREATE OR REPLACE VIEW warehouse.v_wave_productivity AS
+SELECT
+    pw.id                                                               AS wave_id,
+    pw.wave_number,
+    pw.warehouse_id,
+    w.warehouse_code,
+    pw.wave_type,
+    pw.status,
+    pw.assigned_picker_id,
+    pw.planned_lines,
+    pw.picked_lines,
+    pw.total_units,
+    pw.started_at,
+    pw.completed_at,
+    ROUND(
+        EXTRACT(EPOCH FROM (pw.completed_at - pw.started_at)) / 3600.0, 4
+    )                                                                   AS duration_hours,
+    ROUND(
+        pw.picked_lines::NUMERIC /
+        NULLIF(EXTRACT(EPOCH FROM (pw.completed_at - pw.started_at)) / 3600.0, 0), 2
+    )                                                                   AS lines_per_hour,
+    COUNT(wol.id)                                                       AS total_order_lines,
+    SUM(CASE WHEN wol.status = 'PICKED' THEN 1 ELSE 0 END)             AS lines_fully_picked,
+    ROUND(
+        SUM(CASE WHEN wol.status = 'PICKED' THEN 1 ELSE 0 END)::NUMERIC /
+        NULLIF(COUNT(wol.id), 0) * 100, 2
+    )                                                                   AS fill_rate_pct
+FROM warehouse.picking_waves pw
+JOIN warehouse.warehouses w ON w.id = pw.warehouse_id
+LEFT JOIN warehouse.wave_order_lines wol
+       ON wol.wave_id = pw.id AND wol.is_deleted = FALSE
+WHERE pw.is_deleted = FALSE
+GROUP BY pw.id, pw.wave_number, pw.warehouse_id, w.warehouse_code,
+         pw.wave_type, pw.status, pw.assigned_picker_id,
+         pw.planned_lines, pw.picked_lines, pw.total_units,
+         pw.started_at, pw.completed_at;
+
+COMMENT ON VIEW warehouse.v_wave_productivity IS 'Wave picking performance: lines-per-hour, fill rate, and duration. Feeds wave_optimizer.py labor_forecast() and management dashboards.';
+
+
+-- Dock utilisation: appointments per door per day, average dwell time
+CREATE OR REPLACE VIEW warehouse.v_dock_utilization AS
+SELECT
+    dd.id                                                               AS dock_door_id,
+    dd.door_code,
+    dd.warehouse_id,
+    w.warehouse_code,
+    dd.door_type,
+    DATE_TRUNC('day', da.scheduled_arrival)::DATE                      AS appointment_date,
+    COUNT(da.id)                                                        AS appointments_scheduled,
+    SUM(CASE WHEN da.status = 'COMPLETE'  THEN 1 ELSE 0 END)           AS appointments_completed,
+    SUM(CASE WHEN da.status = 'NO_SHOW'   THEN 1 ELSE 0 END)           AS no_shows,
+    SUM(CASE WHEN da.status = 'CANCELLED' THEN 1 ELSE 0 END)           AS cancellations,
+    ROUND(AVG(da.dwell_time_minutes), 2)                                AS avg_dwell_minutes,
+    ROUND(MAX(da.dwell_time_minutes), 2)                                AS max_dwell_minutes,
+    ROUND(
+        SUM(CASE WHEN da.on_time_arrival THEN 1 ELSE 0 END)::NUMERIC /
+        NULLIF(SUM(CASE WHEN da.status != 'CANCELLED' AND da.status != 'NO_SHOW'
+                        THEN 1 ELSE 0 END), 0) * 100, 2
+    )                                                                   AS on_time_arrival_pct
+FROM warehouse.dock_doors dd
+JOIN warehouse.warehouses w   ON w.id = dd.warehouse_id
+LEFT JOIN warehouse.dock_appointments da
+       ON da.dock_door_id = dd.id AND da.is_deleted = FALSE
+WHERE dd.is_active = TRUE
+GROUP BY dd.id, dd.door_code, dd.warehouse_id, w.warehouse_code,
+         dd.door_type, DATE_TRUNC('day', da.scheduled_arrival)::DATE;
+
+COMMENT ON VIEW warehouse.v_dock_utilization IS 'Dock door utilisation by day: appointment counts, no-show rate, average dwell time, and on-time arrival %. KPI target: dwell ≤ 90 min, OTA ≥ 95%.';
+
+
+-- Cycle count accuracy: variance by zone and by SKU ABC class
+CREATE OR REPLACE VIEW warehouse.v_cycle_count_accuracy AS
+SELECT
+    cc.warehouse_id,
+    w.warehouse_code,
+    wz.zone_code,
+    wz.zone_type,
+    cc.id                                                                   AS cycle_count_id,
+    cc.scheduled_date,
+    cc.status,
+    COUNT(ccl.id)                                                           AS total_lines,
+    SUM(CASE WHEN ccl.counted_qty IS NOT NULL THEN 1 ELSE 0 END)           AS lines_counted,
+    ROUND(AVG(ABS(ccl.variance_pct)), 4)                                    AS avg_abs_variance_pct,
+    MAX(ABS(ccl.variance_pct))                                              AS max_abs_variance_pct,
+    SUM(CASE WHEN ABS(ccl.variance_pct) <= 5 THEN 1 ELSE 0 END)           AS lines_within_tolerance,
+    ROUND(
+        SUM(CASE WHEN ABS(ccl.variance_pct) <= 5 THEN 1 ELSE 0 END)::NUMERIC /
+        NULLIF(SUM(CASE WHEN ccl.counted_qty IS NOT NULL THEN 1 ELSE 0 END), 0) * 100, 2
+    )                                                                       AS accuracy_pct,
+    sa.abc_velocity_zone
+FROM warehouse.cycle_counts cc
+JOIN warehouse.warehouses w                ON w.id  = cc.warehouse_id
+JOIN warehouse.cycle_count_lines ccl       ON ccl.cycle_count_id = cc.id
+JOIN warehouse.warehouse_locations wl      ON wl.id = ccl.location_id
+JOIN warehouse.warehouse_zones wz          ON wz.id = wl.zone_id
+LEFT JOIN warehouse.slotting_assignments sa
+       ON sa.sku_id = ccl.sku_id AND sa.warehouse_id = cc.warehouse_id
+          AND sa.is_deleted = FALSE
+WHERE cc.is_deleted = FALSE
+GROUP BY cc.warehouse_id, w.warehouse_code, wz.zone_code, wz.zone_type,
+         cc.id, cc.scheduled_date, cc.status, sa.abc_velocity_zone;
+
+COMMENT ON VIEW warehouse.v_cycle_count_accuracy IS 'Inventory accuracy by zone and ABC velocity class. accuracy_pct = % of counted lines with |variance| ≤ 5%. World-class target ≥ 99.9%.';
+

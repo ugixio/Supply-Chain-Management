@@ -34,6 +34,10 @@ export * from './05-inventory-management/domain/StockMovement';
 
 // ── 06 Warehouse Management ──────────────────────────────────────────────────
 export * from './06-warehouse-management/domain/Warehouse';
+export * from './06-warehouse-management/domain/PickingWave';
+export * from './06-warehouse-management/domain/DockAppointment';
+export * from './06-warehouse-management/domain/CycleCount';
+export * from './06-warehouse-management/domain/LaborTask';
 
 // ── 07 Logistics & Transportation ────────────────────────────────────────────
 export * from './07-logistics-transportation/domain/Shipment';

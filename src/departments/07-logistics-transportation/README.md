@@ -1,97 +1,168 @@
-# Departamento 07 — Logistics & Transportation (TMS)
-## Logística y Transporte
+# 07 — Logistics & Transportation (TMS)
 
-### Misión
-Diseñar y ejecutar la red de transporte más eficiente que entregue los productos
-correctos en el lugar, tiempo y condiciones acordadas, al menor costo total,
-cumpliendo con todas las regulaciones aduaneras y de comercio internacional.
+## Overview
 
-### Funciones principales
-| Función | Descripción |
-|---------|-------------|
-| Gestión de transportistas | Selección, contratos, KPI de carriers |
-| Optimización de rutas | VRP (Vehicle Routing Problem), multi-parada |
-| Coordinación de carga | FTL, LTL, FCL, LCL, aérea, courier |
-| Gestión aduanal | Documentación, HS codes, DUA/pedimento |
-| Seguimiento en tiempo real | Track & trace, eventos de shipment |
-| Logística inversa | Devoluciones, reclamaciones, disposal |
-| Gestión de Incoterms | Aplicación correcta por trade term |
+Gestiona el movimiento físico de mercancías: embarques, legs de transporte, eventos de tracking, Incoterms® 2020 (11 reglas), clasificación Hazmat (IMDG 9 clases), documentación aduanera, certificación AEO/C-TPAT, y cumplimiento WTO TFA Art.7. Responsable del KPI OTD ≥ 95% y la huella de CO₂ Scope 3 Categoría 4.
 
-### KPIs del departamento
-| KPI | Benchmark |
-|-----|-----------|
-| On-Time Delivery (OTD) | ≥ 95% |
-| Transportation Cost / Revenue | < 8-10% (FMCG) |
-| Freight Cost per Unit | vs target por modo |
-| Carrier OTIF Score | ≥ 95% |
-| Claims Rate (daños) | < 0.1% envíos |
-| CO₂ por tonelada-km | Reducción anual 5% |
-| Customs Clearance Time | < 48 h (AEO) |
-| Perfect Delivery Rate | ≥ 97% |
+---
 
-### Modos de transporte y usos
-| Modo | Uso típico | Costo relativo |
-|------|-----------|---------------|
-| ROAD | Distribución nacional, last-mile | Medio |
-| SEA (FCL/LCL) | Importaciones/exportaciones intercontinentales | Bajo |
-| AIR | Urgentes, alto valor, perecederos | Muy alto |
-| RAIL | Rutas medias/largas, materias primas | Bajo-Medio |
-| COURIER | Muestras, repuestos, e-commerce | Alto |
-| MULTIMODAL | Combinaciones optimizadas | Variable |
+## KPIs del Departamento
 
-### Incoterms® 2020 — Guía de aplicación
-| Incoterm | Riesgo pasa a comprador | Recomendado para |
-|----------|------------------------|-----------------|
-| EXW | En fábrica vendedor | Comprador con logística propia |
-| FCA | Entregado al primer carrier | Reemplaza FOB para contenedor |
-| CIP | Al primer carrier (+ seguro) | Exportaciones de alto valor |
-| DPU | Descargado en destino | Reemplaza DAT (2020) |
-| DDP | Destino, derechos pagados | Servicio completo al comprador |
-| FOB | Abordo del buque | Solo marítimo/fluvial |
+| KPI | Benchmark | Fuente |
+|-----|-----------|--------|
+| OTD (On-Time Delivery) | ≥ 95% | Ballou (2004) |
+| Transit Time Variance (días) | < 1 día σ | Interno |
+| Freight Cost / Revenue % | < 3-5% | Benchmark sector |
+| CO₂ / Tonne-Km (road) | 0.062 kgCO₂e | GHG Protocol |
+| Customs Clearance Time | < 24h (AEO) | WTO TFA |
+| Carrier On-Time Rate | ≥ 95% | Chopra & Meindl |
 
-> ⚠️ **DPU reemplaza a DAT** — cambio clave de Incoterms 2020
+---
 
-### Documentos de transporte internacional
-| Documento | Modo | Función |
-|-----------|------|---------|
-| Bill of Lading (B/L) | Marítimo | Título de propiedad + contrato |
-| Air Waybill (AWB) | Aéreo | Guía aérea (no negociable) |
-| CMR | Carretera Europa | Carta de porte internacional |
-| CIM | Ferroviario | Carta de porte ferroviaria |
-| Factura Comercial | Todos | Base para aforo aduanal |
-| Packing List | Todos | Verificación de contenido |
-| Certificado de Origen | Todos | Preferencias arancelarias |
-| EUR.1 / Form A | UE | Certificado de origen preferencial |
+## Estándares e Incoterms® 2020
 
-### WTO TFA Art.7 — Pre-arrival processing
-El sistema implementa:
-- `Shipment.exportDeclarationRef` — pre-declaración de exportación
-- `Shipment.aeoShipperCertified` — operador autorizado AEO/C-TPAT
-- `ShipmentLine.hsCode` — clasificación HS para aforo
-- Reducción documentaria ≥ 50% para operadores AEO
+| Regla | Modo | Responsabilidad vendedor |
+|-------|------|--------------------------|
+| EXW | Todos | Mínima (ex works) |
+| FCA | Todos | Entrega a carrier designado |
+| CPT | Todos | Paga flete hasta destino |
+| CIP | Todos | CPT + seguro mínimo 110% |
+| DAP | Todos | Entrega en destino (sin descarga) |
+| DPU | Todos | Entrega descargada (reemplaza DAT) |
+| DDP | Todos | Máxima (derechos pagados) |
+| FAS | Marítimo | Al costado del buque |
+| FOB | Marítimo | A bordo del buque |
+| CFR | Marítimo | FOB + flete |
+| CIF | Marítimo | CFR + seguro mínimo |
 
-### Archivos clave
-- `domain/Shipment.ts` — Embarque completo con legs, tracking, customs
-- `domain/Carrier.ts` — Maestro de transportistas y contratos de flete
-- `domain/FreightRate.ts` — Tarifas por modo/ruta/peso/volumen
-- `domain/RouteOptimization.ts` — VRP y optimización de rutas
-- `services/CarrierManagement.ts` — Selección y evaluación de carriers
-- `services/CustomsService.ts` — Generación de documentos aduanales
-- `services/TrackingService.ts` — Integración con APIs de tracking
-- `customs/HSCodeClassifier.ts` — Clasificación arancelaria HS
+Otras regulaciones: IMDG Code (IMO), ADR (carretera Europa), Basel Convention, C-TPAT (US CBP), AEO (EU), WTO TFA Art.7, GS1 SSCC.
 
-### Roles del departamento
-- **Logistics Director** — Estrategia de red y contratación
-- **Transportation Manager** — Gestión diaria de flota y carriers
-- **Customs Broker / Specialist** — Importaciones/exportaciones
-- **Freight Coordinator** — Coordinación de embarques
-- **Route Planner** — Optimización de rutas VRP
-- **TMS Administrator** — Sistema de gestión de transporte
+---
 
-### Referencias
-- Chopra & Meindl Ch.13 "Transportation in a Supply Chain"
-- Ballou Ch.12 — Transportation fundamentals
-- ICC Incoterms® 2020 — ICC Publication 723E
-- IMO IMDG Code 2022 (Amendment 41-22)
-- ADR 2023 — European Agreement Dangerous Goods Road
-- WTO TFA — Article 7, Pre-arrival processing
+## Archivos del Departamento
+
+| Archivo | Responsabilidad |
+|---------|----------------|
+| `domain/Shipment.ts` | TransportMode (5), ShipmentStatus, HazmatClass (9 IMDG), ShipmentLine con SSCC/HS code, CustomsDocument, TransportLeg, createShipment(), addTrackingEvent(), isOnTimeDelivery() |
+
+---
+
+## Modelos Matemáticos Aplicados
+
+### 1. OTD — On-Time Delivery
+
+```
+OTD% = (Shipments donde actualDelivery ≤ estimatedDelivery) / Total_shipments × 100
+
+isOnTimeDelivery() = actualDelivery ≤ estimatedDelivery
+```
+
+World-class ≥ 95%. Ref: Ballou (2004) Ch.6.
+
+### 2. Distribución del Transit Time
+
+```
+Transit_time ~ N(μ, σ²)
+
+μ = media histórica por ruta/carrier
+σ = desviación estándar histórica
+
+Promesa ATP = μ + 1.65σ  (P95 de entrega puntual)
+```
+
+### 3. Flete Aéreo — Chargeable Weight
+
+```
+Chargeable_weight = max(actual_kg, volume_m³ × 167)
+
+Volumen equivalente: 167 kg/m³ (IATA estándar)
+Flete = Chargeable_weight × rate_per_kg
+```
+
+### 4. Emisiones CO₂ (GHG Protocol Scope 3 Cat.4)
+
+```
+Emissions_kgCO2e = Distance_km × Weight_tonnes × EF_mode
+
+Factores de emisión:
+  Road:  0.062 kgCO2e/tonne-km
+  Sea:   0.010 kgCO2e/tonne-km
+  Air:   0.602 kgCO2e/tonne-km
+  Rail:  0.028 kgCO2e/tonne-km
+```
+
+Ref: GHG Protocol (2011) *Corporate Value Chain Scope 3 Standard*.
+
+### 5. Duty de Aduana
+
+```
+Duty = CIF_value × Tariff_rate(HS_code, origin_country)
+CIF  = FOB_value + Insurance + Freight
+
+Aplica: WTO MFN rates o preferencial (FTA/GSP)
+```
+
+### 6. Clarke-Wright Savings (VRP)
+
+```
+Saving_ij = d(depot, i) + d(depot, j) − d(i, j)
+
+Merge rutas con mayor saving hasta capacidad del vehículo.
+Minimiza: Σ distancias recorridas por flota.
+```
+
+Ref: Clarke & Wright (1964) *Operations Research*.
+
+---
+
+## Modelos de Machine Learning Recomendados
+
+### 1. Pointer Network / GNN — VRP Dinámico
+
+**Tipo**: Deep RL + Graph Neural Networks  
+**Funcionamiento**: Modela el VRP con ventanas de tiempo (VRPTW) como grafo. Red de atención aprende política de routing near-óptima para flotas dinámicas (nuevas paradas, cancelaciones en tiempo real). Supera Clarke-Wright en fleets complejas.  
+**Output**: secuencia de paradas óptima por vehículo.  
+**Librería**: PyTorch, OR-Tools (Google), `neuopt`  
+**Ref**: Kool, van Hoof & Welling (2019) ICLR.
+
+### 2. LSTM — Predicción de ETD
+
+**Tipo**: Serie temporal  
+**Funcionamiento**: Predice Estimated Time of Delivery dado: carrier, ruta, congestión portuaria, clima, día de semana, tipo de carga. Actualiza predicción con cada evento de tracking recibido.  
+**Output**: `P50_ETA`, `P90_ETA` por embarque. Alerta proactiva cuando P90 excede SLA.  
+**Librería**: TensorFlow, Prophet  
+**Ref**: Hochreiter & Schmidhuber (1997).
+
+### 3. Random Forest — Riesgo Aduanero
+
+**Tipo**: Clasificación supervisada  
+**Funcionamiento**: Clasifica embarques como HIGH_RISK para retención aduanera antes de llegada. Features: par origen-destino, código HS, valor declarado, carrier, historial importador, entidad lista OFAC.  
+**Output**: `risk_level: LOW|MEDIUM|HIGH` + documentos requeridos para pre-clearance.  
+**Librería**: scikit-learn  
+**Ref**: WTO TFA Art.7 (pre-arrival processing).
+
+### 4. RL — Modal Split Optimization
+
+**Tipo**: Reinforcement Learning  
+**Funcionamiento**: Agente aprende cuándo cambiar de road→rail→sea basado en: costo, urgencia, presupuesto CO₂, congestión. Estado: `(origin, dest, weight, urgency, CO2_budget, cost_budget)`. Acción: `mode ∈ {ROAD, SEA, AIR, RAIL, MULTIMODAL}`. Recompensa: `-cost - CO2_penalty - lateness_penalty`.  
+**Output**: modo óptimo de transporte por embarque.  
+**Librería**: Ray RLlib  
+**Ref**: Bektaş & Laporte (2011) *Transportation Research Part B*.
+
+### 5. Imágenes Satelitales + CV — Monitoreo de Puertos
+
+**Tipo**: Computer Vision sobre datos satelitales  
+**Funcionamiento**: Analiza imágenes Sentinel-2/Planet de puertos clave. Cuenta buques en rada, detecta congestión, predice delays antes de que aparezcan en datos AIS del carrier. Feed de inteligencia a ETA predictor.  
+**Output**: `port_congestion_index` por puerto, actualización diaria.  
+**Librería**: Sentinel Hub API, rasterio, Ultralytics  
+**Ref**: Stopford (2009) *Maritime Economics*, 3rd Ed.
+
+---
+
+## Referencias
+
+- Ballou, R.H. (2004) *Business Logistics/Supply Chain Management*, 5th Ed. Pearson
+- ICC (2019) *Incoterms® 2020*, International Chamber of Commerce
+- GHG Protocol (2011) *Corporate Value Chain Scope 3 Standard*, WRI/WBCSD
+- Clarke & Wright (1964) *Operations Research* 12(4): 568-581
+- IMO IMDG Code, 2022 Edition

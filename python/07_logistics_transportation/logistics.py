@@ -196,3 +196,80 @@ def clarke_wright_savings(
             stop_to_route[stop] = ri
 
     return [[stops[idx].id for idx in route] for route in routes if route]
+
+
+def mode_selection(
+    distance_km: float,
+    weight_tonnes: float,
+    volume_m3: float,
+    transit_days_budget: int,
+    co2_budget_kg: float | None = None,
+) -> dict:
+    """
+    Multi-criteria transport mode selection.
+    Scores each mode on: cost (40%), transit time (35%), CO2 (25%).
+    Returns ranked list of modes with scores.
+    Ref: Ballou (2004) Business Logistics Ch.6.
+    """
+    # Mode profiles: (avg_cost_usd_per_tonne_km, avg_speed_kmh, co2_kg_per_tonne_km)
+    MODE_PROFILES = {
+        "ROAD":       (0.15, 80,   0.062),
+        "SEA":        (0.01, 25,   0.008),
+        "AIR":        (4.50, 800,  0.602),
+        "RAIL":       (0.05, 100,  0.022),
+        "MULTIMODAL": (0.08, 60,   0.030),
+    }
+
+    results = []
+    costs = []
+    transits = []
+    co2s = []
+
+    for mode, (cost_rate, speed_kmh, co2_rate) in MODE_PROFILES.items():
+        est_cost = cost_rate * weight_tonnes * distance_km
+        est_transit = distance_km / speed_kmh / 24  # days
+        est_co2 = co2_rate * weight_tonnes * distance_km
+
+        costs.append(est_cost)
+        transits.append(est_transit)
+        co2s.append(est_co2)
+
+        results.append({
+            "mode": mode,
+            "estimated_cost_usd": round(est_cost, 2),
+            "estimated_transit_days": round(est_transit, 1),
+            "estimated_co2_kg": round(est_co2, 2),
+            "feasible": (
+                est_transit <= transit_days_budget and
+                (co2_budget_kg is None or est_co2 <= co2_budget_kg)
+            ),
+        })
+
+    max_cost = max(costs) or 1
+    max_transit = max(transits) or 1
+    max_co2 = max(co2s) or 1
+
+    for i, entry in enumerate(results):
+        cost_score = (1 - costs[i] / max_cost) * 40
+        transit_score = (1 - transits[i] / max_transit) * 35
+        co2_score = (1 - co2s[i] / max_co2) * 25
+        entry["score"] = round(cost_score + transit_score + co2_score, 2)
+
+    results.sort(key=lambda x: (-x["feasible"], -x["score"]))
+    return {"ranked_modes": results, "recommended": results[0]["mode"] if results else None}
+
+
+def carrier_performance_score(
+    otd_pct: float,
+    claim_rate_pct: float,
+    transit_variance_days: float,
+) -> float:
+    """
+    Weighted carrier performance score (0-100):
+      OTD 60% + Claim rate 25% + Transit variance 15%.
+    Matches CarrierPerformance.calculatePerformanceScore() in TypeScript.
+    """
+    otd_score = (otd_pct / 100) * 60
+    claim_score = (1 - min(claim_rate_pct / 5, 1)) * 25
+    variance_score = max(0.0, (1 - abs(transit_variance_days) / 3)) * 15
+    return round(otd_score + claim_score + variance_score, 4)

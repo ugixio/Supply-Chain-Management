@@ -343,3 +343,145 @@ WHERE c.is_deleted = FALSE
 GROUP BY c.id, c.carrier_code, c.name, c.transport_modes, c.ctpat_certified, c.aeo_certified;
 
 COMMENT ON VIEW logistics.v_carrier_performance IS 'Carrier scorecard: OTD %, average transit days, CO2 per tonne-km. Feeds carrier selection in logistics.py clarke_wright_savings().';
+
+
+-- =============================================================================
+-- EXTENSIONS: TransportLane, TrackingEvent, CarrierPerformance, CustomsClearance
+-- Added: 2026-06-18
+-- =============================================================================
+
+-- Transport Lanes (rate cards)
+CREATE TABLE IF NOT EXISTS logistics.transport_lanes (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    lane_code VARCHAR(50) NOT NULL UNIQUE,
+    origin_country CHAR(2) NOT NULL,
+    origin_port VARCHAR(10),
+    destination_country CHAR(2) NOT NULL,
+    destination_port VARCHAR(10),
+    mode VARCHAR(20) NOT NULL CHECK (mode IN ('ROAD','SEA','AIR','RAIL','MULTIMODAL')),
+    carrier_id UUID NOT NULL,
+    service_level VARCHAR(20) NOT NULL CHECK (service_level IN ('STANDARD','EXPRESS','ECONOMY','PREMIUM')),
+    base_rate_cents_per_kg BIGINT NOT NULL CHECK (base_rate_cents_per_kg >= 0),
+    min_chargeable_cents BIGINT NOT NULL CHECK (min_chargeable_cents >= 0),
+    fuel_surcharge_pct NUMERIC(5,4) NOT NULL CHECK (fuel_surcharge_pct >= 0),
+    transit_days INTEGER NOT NULL CHECK (transit_days > 0),
+    valid_from DATE NOT NULL,
+    valid_to DATE NOT NULL,
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+    is_deleted BOOLEAN NOT NULL DEFAULT FALSE,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    CHECK (valid_to > valid_from)
+);
+
+-- Tracking Events
+CREATE TABLE IF NOT EXISTS logistics.tracking_events_v2 (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    shipment_id UUID NOT NULL REFERENCES logistics.shipments(id),
+    milestone VARCHAR(30) NOT NULL CHECK (milestone IN ('BOOKED','COLLECTED','DEPARTED_ORIGIN','IN_TRANSIT','ARRIVED_DESTINATION','CUSTOMS_CLEARANCE','OUT_FOR_DELIVERY','DELIVERED','EXCEPTION','RETURNED')),
+    location VARCHAR(200),
+    country_code CHAR(2),
+    event_at TIMESTAMPTZ NOT NULL,
+    carrier VARCHAR(100) NOT NULL,
+    description TEXT,
+    exception_code VARCHAR(20),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_tracking_events_shipment_event ON logistics.tracking_events_v2(shipment_id, event_at DESC);
+
+-- Carrier Performance Monthly
+CREATE TABLE IF NOT EXISTS logistics.carrier_performance_monthly (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    carrier_id UUID NOT NULL,
+    period_month DATE NOT NULL,
+    mode VARCHAR(20) NOT NULL CHECK (mode IN ('ROAD','SEA','AIR','RAIL','MULTIMODAL')),
+    total_shipments INTEGER NOT NULL CHECK (total_shipments > 0),
+    on_time_shipments INTEGER NOT NULL CHECK (on_time_shipments >= 0),
+    total_claims_count INTEGER NOT NULL DEFAULT 0,
+    total_claims_cents BIGINT NOT NULL DEFAULT 0,
+    avg_transit_days NUMERIC(6,2) NOT NULL,
+    promised_transit_days NUMERIC(6,2) NOT NULL,
+    otd_pct NUMERIC(5,2) GENERATED ALWAYS AS (ROUND((on_time_shipments::NUMERIC / total_shipments) * 100, 2)) STORED,
+    claim_rate_pct NUMERIC(5,2) GENERATED ALWAYS AS (ROUND((total_claims_count::NUMERIC / total_shipments) * 100, 2)) STORED,
+    transit_variance_days NUMERIC(6,2) GENERATED ALWAYS AS (avg_transit_days - promised_transit_days) STORED,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    UNIQUE (carrier_id, period_month, mode)
+);
+
+-- Customs Clearances
+CREATE TABLE IF NOT EXISTS logistics.customs_clearances (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    shipment_id UUID NOT NULL REFERENCES logistics.shipments(id),
+    country_code CHAR(2) NOT NULL,
+    status VARCHAR(20) NOT NULL DEFAULT 'PENDING' CHECK (status IN ('PENDING','LODGED','UNDER_REVIEW','EXAMINATION','RELEASED','HELD','REFUSED')),
+    declaration_number VARCHAR(50),
+    lodged_at TIMESTAMPTZ,
+    released_at TIMESTAMPTZ,
+    cif_value_cents BIGINT NOT NULL CHECK (cif_value_cents >= 0),
+    tariff_rate_pct NUMERIC(6,4) NOT NULL CHECK (tariff_rate_pct >= 0),
+    duty_amount_cents BIGINT GENERATED ALWAYS AS (ROUND(cif_value_cents * tariff_rate_pct / 100)) STORED,
+    vat_amount_cents BIGINT NOT NULL DEFAULT 0,
+    total_landed_cents BIGINT NOT NULL,
+    aeo_shipper_certified BOOLEAN NOT NULL DEFAULT FALSE,
+    hs_code VARCHAR(10) NOT NULL,
+    exam_required BOOLEAN NOT NULL DEFAULT FALSE,
+    hold_reason TEXT,
+    is_deleted BOOLEAN NOT NULL DEFAULT FALSE,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- View: Carrier Scorecard (latest 3 months)
+CREATE OR REPLACE VIEW logistics.v_carrier_scorecard AS
+SELECT
+    carrier_id,
+    mode,
+    COUNT(*) AS months_counted,
+    ROUND(AVG(otd_pct), 2) AS avg_otd_pct,
+    ROUND(AVG(claim_rate_pct), 2) AS avg_claim_rate_pct,
+    ROUND(AVG(avg_transit_days - promised_transit_days), 2) AS avg_transit_variance_days,
+    ROUND(
+        AVG(
+            LEAST((on_time_shipments::NUMERIC / total_shipments) * 60, 60) +
+            GREATEST(0, (1 - LEAST(total_claims_count::NUMERIC / total_shipments / 0.05, 1)) * 25) +
+            GREATEST(0, (1 - ABS(avg_transit_days - promised_transit_days) / 3.0) * 15)
+        ), 2
+    ) AS avg_performance_score,
+    MAX(period_month) AS latest_period
+FROM logistics.carrier_performance_monthly
+WHERE period_month >= DATE_TRUNC('month', NOW()) - INTERVAL '3 months'
+GROUP BY carrier_id, mode;
+
+-- View: Shipments at Risk (no tracking update > 48h, not delivered)
+CREATE OR REPLACE VIEW logistics.v_shipments_at_risk AS
+SELECT
+    s.id AS shipment_id,
+    s.shipment_number,
+    s.status,
+    MAX(te.event_at) AS last_event_at,
+    EXTRACT(EPOCH FROM (NOW() - MAX(te.event_at))) / 3600 AS hours_since_last_event
+FROM logistics.shipments s
+LEFT JOIN logistics.tracking_events_v2 te ON te.shipment_id = s.id
+WHERE s.is_deleted = FALSE
+  AND s.status NOT IN ('DELIVERED', 'CANCELLED')
+GROUP BY s.id, s.shipment_number, s.status
+HAVING MAX(te.event_at) < NOW() - INTERVAL '48 hours'
+   OR MAX(te.event_at) IS NULL;
+
+-- View: Customs Pending
+CREATE OR REPLACE VIEW logistics.v_customs_pending AS
+SELECT
+    cc.id,
+    cc.shipment_id,
+    cc.country_code,
+    cc.status,
+    cc.hs_code,
+    cc.cif_value_cents,
+    cc.duty_amount_cents,
+    cc.aeo_shipper_certified,
+    cc.exam_required,
+    cc.hold_reason,
+    EXTRACT(DAY FROM (NOW() - cc.created_at))::INTEGER AS days_elapsed
+FROM logistics.customs_clearances cc
+WHERE cc.status IN ('PENDING', 'UNDER_REVIEW', 'EXAMINATION')
+  AND cc.is_deleted = FALSE
+ORDER BY cc.created_at ASC;

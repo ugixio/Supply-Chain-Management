@@ -422,3 +422,207 @@ def due_diligence_score(
         (1.0 if v else 0.0) * weights.get(k, 1.0) for k, v in criteria.items()
     )
     return round((weighted_sum / total_weight) * 100, 4)
+
+
+# ─── Conflict Minerals (Dodd-Frank §1502) ────────────────────────────────────
+
+DRC_COVERED_COUNTRIES = {
+    'CD', 'AO', 'BI', 'CF', 'RW', 'SS', 'TZ', 'UG', 'ZM'
+}
+
+MINERALS_3TG = {'TIN', 'TANTALUM', 'TUNGSTEN', 'GOLD'}
+
+COMMON_SMELTER_COUNTRIES = {
+    'TIN': ['MY', 'ID', 'TH', 'PE', 'CN', 'BO'],
+    'TANTALUM': ['CN', 'AU', 'BW', 'CD', 'RW', 'BR'],
+    'TUNGSTEN': ['CN', 'VN', 'RU', 'AU', 'CA', 'AT'],
+    'GOLD': ['CH', 'ZA', 'US', 'CA', 'AU', 'CN', 'AE'],
+}
+
+
+def rcoi_response_rate(cmrts_requested: int, cmrts_collected: int) -> dict:
+    """
+    Calculate RCOI (Reasonable Country of Origin Inquiry) CMRT response rate.
+
+    The Responsible Minerals Initiative (RMI) guidance recommends achieving
+    at least 75% response rate from in-scope suppliers.
+
+    Args:
+        cmrts_requested: Number of CMRT forms sent to suppliers.
+        cmrts_collected: Number of CMRT forms received back from suppliers.
+
+    Returns:
+        dict with keys:
+            response_rate_pct (float): Percentage of CMRTs collected vs requested.
+            gap (int): Number of outstanding CMRTs not yet received.
+            adequate (bool): True if response_rate_pct >= 75.0 (RMI threshold).
+
+    Raises:
+        ValueError: If inputs are negative or collected exceeds requested.
+    """
+    if cmrts_requested < 0 or cmrts_collected < 0:
+        raise ValueError("CMRT counts must be non-negative integers.")
+    if cmrts_collected > cmrts_requested:
+        raise ValueError("cmrts_collected cannot exceed cmrts_requested.")
+
+    response_rate_pct: float = (
+        (cmrts_collected / cmrts_requested * 100.0) if cmrts_requested > 0 else 0.0
+    )
+    gap: int = cmrts_requested - cmrts_collected
+    adequate: bool = response_rate_pct >= 75.0
+
+    return {
+        'response_rate_pct': round(response_rate_pct, 2),
+        'gap': gap,
+        'adequate': adequate,
+    }
+
+
+def classify_mineral_source(
+    countries_of_origin: list[str],
+    all_recycled: bool = False,
+) -> str:
+    """
+    Classify the mineral source based on countries of origin.
+
+    Implements SEC Rule 13p-1 source classification logic:
+    - Recycled/scrap sources → simplified filing (no CMR required).
+    - No DRC covered country in chain → DRC_FREE.
+    - Any DRC covered country present → NOT_FOUND_DRC_CONFLICT_FREE.
+
+    Args:
+        countries_of_origin: List of ISO 3166-1 alpha-2 country codes where
+            minerals were mined or processed.
+        all_recycled: If True, all minerals are from recycled/scrap sources.
+
+    Returns:
+        One of: 'RECYCLED_SCRAP', 'DRC_FREE', 'NOT_FOUND_DRC_CONFLICT_FREE'.
+
+    Raises:
+        ValueError: If any country code is not a 2-character uppercase string.
+    """
+    for code in countries_of_origin:
+        if not isinstance(code, str) or len(code) != 2 or not code.isupper():
+            raise ValueError(
+                f"Invalid country code '{code}': must be 2-character uppercase ISO 3166-1 alpha-2."
+            )
+
+    if all_recycled:
+        return 'RECYCLED_SCRAP'
+
+    for code in countries_of_origin:
+        if code in DRC_COVERED_COUNTRIES:
+            return 'NOT_FOUND_DRC_CONFLICT_FREE'
+
+    return 'DRC_FREE'
+
+
+def form_sd_filing_deadline(reporting_year: int) -> str:
+    """
+    Calculate the SEC Form SD filing deadline for a given reporting year.
+
+    Per SEC Rule 13p-1, Form SD must be filed by May 31 of the calendar year
+    following the reporting year (e.g., reporting year 2024 → deadline 2025-05-31).
+
+    Args:
+        reporting_year: The calendar year the disclosure covers.
+
+    Returns:
+        ISO 8601 date string (YYYY-MM-DD) for May 31 of reporting_year + 1.
+
+    Raises:
+        ValueError: If reporting_year is before 2012 (rule not yet effective).
+    """
+    if reporting_year < 2012:
+        raise ValueError(
+            f"reporting_year must be >= 2012 (SEC Rule 13p-1 effective date). Got {reporting_year}."
+        )
+    return f"{reporting_year + 1}-05-31"
+
+
+def ipsa_required(source_classification: str) -> bool:
+    """
+    Determine whether an Independent Private Sector Audit (IPSA) is required.
+
+    Per SEC Rule 13p-1, an IPSA is only required when a company chooses to
+    declare its products "DRC Conflict Free", which requires independent
+    verification of the supply chain audit.
+
+    Args:
+        source_classification: The MineralSource classification string.
+
+    Returns:
+        True only if source_classification == 'DRC_CONFLICT_FREE'.
+    """
+    return source_classification == 'DRC_CONFLICT_FREE'
+
+
+def supplier_cmrt_coverage(
+    suppliers_total: int,
+    cmrts_collected: int,
+    high_risk_identified: int,
+) -> dict:
+    """
+    Assess CMRT coverage across the supplier base and provide risk-adjusted guidance.
+
+    Args:
+        suppliers_total: Total number of in-scope suppliers requiring a CMRT.
+        cmrts_collected: Number of CMRTs received from in-scope suppliers.
+        high_risk_identified: Number of suppliers flagged as high-risk
+            (e.g., sourcing from DRC covered countries).
+
+    Returns:
+        dict with keys:
+            coverage_pct (float): Percentage of suppliers with CMRT collected.
+            risk_level (str): 'HIGH', 'MEDIUM', or 'LOW'.
+            recommendations (list[str]): Prioritised action items.
+
+    Raises:
+        ValueError: If any argument is negative or cmrts_collected > suppliers_total.
+    """
+    if suppliers_total < 0 or cmrts_collected < 0 or high_risk_identified < 0:
+        raise ValueError("All counts must be non-negative integers.")
+    if cmrts_collected > suppliers_total:
+        raise ValueError("cmrts_collected cannot exceed suppliers_total.")
+
+    coverage_pct: float = (
+        (cmrts_collected / suppliers_total * 100.0) if suppliers_total > 0 else 0.0
+    )
+
+    recommendations: list[str] = []
+
+    if coverage_pct < 50.0 or high_risk_identified > 0:
+        risk_level = 'HIGH'
+    elif coverage_pct < 75.0:
+        risk_level = 'MEDIUM'
+    else:
+        risk_level = 'LOW'
+
+    missing = suppliers_total - cmrts_collected
+    if missing > 0:
+        recommendations.append(
+            f"Follow up on {missing} outstanding CMRT(s) — escalate to procurement leads."
+        )
+    if coverage_pct < 75.0:
+        recommendations.append(
+            "Response rate below 75% RMI threshold; consider contractual CMRT obligations."
+        )
+    if high_risk_identified > 0:
+        recommendations.append(
+            f"Conduct enhanced due diligence on {high_risk_identified} high-risk supplier(s) "
+            "with DRC-covered country exposure."
+        )
+    if risk_level == 'HIGH' and high_risk_identified > 0:
+        recommendations.append(
+            "Engage an IPSA-qualified auditor to validate conflict-free claims for high-risk smelters."
+        )
+    if risk_level == 'LOW':
+        recommendations.append(
+            "Maintain current CMRT collection cadence and review smelter RCGI listing status annually."
+        )
+
+    return {
+        'coverage_pct': round(coverage_pct, 2),
+        'risk_level': risk_level,
+        'recommendations': recommendations,
+    }

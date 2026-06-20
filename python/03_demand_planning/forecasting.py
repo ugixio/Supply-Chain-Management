@@ -463,3 +463,116 @@ def forecast_bias(actual: list[float], forecast: list[float]) -> dict:
         ),
         "bias_direction": direction,
     }
+
+
+# ---------------------------------------------------------------------------
+# Extended accuracy metrics (Oleada C)
+# ---------------------------------------------------------------------------
+
+def wmape(actual: np.ndarray, forecast: np.ndarray) -> float:
+    """
+    Weighted Mean Absolute Percentage Error (WMAPE).
+
+    WMAPE = Σ|A-F| / Σ|A|
+    Preferred over MAPE when actuals contain zeros or near-zeros.
+
+    Args:
+        actual:   array of observed values
+        forecast: array of forecast values (same shape)
+
+    Returns:
+        WMAPE as a fraction (0.10 = 10 %).
+    """
+    a, f = np.asarray(actual, dtype=float), np.asarray(forecast, dtype=float)
+    if a.shape != f.shape or a.size == 0:
+        raise ValueError("actual and forecast must be non-empty and same shape.")
+    denom = np.sum(np.abs(a))
+    if denom == 0:
+        return float("inf")
+    return float(np.sum(np.abs(a - f)) / denom)
+
+
+def smape(actual: np.ndarray, forecast: np.ndarray) -> float:
+    """
+    Symmetric Mean Absolute Percentage Error (sMAPE) — Makridakis 1993.
+
+    sMAPE = (2/n) Σ |A-F| / (|A| + |F|)
+    Bounded [0, 2]; penalises over- and under-forecasting symmetrically.
+
+    Args:
+        actual:   observed values
+        forecast: forecast values
+
+    Returns:
+        sMAPE as a fraction (0.10 = 10 %).
+    """
+    a, f = np.asarray(actual, dtype=float), np.asarray(forecast, dtype=float)
+    if a.shape != f.shape or a.size == 0:
+        raise ValueError("actual and forecast must be non-empty and same shape.")
+    denom = np.abs(a) + np.abs(f)
+    with np.errstate(invalid="ignore", divide="ignore"):
+        terms = np.where(denom == 0, 0.0, 2 * np.abs(a - f) / denom)
+    return float(np.mean(terms))
+
+
+def theil_u(actual: np.ndarray, forecast: np.ndarray) -> dict:
+    """
+    Theil's U statistics (U1 and U2) for forecast accuracy benchmarking.
+
+    U1 (Theil 1958): 0 = perfect, 1 = naive random walk benchmark.
+    U2 (Theil 1966): < 1 beats naive, > 1 worse than naive.
+
+    Args:
+        actual:   observed values (length n)
+        forecast: forecast values (length n, 1-step-ahead)
+
+    Returns:
+        dict with u1, u2, and interpretation string.
+    """
+    a, f = np.asarray(actual, dtype=float), np.asarray(forecast, dtype=float)
+    if a.shape != f.shape or a.size < 2:
+        raise ValueError("Need at least 2 periods and same-shape arrays.")
+    n = len(a)
+    rmse_model = np.sqrt(np.mean((a - f) ** 2))
+    rmse_naive = np.sqrt(np.mean((a[1:] - a[:-1]) ** 2))  # naive: Â_t = A_{t-1}
+
+    u1_denom = np.sqrt(np.mean(a ** 2)) + np.sqrt(np.mean(f ** 2))
+    u1 = float(rmse_model / u1_denom) if u1_denom > 0 else float("inf")
+    u2 = float(rmse_model / rmse_naive) if rmse_naive > 0 else float("inf")
+
+    if u2 < 1.0:
+        interpretation = "BEATS_NAIVE"
+    elif u2 == 1.0:
+        interpretation = "EQUAL_TO_NAIVE"
+    else:
+        interpretation = "WORSE_THAN_NAIVE"
+
+    return {
+        "u1": round(u1, 6),
+        "u2": round(u2, 6),
+        "interpretation": interpretation,
+    }
+
+
+def accuracy_suite(actual: np.ndarray, forecast: np.ndarray) -> dict:
+    """
+    Run the full accuracy metric suite in one call.
+
+    Returns MAE, MAPE, RMSE, WMAPE, sMAPE, Theil-U1, Theil-U2, and bias direction.
+    """
+    a, f = np.asarray(actual, dtype=float), np.asarray(forecast, dtype=float)
+    mae_val = float(np.mean(np.abs(a - f)))
+    mask = a != 0
+    mape_val = float(np.mean(np.abs((a[mask] - f[mask]) / a[mask]))) if mask.any() else float("inf")
+    rmse_val = float(np.sqrt(np.mean((a - f) ** 2)))
+    u_stats = theil_u(a, f)
+    return {
+        "MAE": round(mae_val, 6),
+        "MAPE": round(mape_val, 6) if np.isfinite(mape_val) else float("inf"),
+        "RMSE": round(rmse_val, 6),
+        "WMAPE": round(wmape(a, f), 6),
+        "sMAPE": round(smape(a, f), 6),
+        "Theil_U1": u_stats["u1"],
+        "Theil_U2": u_stats["u2"],
+        "Theil_interpretation": u_stats["interpretation"],
+    }

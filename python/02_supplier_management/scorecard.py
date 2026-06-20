@@ -272,3 +272,102 @@ def supplier_risk_score(
         "risk_level": risk_level,
         "components": components,
     }
+
+
+# ---------------------------------------------------------------------------
+# SCOR AM / RS KPIs (Oleada C)
+# ---------------------------------------------------------------------------
+
+def order_fulfillment_cycle_time(
+    order_processing_days: float,
+    sourcing_days: float,
+    manufacturing_days: float,
+    delivery_days: float,
+) -> dict:
+    """
+    SCOR RS.1.1 — Order Fulfillment Cycle Time (OFCT).
+
+    OFCT = order processing + sourcing + manufacturing + delivery.
+    World-class benchmark varies by industry; electronics ≤5 days,
+    industrial goods ≤10 days.
+
+    Returns total OFCT and component breakdown.
+    """
+    total = order_processing_days + sourcing_days + manufacturing_days + delivery_days
+    return {
+        "ofct_days": round(total, 2),
+        "order_processing_days": order_processing_days,
+        "sourcing_days": sourcing_days,
+        "manufacturing_days": manufacturing_days,
+        "delivery_days": delivery_days,
+    }
+
+
+def return_on_physical_assets(
+    supply_chain_revenue: float,
+    supply_chain_cost: float,
+    total_fixed_assets: float,
+    total_working_capital: float,
+) -> dict:
+    """
+    SCOR AM.1.2 — Return on Physical Assets (ROPA).
+
+    ROPA = Supply Chain Profit / Total Physical Assets
+    where Supply Chain Profit = Revenue − Supply Chain Cost
+    and   Total Physical Assets = Fixed Assets + Working Capital
+
+    Args:
+        supply_chain_revenue:  period revenue attributed to supply chain
+        supply_chain_cost:     total SC operating cost (COGS + logistics + OH)
+        total_fixed_assets:    PP&E at book value
+        total_working_capital: current assets − current liabilities
+
+    Returns:
+        dict with ropa (fraction), sc_profit, and total_assets.
+    """
+    sc_profit = supply_chain_revenue - supply_chain_cost
+    total_assets = total_fixed_assets + total_working_capital
+    if total_assets == 0:
+        raise ValueError("total_fixed_assets + total_working_capital must be > 0.")
+    ropa = sc_profit / total_assets
+    return {
+        "ropa": round(ropa, 6),
+        "ropa_pct": round(ropa * 100, 4),
+        "sc_profit": round(sc_profit, 2),
+        "total_assets": round(total_assets, 2),
+    }
+
+
+def return_on_working_capital(
+    supply_chain_revenue: float,
+    supply_chain_cost: float,
+    inventory_value: float,
+    accounts_receivable: float,
+    accounts_payable: float,
+) -> dict:
+    """
+    SCOR AM.1.3 — Return on Working Capital (ROWC).
+
+    ROWC = Supply Chain Profit / (Inventory + AR − AP)
+
+    Args:
+        supply_chain_revenue:  period revenue
+        supply_chain_cost:     total SC cost
+        inventory_value:       average inventory at cost
+        accounts_receivable:   average AR balance
+        accounts_payable:      average AP balance
+
+    Returns:
+        dict with rowc fraction, working_capital, and sc_profit.
+    """
+    sc_profit = supply_chain_revenue - supply_chain_cost
+    working_capital = inventory_value + accounts_receivable - accounts_payable
+    if working_capital == 0:
+        raise ValueError("Working capital must be non-zero.")
+    rowc = sc_profit / working_capital
+    return {
+        "rowc": round(rowc, 6),
+        "rowc_pct": round(rowc * 100, 4),
+        "sc_profit": round(sc_profit, 2),
+        "working_capital": round(working_capital, 2),
+    }

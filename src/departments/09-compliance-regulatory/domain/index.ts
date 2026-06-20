@@ -21,3 +21,13 @@ export type {
   ComplianceException as ComplianceExceptionRecord,
 } from './ComplianceException';
 export { ComplianceException } from './ComplianceException';
+
+export type {
+  CBAMSector,
+  CBAMDeclarationStatus,
+  EmbeddedEmissionsMethod,
+  CBAMGoodLine,
+  CBAMDeclaration as CBAMDeclarationRecord,
+} from './CBAMDeclaration';
+export { CBAMDeclaration } from './CBAMDeclaration';
+export * from './ConflictMinerals';

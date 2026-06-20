@@ -435,3 +435,256 @@ def scenario_impact_analysis(
         "total_expected_annual_loss_cents": total_expected_annual_loss_cents,
         "top_risk": top_risk,
     }
+
+
+# ─── Bullwhip Effect Quantification ──────────────────────────────────────────
+
+
+def bullwhip_ratio(  # type: ignore[misc]  # supersedes the simple float version above
+    order_history: list[float],
+    demand_history: list[float],
+) -> dict:
+    """
+    Compute the Bullwhip Ratio — variance amplification from demand to orders.
+
+    Bullwhip Ratio = Var(orders) / Var(demand)
+    Target ≈ 1.0 per SCOR-DS. Ratio > 1 indicates amplification (bad).
+    Ratio >> 2 indicates severe bullwhip effect requiring intervention.
+
+    Based on: Lee, Padmanabhan & Whang (1997) Management Science.
+    Measurement: Chen et al. (2000) Management Science.
+
+    Args:
+        order_history: list of order quantities placed upstream (same length as demand)
+        demand_history: list of downstream demand observations
+
+    Returns:
+        {
+          'bullwhip_ratio': float,           # Var(orders)/Var(demand)
+          'var_orders': float,
+          'var_demand': float,
+          'severity': str,                   # 'NONE' (<1.1), 'MILD' (1.1-2), 'MODERATE' (2-5), 'SEVERE' (>5)
+          'recommendation': str,
+          'n_periods': int,
+        }
+
+    Raises:
+        ValueError: if histories have different lengths or fewer than 4 observations,
+                    or if var(demand) == 0
+    """
+    orders = np.asarray(order_history, dtype=float)
+    demand = np.asarray(demand_history, dtype=float)
+
+    if len(orders) != len(demand):
+        raise ValueError(
+            f"order_history and demand_history must have the same length, "
+            f"got {len(orders)} and {len(demand)}."
+        )
+    if len(orders) < 4:
+        raise ValueError(
+            f"At least 4 observations required; got {len(orders)}."
+        )
+
+    var_orders = float(np.var(orders, ddof=1))
+    var_demand = float(np.var(demand, ddof=1))
+
+    if var_demand == 0.0:
+        raise ValueError("Demand variance is zero — cannot compute bullwhip ratio.")
+
+    ratio = var_orders / var_demand
+
+    if ratio < 1.1:
+        severity = "NONE"
+        recommendation = (
+            "Order variance is well-controlled relative to demand. "
+            "Continue current replenishment policy."
+        )
+    elif ratio < 2.0:
+        severity = "MILD"
+        recommendation = (
+            "Mild amplification detected. Review forecast update frequency "
+            "and consider reducing order batch sizes."
+        )
+    elif ratio < 5.0:
+        severity = "MODERATE"
+        recommendation = (
+            "Moderate bullwhip effect. Investigate demand signal sharing (VMI), "
+            "stabilise order quantities, and reduce lead times."
+        )
+    else:
+        severity = "SEVERE"
+        recommendation = (
+            "Severe bullwhip effect. Immediate action required: implement "
+            "information sharing, reduce replenishment lead times, and adopt "
+            "vendor-managed inventory (VMI) or collaborative forecasting (CPFR)."
+        )
+
+    return {
+        "bullwhip_ratio": round(ratio, 6),
+        "var_orders": round(var_orders, 6),
+        "var_demand": round(var_demand, 6),
+        "severity": severity,
+        "recommendation": recommendation,
+        "n_periods": int(len(orders)),
+    }
+
+
+def bullwhip_theoretical_lower_bound(
+    lead_time_periods: int,
+    smoothing_alpha: float | None = None,
+    ma_window: int | None = None,
+) -> dict:
+    """
+    Compute the theoretical lower bound of the bullwhip ratio for a given
+    forecasting policy and lead time (Chen et al. 2000, eq. 3 and 7).
+
+    For Moving Average(p) forecasting:
+        Lower bound = 1 + 2*L/p + 2*(L/p)²
+
+    For Exponential Smoothing (alpha):
+        Lower bound ≈ 1 + 2*alpha*L + (alpha*L)²
+
+    where L = lead_time_periods.
+
+    Args:
+        lead_time_periods: L — replenishment lead time in periods
+        smoothing_alpha: α for exponential smoothing (0 < α ≤ 1); provide this OR ma_window
+        ma_window: p for moving average; provide this OR smoothing_alpha
+
+    Returns:
+        {
+          'lower_bound': float,
+          'lead_time': int,
+          'forecast_method': str,           # 'EXPONENTIAL_SMOOTHING' or 'MOVING_AVERAGE'
+          'interpretation': str,
+        }
+
+    Raises:
+        ValueError: if neither or both of smoothing_alpha / ma_window provided,
+                    or if lead_time < 1
+    """
+    if lead_time_periods < 1:
+        raise ValueError(f"lead_time_periods must be >= 1, got {lead_time_periods}.")
+    if (smoothing_alpha is None) == (ma_window is None):
+        raise ValueError(
+            "Provide exactly one of smoothing_alpha or ma_window, not both or neither."
+        )
+
+    L = int(lead_time_periods)
+
+    if smoothing_alpha is not None:
+        if not (0.0 < smoothing_alpha <= 1.0):
+            raise ValueError(f"smoothing_alpha must be in (0, 1], got {smoothing_alpha}.")
+        alpha = float(smoothing_alpha)
+        lower_bound = 1.0 + 2.0 * alpha * L + (alpha * L) ** 2
+        forecast_method = "EXPONENTIAL_SMOOTHING"
+        interpretation = (
+            f"With exponential smoothing (α={alpha}) and lead time L={L}, "
+            f"the bullwhip ratio cannot be lower than {lower_bound:.4f} even with "
+            "perfect information sharing (Chen et al. 2000, eq.7)."
+        )
+    else:
+        p = int(ma_window)  # type: ignore[arg-type]
+        if p < 1:
+            raise ValueError(f"ma_window must be >= 1, got {p}.")
+        ratio = L / p
+        lower_bound = 1.0 + 2.0 * ratio + 2.0 * ratio ** 2
+        forecast_method = "MOVING_AVERAGE"
+        interpretation = (
+            f"With moving average (p={p}) and lead time L={L}, "
+            f"the bullwhip ratio cannot be lower than {lower_bound:.4f} even with "
+            "perfect information sharing (Chen et al. 2000, eq.3)."
+        )
+
+    return {
+        "lower_bound": round(lower_bound, 6),
+        "lead_time": L,
+        "forecast_method": forecast_method,
+        "interpretation": interpretation,
+    }
+
+
+def bullwhip_decomposition(
+    order_history: list[float],
+    demand_history: list[float],
+    lead_time_periods: int,
+    smoothing_alpha: float = 0.2,
+) -> dict:
+    """
+    Decompose the observed bullwhip ratio into its contributing causes
+    (Lee et al. 1997 four-cause framework).
+
+    Estimated contributions (heuristic decomposition):
+      - Demand signal processing: theoretical lower bound - 1.0
+      - Order batching proxy: periodicity in order_history (FFT-based)
+      - Price fluctuation proxy: CV(order price) if provided, else 0
+      - Shortage gaming proxy: correlation between order spikes and demand dips
+
+    Args:
+        order_history: order quantities
+        demand_history: demand observations (same length)
+        lead_time_periods: L
+        smoothing_alpha: α used in forecasting (for lower bound estimate)
+
+    Returns:
+        {
+          'observed_ratio': float,
+          'theoretical_lower_bound': float,
+          'excess_amplification': float,     # observed - lower_bound
+          'demand_signal_processing': float, # lower_bound - 1.0
+          'batching_proxy': float,           # estimated contribution
+          'shortage_gaming_proxy': float,
+          'n_periods': int,
+        }
+    """
+    # Compute observed ratio (reuse the rich bullwhip_ratio above)
+    bw = bullwhip_ratio(order_history, demand_history)
+    observed_ratio: float = bw["bullwhip_ratio"]
+
+    # Theoretical lower bound for demand signal processing
+    lb_result = bullwhip_theoretical_lower_bound(
+        lead_time_periods=lead_time_periods,
+        smoothing_alpha=smoothing_alpha,
+    )
+    theoretical_lb: float = lb_result["lower_bound"]
+    demand_signal_processing: float = max(0.0, theoretical_lb - 1.0)
+
+    excess_amplification: float = max(0.0, observed_ratio - theoretical_lb)
+
+    # ── Order batching proxy ──────────────────────────────────────────────────
+    # Use FFT to detect dominant periodicity in orders.  If a strong periodic
+    # component exists relative to the DC component, we attribute a fraction
+    # of the excess to batching behaviour.
+    orders_arr = np.asarray(order_history, dtype=float)
+    n = len(orders_arr)
+    fft_magnitudes = np.abs(np.fft.rfft(orders_arr - orders_arr.mean()))
+    if n > 2 and fft_magnitudes[0] > 0:
+        # Relative power of non-DC components vs DC
+        ac_power = float(np.sum(fft_magnitudes[1:] ** 2))
+        dc_power = float(fft_magnitudes[0] ** 2)
+        periodicity_ratio = ac_power / (dc_power + ac_power + 1e-12)
+    else:
+        periodicity_ratio = 0.0
+    batching_proxy = round(excess_amplification * periodicity_ratio * 0.5, 6)
+
+    # ── Shortage gaming proxy ─────────────────────────────────────────────────
+    # Negative correlation between demand and orders (ordering more when demand
+    # dips, anticipating shortages) is a signal of shortage gaming.
+    demand_arr = np.asarray(demand_history, dtype=float)
+    if orders_arr.std() > 0 and demand_arr.std() > 0:
+        correlation = float(np.corrcoef(orders_arr, demand_arr)[0, 1])
+        # Gaming signal: strong negative correlation → higher proxy value
+        gaming_signal = max(0.0, -correlation)
+    else:
+        gaming_signal = 0.0
+    shortage_gaming_proxy = round(excess_amplification * gaming_signal * 0.3, 6)
+
+    return {
+        "observed_ratio": round(observed_ratio, 6),
+        "theoretical_lower_bound": round(theoretical_lb, 6),
+        "excess_amplification": round(excess_amplification, 6),
+        "demand_signal_processing": round(demand_signal_processing, 6),
+        "batching_proxy": batching_proxy,
+        "shortage_gaming_proxy": shortage_gaming_proxy,
+        "n_periods": int(n),
+    }

@@ -425,3 +425,463 @@ def pegging(
             })
             remaining = max(0.0, remaining - pegged)
     return pegs
+
+
+# ── Advanced Lot-Sizing Algorithms ───────────────────────────────────────────
+# Ref: Wagner & Whitin (1958) Management Science 5(1):89-96
+#      Silver & Meal (1973) Production and Inventory Management 14(2):64-73
+#      DeMatteis (1968) IBM Systems Journal 7(1):30-46
+#      Harris (1913) / Wilson (1934) EPQ extension
+
+
+def wagner_whitin(
+    demands: list[float],
+    holding_cost_per_unit_period: float,
+    setup_cost: float,
+) -> dict:
+    """
+    Wagner-Whitin dynamic lot-sizing — globally optimal for single-item,
+    uncapacitated, deterministic, time-varying demand.
+
+    Algorithm: O(T²) DP. For each period k, finds the cheapest period j
+    to place the last order covering periods j..k.
+
+    F[k] = min_{1≤j≤k} { F[j-1] + setup_cost + h * Σ_{t=j}^{k} (t-j)*D[t] }
+
+    Args:
+        demands: list of T net requirements per period (≥0).
+        holding_cost_per_unit_period: h — cost to hold 1 unit for 1 period.
+        setup_cost: A — fixed ordering cost per replenishment.
+
+    Returns:
+        {
+          'order_periods': list[int],        # 0-indexed periods where orders are placed
+          'order_quantities': list[float],   # quantity ordered in each order period
+          'total_cost': float,               # minimum total setup + holding cost
+          'period_costs': list[float],       # cost breakdown per period
+          'algorithm': 'WAGNER_WHITIN'
+        }
+
+    Raises:
+        ValueError: if demands contains negative values or costs are ≤ 0.
+
+    Ref: Wagner & Whitin (1958) Management Science 5(1):89-96.
+    """
+    if holding_cost_per_unit_period <= 0:
+        raise ValueError(
+            f"holding_cost_per_unit_period must be > 0, got {holding_cost_per_unit_period}"
+        )
+    if setup_cost <= 0:
+        raise ValueError(f"setup_cost must be > 0, got {setup_cost}")
+
+    d = [float(x) for x in demands]
+    if any(x < 0 for x in d):
+        raise ValueError("demands must all be ≥ 0")
+
+    T = len(d)
+    if T == 0:
+        return {
+            "order_periods": [],
+            "order_quantities": [],
+            "total_cost": 0.0,
+            "period_costs": [],
+            "algorithm": "WAGNER_WHITIN",
+        }
+
+    h = holding_cost_per_unit_period
+    A = setup_cost
+
+    # F[k] = min cost to satisfy demand for periods 0..k-1 (1-indexed for DP)
+    # F[0] = 0; F[k] = min over j in 1..k of { F[j-1] + A + holding(j,k) }
+    # holding(j, k) = h * sum_{t=j}^{k} (t - j) * d[t-1]  (periods 1-indexed)
+    INF = float("inf")
+    F = [INF] * (T + 1)
+    F[0] = 0.0
+    last_order_start = [0] * (T + 1)  # backtracking: last order covers j..k
+
+    for k in range(1, T + 1):
+        for j in range(1, k + 1):
+            # Holding cost if we order in period j to cover j..k (1-indexed)
+            holding = h * sum((t - j) * d[t - 1] for t in range(j, k + 1))
+            cost = F[j - 1] + A + holding
+            if cost < F[k]:
+                F[k] = cost
+                last_order_start[k] = j
+
+    # Backtrack to find order schedule
+    order_starts: list[int] = []
+    k = T
+    while k > 0:
+        j = last_order_start[k]
+        order_starts.append(j)
+        k = j - 1
+    order_starts.reverse()  # chronological order
+
+    # Build result arrays
+    order_periods: list[int] = []
+    order_quantities: list[float] = []
+    period_costs: list[float] = [0.0] * T
+
+    for idx, j in enumerate(order_starts):
+        # Determine end of this order's coverage
+        if idx + 1 < len(order_starts):
+            end = order_starts[idx + 1] - 1  # up to but not including next order
+        else:
+            end = T  # covers to end (1-indexed)
+
+        qty = sum(d[t - 1] for t in range(j, end + 1))
+        order_periods.append(j - 1)  # convert to 0-indexed
+        order_quantities.append(qty)
+
+        # Holding cost for this lot
+        holding = h * sum((t - j) * d[t - 1] for t in range(j, end + 1))
+        period_costs[j - 1] += A + holding  # setup + holding charged to order period
+
+    return {
+        "order_periods": order_periods,
+        "order_quantities": order_quantities,
+        "total_cost": round(F[T], 6),
+        "period_costs": [round(c, 6) for c in period_costs],
+        "algorithm": "WAGNER_WHITIN",
+    }
+
+
+def silver_meal(
+    demands: list[float],
+    holding_cost_per_unit_period: float,
+    setup_cost: float,
+) -> dict:
+    """
+    Silver-Meal heuristic for time-varying demand lot sizing.
+
+    Orders for k periods starting at j while average cost per period C(k)/k
+    is decreasing. Stops when C(k+1)/(k+1) > C(k)/k.
+
+    C(k) = setup_cost + h * Σ_{t=1}^{k-1} t * D_{j+t}
+
+    On average ~1.6% above Wagner-Whitin optimum but O(T) complexity.
+
+    Args:
+        demands: list of T net requirements per period (≥0).
+        holding_cost_per_unit_period: h.
+        setup_cost: A.
+
+    Returns same structure as wagner_whitin() plus 'algorithm': 'SILVER_MEAL'.
+
+    Raises:
+        ValueError: if demands contains negative values or costs are ≤ 0.
+
+    Ref: Silver & Meal (1973) Production and Inventory Management 14(2):64-73.
+    """
+    if holding_cost_per_unit_period <= 0:
+        raise ValueError(
+            f"holding_cost_per_unit_period must be > 0, got {holding_cost_per_unit_period}"
+        )
+    if setup_cost <= 0:
+        raise ValueError(f"setup_cost must be > 0, got {setup_cost}")
+
+    d = [float(x) for x in demands]
+    if any(x < 0 for x in d):
+        raise ValueError("demands must all be ≥ 0")
+
+    T = len(d)
+    if T == 0:
+        return {
+            "order_periods": [],
+            "order_quantities": [],
+            "total_cost": 0.0,
+            "period_costs": [],
+            "algorithm": "SILVER_MEAL",
+        }
+
+    h = holding_cost_per_unit_period
+    A = setup_cost
+
+    order_periods: list[int] = []
+    order_quantities: list[float] = []
+    period_costs: list[float] = [0.0] * T
+    total_cost = 0.0
+
+    j = 0  # current order start (0-indexed)
+    while j < T:
+        # Skip zero-demand periods without placing an order
+        if d[j] == 0.0:
+            j += 1
+            continue
+
+        # Build lot starting at period j
+        # C(1) = A  (1 period)
+        cum_holding = 0.0
+        prev_avg = A  # C(1)/1 = A
+        k = 1         # number of periods in lot
+
+        while j + k < T:
+            # Extend by one more period: t periods ahead from j (offset = k)
+            cum_holding += h * k * d[j + k]
+            new_cost = A + cum_holding
+            new_avg = new_cost / (k + 1)
+            if new_avg > prev_avg:
+                break
+            prev_avg = new_avg
+            k += 1
+
+        qty = sum(d[j: j + k])
+        order_periods.append(j)
+        order_quantities.append(qty)
+
+        lot_cost = A + h * sum(offset * d[j + offset] for offset in range(1, k))
+        period_costs[j] += lot_cost
+        total_cost += lot_cost
+
+        j += k
+
+    return {
+        "order_periods": order_periods,
+        "order_quantities": order_quantities,
+        "total_cost": round(total_cost, 6),
+        "period_costs": [round(c, 6) for c in period_costs],
+        "algorithm": "SILVER_MEAL",
+    }
+
+
+def part_period_balancing(
+    demands: list[float],
+    holding_cost_per_unit_period: float,
+    setup_cost: float,
+) -> dict:
+    """
+    Part-Period Balancing (PPB) lot-sizing heuristic.
+
+    Orders for additional periods as long as cumulative holding cost
+    (part-periods × h) does not exceed setup_cost. Economic Part Period
+    (EPP) = setup_cost / holding_cost_per_unit_period.
+
+    When adding the next period would exceed EPP, the algorithm selects
+    the span (current or +1) whose cumulative part-periods is closer to EPP.
+
+    Args:
+        demands: list of T net requirements per period (≥0).
+        holding_cost_per_unit_period: h.
+        setup_cost: A.
+
+    Returns same structure as wagner_whitin() plus
+    'algorithm': 'PART_PERIOD_BALANCING'.
+
+    Raises:
+        ValueError: if demands contains negative values or costs are ≤ 0.
+
+    Ref: DeMatteis (1968) IBM Systems Journal 7(1):30-46.
+    """
+    if holding_cost_per_unit_period <= 0:
+        raise ValueError(
+            f"holding_cost_per_unit_period must be > 0, got {holding_cost_per_unit_period}"
+        )
+    if setup_cost <= 0:
+        raise ValueError(f"setup_cost must be > 0, got {setup_cost}")
+
+    d = [float(x) for x in demands]
+    if any(x < 0 for x in d):
+        raise ValueError("demands must all be ≥ 0")
+
+    T = len(d)
+    if T == 0:
+        return {
+            "order_periods": [],
+            "order_quantities": [],
+            "total_cost": 0.0,
+            "period_costs": [],
+            "algorithm": "PART_PERIOD_BALANCING",
+        }
+
+    h = holding_cost_per_unit_period
+    A = setup_cost
+    epp = A / h  # Economic Part Period
+
+    order_periods: list[int] = []
+    order_quantities: list[float] = []
+    period_costs: list[float] = [0.0] * T
+    total_cost = 0.0
+
+    j = 0  # current order start (0-indexed)
+    while j < T:
+        if d[j] == 0.0:
+            j += 1
+            continue
+
+        cum_pp = 0.0   # cumulative part-periods
+        k = 1          # number of periods in lot (at least 1)
+
+        while j + k < T:
+            additional_pp = d[j + k] * k
+            new_cum_pp = cum_pp + additional_pp
+            if new_cum_pp > epp:
+                # Choose k or k+1 based on which is closer to EPP
+                if abs(new_cum_pp - epp) < abs(cum_pp - epp):
+                    k += 1
+                break
+            cum_pp = new_cum_pp
+            k += 1
+
+        qty = sum(d[j: j + k])
+        order_periods.append(j)
+        order_quantities.append(qty)
+
+        lot_holding = h * sum(offset * d[j + offset] for offset in range(1, k))
+        lot_cost = A + lot_holding
+        period_costs[j] += lot_cost
+        total_cost += lot_cost
+
+        j += k
+
+    return {
+        "order_periods": order_periods,
+        "order_quantities": order_quantities,
+        "total_cost": round(total_cost, 6),
+        "period_costs": [round(c, 6) for c in period_costs],
+        "algorithm": "PART_PERIOD_BALANCING",
+    }
+
+
+def compare_lot_sizing_methods(
+    demands: list[float],
+    holding_cost_per_unit_period: float,
+    setup_cost: float,
+) -> dict:
+    """
+    Run all three lot-sizing methods and compare total costs.
+
+    Wagner-Whitin provides the global optimum for the deterministic single-item
+    uncapacitated problem; Silver-Meal and PPB are evaluated relative to it.
+
+    Args:
+        demands: list of T net requirements per period (≥0).
+        holding_cost_per_unit_period: h — cost to hold 1 unit for 1 period.
+        setup_cost: A — fixed ordering cost per replenishment.
+
+    Returns:
+        {
+          'wagner_whitin': {...result dict...},
+          'silver_meal': {...result dict...},
+          'part_period_balancing': {...result dict...},
+          'best_method': str,                       # method with lowest total_cost
+          'silver_meal_pct_above_optimal': float,   # % above W-W (0.0 if W-W cost=0)
+          'ppb_pct_above_optimal': float,
+        }
+
+    Raises:
+        ValueError: propagated from individual algorithms on invalid inputs.
+    """
+    ww = wagner_whitin(demands, holding_cost_per_unit_period, setup_cost)
+    sm = silver_meal(demands, holding_cost_per_unit_period, setup_cost)
+    ppb = part_period_balancing(demands, holding_cost_per_unit_period, setup_cost)
+
+    optimal = ww["total_cost"]
+
+    def _pct_above(cost: float) -> float:
+        if optimal == 0.0:
+            return 0.0
+        return round((cost - optimal) / optimal * 100.0, 4)
+
+    costs = {
+        "wagner_whitin": optimal,
+        "silver_meal": sm["total_cost"],
+        "part_period_balancing": ppb["total_cost"],
+    }
+    best_method = min(costs, key=lambda k: costs[k])
+
+    return {
+        "wagner_whitin": ww,
+        "silver_meal": sm,
+        "part_period_balancing": ppb,
+        "best_method": best_method,
+        "silver_meal_pct_above_optimal": _pct_above(sm["total_cost"]),
+        "ppb_pct_above_optimal": _pct_above(ppb["total_cost"]),
+    }
+
+
+def epq(
+    annual_demand: float,
+    production_rate_per_year: float,
+    setup_cost: float,
+    holding_cost_per_unit_year: float,
+) -> dict:
+    """
+    Economic Production Quantity (EPQ) — Harris-Wilson model for finite
+    production rate.
+
+    EPQ = sqrt(2 * D * S / (H * (1 - D/P)))
+
+    where:
+      D = annual demand rate
+      P = annual production rate  (must be > D)
+      S = setup cost per run
+      H = holding cost per unit per year
+
+    During a production run of length t_p = EPQ/P, inventory builds at rate
+    (P - D). Maximum inventory = EPQ * (1 - D/P).
+
+    Args:
+        annual_demand: D — units demanded per year (> 0).
+        production_rate_per_year: P — units producible per year (> D).
+        setup_cost: S — fixed cost per production run (> 0).
+        holding_cost_per_unit_year: H — holding cost per unit per year (> 0).
+
+    Returns:
+        {
+          'epq': float,                       # optimal production run size
+          'production_run_time_years': float, # t_p = EPQ / P
+          'cycle_time_years': float,          # T = EPQ / D
+          'max_inventory': float,             # EPQ * (1 - D/P)
+          'total_cost_per_year': float,       # setup + holding costs
+          'setup_cost_per_year': float,       # (D / EPQ) * S
+          'holding_cost_per_year': float,     # (max_inventory / 2) * H
+        }
+
+    Raises:
+        ValueError: if annual_demand >= production_rate_per_year (infeasible),
+                    or any parameter is ≤ 0.
+
+    Ref: Harris (1913); Wilson (1934); Nahmias & Olsen (2015) §4.5.
+    """
+    if annual_demand <= 0:
+        raise ValueError(f"annual_demand must be > 0, got {annual_demand}")
+    if production_rate_per_year <= 0:
+        raise ValueError(
+            f"production_rate_per_year must be > 0, got {production_rate_per_year}"
+        )
+    if setup_cost <= 0:
+        raise ValueError(f"setup_cost must be > 0, got {setup_cost}")
+    if holding_cost_per_unit_year <= 0:
+        raise ValueError(
+            f"holding_cost_per_unit_year must be > 0, got {holding_cost_per_unit_year}"
+        )
+    if annual_demand >= production_rate_per_year:
+        raise ValueError(
+            f"Infeasible: annual_demand ({annual_demand}) must be < "
+            f"production_rate_per_year ({production_rate_per_year}). "
+            "System cannot satisfy demand — increase P or reduce D."
+        )
+
+    D = float(annual_demand)
+    P = float(production_rate_per_year)
+    S = float(setup_cost)
+    H = float(holding_cost_per_unit_year)
+
+    utilisation = D / P
+    epq_qty = float(np.sqrt(2.0 * D * S / (H * (1.0 - utilisation))))
+    max_inv = epq_qty * (1.0 - utilisation)
+    cycle_time = epq_qty / D
+    prod_run_time = epq_qty / P
+    setup_cost_yr = (D / epq_qty) * S
+    holding_cost_yr = (max_inv / 2.0) * H
+    total_cost_yr = setup_cost_yr + holding_cost_yr
+
+    return {
+        "epq": round(epq_qty, 6),
+        "production_run_time_years": round(prod_run_time, 8),
+        "cycle_time_years": round(cycle_time, 8),
+        "max_inventory": round(max_inv, 6),
+        "total_cost_per_year": round(total_cost_yr, 6),
+        "setup_cost_per_year": round(setup_cost_yr, 6),
+        "holding_cost_per_year": round(holding_cost_yr, 6),
+    }

@@ -136,6 +136,15 @@ Supply-Chain-Management/
 
 ---
 
+## Language Policy
+
+> **All code, comments, docstrings, commit messages, README files, and documentation
+> in this repository must be written in English.**
+> This applies to every contribution — TypeScript, Python, Markdown, and configuration files.
+> No Spanish (or any other language) is permitted in source files or documentation.
+
+---
+
 ## Critical Business Rules
 1. **Never allow negative inventory** without `backorderAllowed = true`
 2. **POs above threshold** (`PO_APPROVAL_THRESHOLD_CENTS`, default $5,000) → `PENDING_APPROVAL`

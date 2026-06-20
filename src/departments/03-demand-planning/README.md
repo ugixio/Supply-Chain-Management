@@ -1,68 +1,68 @@
-# Departamento 03 — Demand Planning & Forecasting
-## Planificación de Demanda y Pronósticos
+# Department 03 — Demand Planning & Forecasting
+## Demand Planning and Forecasting
 
-### Misión
-Anticipar con precisión la demanda futura de cada SKU para que la cadena de suministro
-pueda posicionarse proactivamente, minimizando rupturas de stock y excesos de inventario.
+### Mission
+Accurately anticipate the future demand of each SKU so that the supply chain
+can position itself proactively, minimizing stockouts and excess inventory.
 
-### Funciones principales
-| Función | Descripción |
+### Main Functions
+| Function | Description |
 |---------|-------------|
-| Pronóstico estadístico | SMA, SES, Holt, Holt-Winters, ML |
-| Demand sensing | Señales en tiempo real: POS, pedidos, clima |
-| Gestión de inventario de seguridad | Cálculo de SS por método estadístico |
-| Planificación EOQ | Cantidad económica de pedido |
-| Colaboración con ventas/marketing | Consensus forecast y ajustes cualitativos |
-| Análisis de errores de pronóstico | MAE, MAPE, RMSE por SKU |
+| Statistical forecasting | SMA, SES, Holt, Holt-Winters, ML |
+| Demand sensing | Real-time signals: POS, orders, weather |
+| Safety stock management | SS calculation using statistical methods |
+| EOQ planning | Economic order quantity |
+| Collaboration with sales/marketing | Consensus forecast and qualitative adjustments |
+| Forecast error analysis | MAE, MAPE, RMSE per SKU |
 
-### KPIs del departamento
-| KPI | Benchmark mundial | Fuente |
+### Department KPIs
+| KPI | World Benchmark | Source |
 |-----|------------------|--------|
-| Forecast Accuracy (MAPE) | < 15% productos A | APICS CPIM |
-| Bias | ≈ 0% (sin sesgo sistemático) | Best practice |
+| Forecast Accuracy (MAPE) | < 15% A-items | APICS CPIM |
+| Bias | ≈ 0% (no systematic bias) | Best practice |
 | Fill Rate | ≥ 98% | Chopra & Meindl Ch.11 |
 | Stock-Out Rate | < 2% | Industry benchmark |
-| Days of Inventory Outstanding | Varía por industria | Sector-specific |
+| Days of Inventory Outstanding | Varies by industry | Sector-specific |
 | Safety Stock ÷ Avg Inventory | ≤ 20% | Lean SCM |
 
-### Algoritmos implementados
-| Algoritmo | Cuándo usar | Parámetros |
+### Implemented Algorithms
+| Algorithm | When to use | Parameters |
 |-----------|-------------|-----------|
-| SMA | Demanda estable, sin tendencia | Período |
-| SES (Holt 1957) | Demanda estacionaria | α ∈ (0,1) |
-| Holt's Linear | Tendencia sin estacionalidad | α, β |
-| Holt-Winters (1960) | Tendencia + estacionalidad | α, β, γ, m |
+| SMA | Stable demand, no trend | Period |
+| SES (Holt 1957) | Stationary demand | α ∈ (0,1) |
+| Holt's Linear | Trend without seasonality | α, β |
+| Holt-Winters (1960) | Trend + seasonality | α, β, γ, m |
 
-> **Regla de selección**: CV < 10% → SES | con tendencia → Holt | estacional → Holt-Winters
+> **Selection rule**: CV < 10% → SES | with trend → Holt | seasonal → Holt-Winters
 
-### Segmentación XYZ
-| Clase | CV | Política de pronóstico |
+### XYZ Segmentation
+| Class | CV | Forecast Policy |
 |-------|-----|----------------------|
-| X | < 10% | Pronóstico estadístico — alta confianza |
-| Y | 10-25% | Consenso estadístico + ajuste comercial |
-| Z | > 25% | Planificación por escenarios, más SS |
+| X | < 10% | Statistical forecast — high confidence |
+| Y | 10-25% | Statistical consensus + commercial adjustment |
+| Z | > 25% | Scenario planning, higher SS |
 
-### Archivos clave
-- `algorithms/Forecasting.ts` — SMA, SES, Holt, Holt-Winters + métricas
-- `algorithms/SafetyStock.ts` — 4 métodos SS, EOQ, ROP, DIO
-- `domain/DemandPlan.ts` — Plan de demanda por SKU/período
-- `domain/SOPCycle.ts` — Ciclo mensual S&OP (inputs/outputs)
-- `services/ForecastingService.ts` — Orquestador de pronósticos
+### Key Files
+- `algorithms/Forecasting.ts` — SMA, SES, Holt, Holt-Winters + metrics
+- `algorithms/SafetyStock.ts` — 4 SS methods, EOQ, ROP, DIO
+- `domain/DemandPlan.ts` — Demand plan per SKU/period
+- `domain/SOPCycle.ts` — Monthly S&OP cycle (inputs/outputs)
+- `services/ForecastingService.ts` — Forecasting orchestrator
 
-### Roles del departamento
-- **Demand Planning Manager** — Estrategia y proceso S&OP
-- **Demand Planner** — Pronósticos por categoría/región
-- **Forecasting Analyst** — Modelos estadísticos y ML
-- **S&OP Coordinator** — Reuniones y consenso
+### Department Roles
+- **Demand Planning Manager** — Strategy and S&OP process
+- **Demand Planner** — Forecasts by category/region
+- **Forecasting Analyst** — Statistical and ML models
+- **S&OP Coordinator** — Meetings and consensus
 
-### Referencias
+### References
 - Holt, C.C. (1957) — Exponentially weighted moving averages
 - Winters, P.R. (1960) — Triple exponential smoothing
 - Chopra & Meindl Ch.7 "Demand Forecasting in a Supply Chain"
 - Ballou Ch.8 — Demand forecasting methods
 - APICS CPIM 9.0 — Fundamentals of Demand Management
 
-## Modelos Matemáticos Aplicados
+## Applied Mathematical Models
 
 1. **SMA — Simple Moving Average** — F_t = (1/n) × Σ D_{t-i} for i=1..n. Best for stable demand with no trend/season. n=3-6 periods typical.
 
@@ -78,13 +78,13 @@ pueda posicionarse proactivamente, minimizando rupturas de stock y excesos de in
 
 7. **MAE, MAPE, RMSE** — MAE=Σ|A-F|/n. MAPE=Σ|A-F|/A × 100/n. RMSE=√(Σ(A-F)²/n). Always compute all three for algorithm selection.
 
-## Modelos de Machine Learning Recomendados
+## Recommended Machine Learning Models
 
 1. **Prophet (Facebook/Meta)** — Additive time-series model: y(t) = trend(t) + seasonality(t) + holidays(t) + ε. Handles missing data, outliers, multiple seasonalities. Best for: SKUs with holiday effects, promotions. Libraries: prophet (Python). Ref: Taylor & Letham (2018).
 
-2. **LSTM / Seq2Seq para Pronóstico Multi-Step** — Recurrent neural network. Input: 52 weeks demand + external features (price, promotions, weather). Output: 12-week forecast horizon per SKU. Libraries: TensorFlow, PyTorch. Ref: Hochreiter & Schmidhuber (1997).
+2. **LSTM / Seq2Seq for Multi-Step Forecasting** — Recurrent neural network. Input: 52 weeks demand + external features (price, promotions, weather). Output: 12-week forecast horizon per SKU. Libraries: TensorFlow, PyTorch. Ref: Hochreiter & Schmidhuber (1997).
 
-3. **LightGBM / XGBoost para Demand Sensing** — Gradient boosting trees. Features: lag features, rolling averages, day-of-week, promotions, price elasticity. Output: short-term (1-4 week) demand. Fast training, interpretable. Libraries: LightGBM, XGBoost.
+3. **LightGBM / XGBoost for Demand Sensing** — Gradient boosting trees. Features: lag features, rolling averages, day-of-week, promotions, price elasticity. Output: short-term (1-4 week) demand. Fast training, interpretable. Libraries: LightGBM, XGBoost.
 
 4. **DeepAR (Amazon)** — Probabilistic RNN that outputs full demand distribution (P10/P50/P90). Trains jointly across all SKUs. Outputs prediction intervals for safety stock calculation. Libraries: GluonTS, SageMaker.
 

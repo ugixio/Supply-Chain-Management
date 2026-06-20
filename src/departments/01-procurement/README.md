@@ -1,67 +1,67 @@
-# Departamento 01 — Procurement & Strategic Sourcing
-## Adquisiciones y Abastecimiento Estratégico
+# Department 01 — Procurement & Strategic Sourcing
+## Procurement and Strategic Sourcing
 
-### Misión
-Garantizar el suministro oportuno, con calidad y al mejor costo total de propiedad (TCO),
-alineando las decisiones de compra con los objetivos estratégicos de la empresa.
+### Mission
+Ensure timely supply at the right quality and lowest total cost of ownership (TCO),
+aligning purchasing decisions with the company's strategic objectives.
 
-### Funciones principales
-| Función | Descripción |
+### Core Functions
+| Function | Description |
 |---------|-------------|
-| Abastecimiento estratégico | Selección y calificación de proveedores mediante licitaciones, RFQ/RFP |
-| Compras tácticas | Emisión y seguimiento de órdenes de compra (PO) |
-| Gestión de contratos | Negociación, administración y renovación de contratos marco |
-| Gestión de categorías | Estrategia por familia de producto (Matriz Kraljic) |
-| Análisis de gasto | Spend analytics, consolidación y optimización |
-| Cumplimiento de proveedores | UFLPA, CSDDD, C-TPAT, ISO 28000 |
+| Strategic sourcing | Supplier selection and qualification through competitive bids, RFQ/RFP |
+| Tactical purchasing | Issuance and tracking of purchase orders (PO) |
+| Contract management | Negotiation, administration, and renewal of framework contracts |
+| Category management | Strategy by product family (Kraljic Matrix) |
+| Spend analysis | Spend analytics, consolidation, and optimization |
+| Supplier compliance | UFLPA, CSDDD, C-TPAT, ISO 28000 |
 
-### KPIs del departamento
-| KPI | Benchmark mundial | Fuente |
+### Department KPIs
+| KPI | Global Benchmark | Source |
 |-----|------------------|--------|
-| Purchase Order Cycle Time | < 3 días | APICS CPIM 9.0 |
-| Procurement Cost Savings | ≥ 3-5% anual | Gartner SCM Top 25 |
+| Purchase Order Cycle Time | < 3 days | APICS CPIM 9.0 |
+| Procurement Cost Savings | ≥ 3-5% annual | Gartner SCM Top 25 |
 | Supplier OTD | ≥ 95% | Chopra & Meindl Ch.14 |
 | Contract Compliance Rate | ≥ 90% | CIPS Best Practice |
 | Spend Under Management | ≥ 80% | McKinsey Procurement |
-| PO Approval Lead Time | < 24 h (automático) | Interna |
+| PO Approval Lead Time | < 24 h (automatic) | Internal |
 
-### Estándares aplicables
+### Applicable Standards
 - **ISO 20400:2017** — Sustainable procurement
 - **US UCC Article 2** — Quantity in contracts
-- **EU Directive 2014/24/EU** — Public procurement (referencia)
-- **Incoterms® 2020** — Términos de entrega en cada PO
+- **EU Directive 2014/24/EU** — Public procurement (reference)
+- **Incoterms® 2020** — Delivery terms on each PO
 
-### Proceso Order-to-PO
+### Order-to-PO Process
 ```
-Necesidad → Requisición → Selección proveedor (Kraljic) →
-RFQ/RFP → Evaluación ofertas → Negociación → PO Draft →
-Aprobación (workflow) → Envío proveedor → Seguimiento → GRN
+Need → Requisition → Supplier selection (Kraljic) →
+RFQ/RFP → Quote evaluation → Negotiation → PO Draft →
+Approval (workflow) → Supplier dispatch → Tracking → GRN
 ```
 
-### Archivos clave
-- `domain/PurchaseOrder.ts` — Agregado PO con workflow de aprobación
-- `domain/Supplier.ts` — Maestro de proveedores con Matriz Kraljic
-- `domain/Contract.ts` — Contratos marco y acuerdos de suministro
-- `domain/RFQ.ts` — Solicitudes de cotización y evaluación de ofertas
-- `services/ApprovalWorkflow.ts` — Motor de flujos de aprobación
-- `services/SpendAnalysis.ts` — Análisis de gasto y ahorros
-- `config/thresholds.ts` — Umbrales de aprobación por nivel
+### Key Files
+- `domain/PurchaseOrder.ts` — PO aggregate with approval workflow
+- `domain/Supplier.ts` — Supplier master with Kraljic Matrix
+- `domain/Contract.ts` — Framework contracts and supply agreements
+- `domain/RFQ.ts` — Requests for quotation and quote evaluation
+- `services/ApprovalWorkflow.ts` — Approval workflow engine
+- `services/SpendAnalysis.ts` — Spend analysis and savings
+- `config/thresholds.ts` — Approval thresholds by level
 
-### Roles del departamento
-- **CPO** (Chief Procurement Officer) — Estrategia y gobierno
-- **Category Manager** — Estrategia por categoría, Krajlic
-- **Strategic Sourcing Manager** — Licitaciones y contratos
-- **Buyer / Procurement Officer** — Emisión y seguimiento de POs
-- **Contract Manager** — Redacción y administración de contratos
-- **Procurement Analyst** — Spend analytics y reporting
+### Department Roles
+- **CPO** (Chief Procurement Officer) — Strategy and governance
+- **Category Manager** — Category strategy, Kraljic
+- **Strategic Sourcing Manager** — Competitive bids and contracts
+- **Buyer / Procurement Officer** — PO issuance and tracking
+- **Contract Manager** — Contract drafting and administration
+- **Procurement Analyst** — Spend analytics and reporting
 
-### Referencias académicas y profesionales
+### Academic and Professional References
 - Chopra & Meindl, *Supply Chain Management* 6th Ed., Ch.14 "Sourcing Decisions"
 - Kraljic, P. "Purchasing Must Become Supply Management" HBR (1983)
 - CIPS (Chartered Institute of Procurement & Supply) — Professional standards
 - APICS CPIM 9.0 — Plan Supply module
 
-## Modelos Matemáticos Aplicados
+## Applied Mathematical Models
 
 1. **Kraljic Matrix** — 2×2 segmentation: axes = Supply Risk (low/high) × Profit Impact (low/high). Quadrants: NON_CRITICAL, LEVERAGE, BOTTLENECK, STRATEGIC. Used to set negotiation strategy per supplier. Ref: Kraljic (1983), HBR "Purchasing Must Become Supply Management".
 
@@ -73,14 +73,14 @@ Aprobación (workflow) → Envío proveedor → Seguimiento → GRN
 
 5. **PO Approval Threshold Rule** — if PO_total > PO_APPROVAL_THRESHOLD_CENTS → status = PENDING_APPROVAL. Binary decision rule to enforce internal controls (SOX compliance).
 
-## Modelos de Machine Learning Recomendados
+## Recommended Machine Learning Models
 
-1. **Random Forest para Clasificación de Proveedores** — Supervised classification. Features: OTD histórico, PPM, financial stability score, country risk index, ESG score. Output: clasificación automática Kraljic (STRATEGIC/LEVERAGE/BOTTLENECK/NON_CRITICAL). Libraries: scikit-learn, XGBoost. Ref: Breiman (2001).
+1. **Random Forest for Supplier Classification** — Supervised classification. Features: historical OTD, PPM, financial stability score, country risk index, ESG score. Output: automatic Kraljic classification (STRATEGIC/LEVERAGE/BOTTLENECK/NON_CRITICAL). Libraries: scikit-learn, XGBoost. Ref: Breiman (2001).
 
-2. **NLP / BERT para Análisis de Contratos** — Transformer-based NLP. Reads contract text, extracts key clauses (penalty terms, SLA, price escalation triggers), flags anomalies. Output: clause risk score per contract. Libraries: HuggingFace Transformers, spaCy. Ref: Devlin et al. (2018).
+2. **NLP / BERT for Contract Analysis** — Transformer-based NLP. Reads contract text, extracts key clauses (penalty terms, SLA, price escalation triggers), flags anomalies. Output: clause risk score per contract. Libraries: HuggingFace Transformers, spaCy. Ref: Devlin et al. (2018).
 
-3. **Regresión Logística / XGBoost para Riesgo de PO** — Binary classifier. Predicts probability that a PO will be delayed or rejected by supplier. Features: supplier history, item complexity, lead time, order size. Output: risk_score 0-1. Libraries: scikit-learn.
+3. **Logistic Regression / XGBoost for PO Risk** — Binary classifier. Predicts probability that a PO will be delayed or rejected by supplier. Features: supplier history, item complexity, lead time, order size. Output: risk_score 0-1. Libraries: scikit-learn.
 
-4. **Clustering K-Means para Segmentación de Gasto** — Unsupervised. Groups spend categories by volume, frequency, supplier concentration. Output: spend categories for strategic sourcing focus. Libraries: scikit-learn.
+4. **K-Means Clustering for Spend Segmentation** — Unsupervised. Groups spend categories by volume, frequency, supplier concentration. Output: spend categories for strategic sourcing focus. Libraries: scikit-learn.
 
-5. **Reinforcement Learning para Negociación Automatizada** — Agent learns optimal bid/ask strategies in repeated procurement negotiations. Output: recommended counter-offer price. Libraries: Ray RLlib, Stable-Baselines3. Ref: Baarslag et al. (2017).
+5. **Reinforcement Learning for Automated Negotiation** — Agent learns optimal bid/ask strategies in repeated procurement negotiations. Output: recommended counter-offer price. Libraries: Ray RLlib, Stable-Baselines3. Ref: Baarslag et al. (2017).

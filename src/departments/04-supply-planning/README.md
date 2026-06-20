@@ -1,61 +1,61 @@
-# Departamento 04 — Supply Planning & Production Scheduling
-## Planificación del Suministro y Programación de Producción
+# Department 04 — Supply Planning & Production Scheduling
+## Supply Planning and Production Scheduling
 
-### Misión
-Traducir el plan de demanda en un plan de suministro ejecutable que equilibre
-disponibilidad de materiales, capacidad productiva y objetivos de servicio al cliente.
+### Mission
+Translate the demand plan into an executable supply plan that balances
+material availability, production capacity, and customer service objectives.
 
-### Funciones principales
-| Función | Descripción |
+### Main Functions
+| Function | Description |
 |---------|-------------|
-| MRP (Materials Requirements Planning) | Explosión de BOM, fechas de necesidad |
-| MPS (Master Production Schedule) | Plan maestro por producto terminado |
-| Planificación de capacidad | CRP (Capacity Requirements Planning) |
-| Gestión de materiales | Compras urgentes, transferencias |
-| S&OP Supply side | Input a la reunión mensual de S&OP |
-| DDMRP | Demand-Driven MRP (posicionamiento de buffers) |
+| MRP (Materials Requirements Planning) | BOM explosion, requirement dates |
+| MPS (Master Production Schedule) | Master plan per finished product |
+| Capacity planning | CRP (Capacity Requirements Planning) |
+| Materials management | Expedited purchasing, transfers |
+| S&OP Supply side | Input to the monthly S&OP meeting |
+| DDMRP | Demand-Driven MRP (buffer positioning) |
 
-### KPIs del departamento
-| KPI | Benchmark mundial |
+### Department KPIs
+| KPI | World Benchmark |
 |-----|------------------|
 | Plan Adherence Rate | ≥ 85% |
-| Schedule Stability (cambios < 24h) | < 10% de órdenes |
-| Capacity Utilization | 75-85% (óptimo) |
+| Schedule Stability (changes < 24h) | < 10% of orders |
+| Capacity Utilization | 75-85% (optimal) |
 | Material Availability Rate | ≥ 98% |
 | Lead Time Achievement | ≥ 95% |
-| Setup Time Efficiency | Varía por industria |
+| Setup Time Efficiency | Varies by industry |
 
-### Proceso MRP simplificado
+### Simplified MRP Process
 ```
-MPS (productos terminados)
-  ↓ Explosión de BOM (lista de materiales)
-  ↓ MRP (necesidades brutas → netas)
-  ↓ Netting (stock disponible + pedidos abiertos)
-  ↓ Firm Planned Orders → POs al módulo Procurement
+MPS (finished products)
+  ↓ BOM explosion (bill of materials)
+  ↓ MRP (gross → net requirements)
+  ↓ Netting (available stock + open orders)
+  ↓ Firm Planned Orders → POs to Procurement module
 ```
 
-### Archivos clave
-- `domain/ProductionPlan.ts` — MPS y plan de producción
-- `domain/MaterialRequirement.ts` — MRP: necesidades de materiales
-- `domain/CapacityPlan.ts` — CRP: planificación de capacidad
-- `domain/BillOfMaterials.ts` — Estructura de materiales (BOM)
-- `services/MRPEngine.ts` — Motor de cálculo MRP
-- `services/CapacityPlanner.ts` — Cálculo CRP y RCCP
+### Key Files
+- `domain/ProductionPlan.ts` — MPS and production plan
+- `domain/MaterialRequirement.ts` — MRP: material requirements
+- `domain/CapacityPlan.ts` — CRP: capacity planning
+- `domain/BillOfMaterials.ts` — Bill of Materials structure (BOM)
+- `services/MRPEngine.ts` — MRP calculation engine
+- `services/CapacityPlanner.ts` — CRP and RCCP calculation
 
-### Roles del departamento
-- **Supply Planning Manager** — Director del proceso MRP/S&OP
-- **Production Scheduler** — Programación diaria de manufactura
-- **Materials Planner** — Gestión MRP y órdenes planificadas
-- **Capacity Planner** — CRP y restricciones de capacidad
-- **DDMRP Specialist** — Implementación demand-driven
+### Department Roles
+- **Supply Planning Manager** — Director of the MRP/S&OP process
+- **Production Scheduler** — Daily manufacturing scheduling
+- **Materials Planner** — MRP management and planned orders
+- **Capacity Planner** — CRP and capacity constraints
+- **DDMRP Specialist** — Demand-driven implementation
 
-### Referencias
+### References
 - Chopra & Meindl Ch.10 "Coordinating Supply and Demand"
 - APICS CPIM 9.0 — Plan Supply & Master Scheduling modules
 - Orlicky, J. "Material Requirements Planning" (2022 3rd Ed.)
 - Ptak & Smith "Demand Driven Material Requirements Planning" (2016)
 
-## Modelos Matemáticos Aplicados
+## Applied Mathematical Models
 
 1. **MRP Netting** — Net_Req_t = max(0, Gross_Req_t - Scheduled_Receipts_t - On_Hand_{t-1}). Converts gross demand into net requirements after available inventory. Ref: Orlicky (2022).
 
@@ -69,14 +69,14 @@ MPS (productos terminados)
 
 6. **Planned Order Release with Lead Time Offset** — Release_date = Need_date - Lead_time_periods. Core MRP time-phasing logic. Ref: Orlicky (2022) Ch.4.
 
-## Modelos de Machine Learning Recomendados
+## Recommended Machine Learning Models
 
-1. **Reinforcement Learning para Dynamic Lot Sizing** — Agent observes (inventory, demand forecast, holding cost, setup cost) and decides order quantity each period. Learns policy that minimizes total cost over horizon. Libraries: Ray RLlib. Ref: Oroojlooy et al. (2022).
+1. **Reinforcement Learning for Dynamic Lot Sizing** — Agent observes (inventory, demand forecast, holding cost, setup cost) and decides order quantity each period. Learns policy that minimizes total cost over horizon. Libraries: Ray RLlib. Ref: Oroojlooy et al. (2022).
 
-2. **Graph Neural Networks para BOM Explosion** — Models multi-level Bill of Materials as directed acyclic graph. Propagates demand signals through component levels considering shared parts. Libraries: PyTorch Geometric.
+2. **Graph Neural Networks for BOM Explosion** — Models multi-level Bill of Materials as directed acyclic graph. Propagates demand signals through component levels considering shared parts. Libraries: PyTorch Geometric.
 
-3. **Monte Carlo Simulation para MPS Risk** — Simulates 10,000 scenarios of demand variability and supplier lead time distributions. Outputs P90 material requirement for robust planning. Libraries: NumPy, SciPy.
+3. **Monte Carlo Simulation for MPS Risk** — Simulates 10,000 scenarios of demand variability and supplier lead time distributions. Outputs P90 material requirement for robust planning. Libraries: NumPy, SciPy.
 
-4. **XGBoost para Predicción de Capacidad** — Predicts bottleneck workstations given MPS. Features: historical throughput, maintenance schedule, shift patterns. Output: capacity utilization forecast. Libraries: XGBoost.
+4. **XGBoost for Capacity Prediction** — Predicts bottleneck workstations given MPS. Features: historical throughput, maintenance schedule, shift patterns. Output: capacity utilization forecast. Libraries: XGBoost.
 
-5. **Linear Programming para Optimización de Plan Maestro** — Minimize: Σ(holding_cost×I_t + setup_cost×Y_t + backorder_cost×B_t). Subject to: inventory balance, capacity constraints, demand satisfaction. Libraries: PuLP, scipy.optimize, Google OR-Tools. Ref: Nahmias (2009).
+5. **Linear Programming for Master Plan Optimization** — Minimize: Σ(holding_cost×I_t + setup_cost×Y_t + backorder_cost×B_t). Subject to: inventory balance, capacity constraints, demand satisfaction. Libraries: PuLP, scipy.optimize, Google OR-Tools. Ref: Nahmias (2009).

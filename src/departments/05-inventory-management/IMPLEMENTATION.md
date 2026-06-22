@@ -1,1718 +1,1521 @@
-# Inventory Management — Enterprise Implementation Guide
+# Inventory Health & Excess/Obsolete Analytics — Implementation Guide
 
 **Department:** 05 — Inventory Management
+**Analytics Topic:** Inventory Health Assessment, Shortage Analysis, Excess and Obsolete Inventory (E&O),
+ABC/XYZ Classification, Safety Stock Compliance, Cycle Count Accuracy
 **Standard Alignment:** SCOR-DS · ISO 28000:2022 · GS1 Gen. Specs. v23 · ISO 9001:2015 §8.5.2
 **Document Status:** Authorised for Implementation
-**Last Reviewed:** 2026-06-20
-**Audience:** Senior Supply Chain Architects, ERP Programme Managers, Data Science Leads
+**Last Reviewed:** 2026-06-22
+**Audience:** Senior Supply Chain Architects, ERP Programme Managers, Power BI Developers, Data Science Leads
+**Business Context:** €50B global multinational, 40 countries, SAP S/4HANA MM/WM, Power BI, Azure SQL, Python.
+Daily inventory snapshots. Physical inventory and cycle counts monthly/quarterly.
 
 ---
 
 ## Table of Contents
 
 1. [Executive Summary](#1-executive-summary)
-2. [Prerequisites & Dependencies](#2-prerequisites--dependencies)
-3. [Phase 0: Assessment & AS-IS Analysis](#3-phase-0-assessment--as-is-analysis)
-4. [Phase 1: Foundation & Master Data](#4-phase-1-foundation--master-data)
-5. [Phase 2: Process Standardisation & Core Analytics](#5-phase-2-process-standardisation--core-analytics)
-6. [Phase 3: Mathematical Models](#6-phase-3-mathematical-models)
-7. [Phase 4: ML/AI Pipeline](#7-phase-4-mlai-pipeline)
-8. [Phase 5: Integration & Automation](#8-phase-5-integration--automation)
-9. [Phase 6: Continuous Improvement](#9-phase-6-continuous-improvement)
-10. [Technology Stack & Architecture](#10-technology-stack--architecture)
-11. [Change Management & Training](#11-change-management--training)
-12. [Implementation KPIs](#12-implementation-kpis)
-13. [Risk & Mitigation](#13-risk--mitigation)
-14. [Timeline Summary](#14-timeline-summary)
-15. [References](#15-references)
+2. [Analysis Objective](#2-analysis-objective)
+3. [Scope](#3-scope)
+4. [Business Questions](#4-business-questions)
+5. [Data Sources](#5-data-sources)
+6. [Data Model](#6-data-model)
+7. [Data Dictionary](#7-data-dictionary)
+8. [Transformation Rules](#8-transformation-rules)
+9. [Business Rules](#9-business-rules)
+10. [KPIs and Formulas](#10-kpis-and-formulas)
+11. [Analytical Logic](#11-analytical-logic)
+12. [Validations and Controls](#12-validations-and-controls)
+13. [Required Evidence](#13-required-evidence)
+14. [Dashboard Design](#14-dashboard-design)
+15. [Use Cases](#15-use-cases)
+16. [Recommended Actions](#16-recommended-actions)
+17. [Test Cases](#17-test-cases)
+18. [Risks and Mitigations](#18-risks-and-mitigations)
+19. [Implementation Checklist](#19-implementation-checklist)
+20. [Validation Checklist](#20-validation-checklist)
+21. [Pending Information](#21-pending-information)
+22. [Implementation Roadmap](#22-implementation-roadmap)
 
 ---
 
 ## 1. Executive Summary
 
-This implementation guide governs the end-to-end deployment of the Inventory Management module within the enterprise Supply Chain Management platform. The module covers item master governance, stock movement event sourcing, multi-echelon replenishment policy optimisation, warehouse execution (FEFO lot control), ERP GL integration, and a production-grade ML/AI pipeline for anomaly detection, stockout prediction, and reinforcement-learning-driven replenishment.
+This document defines the complete analytics implementation for Inventory Health and Excess/Obsolete
+(E&O) management across the enterprise Supply Chain Management platform. The organisation operates a
+global inventory footprint across 40 countries with SAP S/4HANA as the ERP backbone, Power BI as the
+reporting layer, Azure SQL as the analytical data warehouse, and Python for statistical modelling.
 
-### Strategic Objectives
+Inventory typically represents 20–35% of total assets in manufacturing and distribution organisations
+(Chopra & Meindl, 2016). For a €50B enterprise, even a 1% reduction in excess inventory translates to
+approximately €50M in freed working capital. The analytics programme described here provides the data
+infrastructure, KPI framework, and decision-support tools required to achieve three primary outcomes:
 
-The primary objective is to establish a single version of inventory truth across all legal entities, distribution centres, and third-party logistics providers. The system must eliminate manual reconciliation, enforce regulatory lot-tracking obligations (EU REACH 1907/2006; FSMA 204; GS1 SSCC traceability), and provide real-time financial visibility through automatic GL journal generation.
+**Working capital reduction:** Identify and liquidate excess and obsolete inventory to reduce days
+inventory outstanding (DIO) by 10–20 days and free €150–400M in working capital within 18 months
+of full deployment.
 
-Secondary objectives include: reducing total inventory carrying cost by 18-25% through statistically grounded safety-stock rightsizing; improving service levels to Fill Rate >= 98.5% and OTIF >= 97%; achieving cycle-count accuracy of >= 99.5% within 12 months of go-live; and deploying predictive ML models that reduce stockout events by at least 40% relative to the baseline rule-based replenishment engine.
+**Service level protection:** Maintain fill rates above 98.5% and prevent stockouts through early
+shortage detection based on coverage day thresholds, safety stock compliance monitoring, and
+forward-looking demand-supply gap analysis.
 
-### Scope
+**Cycle count accuracy:** Achieve and sustain inventory accuracy above 99.5% through an ABC-driven
+continuous cycle counting programme, anomaly detection on adjustment transactions, and root cause
+tracking of discrepancies.
 
-The scope encompasses all raw materials, work-in-progress, finished goods, maintenance/repair/operations (MRO) items, and packaging materials managed within the corporate ERP landscape. The domain boundary excludes consignment stock owned by suppliers (tracked as memo items only) and customer-owned goods held on a bailment basis.
-
-### Investment Thesis
-
-Inventory typically represents 20-35% of total assets in manufacturing and distribution organisations (Chopra & Meindl, 2016). A structured, analytically rigorous inventory management programme consistently delivers 15-30% reduction in working capital tied up in stock, 10-20% reduction in obsolescence write-offs, and 5-12% reduction in expediting and premium freight costs. The ROI horizon is 14-18 months post go-live for a mid-size deployment and 10-14 months for large-scale rollouts with high SKU velocity.
+The implementation is structured across 22 sections covering data sourcing from SAP S/4HANA, star
+schema design in Azure SQL, Power BI dashboard specifications, KPI formulas, business rules, and a
+week-by-week implementation roadmap spanning 16 weeks.
 
 ---
 
-## 2. Prerequisites & Dependencies
+## 2. Analysis Objective
 
-### 2.1 Upstream Module Dependencies
+The primary objective of this analytics implementation is to establish a single, trusted view of
+inventory health across all legal entities, distribution centres, and third-party logistics providers,
+enabling proactive management decisions that reduce both stockout risk and excess/obsolete inventory.
 
-| Dependency | Module | Consumed Artefact | Criticality |
+Specific analytical objectives:
+
+- **Inventory health assessment:** Classify all active SKUs by coverage days, turnover rate, and
+  aging bracket. Flag items approaching critical coverage thresholds before stockouts occur.
+
+- **Shortage detection:** Identify SKUs with zero or critically low on-hand stock relative to open
+  demand. Quantify shortage exposure in units and value.
+
+- **Excess and obsolete identification:** Quantify the financial exposure of excess inventory
+  (overstocked relative to demand) and obsolete inventory (no movement in 365+ days).
+
+- **ABC/XYZ segmentation:** Classify all active SKUs into the 9-cell ABC-XYZ matrix to enable
+  differentiated replenishment policies, service level targets, and management attention allocation.
+
+- **Safety stock compliance:** Compare actual on-hand stock against statistically calculated safety
+  stock requirements and flag SKUs below their safety stock level.
+
+- **Cycle count accuracy:** Track count accuracy by location, zone, ABC class, and warehouse to
+  identify systemic accuracy gaps and drive corrective action.
+
+---
+
+## 3. Scope
+
+### In Scope
+
+- All active SKUs (status = ACTIVE) across all SAP plants, storage locations, and distribution centres
+  within the 40-country footprint
+- Raw materials, finished goods, semi-finished goods, maintenance/repair/operations (MRO), and packaging
+  materials
+- Consignment stock held by the organisation but owned by suppliers (memo tracking only, clearly labelled
+  as non-owned in all reports)
+- All SAP movement types generating stock movements (GR, GI, transfers, adjustments, scrapping)
+- Physical inventory and cycle count results from SAP WM and SAP EWM
+- Daily snapshots stored in Azure SQL for trending and aging analysis
+- Safety stock levels maintained in SAP MRP (MRP2 view, fields: safety stock, reorder point)
+
+### Out of Scope
+
+- Customer-owned goods held on a bailment basis (tracked in a separate custodial system)
+- Project stock (special stock indicator Q) — analysed separately by the Project Management Office
+- Vendor-managed inventory (VMI) where ownership has not transferred to the organisation
+- Capital assets and fixed assets managed in SAP FI-AA
+- Items with status DISCONTINUED or BLOCKED — included in E&O analysis only, not in active health KPIs
+
+### Geographic Scope
+
+All 40 countries. Regional rollout sequence: Europe (Weeks 1–6), Americas (Weeks 7–10),
+Asia-Pacific (Weeks 11–14), Middle East and Africa (Weeks 15–16).
+
+---
+
+## 4. Business Questions
+
+The analytics framework is designed to answer the following specific business questions:
+
+**BQ-01:** Which SKUs are at risk of stockout within the next 7, 14, or 30 days based on current
+on-hand stock, average daily usage, and open purchase orders?
+
+**BQ-02:** What is the total financial value of excess inventory by country, plant, product category,
+and ABC class, and which SKUs represent the highest excess exposure?
+
+**BQ-03:** Which SKUs have had no stock movement in the past 365 days, what is their total value,
+and what is the recommended disposition (markdown, return to supplier, scrap, inter-plant transfer)?
+
+**BQ-04:** What is the current inventory turnover ratio and days inventory outstanding by region,
+product category, and ABC class, and how does it compare to the prior year and industry benchmarks?
+
+**BQ-05:** Which plants or storage locations have the highest percentage of SKUs below their
+calculated safety stock level, and what is the aggregate demand-at-risk in units and value?
+
+**BQ-06:** What is the cycle count accuracy rate by warehouse, zone, and ABC class for the current
+month and trailing 12 months, and which locations have repeat discrepancies?
+
+**BQ-07:** What is the E&O ratio (excess plus obsolete value as a percentage of total inventory
+value) by business unit, and how does it trend over the past 24 months?
+
+**BQ-08:** Which XYZ-Z class items (high demand variability) have experienced the largest safety
+stock violations in the past 90 days, and what is the associated service level impact?
+
+**BQ-09:** Which suppliers are contributing most to excess inventory through over-delivery or
+premature shipment, and what is the financial impact by supplier and commodity group?
+
+**BQ-10:** What is the aging profile of the current inventory (0–30 days, 31–90 days, 91–180 days,
+181–365 days, >365 days) expressed in units, pallets, and value?
+
+**BQ-11:** How many SKUs are classified as AZ (high value, erratic demand) and what specific
+replenishment and safety stock policies are applied to each?
+
+**BQ-12:** What is the projected inventory value at the end of the next quarter based on current
+coverage days and demand forecast, and what actions are required to hit the DIO target?
+
+---
+
+## 5. Data Sources
+
+### DS-01: SAP S/4HANA — Daily Inventory Snapshot
+
+| Attribute | Detail |
+|---|---|
+| Source Name | SAP S/4HANA MM — Material Management |
+| Origin System | SAP S/4HANA production client |
+| Table/Query | MARD (storage location stock), MBEW (material valuation), MARA (material master), MARC (plant data) |
+| Data Owner | Global Inventory Control Manager |
+| Frequency | Daily batch extract at 23:00 UTC via SAP RFC / BW extractor |
+| Required Fields | MATNR, WERKS, LGORT, LABST (unrestricted stock), EINME (GR blocked), SPEME (blocked stock), UMLME (stock in transfer), MEINS (UOM), VPRSV (price control), VERPR (moving avg price), STPRS (standard price) |
+| Critical Fields | MATNR, WERKS, LGORT, LABST — null or negative values constitute a data quality breach |
+| Primary Key | MATNR + WERKS + LGORT + snapshot_date |
+| Validations | LABST >= 0; MATNR exists in material master (MARA); WERKS in active plant list |
+| Possible Errors | Delta extractor gaps if SAP transport applied during extraction window; MBEW valuation missing for new materials; MEINS UOM mismatch vs. GS1 standard |
+| Extraction Evidence | SAP job log (SM37): job ZINV_SNAP_DAILY; Azure Data Factory pipeline run ID logged to audit table |
+
+### DS-02: SAP S/4HANA — Stock Movement History
+
+| Attribute | Detail |
+|---|---|
+| Source Name | SAP S/4HANA — Material Document History |
+| Origin System | SAP S/4HANA |
+| Table/Query | MSEG (material document segment), MKPF (material document header) |
+| Data Owner | Warehouse Operations Manager |
+| Frequency | Daily incremental extract (delta via change pointer) |
+| Required Fields | MBLNR (document number), MJAHR (year), ZEILE (line), MATNR, WERKS, LGORT, BWART (movement type), MENGE (quantity), MEINS, BUDAT (posting date), BLDAT (document date), BKTXT (reference) |
+| Critical Fields | BWART, MENGE, BUDAT — used to compute ADU, turnover, and aging |
+| Primary Key | MBLNR + MJAHR + ZEILE |
+| Validations | BWART in approved movement type list; BUDAT <= current date; MENGE != 0 |
+| Possible Errors | Backdated postings distorting daily ADU; incorrect reversal movements creating phantom demand; movement type 551 (scrapping) posted without NCR reference |
+| Extraction Evidence | ADF pipeline ZINV_MVMT_DELTA; row count reconciled against SAP transaction MB51 |
+
+### DS-03: SAP S/4HANA — MRP Safety Stock and Reorder Points
+
+| Attribute | Detail |
+|---|---|
+| Source Name | SAP S/4HANA MRP — MRP2 Planning View |
+| Origin System | SAP S/4HANA |
+| Table/Query | MARC (EISBE = safety stock, MINBE = reorder point, MTVFP = checking rule, DISMM = MRP type) |
+| Data Owner | Demand Planning Manager |
+| Frequency | Weekly extract (Sunday 02:00 UTC) |
+| Required Fields | MATNR, WERKS, EISBE (safety stock), MINBE (reorder point), DISMM (MRP type), DZEIT (in-house production time), PLIFZ (planned delivery time) |
+| Critical Fields | EISBE — used for safety stock compliance KPI; must be > 0 for all A and B class active SKUs |
+| Primary Key | MATNR + WERKS |
+| Validations | EISBE >= 0; MINBE >= EISBE; DISMM in (ND, PD, VB, VM) |
+| Possible Errors | Safety stock set to 0 for items that should have SS (data entry error); MRP type ND (no planning) for active SKUs |
+| Extraction Evidence | ADF pipeline ZMRP_SS_WEEKLY; reconciled against SAP transaction MD04 sample check |
+
+### DS-04: SAP WM / EWM — Cycle Count Results
+
+| Attribute | Detail |
+|---|---|
+| Source Name | SAP WM Inventory Management / SAP EWM Physical Inventory |
+| Origin System | SAP WM (legacy) and SAP EWM (modern DCs) |
+| Table/Query | LINV (inventory document), LQUA (WM quant), /SCWM/QUAN (EWM quant) |
+| Data Owner | Physical Inventory Controller |
+| Frequency | Daily extract of completed count documents |
+| Required Fields | IVNR (inventory document), MATNR, LGNUM (warehouse number), LGTYP (storage type), LGPLA (storage bin), ANZLI (system book stock), ANZPH (counted quantity), IDATU (count date), KZDIF (difference indicator), BUDAT (posting date) |
+| Critical Fields | ANZLI, ANZPH — delta = adjustment quantity; KZDIF flag indicates whether recount was performed |
+| Primary Key | IVNR + LGPLA + MATNR |
+| Validations | ANZPH >= 0; count date within current fiscal year; ANZLI reconciles to inventory snapshot for same date |
+| Possible Errors | Double-counting if count document posted before snapshot extract; EWM and WM data arriving in different pipelines creating duplication |
+| Extraction Evidence | ADF pipeline ZINV_CYCLE_COUNT; count document numbers logged in audit table |
+
+### DS-05: Azure SQL — Demand History (Cleaned)
+
+| Attribute | Detail |
+|---|---|
+| Source Name | Azure SQL — Demand History Fact Table |
+| Origin System | Downstream from SAP SD (sales orders) and SAP MM (internal consumption) via ADF |
+| Table/Query | fact_demand_daily (Azure SQL DW) |
+| Data Owner | Demand Planning Analytics Lead |
+| Frequency | Daily refresh |
+| Required Fields | sku_id, plant_code, demand_date, demand_units, demand_value_cents, demand_source (CUSTOMER_ORDER / INTERNAL_CONSUMPTION / FORECAST) |
+| Critical Fields | demand_units — used for ADU calculation; must exclude returns and cancellations |
+| Primary Key | sku_id + plant_code + demand_date + demand_source |
+| Validations | demand_units >= 0; no future dates; demand_source in approved list |
+| Possible Errors | SAP cancellation reversals creating negative demand rows; promotional spikes inflating ADU |
+| Extraction Evidence | ADF pipeline ZDEM_DAILY; row count and sum reconciled daily against SAP MB52 |
+
+### DS-06: SAP S/4HANA — Material Master (Classification)
+
+| Attribute | Detail |
+|---|---|
+| Source Name | SAP S/4HANA — Material Master Classification |
+| Origin System | SAP S/4HANA |
+| Table/Query | MARA (general data), MAKT (descriptions), KLAH/KSSK/AUSP (classification) |
+| Data Owner | Master Data Steward |
+| Frequency | Weekly full extract |
+| Required Fields | MATNR, MBRSH (industry sector), MTART (material type), MATKL (material group), BRGEW (gross weight), NTGEW (net weight), VOLUM (volume), VOLEH (volume unit), MEINS (base UOM), BISMT (old material number) |
+| Critical Fields | MATKL — used for product hierarchy in all reports; MTART — determines material category |
+| Primary Key | MATNR |
+| Validations | MATNR not null; MATKL in approved material group list; MEINS is a valid GS1 UOM code |
+| Possible Errors | Material group (MATKL) not maintained; duplicate materials created due to no BISMT cross-reference |
+| Extraction Evidence | ADF pipeline ZMARA_WEEKLY |
+
+---
+
+## 6. Data Model
+
+The analytics solution uses a star schema deployed in Azure SQL with one central fact table and six
+dimension tables. All monetary values are stored as integer cents (BIGINT) per the project Money
+convention. All dates are ISO 8601 (YYYY-MM-DD).
+
+### Fact Tables
+
+**fact_inventory_snapshot** — Grain: one row per SKU + plant + storage location + snapshot date.
+Captures the end-of-day on-hand inventory position, valuation, coverage days, and health classification.
+Partitioned by snapshot_date (monthly partitions in Azure SQL) for query performance.
+
+**fact_stock_movements** — Grain: one row per SAP material document line.
+Captures all stock movement events with movement type, quantity, value, and GL accounts.
+Used for ADU calculation, turnover computation, and aging analysis. Retained rolling 36 months.
+
+**fact_cycle_counts** — Grain: one row per count document per storage bin per SKU.
+Captures system book stock, counted quantity, variance, and accuracy flag.
+Used for cycle count accuracy KPI and discrepancy trending.
+
+### Dimension Tables
+
+**dim_material** — SKU master with GS1 attributes, material type, product hierarchy, lot tracking flags,
+ABC/XYZ classification, safety stock level, and REACH/UFLPA compliance flags.
+
+**dim_plant** — Plant and storage location master with country, region, currency, and DC manager.
+
+**dim_date** — Calendar dimension with fiscal week, fiscal period, fiscal year, holiday flags, peak
+season flag, and planning horizon attributes.
+
+**dim_movement_type** — SAP movement type classification mapping BWART codes to analytical categories
+(GOODS_RECEIPT, GOODS_ISSUE, TRANSFER, ADJUSTMENT, SCRAP, RETURN).
+
+**dim_abc_xyz** — ABC-XYZ 9-cell classification with policy attributes (review cycle, SS method,
+service level target, count frequency).
+
+**dim_safety_stock** — Current safety stock and reorder point by SKU and plant, refreshed weekly
+from SAP MRP.
+
+### Key Relationships
+
+```
+fact_inventory_snapshot.sku_id         --> dim_material.sku_id          (many-to-one)
+fact_inventory_snapshot.plant_code     --> dim_plant.plant_code          (many-to-one)
+fact_inventory_snapshot.snapshot_date  --> dim_date.date_id              (many-to-one)
+fact_inventory_snapshot.abc_xyz_cell   --> dim_abc_xyz.cell_code         (many-to-one)
+fact_stock_movements.sku_id            --> dim_material.sku_id           (many-to-one)
+fact_stock_movements.movement_type_code--> dim_movement_type.bwart_code  (many-to-one)
+fact_cycle_counts.sku_id               --> dim_material.sku_id           (many-to-one)
+dim_safety_stock.sku_id                --> dim_material.sku_id           (one-to-one per plant)
+```
+
+---
+
+## 7. Data Dictionary
+
+### Table: fact_inventory_snapshot
+
+| Field | Type | Description | PK |
 |---|---|---|---|
-| Item master (SKU) | 01-Procurement | `InventoryItem` aggregate | Blocking |
-| Supplier lead time | 02-Supplier Management | `SupplierScorecard.leadTimeDays` | Blocking |
-| Demand forecasts | 04-Demand Planning | `ForecastResult` (SMA/SES/Holt/Holt-Winters) | Blocking |
-| Purchase Orders | 01-Procurement | `PurchaseOrder` (APPROVED status) | Blocking |
-| Quality inspection results | 07-Quality | `InspectionRecord` (AQL ISO 2859-1) | Required |
-| Shipment receipts | 06-Logistics | `Shipment` (DELIVERED status) | Required |
-| GL chart of accounts | Finance (ERP) | Account codes for COGS, inventory asset | Required |
-| Compliance flags | 10-Compliance | `reachSVHC`, `uflpaRisk` | Required |
+| snapshot_id | BIGINT IDENTITY | Surrogate primary key | Yes |
+| snapshot_date | DATE | ISO 8601 date of snapshot | No |
+| sku_id | NVARCHAR(40) | SAP material number (MATNR) | No |
+| plant_code | NVARCHAR(4) | SAP plant code (WERKS) | No |
+| storage_location | NVARCHAR(4) | SAP storage location (LGORT) | No |
+| on_hand_units | DECIMAL(18,3) | Unrestricted stock quantity (LABST) | No |
+| blocked_units | DECIMAL(18,3) | Quality-blocked stock (SPEME) | No |
+| in_transfer_units | DECIMAL(18,3) | Stock in transfer (UMLME) | No |
+| unit_cost_cents | BIGINT | Moving average or standard price in integer cents | No |
+| on_hand_value_cents | BIGINT | on_hand_units x unit_cost_cents rounded to integer | No |
+| adu_90d | DECIMAL(18,3) | Average daily usage — 90-day rolling | No |
+| coverage_days | DECIMAL(10,2) | on_hand_units / adu_90d; NULL if adu_90d = 0 | No |
+| coverage_bucket | NVARCHAR(20) | CRITICAL / WARNING / HEALTHY / EXCESS / ZERO_DEMAND | No |
+| coverage_target_days | INT | Policy target: A=30, B=45, C=60 days | No |
+| safety_stock_units | DECIMAL(18,3) | From SAP MRP (MARC.EISBE) | No |
+| ss_compliant | BIT | 1 if on_hand_units >= safety_stock_units | No |
+| last_movement_date | DATE | Date of most recent stock movement (any type) | No |
+| days_since_movement | INT | DATEDIFF(snapshot_date, last_movement_date) | No |
+| is_obsolete | BIT | 1 if days_since_movement > 365 | No |
+| is_excess | BIT | 1 if coverage_days > coverage_target_days | No |
+| excess_value_cents | BIGINT | MAX(0, excess_days x adu_90d x unit_cost_cents) | No |
+| has_open_demand | BIT | 1 if open sales order or demand forecast > 0 in next 30 days | No |
+| abc_class | CHAR(1) | A / B / C from ABC classification engine | No |
+| xyz_class | CHAR(1) | X / Y / Z from XYZ classification engine | No |
+| abc_xyz_cell | NVARCHAR(2) | AX / AY / AZ / BX / BY / BZ / CX / CY / CZ | No |
 
-### 2.2 Infrastructure Prerequisites
-
-- **Event Store**: append-only log (PostgreSQL with advisory locks or Apache Kafka) supporting idempotent writes via `idempotencyKey` (UUID v4).
-- **Read-model projections**: materialised views rebuilt from event stream; must support eventual consistency with < 500 ms lag under normal load.
-- **Node.js runtime**: >= 20 LTS; TypeScript >= 5.3.
-- **Python runtime**: >= 3.11; virtualenv or conda environment pinned via `requirements.txt`.
-- **ERP connectivity**: SAP RFC/BAPI gateway or Oracle Integration Cloud adapter (REST/SOAP); credentials stored in Vault (HashiCorp), never in source.
-- **RFID/barcode middleware**: GS1-128 scanner drivers; RFID middleware (Impinj Octane SDK or equivalent open-source wrapper) capable of publishing SSCC reads to internal message bus.
-- **Object storage**: S3-compatible bucket (MinIO for on-premises) for ML artefact versioning and training datasets.
-- **Container orchestration**: Kubernetes >= 1.28 for ML training jobs; Helm charts version-controlled alongside application code.
-
-### 2.3 Data Quality Prerequisites
-
-Before Phase 1 begins, a data quality gate must be passed:
-
-- >= 95% of active SKUs have a valid GTIN (GS1 Gen. Specs. v23 check digit validated).
-- >= 90% of SKUs have a confirmed primary supplier with `quotedLeadTimeDays > 0`.
-- All financial accounts referenced by `getJournalAccounts()` exist in the ERP chart of accounts.
-- Historical demand data spans >= 24 months for all A-class SKUs (required for seasonal Holt-Winters fitting and XGBoost lag features).
+**Granularity:** One row per MATNR + WERKS + LGORT + snapshot_date
+**Partitioning:** By snapshot_date (monthly)
+**Transformations:** coverage_days capped at 999 for display; NULL when adu_90d = 0
+**Cleaning:** Negative LABST values set to 0 with error logged to dq_error_log
+**Validations:** on_hand_value_cents = ROUND(on_hand_units x unit_cost_cents, 0), tolerance ±1 cent
 
 ---
 
-## 3. Phase 0: Assessment & AS-IS Analysis
+### Table: fact_stock_movements
 
-### 3.1 Objectives
-
-Phase 0 produces a quantified baseline of the current inventory operation. Without an accurate baseline, improvement claims cannot be validated and business case commitments cannot be honoured. This phase takes 4-6 weeks and is conducted by a joint team of supply chain consultants, IT architects, and finance controllers.
-
-### 3.2 Inventory Health Diagnostic
-
-Execute the following diagnostic queries against the current system (or manual export) to establish baseline KPIs:
-
-**Inventory Accuracy Rate (IAR)**
-```
-IAR = (Count of locations where system qty = physical qty) / (Total locations counted) x 100
-```
-Target baseline expectation: 85-92% for organisations without automated counting. World-class: >= 99.5%.
-
-**Inventory Turnover Ratio**
-```
-Turnover = COGS (12 months rolling) / Average Inventory Value (12 months)
-```
-Benchmark by industry: Retail 8-12x; Automotive OEM 15-25x; Industrial distribution 4-6x.
-
-**Days Inventory Outstanding (DIO)**
-```
-DIO = 365 / Turnover Ratio
-```
-
-**Obsolescence Rate**
-```
-Obsolescence Rate = (Value of stock > 12 months with no movement) / Total Inventory Value x 100
-```
-Trigger corrective action if > 5%.
-
-### 3.3 Process Mapping
-
-Conduct value-stream mapping (VSM) workshops across receiving, putaway, replenishment, picking, packing, and shipping. Document:
-
-- Cycle times at each step (median and 90th percentile).
-- Touchpoints where paper-based or spreadsheet reconciliation occurs — these are primary automation targets.
-- Exception handling procedures for shorts, overages, and damaged goods receipts.
-- Current lot-tracking procedures for temperature-controlled and REACH SVHC items.
-
-### 3.4 Data Gap Analysis
-
-| Data Element | Required By | Gap Severity | Remediation |
+| Field | Type | Description | PK |
 |---|---|---|---|
-| Historical demand by SKU/DC | XGBoost, Holt-Winters | Critical | Extract from ERP sales orders; minimum 24 months |
-| Lead time distribution per supplier | Safety Stock Methods 3-4 | Critical | Pull from PO history; flag if N < 30 |
-| Unit cost (FIFO/WAC) | ABC value ranking, EOQ H | High | Align with finance valuation policy |
-| Lot expiry dates | FEFO picking | High | Mandatory for lot-tracked items |
-| Physical dimension (L/W/H, weight) | Warehouse slotting, CPOI | Medium | Source from supplier or measure during receiving |
-| Hazmat class (IMDG/ADR) | FEFO override, storage zoning | High | Review safety data sheets |
+| movement_id | BIGINT IDENTITY | Surrogate primary key | Yes |
+| doc_number | NVARCHAR(10) | SAP material document (MBLNR) | No |
+| doc_year | CHAR(4) | Material document year (MJAHR) | No |
+| doc_line | NVARCHAR(4) | Document line (ZEILE) | No |
+| posting_date | DATE | SAP posting date (BUDAT) | No |
+| sku_id | NVARCHAR(40) | SAP material number (MATNR) | No |
+| plant_code | NVARCHAR(4) | SAP plant (WERKS) | No |
+| storage_location | NVARCHAR(4) | SAP storage location (LGORT) | No |
+| movement_type_code | NVARCHAR(3) | SAP movement type (BWART) | No |
+| movement_category | NVARCHAR(30) | Analytical category: GOODS_RECEIPT / GOODS_ISSUE / TRANSFER / ADJUSTMENT / SCRAP / RETURN | No |
+| quantity_units | DECIMAL(18,3) | Always positive; direction from movement_category | No |
+| unit_cost_cents | BIGINT | Unit cost at time of movement (integer cents) | No |
+| total_value_cents | BIGINT | quantity_units x unit_cost_cents (integer cents) | No |
+| reference_doc | NVARCHAR(20) | PO number, SO number, or internal reference | No |
+| is_reversal | BIT | 1 if this movement reverses a prior document | No |
+| reversal_doc | NVARCHAR(10) | Original document number if is_reversal = 1 | No |
 
-### 3.5 AS-IS Scorecard
-
-Produce a one-page scorecard with red/amber/green (RAG) ratings across five dimensions: Data Quality, Process Maturity, Technology Capability, Organisational Capability, and Compliance Readiness. This scorecard forms the baseline against which Phase 6 continuous improvement tracks progress.
-
----
-
-## 4. Phase 1: Foundation & Master Data
-
-### 4.1 Item Master Governance
-
-The `InventoryItem` aggregate is the authoritative source of record for all stock-keeping unit attributes. It is immutable after creation — changes are applied via domain events, never direct mutation.
-
-**Core attributes required at item creation:**
-
-```typescript
-// src/departments/05-inventory-management/domain/InventoryItem.ts (excerpt)
-interface InventoryItem {
-  sku: string;                       // GS1 GTIN-14 or internal code; immutable
-  gtin: string;                      // 14-digit GTIN with validated check digit
-  description: string;
-  uom: UOM;                          // GS1 UOM code (EA, KG, LT, M, etc.)
-  unitCostCents: number;             // Integer cents — FIFO or WAC per finance policy
-  storageCondition: StorageCondition; // AMBIENT | CHILLED | FROZEN | CONTROLLED_ATMOSPHERE
-  lotTracked: boolean;               // true when storageCondition !== AMBIENT or reachSVHC
-  shelfLifeDays: number | null;      // null for non-perishable
-  reachSVHC: boolean;                // EU REACH Art.57 Substance of Very High Concern
-  hazmatClass: string | null;        // IMDG/ADR class (e.g. "3", "8", "6.1")
-  abcClass: 'A' | 'B' | 'C' | null; // Set by classification engine
-  xyzClass: 'X' | 'Y' | 'Z' | null; // Set by classification engine
-  status: 'ACTIVE' | 'DISCONTINUED' | 'BLOCKED';
-  isDeleted: boolean;                // Soft-delete only — never hard delete
-}
-```
-
-**Business rule enforcement:**
-- `lotTracked` must be `true` if `storageCondition !== 'AMBIENT'` or `reachSVHC === true`.
-- `sku` is immutable once created. Status transitions use the `status` field.
-- `unitCostCents` must be a positive integer. Fractional cents must be rounded using banker's rounding before storage.
-
-### 4.2 Event-Sourced Stock Movement
-
-All inventory transactions are recorded as immutable events in the event store. The current on-hand balance is a projection derived by replaying events — it is never stored as mutable state.
-
-```typescript
-type MovementType =
-  | 'GOODS_RECEIPT'         // Inbound from supplier (PO-referenced)
-  | 'GOODS_ISSUE'           // Outbound to production or customer
-  | 'TRANSFER_IN'           // Inter-location transfer (receiving side)
-  | 'TRANSFER_OUT'          // Inter-location transfer (issuing side)
-  | 'ADJUSTMENT_POSITIVE'   // Cycle count surplus
-  | 'ADJUSTMENT_NEGATIVE'   // Cycle count shortage
-  | 'RETURN_FROM_CUSTOMER'  // Reverse logistics
-  | 'RETURN_TO_SUPPLIER'    // Quality rejection return
-  | 'SCRAP'                 // Write-off (damage, expiry)
-  | 'QUARANTINE_IN'         // Move to quality hold
-  | 'QUARANTINE_OUT';       // Release from quality hold
-
-interface StockMovement {
-  movementId: string;         // UUID v4
-  idempotencyKey: string;     // UUID v4; unique constraint prevents double-posting
-  sku: string;
-  locationId: string;         // Warehouse location (aisle-bay-level-position)
-  lotNumber: string | null;   // Required when InventoryItem.lotTracked = true
-  expiryDate: string | null;  // ISO 8601 date; required when shelfLifeDays set
-  movementType: MovementType;
-  quantityUnits: number;      // Always positive; direction encoded in type
-  unitCostCents: number;
-  totalValueCents: number;    // quantityUnits * unitCostCents
-  referenceDocType: 'PO' | 'SO' | 'TRANSFER' | 'MANUAL' | 'INSPECTION';
-  referenceDocId: string;
-  glDebitAccount: string;     // Populated by getJournalAccounts()
-  glCreditAccount: string;
-  postedAt: ISOTimestamp;     // UTC
-  isDeleted: boolean;
-}
-```
-
-**GL journal generation** is mandatory for every movement. The mapping function:
-
-```typescript
-function getJournalAccounts(type: MovementType): { debit: string; credit: string } {
-  const map: Record<MovementType, { debit: string; credit: string }> = {
-    GOODS_RECEIPT:        { debit: '1310',  credit: '2100' }, // Inventory / GR-IR
-    GOODS_ISSUE:          { debit: '5000',  credit: '1310' }, // COGS / Inventory
-    TRANSFER_IN:          { debit: '1310',  credit: '1310' }, // Inventory-to / Inventory-from
-    TRANSFER_OUT:         { debit: '1310',  credit: '1310' },
-    ADJUSTMENT_POSITIVE:  { debit: '1310',  credit: '7800' }, // Inventory / Inv Adj. P&L
-    ADJUSTMENT_NEGATIVE:  { debit: '7800',  credit: '1310' },
-    RETURN_FROM_CUSTOMER: { debit: '1310',  credit: '5000' },
-    RETURN_TO_SUPPLIER:   { debit: '2100',  credit: '1310' },
-    SCRAP:                { debit: '7900',  credit: '1310' }, // Scrap loss / Inventory
-    QUARANTINE_IN:        { debit: '1315',  credit: '1310' }, // Quarantine stock / Inventory
-    QUARANTINE_OUT:       { debit: '1310',  credit: '1315' },
-  };
-  return map[type];
-}
-```
-
-### 4.3 Preventing Negative Inventory
-
-The stock balance projection must enforce the no-negative-inventory business rule before any GOODS_ISSUE, TRANSFER_OUT, or SCRAP movement is accepted:
-
-```typescript
-function projectStockBalance(events: StockMovement[], sku: string, locationId: string): number {
-  const INBOUND: MovementType[] = ['GOODS_RECEIPT', 'TRANSFER_IN', 'ADJUSTMENT_POSITIVE',
-    'RETURN_FROM_CUSTOMER', 'QUARANTINE_OUT'];
-  return events
-    .filter(e => e.sku === sku && e.locationId === locationId && !e.isDeleted)
-    .reduce((balance, e) => {
-      return INBOUND.includes(e.movementType)
-        ? balance + e.quantityUnits
-        : balance - e.quantityUnits;
-    }, 0);
-}
-
-function validateIssue(sku: string, locationId: string, qty: number,
-    backorderAllowed: boolean, currentBalance: number): void {
-  if (!backorderAllowed && currentBalance - qty < 0) {
-    throw new DomainError(
-      `NEGATIVE_INVENTORY_BLOCKED: SKU ${sku} at ${locationId} — ` +
-      `balance ${currentBalance}, requested ${qty}. Set backorderAllowed=true to proceed.`
-    );
-  }
-}
-```
-
-### 4.4 Location Master
-
-Warehouse locations follow the GS1 GLN standard extended with sub-location codes:
-
-```
-{GLN-13}.{AISLE:2}.{BAY:3}.{LEVEL:2}.{POSITION:2}
-```
-
-Each location record carries: `storageCondition`, `maxWeightKg`, `maxVolumeM3`, `pickZone`, `putawayZone`, `abcZone` (A/B/C velocity zone for slotting), and `isActive`.
+**Granularity:** One row per SAP material document line
+**Retention:** 36 months rolling
+**Transformations:** movement_category derived from BWART mapping table; reversals flagged by SAP reversal indicator
+**Cleaning:** Zero-quantity movements filtered out; backdated postings (> 90 days prior) flagged in dq_error_log
 
 ---
 
-## 5. Phase 2: Process Standardisation & Core Analytics
+### Table: dim_material
 
-### 5.1 Receiving Process
-
-**Step 1 — Advance Shipment Notice (ASN) matching**: Incoming `Shipment` records (status `DELIVERED`) are matched to open PO lines. Quantity tolerances: over-delivery <= 5%, under-delivery <= 10% without buyer approval.
-
-**Step 2 — Quality gate**: Every receipt triggers an `InspectionRecord` per AQL ISO 2859-1. Items failing inspection are moved to quarantine via `QUARANTINE_IN` event. GOODS_RECEIPT is only posted for accepted quantities.
-
-**Step 3 — Lot assignment**: For lot-tracked items, the system auto-generates a lot number using the format `{YYYYMMDD}-{SUPPLIER_CODE}-{SEQUENCE_5}` and assigns `expiryDate = receivedDate + shelfLifeDays`.
-
-**Step 4 — GS1 SSCC label printing**: A Serial Shipping Container Code (SSCC-18) is generated per pallet and printed in GS1-128 format. The SSCC is linked to the movement event and the originating ASN.
-
-**Step 5 — Putaway**: The WMS slotting engine assigns a putaway location based on ABC velocity zone, storage condition, and current utilisation (CPOI algorithm — see Phase 3).
-
-### 5.2 Cycle Counting Programme
-
-Replace annual wall-to-wall physical inventories with a continuous cycle counting programme:
-
-| ABC Class | Count Frequency | Annual Counts per SKU |
+| Field | Type | Description |
 |---|---|---|
-| A | Weekly | 52 |
-| B | Monthly | 12 |
-| C | Quarterly | 4 |
-
-Discrepancies above threshold (A: > 0.1%; B/C: > 1%) trigger blind recount before posting `ADJUSTMENT_POSITIVE` or `ADJUSTMENT_NEGATIVE` events. All adjustments require authorisation:
-
-- Adjustments <= $500: Warehouse supervisor
-- Adjustments $500 - $5,000: Inventory controller
-- Adjustments > $5,000: Finance controller + VP Supply Chain
-
-### 5.3 Core Analytics Dashboard
-
-The following metrics are computed daily from the event stream projection:
-
-- **Inventory Turnover Ratio** = COGS (rolling 365 days) / Average Inventory Value
-- **Days Inventory Outstanding (DIO)** = 365 / Turnover Ratio
-- **Fill Rate (line-item)** = Lines shipped complete on first attempt / Total order lines x 100
-- **Inventory Accuracy Rate** = Locations matching system balance / Locations counted x 100
-- **Obsolescence Exposure** = Value of stock with zero movement > 180 days
+| sku_id | NVARCHAR(40) | SAP MATNR — primary key, immutable |
+| gtin | NVARCHAR(14) | GS1 GTIN-14 with validated check digit |
+| description | NVARCHAR(200) | Material description (English) |
+| material_type | NVARCHAR(4) | SAP MTART: ROH, FERT, HALB, HIBE, VERP |
+| material_group | NVARCHAR(9) | SAP MATKL — product hierarchy node |
+| base_uom | NVARCHAR(3) | GS1 UOM code: EA, KG, LT, M, etc. |
+| gross_weight_kg | DECIMAL(12,3) | SAP BRGEW in KG |
+| volume_m3 | DECIMAL(12,6) | SAP VOLUM converted to cubic metres |
+| storage_condition | NVARCHAR(20) | AMBIENT / CHILLED / FROZEN / CONTROLLED |
+| lot_tracked | BIT | 1 if lot tracking required |
+| reach_svhc | BIT | 1 if EU REACH Art.57 SVHC |
+| hazmat_class | NVARCHAR(10) | IMDG/ADR class or NULL |
+| abc_class | CHAR(1) | A / B / C — refreshed monthly |
+| xyz_class | CHAR(1) | X / Y / Z — refreshed monthly |
+| coverage_target_days | INT | Policy target: A=30, B=45, C=60 days |
+| status | NVARCHAR(15) | ACTIVE / DISCONTINUED / BLOCKED |
+| is_deleted | BIT | Soft-delete flag — never physically removed |
+| created_date | DATE | Date material master created in SAP |
+| last_updated_date | DATE | Date of last master data change |
 
 ---
 
-## 6. Phase 3: Mathematical Models
+### Table: fact_cycle_counts
 
-### 6.1 ABC Classification (Pareto Analysis)
-
-**Principle**: 80% of inventory value is typically concentrated in 20% of SKUs (Pareto, 1896). ABC classification allocates management attention and policy rigour in proportion to financial significance.
-
-**Value-Velocity Matrix**
-
-Each SKU is scored on two dimensions:
-1. **Annual Consumption Value (ACV)** = Average Unit Cost x Annual Demand Units
-2. **Velocity** = Annual movement transactions (frequency of picks/issues)
-
-```python
-# python/05_inventory_management/abc_classification.py
-import pandas as pd
-import numpy as np
-
-def classify_abc(df: pd.DataFrame,
-                 value_col: str = 'annual_value_cents',
-                 a_threshold: float = 0.80,
-                 b_threshold: float = 0.95) -> pd.DataFrame:
-    """
-    Classify SKUs into ABC categories using cumulative value share.
-
-    Parameters
-    ----------
-    df : DataFrame with columns [sku, annual_value_cents]
-    a_threshold : cumulative value share for A cutoff (default 80%)
-    b_threshold : cumulative value share for B cutoff (default 95%)
-
-    Returns
-    -------
-    DataFrame with added columns: value_rank, cum_value_share, abc_class
-    """
-    df = df.copy()
-    df = df.sort_values(value_col, ascending=False).reset_index(drop=True)
-    total_value = df[value_col].sum()
-    df['cum_value_share'] = df[value_col].cumsum() / total_value
-    df['value_rank'] = df.index + 1
-
-    def assign_class(cum_share: float) -> str:
-        if cum_share <= a_threshold:
-            return 'A'
-        elif cum_share <= b_threshold:
-            return 'B'
-        return 'C'
-
-    df['abc_class'] = df['cum_value_share'].apply(assign_class)
-    return df
-```
-
-**Policy Assignment Table by ABC Class**
-
-| Dimension | A | B | C |
+| Field | Type | Description | PK |
 |---|---|---|---|
-| Replenishment review | Continuous (r,Q) | Periodic (s,S) — 2-week cycle | Periodic (s,S) — 4-week cycle |
-| Safety stock method | Method 4 (joint variability) | Method 3 (demand sigma) | Method 1 (fixed days cover) |
-| Service level target (CSL) | 99.0% | 97.0% | 95.0% |
-| Cycle count frequency | Weekly | Monthly | Quarterly |
-| Supplier dual-sourcing | Mandatory if HHI > 0.25 | Recommended | Optional |
-| Obsolescence review | Quarterly | Semi-annual | Annual |
-| Lot tracking | Required if controlled | Recommended | Optional |
+| count_id | BIGINT IDENTITY | Surrogate primary key | Yes |
+| count_doc | NVARCHAR(10) | SAP inventory document (IVNR) | No |
+| count_date | DATE | Physical count date (IDATU) | No |
+| sku_id | NVARCHAR(40) | SAP MATNR | No |
+| warehouse_code | NVARCHAR(3) | SAP warehouse number (LGNUM) | No |
+| storage_type | NVARCHAR(3) | SAP storage type (LGTYP) | No |
+| storage_bin | NVARCHAR(10) | SAP storage bin (LGPLA) | No |
+| system_qty | DECIMAL(18,3) | Book stock at time of count (ANZLI) | No |
+| counted_qty | DECIMAL(18,3) | Physical count result (ANZPH) | No |
+| variance_qty | DECIMAL(18,3) | counted_qty - system_qty | No |
+| variance_value_cents | BIGINT | variance_qty x unit_cost_cents (integer cents) | No |
+| accuracy_flag | BIT | 1 if ABS(variance_qty) = 0 | No |
+| recount_performed | BIT | 1 if a blind recount was triggered | No |
+| adjustment_posted | BIT | 1 if adjustment movement was posted | No |
+| abc_class | CHAR(1) | ABC class at time of count | No |
 
-### 6.2 XYZ Classification (Demand Variability)
+---
 
-**Coefficient of Variation (CV)**
+### Table: dim_safety_stock
 
-XYZ classification measures demand predictability over the trailing 12 months:
-
-```
-CV = sigma_D / mu_D
-```
-
-Where `sigma_D` is the standard deviation of periodic demand (weekly or monthly buckets) and `mu_D` is the arithmetic mean.
-
-**Z-score thresholds** (industry standard, consistent with Chopra & Meindl Ch.11):
-
-| Class | CV Range | Interpretation |
+| Field | Type | Description |
 |---|---|---|
-| X | CV < 0.10 | Highly stable, predictable demand |
-| Y | 0.10 <= CV < 0.25 | Moderate variability; seasonal or trend-affected |
-| Z | CV >= 0.25 | Erratic, lumpy, or intermittent demand |
+| ss_id | BIGINT IDENTITY | Surrogate primary key |
+| sku_id | NVARCHAR(40) | SAP MATNR |
+| plant_code | NVARCHAR(4) | SAP WERKS |
+| safety_stock_units | DECIMAL(18,3) | SAP MARC.EISBE |
+| reorder_point_units | DECIMAL(18,3) | SAP MARC.MINBE |
+| mrp_type | NVARCHAR(2) | SAP MARC.DISMM |
+| planned_delivery_days | INT | SAP MARC.PLIFZ |
+| valid_from_date | DATE | Date of extract (weekly) |
+| ss_method | NVARCHAR(10) | Method 1 / Method 3 / Method 4 per ABC class policy |
 
-```python
-def classify_xyz(demand_series: pd.Series) -> str:
-    """
-    Classify a single SKU demand series into X, Y, or Z.
+---
 
-    Parameters
-    ----------
-    demand_series : weekly or monthly demand quantities (minimum 12 periods)
+## 8. Transformation Rules
 
-    Returns
-    -------
-    'X', 'Y', or 'Z'
-    """
-    if len(demand_series) < 12:
-        raise ValueError("Minimum 12 periods required for XYZ classification")
-    mu = demand_series.mean()
-    if mu == 0:
-        return 'Z'  # No demand — treat as highly erratic
-    cv = demand_series.std(ddof=1) / mu
-    if cv < 0.10:
-        return 'X'
-    elif cv < 0.25:
-        return 'Y'
-    return 'Z'
+**TR-01 — ADU Calculation (90-Day Rolling Average Daily Usage)**
+Extract all GOODS_ISSUE, SCRAP, and RETURN_TO_SUPPLIER movements from fact_stock_movements for each
+SKU-plant combination over the 90 calendar days preceding the snapshot date. Sum total quantity issued.
+Divide by 90. Exclude reversal movements (is_reversal = 1). Store in fact_inventory_snapshot.adu_90d.
+
+**TR-02 — Coverage Days Calculation**
+coverage_days = on_hand_units / adu_90d. If adu_90d = 0, set coverage_days = NULL and flag
+is_zero_demand = 1. Cap display value at 999 for readability. Do not cap the stored value.
+
+**TR-03 — Coverage Bucket Assignment**
+Assign coverage_bucket based on coverage_days thresholds and ABC class:
+- coverage_days < 7: CRITICAL (all classes)
+- coverage_days 7–13: WARNING (all classes)
+- A class: 14–30 = HEALTHY, > 30 = EXCESS
+- B class: 14–45 = HEALTHY, > 45 = EXCESS
+- C class: 14–60 = HEALTHY, > 60 = EXCESS
+- coverage_days NULL: ZERO_DEMAND
+
+**TR-04 — On-Hand Value Calculation**
+on_hand_value_cents = ROUND(on_hand_units x unit_cost_cents, 0). Use moving average price (VERPR)
+for materials with price control V; use standard price (STPRS) for price control S. Store as BIGINT.
+
+**TR-05 — Excess Inventory Value Calculation**
+excess_value_cents = MAX(0, (coverage_days - coverage_target_days) x adu_90d x unit_cost_cents).
+Apply only where coverage_days is not NULL and is_obsolete = 0. For zero-demand items with on-hand
+stock and days_since_movement < 365, classify as excess with coverage_days = 999 sentinel value.
+
+**TR-06 — Obsolete Inventory Flag**
+is_obsolete = 1 where last_movement_date < snapshot_date - 365 AND on_hand_units > 0.
+last_movement_date = MAX(posting_date) from fact_stock_movements for the SKU-plant-location,
+considering all movement types including adjustments and transfers.
+
+**TR-07 — Safety Stock Compliance Flag**
+ss_compliant = 1 where on_hand_units >= safety_stock_units. Load safety_stock_units from
+dim_safety_stock (weekly refresh from SAP MARC.EISBE). Where EISBE = 0 for an A or B class
+item, flag as SS_NOT_MAINTAINED in a separate data quality report.
+
+**TR-08 — ABC Classification (Monthly Refresh)**
+Compute Annual Consumption Value (ACV) = adu_90d x 365 x unit_cost_cents for each active SKU-plant.
+Rank descending by ACV. Compute cumulative value share. Assign A (0–80%), B (80–95%), C (95–100%).
+Run monthly on the first calendar day of each month. Write results to dim_material.abc_class.
+
+**TR-09 — XYZ Classification (Monthly Refresh)**
+Compute 12 weekly demand buckets for each active SKU-plant from fact_stock_movements. Calculate
+CV = std_dev(weekly_demand) / mean(weekly_demand). Assign X (CV < 0.10), Y (0.10 <= CV < 0.25),
+Z (CV >= 0.25). For SKUs with fewer than 12 weeks of demand history, assign Z and flag as
+INSUFFICIENT_HISTORY. Run concurrently with ABC refresh.
+
+**TR-10 — E&O Ratio Calculation**
+E&O_ratio_pct = (SUM(excess_value_cents WHERE is_excess = 1) + SUM(on_hand_value_cents WHERE
+is_obsolete = 1)) / SUM(on_hand_value_cents WHERE status = 'ACTIVE') x 100.
+Calculated at plant, region, and enterprise level.
+
+**TR-11 — Cycle Count Accuracy Rate**
+accuracy_rate_pct = COUNT(*) WHERE accuracy_flag = 1 / COUNT(*) x 100. Calculated by warehouse,
+storage_type, abc_class, and count_date for daily, weekly, and monthly aggregations.
+
+**TR-12 — Shortage Rate Calculation**
+shortage_rate_pct = COUNT(DISTINCT sku_id) WHERE on_hand_units = 0 AND status = 'ACTIVE' AND
+has_open_demand = 1 / COUNT(DISTINCT sku_id WHERE status = 'ACTIVE') x 100.
+Open demand loaded daily from SAP MD04 stock requirements list.
+
+**TR-13 — Inventory Turnover Ratio (Trailing 12 Months)**
+turnover_ratio = SUM(total_value_cents WHERE movement_category IN ('GOODS_ISSUE','SCRAP') AND
+posting_date >= snapshot_date - 365) / AVG(on_hand_value_cents aggregated by month for prior 12
+months). Calculated at enterprise, region, plant, and material group levels.
+
+**TR-14 — DIO (Days Inventory Outstanding)**
+DIO = 365 / turnover_ratio. Where turnover_ratio = 0, set DIO = NULL. DIO is the primary
+working capital KPI for executive reporting.
+
+**TR-15 — Last Movement Date Derivation**
+last_movement_date = MAX(posting_date) from fact_stock_movements for sku_id + plant_code +
+storage_location. Includes all movement types. Refreshed daily with each snapshot load.
+
+---
+
+## 9. Business Rules
+
+### BR-01: No Negative Inventory
+
+| Attribute | Detail |
+|---|---|
+| Name | No Negative Inventory |
+| Description | On-hand stock quantity must never be negative for items where backorder is not explicitly allowed |
+| Logic Condition | IF on_hand_units < 0 AND backorder_allowed = FALSE THEN raise data quality error |
+| Expected Result | on_hand_units >= 0 for all active SKUs where backorder_allowed = FALSE |
+| Example | SKU MAT-00123, Plant DE01: LABST = -5 EA triggers data quality alert; record excluded from health KPIs pending investigation |
+| Exception | Items with backorder_allowed = TRUE may show negative stock during the replenishment pipeline; these are flagged separately as BACKORDER not SHORTAGE |
+| Evidence | CLAUDE.md Critical Business Rule #1; SAP configuration: negative stock check active in plant parameters |
+
+### BR-02: Soft-Delete Only
+
+| Attribute | Detail |
+|---|---|
+| Name | Soft-Delete Only |
+| Description | No inventory records, stock movements, cycle count documents, or material master records may be physically deleted |
+| Logic Condition | is_deleted = TRUE is the only permitted deletion mechanism; hard DELETE statements blocked at database layer |
+| Expected Result | All historical records preserved; reports filter on is_deleted = FALSE by default |
+| Example | Obsolete material MAT-99999 is discontinued: MARC.MMSTA set to X (blocked); is_deleted = FALSE until physical scrapping is complete |
+| Exception | Test data in non-production environments may be hard-deleted by IT administrators only |
+| Evidence | CLAUDE.md Critical Business Rule #3; Azure SQL row-level security policy |
+
+### BR-03: Coverage Target Days by ABC Class
+
+| Attribute | Detail |
+|---|---|
+| Name | Coverage Target Days by ABC Class |
+| Description | Maximum acceptable coverage days varies by ABC classification; excess is defined as coverage above target |
+| Logic Condition | A class: target = 30 days; B class: target = 45 days; C class: target = 60 days |
+| Expected Result | SKUs with coverage_days > target are flagged is_excess = TRUE and excess_value_cents calculated |
+| Example | SKU MAT-00456 (Class A): coverage_days = 65; excess_days = 35; excess_value_cents = 35 x adu x unit_cost |
+| Exception | Items with seasonal demand may have target days extended by 30% during pre-season buffer build (controlled by seasonal_flag in dim_material) |
+| Evidence | Chopra & Meindl, Supply Chain Management 6th Ed., Chapter 11 |
+
+### BR-04: Obsolete Inventory Threshold
+
+| Attribute | Detail |
+|---|---|
+| Name | Obsolete Inventory Threshold |
+| Description | Inventory with no stock movement for 365+ calendar days is classified as obsolete regardless of ABC class or value |
+| Logic Condition | is_obsolete = 1 WHERE last_movement_date < TODAY() - 365 AND on_hand_units > 0 |
+| Expected Result | Obsolete items flagged in dashboard with disposition workflow triggered |
+| Example | SKU MAT-07890, Plant FR01: last movement 2024-12-15; snapshot date 2026-06-22; days_since_movement = 554; is_obsolete = TRUE |
+| Exception | Items on long-term strategic reserve approved by VP Supply Chain with documented business justification may have threshold extended to 730 days |
+| Evidence | GAAP/IFRS IAS 2 inventory write-down requirements; Financial Control Policy §7.3 |
+
+### BR-05: Safety Stock Maintenance Mandatory for A and B Class
+
+| Attribute | Detail |
+|---|---|
+| Name | Safety Stock Maintenance Mandatory |
+| Description | All A and B class active SKUs must have a non-zero safety stock level maintained in SAP MRP |
+| Logic Condition | IF abc_class IN ('A','B') AND status = 'ACTIVE' AND EISBE = 0 THEN flag SS_NOT_MAINTAINED |
+| Expected Result | Zero SS_NOT_MAINTAINED flags for A and B class items in steady state |
+| Example | SKU MAT-00321 (Class A, Plant GB01): EISBE = 0; flagged in weekly data quality report; owner assigned to update within 5 business days |
+| Exception | Items with MRP type ND (no planning) are exempt but must have an approved documented rationale |
+| Evidence | SCOR-DS Plan process; Chopra & Meindl Ch.11 |
+
+### BR-06: Cycle Count Frequency by ABC Class
+
+| Attribute | Detail |
+|---|---|
+| Name | Cycle Count Frequency |
+| Description | Minimum cycle count frequency enforced by ABC class |
+| Logic Condition | A class: weekly (7 days); B class: monthly (31 days); C class: quarterly (92 days) |
+| Expected Result | All active SKU-locations counted at required frequency; overdue counts flagged in dashboard |
+| Example | SKU MAT-00789 (Class A, Bin A01-001-02): last count date 2026-05-15; today 2026-06-22; overdue by 3 weeks; alert raised to warehouse manager |
+| Exception | Items in quarantine status are counted at time of release, not on standard schedule |
+| Evidence | ISO 9001:2015 §8.5.2; internal Inventory Control Procedure ICP-001 |
+
+### BR-07: Lot Tracking Mandatory for Non-Ambient and REACH SVHC
+
+| Attribute | Detail |
+|---|---|
+| Name | Lot Tracking Mandatory |
+| Description | Lot tracking is mandatory for all items where storage condition is not AMBIENT or where reach_svhc = TRUE |
+| Logic Condition | IF (storage_condition != 'AMBIENT' OR reach_svhc = TRUE) AND lot_tracked = FALSE THEN compliance breach |
+| Expected Result | Zero items failing this rule in production |
+| Example | SKU MAT-05511 (CHILLED, reach_svhc = FALSE): lot_tracked must = TRUE; if FALSE, blocked from GOODS_RECEIPT posting |
+| Exception | None permitted — this is a regulatory requirement under EU REACH 1907/2006 and ISO 9001:2015 §8.5.2 |
+| Evidence | CLAUDE.md Critical Business Rule #5; EU REACH 1907/2006 |
+
+### BR-08: All Stock Movements Generate GL Journal Entry
+
+| Attribute | Detail |
+|---|---|
+| Name | GL Journal Generation Mandatory |
+| Description | Every stock movement must generate a corresponding debit/credit GL journal entry |
+| Logic Condition | IF StockMovement posted AND GL journal NOT generated THEN error; retry within 60 seconds |
+| Expected Result | 100% of movements have a corresponding GL journal posted to ERP |
+| Example | GOODS_RECEIPT movement: debit GL 1310 (Inventory), credit GL 2100 (GR-IR clearing) |
+| Exception | Transfers between storage locations within the same GL cost centre may generate zero-value journals (still required) |
+| Evidence | CLAUDE.md Critical Business Rule #4; internal Financial Control Policy §5.1 |
+
+---
+
+## 10. KPIs and Formulas
+
+All KPIs are calculated daily unless otherwise noted. DAX formulas are for Power BI Desktop.
+SQL formulas target Azure SQL DW.
+
+### KPI-01: Inventory Coverage Days
+
+**Definition:** Number of days of supply available given current on-hand stock and 90-day ADU.
+
+**Formula:**
+```
+Coverage_Days = On_Hand_Units / ADU_90d
+ADU_90d = SUM(goods_issue_units, trailing 90 days) / 90
 ```
 
-**Combined ABC-XYZ 9-Cell Policy Matrix**
+**DAX:**
+```dax
+Coverage Days =
+VAR ADU =
+    DIVIDE(
+        CALCULATE(
+            SUM(fact_stock_movements[quantity_units]),
+            fact_stock_movements[movement_category] IN {"GOODS_ISSUE","SCRAP"},
+            DATESINPERIOD(dim_date[date_id], MAX(dim_date[date_id]), -90, DAY)
+        ),
+        90
+    )
+RETURN DIVIDE([On Hand Units], ADU, BLANK())
+```
+
+**SQL:**
+```sql
+SELECT
+    s.sku_id, s.plant_code, s.snapshot_date,
+    s.on_hand_units,
+    COALESCE(m.total_issued / 90.0, 0)                         AS adu_90d,
+    CASE
+        WHEN COALESCE(m.total_issued, 0) = 0 THEN NULL
+        ELSE s.on_hand_units / (m.total_issued / 90.0)
+    END                                                         AS coverage_days
+FROM fact_inventory_snapshot s
+LEFT JOIN (
+    SELECT sku_id, plant_code,
+           SUM(quantity_units) AS total_issued
+    FROM fact_stock_movements
+    WHERE movement_category IN ('GOODS_ISSUE','SCRAP')
+      AND posting_date >= DATEADD(DAY, -90, GETDATE())
+      AND is_reversal = 0
+    GROUP BY sku_id, plant_code
+) m ON s.sku_id = m.sku_id AND s.plant_code = m.plant_code
+WHERE s.snapshot_date = CAST(GETDATE() AS DATE);
+```
+
+---
+
+### KPI-02: Inventory Turnover Ratio
+
+**Definition:** Number of times inventory is consumed in a trailing 12-month period.
+
+**Formula:**
+```
+Turnover_Ratio = COGS_trailing_12m_cents / Avg_Inventory_Value_12m_cents
+```
+
+**DAX:**
+```dax
+Inventory Turnover =
+VAR COGS =
+    CALCULATE(
+        SUM(fact_stock_movements[total_value_cents]),
+        fact_stock_movements[movement_category] IN {"GOODS_ISSUE","SCRAP"},
+        DATESINPERIOD(dim_date[date_id], MAX(dim_date[date_id]), -365, DAY)
+    )
+VAR AvgInv =
+    AVERAGEX(
+        VALUES(dim_date[fiscal_month]),
+        CALCULATE(SUM(fact_inventory_snapshot[on_hand_value_cents]))
+    )
+RETURN DIVIDE(COGS, AvgInv, BLANK())
+```
+
+---
+
+### KPI-03: Days Inventory Outstanding (DIO)
+
+**Formula:**
+```
+DIO = 365 / Inventory_Turnover_Ratio
+```
+
+**DAX:**
+```dax
+DIO Days = DIVIDE(365, [Inventory Turnover], BLANK())
+```
+
+**Target:** DIO < 45 days for finished goods. Alert threshold: DIO > 60 days triggers working capital review.
+
+---
+
+### KPI-04: Excess Inventory Value
+
+**Formula:**
+```
+Excess_Value_cents = MAX(0,
+    (Coverage_Days - Coverage_Target_Days) x ADU_90d x Unit_Cost_cents)
+```
+
+**DAX:**
+```dax
+Excess Inventory Value EUR =
+SUMX(
+    fact_inventory_snapshot,
+    VAR ExcessDays =
+        MAX(0,
+            fact_inventory_snapshot[coverage_days]
+            - RELATED(dim_material[coverage_target_days])
+        )
+    RETURN
+        ExcessDays
+        * fact_inventory_snapshot[adu_90d]
+        * DIVIDE(fact_inventory_snapshot[unit_cost_cents], 100)
+)
+```
+
+---
+
+### KPI-05: Obsolete Inventory Value
+
+**Formula:**
+```
+Obsolete_Value_cents = SUM(on_hand_value_cents) WHERE is_obsolete = 1
+```
+
+**DAX:**
+```dax
+Obsolete Inventory EUR =
+CALCULATE(
+    SUMX(
+        fact_inventory_snapshot,
+        DIVIDE(fact_inventory_snapshot[on_hand_value_cents], 100)
+    ),
+    fact_inventory_snapshot[is_obsolete] = 1
+)
+```
+
+---
+
+### KPI-06: E&O Ratio
+
+**Formula:**
+```
+E&O_Ratio_pct = (Excess_Value_cents + Obsolete_Value_cents)
+                / Total_Active_Inventory_Value_cents x 100
+```
+
+**DAX:**
+```dax
+E&O Ratio % =
+DIVIDE(
+    [Excess Inventory Value EUR] + [Obsolete Inventory EUR],
+    DIVIDE(
+        CALCULATE(
+            SUM(fact_inventory_snapshot[on_hand_value_cents]),
+            dim_material[status] = "ACTIVE"
+        ),
+        100
+    ),
+    0
+) * 100
+```
+
+**Target:** E&O Ratio < 5%. Alert: > 8% triggers executive review. World-class: < 2%.
+
+---
+
+### KPI-07: Shortage Rate
+
+**Formula:**
+```
+Shortage_Rate_pct =
+    COUNT(DISTINCT sku_id WHERE on_hand_units = 0 AND has_open_demand = 1)
+    / COUNT(DISTINCT sku_id WHERE status = 'ACTIVE') x 100
+```
+
+**DAX:**
+```dax
+Shortage Rate % =
+VAR ShortageSKUs =
+    CALCULATE(
+        DISTINCTCOUNT(fact_inventory_snapshot[sku_id]),
+        fact_inventory_snapshot[on_hand_units] = 0,
+        fact_inventory_snapshot[has_open_demand] = 1
+    )
+VAR TotalActive =
+    CALCULATE(
+        DISTINCTCOUNT(fact_inventory_snapshot[sku_id]),
+        dim_material[status] = "ACTIVE"
+    )
+RETURN DIVIDE(ShortageSKUs, TotalActive, 0) * 100
+```
+
+**Target:** Shortage Rate < 0.5%. Alert: > 2% for A-class items.
+
+---
+
+### KPI-08: Cycle Count Accuracy
+
+**Formula:**
+```
+Cycle_Count_Accuracy_pct =
+    COUNT(counts WHERE ABS(variance_qty) = 0)
+    / COUNT(all counts) x 100
+```
+
+**DAX:**
+```dax
+Cycle Count Accuracy % =
+DIVIDE(
+    CALCULATE(COUNTROWS(fact_cycle_counts), fact_cycle_counts[accuracy_flag] = 1),
+    COUNTROWS(fact_cycle_counts),
+    0
+) * 100
+```
+
+**SQL:**
+```sql
+SELECT
+    warehouse_code,
+    abc_class,
+    COUNT(*)                                                           AS total_counts,
+    SUM(CAST(accuracy_flag AS INT))                                    AS accurate_counts,
+    100.0 * SUM(CAST(accuracy_flag AS INT)) / COUNT(*)                AS accuracy_rate_pct
+FROM fact_cycle_counts
+WHERE count_date >= DATEADD(MONTH, -1, GETDATE())
+GROUP BY warehouse_code, abc_class
+ORDER BY accuracy_rate_pct ASC;
+```
+
+**Target:** Overall >= 99.5%. A-class >= 99.9%. Alert: < 98% for any warehouse triggers investigation.
+
+---
+
+### KPI-09: Safety Stock Compliance Rate
+
+**Formula:**
+```
+SS_Compliance_pct =
+    COUNT(DISTINCT sku_id WHERE on_hand_units >= safety_stock_units)
+    / COUNT(DISTINCT sku_id WHERE safety_stock_units > 0) x 100
+```
+
+**DAX:**
+```dax
+Safety Stock Compliance % =
+VAR Compliant =
+    CALCULATE(
+        DISTINCTCOUNT(fact_inventory_snapshot[sku_id]),
+        fact_inventory_snapshot[ss_compliant] = 1,
+        fact_inventory_snapshot[safety_stock_units] > 0
+    )
+VAR WithSS =
+    CALCULATE(
+        DISTINCTCOUNT(fact_inventory_snapshot[sku_id]),
+        fact_inventory_snapshot[safety_stock_units] > 0
+    )
+RETURN DIVIDE(Compliant, WithSS, 0) * 100
+```
+
+**Target:** >= 90% overall. >= 97% for A-class items.
+
+---
+
+## 11. Analytical Logic
+
+### Coverage Day Buckets
+
+Coverage days determine the health classification of each SKU-location. Thresholds:
+
+| Bucket | Coverage Days | Colour | Action |
+|---|---|---|---|
+| CRITICAL | < 7 days | Red | Immediate replenishment; escalate to planner same day |
+| WARNING | 7–13 days | Amber | Expedite open PO or raise emergency order |
+| HEALTHY (A) | 14–30 days | Green | No action required |
+| HEALTHY (B) | 14–45 days | Green | No action required |
+| HEALTHY (C) | 14–60 days | Green | No action required |
+| EXCESS (A) | > 30 days | Blue | Investigate; defer next PO |
+| EXCESS (B) | > 45 days | Blue | Investigate; defer next PO |
+| EXCESS (C) | > 60 days | Blue | Investigate; defer next PO |
+| ZERO_DEMAND | NULL (ADU = 0) | Grey | Review for obsolescence or discontinuation |
+
+For items with seasonal demand profile, the HEALTHY upper threshold is extended by 50% during the
+4-week pre-season buffer build period (controlled by dim_date.pre_season_flag = 1).
+
+### ABC Velocity Segmentation
+
+ABC classification based on Annual Consumption Value (ACV) from 90-day ADU projected to 365 days:
+
+| Class | Cumulative ACV Share | Typical SKU Count | Policy |
+|---|---|---|---|
+| A | 0–80% | ~15–20% of SKUs | Continuous review, Method 4 SS, weekly count |
+| B | 80–95% | ~25–30% of SKUs | Periodic review (2 weeks), Method 3 SS, monthly count |
+| C | 95–100% | ~50–60% of SKUs | Periodic review (4 weeks), Method 1 SS, quarterly count |
+
+### XYZ Demand Variability Segmentation
+
+XYZ classification uses the 12-week coefficient of variation (CV):
+
+| Class | CV Range | Demand Pattern | Forecasting Method |
+|---|---|---|---|
+| X | CV < 0.10 | Stable, predictable | SMA or SES sufficient |
+| Y | 0.10 <= CV < 0.25 | Moderate variability | Holt or Holt-Winters |
+| Z | CV >= 0.25 | Erratic, intermittent | Newsvendor or min-max |
+
+### ABC-XYZ 9-Cell Policy Matrix
 
 | | X (Stable) | Y (Variable) | Z (Erratic) |
 |---|---|---|---|
-| **A (High Value)** | AX: Continuous review, tight safety stock, Method 4 | AY: Continuous review, Holt forecasting, Method 4 | AZ: Continuous review, Newsvendor model, dual source |
-| **B (Medium Value)** | BX: Periodic review (2wk), Method 3, EOQ | BY: Periodic review (2wk), SES forecast, Method 3 | BZ: Min-max with wide bands, manual oversight |
-| **C (Low Value)** | CX: Periodic review (4wk), Method 1, bulk purchase | CY: Periodic review (4wk), min-max replenishment | CZ: On-demand / kanban; consider rationalisation |
+| **A (High Value)** | Continuous review, Method 4 SS, 99% CSL | Continuous review, Holt forecast, Method 4, 99% CSL | Continuous review, Newsvendor, dual-source, 98% CSL |
+| **B (Medium Value)** | Periodic 2-week, Method 3 SS, EOQ, 97% CSL | Periodic 2-week, SES forecast, Method 3, 97% CSL | Min-max wide bands, manual oversight, 95% CSL |
+| **C (Low Value)** | Periodic 4-week, Method 1 SS, bulk buy, 95% CSL | Periodic 4-week, min-max replenishment, 95% CSL | On-demand or kanban; review for rationalisation |
 
-**Policy notes:**
-- AZ items require human escalation when the ML anomaly model flags unusual consumption — the combination of high value and unpredictable demand represents maximum financial risk.
-- CZ items should trigger SKU rationalisation review annually. If < 3 picks/year and no strategic reason, recommend discontinuation.
+### Inventory Aging Buckets
 
-### 6.3 Safety Stock Methods 1-4
+All on-hand inventory is assigned to an aging bucket based on days since last goods receipt:
 
-All methods use the standard normal z-score lookup for cycle service level (CSL):
+| Aging Bucket | Days Since Last Receipt | Financial Risk | Action |
+|---|---|---|---|
+| FRESH | 0–30 days | None | Normal management |
+| RECENT | 31–90 days | Low | Monitor |
+| AGING | 91–180 days | Medium | Demand review |
+| OLD | 181–365 days | High | Disposition review required |
+| OBSOLETE | > 365 days | Critical | Write-down assessment; mandatory disposition |
 
-| CSL | z |
+### E&O Disposition Alert Logic
+
+When a SKU is flagged as excess or obsolete the following disposition workflow is triggered:
+
+1. **Day 1:** Automatic email alert to plant inventory controller and regional demand planner
+2. **Day 7:** If no disposition entered, second alert with financial exposure highlighted
+3. **Day 14:** No disposition escalates to Supply Chain Director
+4. **Day 30:** Finance Controller accrues provision: 50% of obsolete value, 20% of excess value
+5. **Day 90:** Automatic write-down recommendation raised to CFO for IFRS IAS 2 compliance
+
+### Safety Stock Violation Alert Priority
+
+| ABC Class | SS Violation Duration | Priority | Alert Recipient |
+|---|---|---|---|
+| A | Same day | P1 — Critical | Planner + Plant Manager + SC Director |
+| B | > 2 consecutive days | P2 — High | Planner + Inventory Controller |
+| C | > 7 consecutive days | P3 — Medium | Inventory Controller |
+| Any class | > 14 consecutive days | P2 — Escalated | Regional Supply Chain Manager |
+
+---
+
+## 12. Validations and Controls
+
+### VC-01: Non-Negative On-Hand Stock
+
+| Attribute | Detail |
 |---|---|
-| 90.0% | 1.282 |
-| 95.0% | 1.645 |
-| 97.0% | 1.881 |
-| 98.0% | 2.054 |
-| 99.0% | 2.326 |
-| 99.5% | 2.576 |
-| 99.9% | 3.090 |
+| Name | Non-Negative On-Hand Stock |
+| Field/Table | fact_inventory_snapshot.on_hand_units |
+| Rule | on_hand_units >= 0 for all rows |
+| Method | Pre-load SQL CHECK constraint + ADF pipeline data quality activity |
+| Expected Result | Zero rows with on_hand_units < 0 in production load |
+| Action if Fails | Row quarantined to dq_error_log; SAP inventory controller notified; excluded from KPIs |
+| Evidence | BR-01; CLAUDE.md Critical Business Rule #1 |
 
-**Implementation order**: Start with Method 1 for all items at go-live (data minimisation). Migrate to Method 3 once 12 months of demand history accumulates. Migrate A-class items to Method 4 once lead time distribution data has >= 30 PO observations per supplier.
+### VC-02: On-Hand Value Reconciliation
+
+| Attribute | Detail |
+|---|---|
+| Name | On-Hand Value Reconciliation |
+| Field/Table | fact_inventory_snapshot.on_hand_value_cents |
+| Rule | ABS(on_hand_value_cents - ROUND(on_hand_units x unit_cost_cents, 0)) <= 1 cent |
+| Method | Post-load SQL validation query; daily reconciliation report |
+| Expected Result | < 0.01% of rows with value discrepancy > 1 cent |
+| Action if Fails | Investigate price control mismatch (V vs S); restate value using correct price |
+| Evidence | Financial Control Policy §4.2; IFRS IAS 2 |
+
+### VC-03: ADU Non-Zero for A-Class Active SKUs
+
+| Attribute | Detail |
+|---|---|
+| Name | ADU Reasonableness for A-Class |
+| Field/Table | fact_inventory_snapshot.adu_90d |
+| Rule | A-class items must have adu_90d > 0 |
+| Method | Post-load validation query; A-class zero-ADU flagged in DQ report |
+| Expected Result | Zero A-class items with ADU = 0 in steady state |
+| Action if Fails | Review if item was recently reclassified or demand ceased; reclassify to C if confirmed |
+| Evidence | TR-01; BR-05 |
+
+### VC-04: Safety Stock Maintained for A/B Class
+
+| Attribute | Detail |
+|---|---|
+| Name | Safety Stock Completeness |
+| Field/Table | dim_safety_stock.safety_stock_units |
+| Rule | safety_stock_units > 0 for all active A and B class SKUs |
+| Method | Weekly validation query post-SAP extract |
+| Expected Result | Zero A/B class items with safety_stock_units = 0 after Week 4 of implementation |
+| Action if Fails | Alert to Demand Planning team; SLA: corrected within 5 business days |
+| Evidence | BR-05; CLAUDE.md |
+
+### VC-05: Cycle Count Coverage Completeness
+
+| Attribute | Detail |
+|---|---|
+| Name | Cycle Count Coverage |
+| Field/Table | fact_cycle_counts |
+| Rule | All A-class SKU-locations counted within 7 days; B within 31 days; C within 92 days |
+| Method | Daily query: days since last count vs. frequency threshold per ABC class |
+| Expected Result | < 1% of A-class locations overdue at any time |
+| Action if Fails | Warehouse manager notified; count added to next-day schedule |
+| Evidence | BR-06; ISO 9001:2015 §8.5.2 |
+
+### VC-06: Lot Tracking Flag Completeness
+
+| Attribute | Detail |
+|---|---|
+| Name | Lot Tracking Flag Completeness |
+| Field/Table | dim_material.lot_tracked |
+| Rule | lot_tracked = TRUE for all active SKUs where storage_condition != 'AMBIENT' OR reach_svhc = TRUE |
+| Method | Weekly validation query against dim_material |
+| Expected Result | Zero non-compliant items |
+| Action if Fails | Master data steward alerted; item blocked from receipt until corrected |
+| Evidence | BR-07; EU REACH 1907/2006; ISO 9001:2015 §8.5.2 |
+
+### VC-07: Movement Type Mapping Completeness
+
+| Attribute | Detail |
+|---|---|
+| Name | SAP Movement Type Mapping |
+| Field/Table | fact_stock_movements.movement_category |
+| Rule | All SAP BWART codes present in the movement type mapping table; movement_category must not be NULL |
+| Method | Post-load check: COUNT(*) WHERE movement_category IS NULL |
+| Expected Result | Zero unmapped movement types |
+| Action if Fails | New movement type identified in SAP; add to mapping table and reprocess affected records |
+| Evidence | TR-01; DS-02 |
 
 ---
 
-**Method 1 — Fixed Days Cover (Baseline)**
+## 13. Required Evidence
 
-```
-SS_1 = D_daily * days_cover
-```
+The following evidence artefacts must be produced and stored in the project SharePoint repository
+before each phase milestone is signed off by the Data Governance Board:
 
-Where `D_daily` is average daily demand and `days_cover` is set by ABC class policy (A: 7 days; B: 14 days; C: 21 days). Simple but ignores variability — use only as a temporary bootstrap.
+1. **Data source connection test results:** Screenshot of successful ADF pipeline runs for all six
+   data sources with row counts and checksums matching SAP control totals for 3 consecutive days.
+
+2. **Data quality baseline report:** Results of VC-01 through VC-07 validations against the first
+   30 days of production data, showing pass/fail rates and open remediation items with owners.
+
+3. **ABC/XYZ classification audit:** Excel export of all active SKUs with ABC and XYZ classifications
+   for the first monthly run, reviewed and signed off by the Inventory Control Manager.
+
+4. **E&O financial exposure report:** First E&O report showing excess and obsolete values reconciled
+   to SAP financial statements (MBEW values), reviewed and signed off by the Finance Controller.
+
+5. **Safety stock compliance baseline:** Report showing SS compliance rate by plant and ABC class
+   for the first week of data, with action log for items failing BR-05.
+
+6. **Cycle count accuracy baseline:** First month's cycle count accuracy report by warehouse and
+   ABC class, reconciled against SAP transaction MI23 summary report within 0.5%.
+
+7. **Power BI UAT sign-off:** User acceptance testing evidence from at least three inventory
+   controllers and one regional supply chain manager confirming KPI accuracy against source system.
+
+8. **CSDDD data retention evidence:** Confirmation that E&O and inventory adjustment records are
+   retained for minimum 5 years per Article 23 of EU Directive 2024/1760 (CSDDD).
 
 ---
 
-**Method 2 — Demand Variability, Fixed Lead Time**
+## 14. Dashboard Design
 
-```
-SS_2 = z * sigma_D * sqrt(LT)
-```
+### Power BI Report Structure
 
-Where `sigma_D` is the standard deviation of demand per unit time period and `LT` is lead time expressed in the same unit. Assumes lead time is deterministic.
-
----
-
-**Method 3 — Recommended Standard (Holt/Chopra & Meindl Ch.11)**
-
-```
-SS_3 = z * sigma_D * sqrt(LT)
-```
-
-Functionally the same formula as Method 2 but applied with statistically fitted `sigma_D` from the demand forecasting module. The key distinction is using the residual standard error from the forecasting model (SES or Holt) rather than the raw historical standard deviation, which reduces bias from trend or seasonal effects.
+**Report File:** Inventory_Health_Analytics.pbix
+**Refresh Schedule:** Daily at 06:00 CET (after ADF pipeline completion at 05:30 CET)
+**Row-Level Security:** Plant-level RLS; regional managers see their plants only; Global SCM team sees all
+**Data Source:** Azure SQL DW via DirectQuery (fact tables) + Import (dim tables)
 
 ---
 
-**Method 4 — Most Accurate: Joint Demand and Lead Time Variability**
+### Page 1: Executive Inventory Health Overview
 
-```
-SS_4 = z * sqrt(LT * sigma_D^2 + D_bar^2 * sigma_LT^2)
-```
+**Purpose:** Single-page senior leadership view of inventory health and E&O exposure.
 
-Where:
-- `LT` = mean lead time (days or weeks)
-- `sigma_D` = standard deviation of demand per unit time
-- `D_bar` = mean demand per unit time
-- `sigma_LT` = standard deviation of lead time
+**Visuals:**
+- KPI cards (top row, 5 cards): Total Inventory Value (€M), DIO (days), Turnover Ratio, E&O Ratio (%), Shortage Rate (%)
+- Clustered bar chart: On-hand value by coverage bucket (CRITICAL / WARNING / HEALTHY / EXCESS) per region
+- Treemap: E&O value by product category and plant (size = value, colour = E&O ratio)
+- Line chart: DIO trend — current month vs. prior 12 months with target reference line at 45 days
+- Table: Top 20 excess inventory SKUs — columns: SKU, description, plant, excess value (€), coverage days, last movement date
 
-This is the Chopra & Meindl recommended formula when both demand and supply variability are material. It must be used for all A-class items once sufficient lead time data is available.
+**Slicers:** Region, Country, Plant, Material Group, ABC Class, Snapshot Date (date picker)
+**Drill-down:** Click region bar to plant breakdown; click plant to SKU detail
 
-```python
-import numpy as np
-from scipy.stats import norm
+---
 
-def safety_stock_method4(mean_demand: float,
-                          std_demand: float,
-                          mean_lead_time: float,
-                          std_lead_time: float,
-                          service_level: float) -> float:
-    """
-    Safety stock using joint demand and lead time variability (Method 4).
+### Page 2: Coverage and Shortage Analysis
 
-    Parameters
-    ----------
-    mean_demand    : average demand per unit time (same unit as lead time)
-    std_demand     : standard deviation of demand per unit time
-    mean_lead_time : mean supplier lead time (same unit as demand period)
-    std_lead_time  : standard deviation of lead time
-    service_level  : cycle service level (e.g. 0.99 for 99%)
+**Purpose:** Operational view for inventory planners to manage shortage risk.
 
-    Returns
-    -------
-    Safety stock quantity (same unit as demand)
-    """
-    z = norm.ppf(service_level)
-    variance = (mean_lead_time * std_demand**2) + (mean_demand**2 * std_lead_time**2)
-    return z * np.sqrt(variance)
-```
+**Visuals:**
+- Matrix: Coverage bucket count by plant x ABC class (conditional formatting: red = CRITICAL, amber = WARNING)
+- Scatter plot: Coverage days (Y-axis) vs. ADU units/day (X-axis); bubble size = on_hand_value; colour = coverage bucket
+- Table: CRITICAL and WARNING SKUs — columns: SKU, description, plant, on_hand_units, ADU, coverage_days, open_PO_qty, open_PO_ETA, shortage_risk_value_eur
+- KPI card: Count of A-class SKUs in CRITICAL bucket (target = 0)
+- Bar chart: Shortage rate % by week (trailing 13 weeks)
 
-### 6.4 Economic Order Quantity (EOQ) with Extensions
+**Slicers:** Plant, ABC Class, Material Group, Supplier
+**Actions:** Export button for shortage list (CSV for planner action in SAP MD04)
 
-**Basic EOQ** (Harris, 1913; Wilson, 1934):
+---
 
-```
-EOQ = sqrt(2 * D * S / H)
-```
+### Page 3: Excess and Obsolete Inventory
 
-Where:
-- `D` = annual demand (units)
-- `S` = order setup/ordering cost per order ($ per order)
-- `H` = annual holding cost per unit ($ per unit per year) = unit cost * carrying cost rate
+**Purpose:** Working capital management view for supply chain finance and planners.
 
-Carrying cost rate benchmark: 18-25% of unit cost per annum (includes capital, storage, insurance, obsolescence).
+**Visuals:**
+- Gauge: E&O Ratio % vs. target 5% and alert 8%
+- Clustered bar chart: Excess value by plant and ABC class (stacked: excess vs. obsolete)
+- Bar chart: Obsolete value by aging bucket (181–365 days, > 365 days) and plant
+- Waterfall chart: E&O value change month-over-month (green bars = dispositions actioned, red bars = new additions)
+- Table: Top 50 E&O items — SKU, description, plant, ABC class, excess_value (€), obsolete_value (€), last_movement_date, days_since_movement, disposition_status
+- KPI cards: Total Excess Value (€M), Total Obsolete Value (€M), Items Pending Disposition (count), Items Overdue for Disposition (> 14 days)
 
-**Quantity Discount Extension**
+**Slicers:** Region, Plant, Material Group, ABC Class, Days Since Movement Range
+**Drill-through:** Click SKU to movement history detail page
 
-When suppliers offer tiered pricing, evaluate total annual cost (TAC) at each price break:
+---
 
-```
-TAC(Q) = D * P + (D / Q) * S + (Q / 2) * H(P)
-```
+### Page 4: ABC/XYZ Segmentation
 
-Where `P` is the unit price at a given tier and `H(P) = P * carrying_rate`. The optimal `Q*` is the quantity minimising `TAC` across all feasible tiers.
+**Purpose:** Classification governance and policy compliance view.
 
-**Imputed Cost (Total Cost of Ownership)**
+**Visuals:**
+- 9-cell matrix heatmap: Count and total value of SKUs in each ABC-XYZ cell (colour intensity = concentration risk)
+- Dual-axis bar chart: Turnover ratio (bar) and E&O ratio (line) by ABC class
+- Donut chart: Inventory value distribution by ABC class (A/B/C segments)
+- Table: AZ class items (highest risk) — columns: SKU, plant, on_hand_value, coverage_days, ss_compliant, shortage_flag, last_review_date
+- Line chart: ABC classification stability — % of SKUs that changed class in current month vs. prior 3 months
 
-For strategic items, `S` should include imputed costs: buyer time, supplier qualification, quality inspection, system processing. A typical imputed ordering cost for complex direct materials is $150-$400 per PO line.
+**Slicers:** Region, Plant, Material Type
 
-**Sensitivity Bands (+/- 20%)**
+---
 
-EOQ is robust to input errors — total cost is relatively flat near the optimum. Compute the total annual cost at Q = 0.8 * EOQ and Q = 1.2 * EOQ to confirm the cost penalty of rounding to standard pack sizes is acceptable (typically < 2% cost increase within +/-20% band).
+### Page 5: Safety Stock Compliance
 
-```python
-def eoq_with_extensions(demand_annual: float,
-                         ordering_cost: float,
-                         unit_cost_cents: int,
-                         carrying_rate: float = 0.20) -> dict:
-    """
-    Compute EOQ and sensitivity analysis.
+**Purpose:** Replenishment policy compliance monitoring.
 
-    Parameters
-    ----------
-    demand_annual   : annual demand in units
-    ordering_cost   : cost per order in dollars
-    unit_cost_cents : unit cost in integer cents
-    carrying_rate   : annual carrying cost as fraction of unit cost
+**Visuals:**
+- Gauge: Overall SS compliance rate % vs. target 90%
+- Bar chart: SS compliance rate by plant and ABC class (sorted ascending — worst first in red)
+- Table: SS violations — SKU, plant, on_hand_units, safety_stock_units, deficit_units, deficit_value (€), days_below_SS, abc_class, xyz_class
+- Trend line: Weekly SS compliance rate by ABC class (trailing 13 weeks)
+- KPI card: Count of A-class SKUs below SS (target = 0)
 
-    Returns
-    -------
-    Dictionary with eoq, total_annual_cost, sensitivity at +/-20%
-    """
-    unit_cost = unit_cost_cents / 100.0
-    H = unit_cost * carrying_rate
-    eoq = np.sqrt(2 * demand_annual * ordering_cost / H)
-    def tac(q: float) -> float:
-        return (demand_annual * unit_cost) + (demand_annual / q) * ordering_cost + (q / 2) * H
+**Slicers:** Plant, ABC Class, Region, Week
 
-    return {
-        'eoq': round(eoq, 2),
-        'tac_at_eoq': round(tac(eoq), 2),
-        'tac_at_80pct': round(tac(eoq * 0.8), 2),
-        'tac_at_120pct': round(tac(eoq * 1.2), 2),
-        'cost_penalty_80pct_pct': round((tac(eoq * 0.8) / tac(eoq) - 1) * 100, 3),
-        'cost_penalty_120pct_pct': round((tac(eoq * 1.2) / tac(eoq) - 1) * 100, 3),
-    }
-```
+---
 
-### 6.5 (r, Q) Continuous Review Policy
+### Page 6: Cycle Count Accuracy
 
-The (r, Q) policy places a fixed order of size Q whenever on-hand inventory plus on-order drops to or below the reorder point r.
+**Purpose:** Inventory accuracy governance view for warehouse managers and inventory controllers.
 
-**Reorder Point (ROP)**
+**Visuals:**
+- KPI cards: Overall accuracy %, A-class accuracy %, count variance value (€), overdue locations (count)
+- Bar chart: Accuracy rate by warehouse (sorted ascending — worst first); red line at 99.5% target
+- Heatmap matrix: Accuracy rate by storage_type (Y) x warehouse (X); colour gradient red–green
+- Pareto chart: Top 20 SKUs by cumulative adjustment value (trailing 12 months)
+- Table: Recent count variances — doc number, date, SKU, bin, system_qty, counted_qty, variance_qty, variance_value, recount_flag, adjustment_posted
+- Line chart: Accuracy rate trend by week (trailing 26 weeks) with 99.5% and 99.9% reference lines
 
-```
-r = D_bar * LT + SS
-```
+**Slicers:** Warehouse, ABC Class, Storage Type, Date Range
 
-Where `D_bar * LT` is the expected demand during lead time (cycle stock depletion) and `SS` is the safety stock buffer.
+---
 
-**Service Level Setting by ABC Class**
+## 15. Use Cases
 
-| ABC Class | Target CSL | z-score | Rationale |
+### UC-01: Pre-Quarter Working Capital Target Setting
+
+**Scenario:** The CFO sets a target to reduce DIO from 58 days to 48 days by end of Q3 FY2026.
+The Supply Chain Finance Director uses the analytics to identify which plants and SKUs to prioritise.
+
+**Steps:**
+1. Open Page 1 — Executive Overview; set snapshot date to current quarter start; all regions
+2. Identify plants with DIO > 60 days on the scatter plot (bubble size = opportunity size)
+3. Drill to Page 3 — Excess and Obsolete; filter by these plants
+4. Export top 50 excess SKUs; assign to plant inventory controllers for disposition
+5. Track weekly DIO trend on Page 1 against the 48-day quarterly target
+
+**Outcome:** €180M excess inventory identified across 8 plants; disposition plan covering 60% of
+excess agreed within 3 weeks; DIO reduced to 51 days by end of Q3.
+
+---
+
+### UC-02: Shortage Prevention for A-Class SKUs
+
+**Scenario:** A production planner in Germany identifies that 12 A-class raw materials are entering
+WARNING coverage bucket. Three are key active pharmaceutical ingredients with 45-day supplier lead time.
+
+**Steps:**
+1. Open Page 2 — Coverage and Shortage Analysis; filter Plant = DE01; ABC Class = A
+2. Sort table by coverage_days ascending; identify 12 SKUs with coverage_days < 14
+3. Check open_PO_qty and open_PO_ETA columns — 3 API items have no open PO
+4. Escalate 3 API items to procurement for emergency order; export list to SAP MD04
+
+**Outcome:** Emergency POs raised for 3 API items; premium freight cost €45K avoided production
+stoppage valued at €2.1M. Demand-at-risk reduced from €2.3M to €0.2M within 5 days.
+
+---
+
+### UC-03: Cycle Count Discrepancy Root Cause Analysis
+
+**Scenario:** Warehouse DE01 shows A-class cycle count accuracy of 97.2% in June 2026, below the
+99.9% target. The Warehouse Manager needs to identify root cause.
+
+**Steps:**
+1. Open Page 6 — Cycle Count Accuracy; filter Warehouse = DE01; June 2026
+2. Review Pareto chart: top discrepancy SKUs are concentrated in storage type 001 (high-bay racking)
+3. Review heatmap: storage type 001, bins at levels 6+ show 89% accuracy vs. 99.5% at levels 1–4
+4. Hypothesise: reach truck driver error at high levels; partial pallets in incorrect bins
+5. Implement: visual bin labelling at levels 5–6; refresher training for 3 operators
+
+**Outcome:** Accuracy for storage type 001 improved to 99.4% within 4 weeks after corrective action.
+
+---
+
+### UC-04: E&O Disposition Campaign
+
+**Scenario:** Global Inventory Health Review (quarterly) identifies €85M in E&O inventory.
+Supply Chain Director initiates a 90-day disposition campaign.
+
+**Steps:**
+1. Export Page 3 — Excess and Obsolete: full item list with recommended_disposition pre-populated
+2. Assign items to regional inventory controllers via disposition workflow tool
+3. Track weekly: waterfall chart shows disposition progress (green bars = items actioned)
+4. Week 4: 30% actioned — markdown €15M, inter-plant transfer €8M, return to supplier €5M
+5. Week 8: 65% actioned; remaining escalated to Supply Chain Director
+6. Week 12: provision raised for remaining 35% (€30M) per financial control policy
+
+**Outcome:** €58M of E&O liquidated within 90 days; E&O ratio reduced from 8.2% to 4.1%.
+
+---
+
+### UC-05: Monthly ABC/XYZ Reclassification Review
+
+**Scenario:** Monthly ABC/XYZ refresh completes. 340 SKUs changed classification. 15 moved from C to A
+(significant velocity increase). 28 moved from A to C (demand decline). Replenishment policies must
+be updated for all reclassified items.
+
+**Steps:**
+1. Open Page 4 — ABC/XYZ Segmentation; review classification stability chart
+2. Filter: changed_class_current_month = YES; export list
+3. For 15 new A-class items: SS method changed to Method 4; count frequency changed to weekly
+4. For 28 items moved to C: SS method changed to Method 1; count frequency changed to quarterly
+5. SAP MRP parameters updated within 3 business days per SLA
+
+**Outcome:** 340 SKUs realigned to correct replenishment policy; estimated €3.2M SS reduction
+from former A-class items now correctly classified as C.
+
+---
+
+## 16. Recommended Actions
+
+| Result | Recommended Action | Owner | Timeline |
 |---|---|---|---|
-| A | 99.0% | 2.326 | High value; stockout cost exceeds holding cost |
-| B | 97.0% | 1.881 | Balanced; moderate stockout consequence |
-| C | 95.0% | 1.645 | Low value; holding cost dominates |
-
-Q is set to EOQ (optionally rounded up to supplier minimum order quantity or pack size).
-
-**Continuous review** requires real-time inventory visibility — mandatory RFID or scanner confirmation at point of issue. Without accurate real-time balances, the (r, Q) system degrades to periodic effective behaviour.
-
-### 6.6 (s, S) Periodic Review Policy
-
-The (s, S) policy is applied at each review period R: if on-hand inventory falls below the trigger level `s` (order-up-to point minus buffer), order sufficient stock to raise the position to the order-up-to level `S`.
-
-**Effective Lead Time**
-
-```
-Effective LT = L + R
-```
-
-Where `L` is the supplier lead time and `R` is the review period. Safety stock must cover variability over the entire effective lead time.
-
-```
-SS_(s,S) = z * sigma_D * sqrt(L + R)
-S = D_bar * (L + R) + SS_(s,S)
-s = D_bar * L + SS_minimum  (trigger if position drops to expected demand during lead time)
-```
-
-**Review Period Selection by ABC Class**
-
-| ABC Class | Review Period R | Rationale |
-|---|---|---|
-| A | Continuous (r,Q) preferred | Highest attention warranted |
-| B | 2 weeks | Weekly MRP run covers replenishment cycle |
-| C | 4 weeks | Batch replenishment reduces transaction cost |
-
-Organisations with SAP MRP may align review periods to MRP planning horizons (daily for A; weekly for B; bi-weekly for C).
-
-### 6.7 Newsvendor Model
-
-The Newsvendor model applies to perishable goods, make-to-stock items with short lifecycle, and single-period procurement decisions (seasonal buys, promotional stock, fashion items).
-
-**Critical Ratio and Optimal Quantity Q***
-
-```
-Critical Ratio (CR) = (p - c) / (p - v)
-```
-
-Where:
-- `p` = selling price per unit
-- `c` = unit cost per unit
-- `v` = salvage/residual value per unit (could be negative for disposal costs)
-
-The critical ratio equals the optimal service level. The optimal order quantity Q* satisfies:
-
-```
-F(Q*) = CR
-```
-
-Where `F` is the CDF of demand. For normally distributed demand:
-
-```
-Q* = mu_D + z_CR * sigma_D
-```
-
-Where `z_CR = norm.ppf(CR)`.
-
-For Poisson-distributed demand (low-volume, discrete items):
-
-```
-Q* = smallest Q such that Poisson_CDF(Q; lambda) >= CR
-```
-
-```python
-from scipy.stats import norm, poisson
-
-def newsvendor_normal(mu: float, sigma: float,
-                       price: float, cost: float, salvage: float) -> dict:
-    """
-    Newsvendor solution under normal demand.
-    """
-    cr = (price - cost) / (price - salvage)
-    z = norm.ppf(cr)
-    q_star = mu + z * sigma
-    expected_sales = mu - sigma * norm.pdf(z) + (mu - q_star) * norm.cdf(-z)
-    expected_profit = (price - salvage) * expected_sales - (cost - salvage) * q_star
-    return {'critical_ratio': cr, 'z': z, 'q_star': q_star,
-            'expected_profit': expected_profit}
-
-def newsvendor_poisson(lam: float, price: float, cost: float, salvage: float) -> dict:
-    """
-    Newsvendor solution under Poisson demand.
-    """
-    cr = (price - cost) / (price - salvage)
-    q_star = poisson.ppf(cr, mu=lam)
-    return {'critical_ratio': cr, 'q_star': int(q_star)}
-```
-
-### 6.8 Newsvendor with Price Optimisation (Petruzzi-Dada)
-
-Petruzzi and Dada (1999) extend the Newsvendor model to jointly optimise price `p` and quantity `Q` when demand is price-sensitive.
-
-**Demand model:**
-
-```
-D(p) = a - b * p + epsilon
-```
-
-Where `a` and `b` are market parameters estimated from historical price-demand data and `epsilon` is a zero-mean error term.
-
-**Grid search procedure:**
-
-1. Fit demand model: regress historical demand on price to estimate `a` and `b`.
-2. Define price grid: `p in [c * (1 + min_margin), p_max]` with step size 0.01 * c.
-3. For each `p` in the grid:
-   a. Compute `mu_D(p) = a - b * p`
-   b. Apply standard Newsvendor formula to get `Q*(p)`
-   c. Compute expected profit `Pi(p, Q*(p))`
-4. Select `p*` and `Q*` that maximise `Pi`.
-
-This is particularly relevant for perishable food, fashion, and short-lifecycle electronics where markdown pricing is common.
-
-### 6.9 FEFO Picking Logic
-
-First-Expired First-Out (FEFO) is mandatory for all lot-tracked items. FEFO supersedes FIFO in every picking scenario. The algorithm:
-
-**Lot Selection Algorithm:**
-
-```python
-from datetime import date, timedelta
-from typing import List, Dict, Optional
-
-def fefo_lot_selection(available_lots: List[Dict],
-                        qty_required: float,
-                        today: date,
-                        alert_days: int = 30) -> List[Dict]:
-    """
-    Select lots for picking using FEFO logic with expiry alerting.
-
-    Parameters
-    ----------
-    available_lots : list of dicts with keys: lot_number, expiry_date, qty_available
-    qty_required   : quantity to pick
-    today          : current date
-    alert_days     : flag lots expiring within this many days
-
-    Returns
-    -------
-    List of picking instructions: [{'lot_number': ..., 'qty_pick': ..., 'expiry_warning': bool}]
-    """
-    # Filter out expired lots — never pick
-    eligible = [
-        lot for lot in available_lots
-        if lot['expiry_date'] is not None and lot['expiry_date'] > today
-    ]
-    # Sort by ascending expiry date (earliest first)
-    eligible.sort(key=lambda x: x['expiry_date'])
-
-    picks = []
-    remaining = qty_required
-
-    for lot in eligible:
-        if remaining <= 0:
-            break
-        pick_qty = min(lot['qty_available'], remaining)
-        days_to_expiry = (lot['expiry_date'] - today).days
-        picks.append({
-            'lot_number': lot['lot_number'],
-            'qty_pick': pick_qty,
-            'expiry_date': lot['expiry_date'].isoformat(),
-            'expiry_warning': days_to_expiry <= alert_days,
-            'days_to_expiry': days_to_expiry,
-        })
-        remaining -= pick_qty
-
-    if remaining > 0:
-        raise ValueError(
-            f"Insufficient stock: {qty_required - remaining} available, {qty_required} required"
-        )
-    return picks
-```
-
-**Expiry Alert Thresholds by Storage Condition:**
-
-| Storage Condition | Warning Alert | Critical Alert | Auto-markdown Trigger |
-|---|---|---|---|
-| AMBIENT (non-perishable) | N/A | N/A | N/A |
-| AMBIENT (food/pharma) | 60 days | 30 days | 45 days |
-| CHILLED | 14 days | 7 days | 10 days |
-| FROZEN | 30 days | 14 days | 21 days |
-| CONTROLLED_ATMOSPHERE | 7 days | 3 days | 5 days |
-
-Warning alerts notify inventory planners. Critical alerts trigger automatic transfer to markdown/clearance bin and raise a `QUARANTINE_IN` event pending QC review. Auto-markdown triggers integrate with the pricing engine.
-
-### 6.10 Inventory Turnover, DIO, and Fill Rate
-
-These KPIs are computed from the event store projection using the data pipeline below.
-
-**Inventory Turnover Ratio**
-```
-Turnover = Sum(COGS movements, 365 days) / Average(daily_inventory_value, 365 days)
-```
-
-**Days Inventory Outstanding (DIO)**
-```
-DIO = 365 / Turnover
-```
-
-**Fill Rate (Line-Item Level)**
-```
-Fill_Rate = Count(order lines shipped complete on first attempt) / Count(total order lines) * 100
-```
-
-**Data Pipeline (Python):**
-
-```python
-def compute_inventory_kpis(movements_df: pd.DataFrame,
-                             orders_df: pd.DataFrame,
-                             period_days: int = 365) -> dict:
-    """
-    Compute Turnover, DIO, and Fill Rate from movement history.
-
-    movements_df columns: movement_type, total_value_cents, posted_at, sku
-    orders_df columns: order_line_id, qty_ordered, qty_shipped, shipped_at
-    """
-    cutoff = pd.Timestamp.utcnow() - pd.Timedelta(days=period_days)
-    recent = movements_df[movements_df['posted_at'] >= cutoff]
-
-    cogs_types = ['GOODS_ISSUE', 'SCRAP', 'RETURN_TO_SUPPLIER']
-    cogs = recent[recent['movement_type'].isin(cogs_types)]['total_value_cents'].sum()
-
-    # Daily inventory value (simplified: snapshot at end of each day)
-    daily_vals = recent.groupby(recent['posted_at'].dt.date)['total_value_cents'].sum()
-    avg_inventory = daily_vals.mean() if len(daily_vals) > 0 else 1
-
-    turnover = (cogs / avg_inventory) if avg_inventory > 0 else 0
-    dio = 365 / turnover if turnover > 0 else float('inf')
-
-    recent_orders = orders_df[orders_df['shipped_at'] >= cutoff]
-    complete_lines = (recent_orders['qty_shipped'] >= recent_orders['qty_ordered']).sum()
-    fill_rate = (complete_lines / len(recent_orders) * 100) if len(recent_orders) > 0 else 0
-
-    return {
-        'turnover_ratio': round(turnover, 2),
-        'dio_days': round(dio, 1),
-        'fill_rate_pct': round(fill_rate, 2),
-        'cogs_cents': int(cogs),
-        'avg_inventory_value_cents': int(avg_inventory),
-    }
-```
-
-### 6.11 Wagner-Whitin and Silver-Meal Lot Sizing
-
-Wagner-Whitin (1958) provides the globally optimal lot-sizing solution for time-varying deterministic demand over a finite horizon using dynamic programming.
-
-**When to switch from EOQ fixed lots:**
-- EOQ is appropriate when demand is approximately stationary (CV < 0.15) and holding cost is low relative to ordering cost.
-- Switch to Silver-Meal when demand is moderately time-varying (CV 0.15-0.35) — Silver-Meal provides near-optimal solutions (within 1-2% of Wagner-Whitin) at much lower computational cost.
-- Use Wagner-Whitin when: (a) demand is highly time-varying (CV > 0.35); (b) the planning horizon is finite and known (seasonal product); (c) the cost of non-optimality is material (high-value A-class items).
-
-**Silver-Meal Heuristic:**
-
-Order quantity covers periods 1..k where average cost per period is minimised:
-
-```
-C(k) = [S + H * sum_{t=2}^{k}(t-1)*d_t] / k
-
-Stop when C(k+1) > C(k)
-```
-
-```python
-def silver_meal(demand: list, S: float, H: float) -> list:
-    """
-    Silver-Meal heuristic for lot-sizing with time-varying demand.
-
-    Parameters
-    ----------
-    demand : list of demand quantities per period
-    S      : ordering cost per order
-    H      : holding cost per unit per period
-
-    Returns
-    -------
-    List of order quantities aligned to demand periods
-    """
-    n = len(demand)
-    orders = [0] * n
-    t = 0
-    while t < n:
-        best_k = 1
-        min_cost = S
-        cumulative_holding = 0
-        for k in range(2, n - t + 1):
-            cumulative_holding += (k - 1) * demand[t + k - 1] * H
-            total_cost = S + cumulative_holding
-            avg_cost = total_cost / k
-            prev_avg = (S + sum((j - 1) * demand[t + j - 1] * H for j in range(2, k))) / (k - 1) if k > 2 else S
-            if avg_cost > prev_avg:
-                break
-            best_k = k
-        order_qty = sum(demand[t:t + best_k])
-        orders[t] = order_qty
-        t += best_k
-    return orders
-```
+| SKU in CRITICAL coverage bucket (< 7 days) | Raise emergency PO or expedite open PO; confirm supplier availability same day | Inventory Planner | Same business day |
+| E&O Ratio > 8% | Initiate E&O disposition campaign; assign items to regional controllers; escalate to SC Director | Inventory Control Manager | Within 5 business days |
+| A-class SKU below safety stock > 2 consecutive days | Review demand forecast accuracy; recalculate SS using Method 4; check supplier lead time variability | Demand Planner | Within 2 business days |
+| Cycle count accuracy < 99% for A-class warehouse | Root cause analysis within 48 hours; implement corrective action plan within 5 days | Warehouse Manager | Within 48 hours |
+| DIO > 60 days | Identify top 20 excess value SKUs; initiate disposition; defer next PO for excess items | SC Finance Director | Within 10 business days |
+| Obsolete inventory > 5% of total value | Escalate to Finance Controller for IFRS IAS 2 write-down assessment; initiate disposition | SC Director | Within 15 days |
+| SS_NOT_MAINTAINED flag for A/B class item | Calculate and enter safety stock in SAP MRP; use Method 4 for A-class, Method 3 for B-class | Demand Planner | Within 5 business days |
+| 15+ SKUs change ABC class from C to A in monthly refresh | Update replenishment policy (SS method, count frequency, review cycle) in SAP and APS within SLA | Inventory Control Manager | Within 3 business days |
+| Shortage Rate > 2% for A-class | Convene emergency S&OP meeting; review demand forecast; assess supplier capacity | VP Supply Chain | Within 24 hours |
+| E&O item with no disposition after 14 days | Automatic escalation to SC Director with financial exposure; Finance provision alert triggered | System automated alert | Day 14 |
 
 ---
 
-## 7. Phase 4: ML/AI Pipeline
-
-### 7.1 Architecture Overview
-
-The ML pipeline follows a three-layer architecture:
-
-1. **Feature Store** (offline): daily batch job reads from the event store projection, computes features, and writes Parquet files to object storage (versioned by date).
-2. **Training Layer**: PyTorch and scikit-learn training jobs run in Kubernetes pods. Model artefacts (`.pt` weights, `joblib` pickles, metadata YAML) are versioned in object storage.
-3. **Inference Layer**: REST microservice (FastAPI) wraps loaded model artefacts. Each inference request is logged with input hash, prediction, and model version for auditability.
-
-All models are retrained monthly (minimum) or on data drift trigger (KS-test p-value < 0.05 on key feature distributions).
-
-### 7.2 LSTM Autoencoder for Anomaly Detection
-
-**Purpose**: Detect anomalous stock movement patterns that may indicate shrinkage, data entry errors, process deviations, or fraud. Trained exclusively on normal (non-anomalous) data; anomalies are identified as sequences with high reconstruction error.
-
-**Window Construction**
-
-Each training/inference sample is a sliding window of T consecutive days of movement features per SKU:
-
-```python
-import torch
-import numpy as np
-from torch import nn
-from torch.utils.data import Dataset, DataLoader
-
-WINDOW_SIZE = 14  # 14-day rolling window
-
-def build_windows(df: pd.DataFrame, sku: str, window: int = WINDOW_SIZE) -> np.ndarray:
-    """
-    Build sliding windows from daily movement summary for a given SKU.
-
-    Features per day: [qty_issued, qty_received, adj_positive, adj_negative,
-                       transaction_count, avg_cost_cents]
-    """
-    sku_data = df[df['sku'] == sku].sort_values('date')
-    features = sku_data[['qty_issued', 'qty_received', 'adj_positive',
-                           'adj_negative', 'transaction_count', 'avg_cost_cents']].values
-    # Normalise per-feature using training set statistics
-    windows = []
-    for i in range(len(features) - window + 1):
-        windows.append(features[i:i + window])
-    return np.array(windows, dtype=np.float32)
-```
-
-**LSTM Autoencoder Architecture**
-
-```python
-class LSTMAutoencoder(nn.Module):
-    def __init__(self, input_size: int = 6, hidden_size: int = 32, num_layers: int = 2):
-        super().__init__()
-        self.encoder = nn.LSTM(input_size, hidden_size, num_layers,
-                                batch_first=True, dropout=0.2)
-        self.decoder = nn.LSTM(hidden_size, hidden_size, num_layers,
-                                batch_first=True, dropout=0.2)
-        self.output_layer = nn.Linear(hidden_size, input_size)
-
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
-        # Encode
-        _, (h_n, c_n) = self.encoder(x)
-        # Repeat last hidden state across sequence length
-        seq_len = x.size(1)
-        decoder_input = h_n[-1].unsqueeze(1).repeat(1, seq_len, 1)
-        # Decode
-        decoded, _ = self.decoder(decoder_input)
-        return self.output_layer(decoded)
-```
-
-**Training on Normal-Only Data**
-
-```python
-def train_autoencoder(normal_windows: np.ndarray,
-                       epochs: int = 50,
-                       lr: float = 1e-3) -> LSTMAutoencoder:
-    """
-    Train LSTM Autoencoder on normal movement windows only.
-    Anomalous periods must be excluded from training data.
-    """
-    dataset = torch.tensor(normal_windows)
-    loader = DataLoader(dataset, batch_size=64, shuffle=True)
-    model = LSTMAutoencoder()
-    optimiser = torch.optim.Adam(model.parameters(), lr=lr)
-    criterion = nn.MSELoss()
-
-    model.train()
-    for epoch in range(epochs):
-        total_loss = 0.0
-        for batch in loader:
-            optimiser.zero_grad()
-            reconstructed = model(batch)
-            loss = criterion(reconstructed, batch)
-            loss.backward()
-            optimiser.step()
-            total_loss += loss.item()
-    return model
-```
-
-**Threshold Calibration at Target FPR**
-
-After training, calibrate the reconstruction error threshold at the desired false positive rate (FPR) using a held-out normal validation set:
-
-```python
-def calibrate_threshold(model: LSTMAutoencoder,
-                          val_windows: np.ndarray,
-                          target_fpr: float = 0.05) -> float:
-    """
-    Set reconstruction error threshold so that false positive rate on
-    normal validation data equals target_fpr.
-    """
-    model.eval()
-    with torch.no_grad():
-        val_tensor = torch.tensor(val_windows)
-        recon = model(val_tensor)
-        errors = ((val_tensor - recon) ** 2).mean(dim=(1, 2)).numpy()
-    # Threshold at (1 - target_fpr) quantile of normal error distribution
-    threshold = np.quantile(errors, 1.0 - target_fpr)
-    return float(threshold)
-```
-
-Recommended target FPR: 0.05 (5%) — balance between sensitivity to real anomalies and alert fatigue. For high-value A-class items, reduce to 0.02.
-
-### 7.3 Reinforcement Learning Inventory Policy (PPO)
-
-**Purpose**: Learn a replenishment ordering policy that minimises total cost (holding + ordering + stockout penalty) without requiring explicit demand distribution assumptions. Benchmark against the analytical (s, S) policy.
-
-**InventoryEnv Design (OpenAI Gym interface)**
-
-```python
-import gymnasium as gym
-from gymnasium import spaces
-from scipy.stats import nbinom
-import numpy as np
-
-class InventoryEnv(gym.Env):
-    """
-    Single-SKU inventory environment with negative-binomial demand.
-
-    State space: [inventory_on_hand, open_orders_arriving_t1, open_orders_arriving_t2,
-                  days_since_last_order, demand_last_7_days (rolling)]
-    Action space: order quantity in [0, max_order_qty]
-    """
-
-    def __init__(self, config: dict):
-        super().__init__()
-        self.mean_demand = config['mean_demand']         # mu
-        self.demand_dispersion = config['dispersion']    # r parameter for neg-binomial
-        self.lead_time = config['lead_time_days']
-        self.holding_cost = config['holding_cost_per_unit_per_day']
-        self.stockout_penalty = config['stockout_penalty_per_unit']
-        self.ordering_cost = config['ordering_cost_per_order']
-        self.max_order = config.get('max_order_qty', 500)
-        self.episode_length = config.get('episode_length', 365)
-
-        # Negative-binomial parameterisation: mean=mu, var=mu + mu^2/r
-        p = self.demand_dispersion / (self.demand_dispersion + self.mean_demand)
-        self.demand_dist = nbinom(n=self.demand_dispersion, p=p)
-
-        self.observation_space = spaces.Box(
-            low=0, high=10000, shape=(self.lead_time + 4,), dtype=np.float32
-        )
-        self.action_space = spaces.Discrete(self.max_order + 1)
-
-    def reset(self, seed=None):
-        super().reset(seed=seed)
-        self.inventory = self.mean_demand * self.lead_time * 2  # Start with ample stock
-        self.pipeline = [0] * self.lead_time  # Open orders by arrival day
-        self.day = 0
-        return self._get_obs(), {}
-
-    def step(self, action: int):
-        order_qty = int(action)
-        cost = 0.0
-
-        # Ordering cost
-        if order_qty > 0:
-            cost += self.ordering_cost
-
-        # Place order into pipeline
-        self.pipeline.append(order_qty)
-
-        # Receive arriving order
-        arriving = self.pipeline.pop(0)
-        self.inventory += arriving
-
-        # Realise demand (negative binomial)
-        demand = int(self.demand_dist.rvs())
-        fulfilled = min(demand, max(0, int(self.inventory)))
-        unmet = demand - fulfilled
-        self.inventory = max(0, self.inventory - demand)
-
-        # Costs
-        cost += self.inventory * self.holding_cost
-        cost += unmet * self.stockout_penalty
-
-        self.day += 1
-        done = self.day >= self.episode_length
-
-        return self._get_obs(), -cost, done, False, {'unmet_demand': unmet}
-
-    def _get_obs(self) -> np.ndarray:
-        return np.array(
-            [self.inventory] + list(self.pipeline) + [self.day % 7, self.day % 30],
-            dtype=np.float32
-        )
-```
-
-**Reward Shaping**
-
-The reward is the negative total period cost (negative because PPO maximises reward and we want to minimise cost). Additional reward shaping:
-- Penalty multiplier of 3x on stockout cost for A-class items (strategic importance).
-- Small positive reward (+0.1) for maintaining inventory within [SS, SS + EOQ] band to guide early training.
-- Zero penalty for intentional stockout when `backorderAllowed = true` (use backorder cost instead).
-
-**Training Configuration (Stable-Baselines3 PPO)**
-
-```python
-from stable_baselines3 import PPO
-
-def train_rl_policy(env: InventoryEnv, total_timesteps: int = 1_000_000) -> PPO:
-    """
-    Train PPO agent on InventoryEnv.
-    Benchmark against analytical (s,S) policy after training.
-    """
-    model = PPO(
-        policy='MlpPolicy',
-        env=env,
-        learning_rate=3e-4,
-        n_steps=2048,
-        batch_size=64,
-        n_epochs=10,
-        gamma=0.99,
-        gae_lambda=0.95,
-        clip_range=0.2,
-        ent_coef=0.01,      # Entropy regularisation for exploration
-        verbose=1,
-    )
-    model.learn(total_timesteps=total_timesteps)
-    return model
-```
-
-**Benchmarking vs (s, S)**
-
-After training, run 100 independent episodes comparing PPO and the analytical (s, S) policy. Report: mean total cost per episode, fill rate, average inventory level, and number of stockout events. PPO should achieve >= 5% cost reduction vs (s, S) to justify deployment overhead.
-
-### 7.4 Isolation Forest for Anomaly Detection
-
-**Purpose**: Complement the LSTM Autoencoder with an interpretable, fast tree-based anomaly detector that operates on engineered features from the movement history. Isolation Forest is effective for tabular feature vectors where the LSTM temporal approach may be resource-constrained.
-
-**Feature Engineering from Movement History**
-
-```python
-from sklearn.ensemble import IsolationForest
-from sklearn.preprocessing import StandardScaler
-
-def engineer_features(movements_df: pd.DataFrame,
-                       sku: str,
-                       lookback_days: int = 30) -> pd.DataFrame:
-    """
-    Build daily anomaly detection features for a single SKU.
-
-    Features: rolling means, standard deviations, ratios, and spikes.
-    """
-    df = movements_df[movements_df['sku'] == sku].copy()
-    df['date'] = pd.to_datetime(df['posted_at']).dt.date
-    daily = df.groupby(['date', 'movement_type'])['quantity_units'].sum().unstack(fill_value=0)
-
-    # Core features
-    daily['net_movement'] = daily.get('GOODS_RECEIPT', 0) - daily.get('GOODS_ISSUE', 0)
-    daily['adj_total'] = (daily.get('ADJUSTMENT_POSITIVE', 0) +
-                          daily.get('ADJUSTMENT_NEGATIVE', 0))
-    daily['scrap_units'] = daily.get('SCRAP', 0)
-
-    # Rolling statistics (7-day and 30-day)
-    for col in ['net_movement', 'adj_total', 'GOODS_ISSUE']:
-        if col in daily.columns:
-            daily[f'{col}_roll7_mean'] = daily[col].rolling(7, min_periods=1).mean()
-            daily[f'{col}_roll7_std'] = daily[col].rolling(7, min_periods=1).std().fillna(0)
-            daily[f'{col}_roll30_mean'] = daily[col].rolling(30, min_periods=1).mean()
-
-    # Spike ratio: today's issue vs 30-day mean
-    if 'GOODS_ISSUE' in daily.columns:
-        daily['issue_spike_ratio'] = daily['GOODS_ISSUE'] / (
-            daily['GOODS_ISSUE_roll30_mean'].replace(0, 1)
-        )
-
-    return daily.fillna(0)
-
-def train_isolation_forest(features_df: pd.DataFrame,
-                             contamination: float = 0.05) -> tuple:
-    """
-    Train Isolation Forest. Returns fitted model and scaler.
-    contamination: expected proportion of outliers in training data.
-    """
-    scaler = StandardScaler()
-    X = scaler.fit_transform(features_df.values)
-    model = IsolationForest(
-        n_estimators=200,
-        max_samples='auto',
-        contamination=contamination,
-        random_state=42,
-        n_jobs=-1,
-    )
-    model.fit(X)
-    return model, scaler
-```
-
-**Alert Routing**
-
-Isolation Forest anomaly scores are routed as follows:
-- Score < -0.2 (strong anomaly): immediate alert to warehouse manager + inventory controller.
-- Score in [-0.2, -0.1]: logged to anomaly dashboard for daily review.
-- Score >= -0.1: no alert.
-
-For A-class items, alert thresholds are tightened by 0.05 (i.e., strong anomaly at < -0.15).
-
-### 7.5 XGBoost for Stockout Prediction
-
-**Purpose**: Predict probability of stockout in the next 7 and 14 days for each SKU-location combination. Early prediction enables proactive replenishment orders before the (r, Q) system ROP is breached, reducing stockout frequency.
-
-**Lag Features and Rolling Demand**
-
-```python
-import xgboost as xgb
-from sklearn.model_selection import TimeSeriesSplit
-from sklearn.metrics import roc_auc_score
-
-def build_stockout_features(movements_df: pd.DataFrame,
-                              pos_df: pd.DataFrame,
-                              forecast_df: pd.DataFrame) -> pd.DataFrame:
-    """
-    Build training features for stockout prediction.
-
-    movements_df : daily movement aggregates per SKU
-    pos_df       : purchase orders with lead time actuals
-    forecast_df  : demand forecasts from planning module
-    """
-    df = movements_df.copy()
-    df['date'] = pd.to_datetime(df['date'])
-    df = df.sort_values(['sku', 'date'])
-
-    feature_cols = []
-
-    # Lag features (1, 3, 7, 14, 28 days of net stock change)
-    for lag in [1, 3, 7, 14, 28]:
-        col = f'net_change_lag{lag}'
-        df[col] = df.groupby('sku')['net_movement'].shift(lag)
-        feature_cols.append(col)
-
-    # Rolling demand statistics
-    for window in [7, 14, 28]:
-        col_mean = f'demand_roll{window}_mean'
-        col_std = f'demand_roll{window}_std'
-        df[col_mean] = df.groupby('sku')['qty_issued'].transform(
-            lambda x: x.rolling(window, min_periods=1).mean()
-        )
-        df[col_std] = df.groupby('sku')['qty_issued'].transform(
-            lambda x: x.rolling(window, min_periods=1).std().fillna(0)
-        )
-        feature_cols.extend([col_mean, col_std])
-
-    # Lead time variance feature (from PO history)
-    lt_stats = pos_df.groupby('supplier_id')['actual_lead_time_days'].agg(['mean', 'std'])
-    lt_stats.columns = ['lt_mean', 'lt_std']
-    df = df.merge(lt_stats, on='supplier_id', how='left')
-    feature_cols.extend(['lt_mean', 'lt_std'])
-
-    # Forecast error (actual vs forecast, 7-day rolling MAE)
-    df = df.merge(forecast_df[['sku', 'date', 'forecast_qty']], on=['sku', 'date'], how='left')
-    df['forecast_error'] = (df['qty_issued'] - df['forecast_qty']).abs()
-    df['forecast_mae_7d'] = df.groupby('sku')['forecast_error'].transform(
-        lambda x: x.rolling(7, min_periods=1).mean()
-    )
-    feature_cols.extend(['forecast_qty', 'forecast_mae_7d'])
-
-    # Calendar features
-    df['day_of_week'] = df['date'].dt.dayofweek
-    df['week_of_year'] = df['date'].dt.isocalendar().week.astype(int)
-    df['month'] = df['date'].dt.month
-    feature_cols.extend(['day_of_week', 'week_of_year', 'month'])
-
-    # Current inventory balance (from projection)
-    feature_cols.append('current_balance')
-
-    return df[['sku', 'date'] + feature_cols + ['stockout_7d', 'stockout_14d']].dropna()
-
-def train_xgboost_stockout(df: pd.DataFrame, target: str = 'stockout_7d') -> xgb.XGBClassifier:
-    """
-    Train XGBoost stockout predictor with time-series cross-validation.
-
-    target : 'stockout_7d' or 'stockout_14d'
-    """
-    feature_cols = [c for c in df.columns if c not in ['sku', 'date', 'stockout_7d', 'stockout_14d']]
-    X = df[feature_cols].values
-    y = df[target].values
-
-    tscv = TimeSeriesSplit(n_splits=5)
-    model = xgb.XGBClassifier(
-        n_estimators=400,
-        max_depth=6,
-        learning_rate=0.05,
-        subsample=0.8,
-        colsample_bytree=0.8,
-        scale_pos_weight=(y == 0).sum() / (y == 1).sum(),  # Handle class imbalance
-        eval_metric='auc',
-        use_label_encoder=False,
-        random_state=42,
-        n_jobs=-1,
-    )
-
-    auc_scores = []
-    for train_idx, val_idx in tscv.split(X):
-        model.fit(X[train_idx], y[train_idx],
-                  eval_set=[(X[val_idx], y[val_idx])],
-                  verbose=False)
-        preds = model.predict_proba(X[val_idx])[:, 1]
-        auc_scores.append(roc_auc_score(y[val_idx], preds))
-
-    print(f"Mean AUC ({target}): {np.mean(auc_scores):.4f} (+/- {np.std(auc_scores):.4f})")
-
-    # Final fit on all data
-    model.fit(X, y)
-    return model
-```
-
-**Deployment Decision Rule**
-
-XGBoost stockout predictions feed a replenishment escalation queue:
-- P(stockout_7d) >= 0.70: immediate emergency replenishment order, flag for planner review.
-- P(stockout_7d) in [0.40, 0.70): accelerated replenishment (reduce review period to 1 day for this SKU).
-- P(stockout_7d) < 0.40: standard replenishment cycle.
+## 17. Test Cases
+
+### TC-01: ADU Calculation Validation
+
+Create a test SKU with 90 days of known GOODS_ISSUE movements: 10 units/day for 30 days, 20 units/day
+for 30 days, 0 units for 30 days. Expected ADU = (300 + 600 + 0) / 90 = 10.0 units/day. Compare
+pipeline output to expected. Tolerance: 0.001 units.
+
+### TC-02: Coverage Bucket Assignment
+
+Load 5 test SKUs with coverage_days and ABC class: 3 days (any class) = CRITICAL; 10 days (any) =
+WARNING; 25 days (A class) = HEALTHY; 25 days (C class) = HEALTHY; 80 days (A class) = EXCESS.
+Verify all 5 assigned correctly.
+
+### TC-03: Excess Value Calculation
+
+SKU class A, on_hand = 100 units, ADU = 2 units/day, unit_cost = €5.00, coverage_days = 50,
+target = 30. Excess days = 20; excess_value = 20 x 2 x €5.00 = €200.00. Pipeline should return
+excess_value_cents = 20000. Tolerance: 0 cents.
+
+### TC-04: Obsolete Flag
+
+Insert snapshot record with last_movement_date = 2024-12-01 and snapshot_date = 2026-06-22.
+days_since_movement = 568. is_obsolete should = 1. Insert second record with last_movement_date =
+2025-12-01; days_since_movement = 203; is_obsolete should = 0. Verify both records.
+
+### TC-05: Safety Stock Compliance
+
+SKU with on_hand_units = 50, safety_stock_units = 60: ss_compliant = 0.
+SKU with on_hand_units = 60, safety_stock_units = 60: ss_compliant = 1.
+SKU with on_hand_units = 75, safety_stock_units = 60: ss_compliant = 1.
+Verify all three.
+
+### TC-06: Cycle Count Accuracy
+
+Load 10 count records: 8 with counted_qty = system_qty (accuracy_flag = 1); 2 with variance.
+Expected accuracy_rate = 80.0%. Verify DAX measure and SQL query both return 80.0%.
+
+### TC-07: E&O Ratio
+
+Total inventory value = €1,000,000. Excess value = €60,000. Obsolete value = €30,000.
+Expected E&O Ratio = (60,000 + 30,000) / 1,000,000 x 100 = 9.0%.
+Verify Power BI measure returns 9.0%.
+
+### TC-08: Negative Inventory Rejection
+
+Attempt to load a snapshot row with on_hand_units = -5. Verify: (a) ADF pipeline validation
+activity rejects the row; (b) row appears in dq_error_log; (c) KPI calculations exclude the row;
+(d) alert is sent to the assigned data owner within 1 hour.
+
+### TC-09: ABC Classification Monthly Refresh
+
+Load 100 test SKUs with known ACV values. Top 15 SKUs represent exactly 80% of total ACV; next 25
+represent 15%; bottom 60 represent 5%. Expected: 15 A-class, 25 B-class, 60 C-class. Verify output.
+
+### TC-10: DIO Calculation
+
+COGS over 365 days = €500M. Average monthly inventory value = €100M (12-month average).
+Turnover = 500/100 = 5.0. DIO = 365/5 = 73 days. Verify DAX and SQL both return 73.0 days.
 
 ---
 
-## 8. Phase 5: Integration & Automation
-
-### 8.1 SAP WM/EWM Integration
-
-**Goods Receipt posting (SAP BAPI)**
-
-```
-BAPI_GOODSMVT_CREATE
-  - Movement Type: 101 (GR for PO), 261 (GI for production order), 551 (Scrapping)
-  - Plant / Storage Location mapped from internal locationId
-  - Batch (Lot) number passed in MATERIALDOCUMENT_ITEM-BATCH
-  - Idempotency: check MATERIALDOCUMENT table for matching reference doc + item before posting
-```
-
-Every BAPI call result is written to the internal event store audit log regardless of success or failure. Retry with exponential backoff (base 2s, max 5 retries) for transient SAP RFC errors (RFC_EXCEPTION class).
-
-**SAP EWM Transfer Order integration**
-
-For warehouse execution (putaway and picking), transfer orders are created in EWM via:
-- `/SCWM/PRDI_TOC_CREATE_V2` for putaway
-- `/SCWM/TO_CREATE_PICK` for picking
-
-Transfer order status callbacks (confirmed/cancelled) are received via SAP outbound IDocs (WMMBXY.WMMBXY01) routed through the internal message bus.
-
-### 8.2 Oracle WMS Integration
-
-Oracle WMS Cloud exposes REST APIs (JSON/OAuth 2.0). Key endpoints consumed:
-
-| Operation | Oracle WMS Endpoint | Internal Event |
-|---|---|---|
-| ASN creation | `POST /inventory/asn` | Triggered by GOODS_RECEIPT movement |
-| Lot inquiry | `GET /inventory/lots/{lotNumber}` | Used in FEFO picking |
-| Outbound shipment confirmation | `POST /outbound/shipments/{id}/confirm` | Triggers GOODS_ISSUE |
-| Cycle count results | `POST /inventory/cycle-count-results` | Triggers ADJUSTMENT events |
-
-All Oracle WMS API calls use idempotency headers (`Idempotency-Key: {uuid}`) to prevent duplicate postings.
-
-### 8.3 RFID and Barcode Scanner Integration
-
-**GS1-128 barcode scanning**
-
-Receiving dock scanners decode GS1-128 labels containing:
-- Application Identifier (AI) 01: GTIN-14
-- AI 10: Batch/Lot number
-- AI 17: Expiry date (YYMMDD)
-- AI 37: Quantity
-- AI 00: SSCC-18 (pallet level)
-
-The middleware layer (Node.js) decodes AI structures and maps them to `StockMovement` event fields, ensuring the idempotencyKey is derived from the SSCC + movement type to prevent duplicate scans creating duplicate movements.
-
-**RFID integration**
-
-RFID reads at dock doors (conveyor or portal readers) trigger real-time inventory updates. Each RFID tag encodes GTIN and serial number (GS1 SGTIN-96 EPC encoding). The RFID middleware:
-1. Deduplicates reads within a 2-second time window per EPC.
-2. Correlates EPC to internal `sku`, `lotNumber`, and `locationId`.
-3. Publishes a `RFID_READ` event to the internal bus.
-4. The inventory service consumes `RFID_READ` events and triggers TRANSFER_IN/TRANSFER_OUT movements when the location transition is confirmed.
-
-### 8.4 ERP GL Posting Automation
-
-The GL posting service subscribes to all `StockMovement` events and generates journal entries asynchronously:
-
-```typescript
-async function postGLJournal(movement: StockMovement): Promise<void> {
-  const accounts = getJournalAccounts(movement.movementType);
-  const journalEntry = {
-    externalReference: movement.movementId,
-    idempotencyKey: `GL-${movement.idempotencyKey}`,
-    debitAccount: accounts.debit,
-    creditAccount: accounts.credit,
-    amountCents: movement.totalValueCents,
-    currency: 'USD',
-    postingDate: movement.postedAt.split('T')[0],
-    description: `${movement.movementType} / SKU ${movement.sku} / ${movement.quantityUnits} ${movement.sku}`,
-    costCenter: movement.locationId,
-  };
-  await erpGLAdapter.post(journalEntry);
-}
-```
-
-The GL posting service must be idempotent: if the ERP returns a duplicate-key error for a given `idempotencyKey`, it is treated as success (the posting already exists).
-
----
-
-## 9. Phase 6: Continuous Improvement
-
-### 9.1 Model Governance and Retraining Cadence
-
-| Model | Retrain Trigger | Minimum Frequency | Validation Gate |
-|---|---|---|---|
-| LSTM Autoencoder | KS-test drift p < 0.05 on movement features | Monthly | Recall >= 80% on labelled anomaly test set |
-| RL Policy (PPO) | Mean episode reward drops > 10% vs baseline | Quarterly | Cost reduction >= 5% vs (s,S) benchmark |
-| Isolation Forest | Contamination estimate shifts > 2pp | Monthly | FPR <= 7% on normal validation set |
-| XGBoost Stockout | AUC drops below 0.75 on holdout | Monthly | AUC >= 0.78 on rolling 90-day test set |
-
-### 9.2 ABC-XYZ Reclassification
-
-Reclassify all SKUs quarterly:
-1. Recompute ACV using last 12 months of COGS movements.
-2. Recompute CV from last 12 months of weekly demand.
-3. Reassign ABC and XYZ classes.
-4. Trigger policy parameter updates (safety stock method, service level target, review period).
-5. Communicate changes to affected planning teams.
-
-### 9.3 Supplier Lead Time Review
-
-Update `sigma_LT` inputs to Method 4 safety stock calculations:
-- Monthly: compute lead time statistics from last 6 months of PO receipts per supplier.
-- Flag any supplier whose `sigma_LT / mean_LT` (CV of lead time) exceeds 0.30 for supplier management escalation.
-
-### 9.4 Kaizen Event Programme
-
-Schedule quarterly inventory kaizen events:
-- Focus on top-10 highest DIO SKUs: investigate root causes (demand forecast accuracy, supplier reliability, over-purchasing).
-- Focus on top-10 highest obsolescence exposure SKUs: develop disposal or repurposing plans.
-- Review fill rate miss events: trace each miss to root cause (stockout, partial fulfillment, quality hold) and implement countermeasures.
-
-### 9.5 SCOR-DS Maturity Progression
-
-| Maturity Level | Capability | Target Timeline |
-|---|---|---|
-| Level 1 | Manual, reactive inventory management | AS-IS baseline |
-| Level 2 | Standardised processes, ERP-integrated | End of Phase 2 (Month 6) |
-| Level 3 | Analytically driven replenishment (EOQ, safety stock) | End of Phase 3 (Month 10) |
-| Level 4 | Predictive ML models, RL policy in production | End of Phase 4 (Month 16) |
-| Level 5 | Autonomous, self-optimising inventory with closed-loop learning | End of Phase 6 (Month 24) |
-
----
-
-## 10. Technology Stack & Architecture
-
-### 10.1 Domain Layer (TypeScript)
-
-| Component | Technology | Pattern |
-|---|---|---|
-| Aggregates | TypeScript 5.3 | Domain-Driven Design |
-| Event store | PostgreSQL 16 (append-only) | CQRS / Event Sourcing |
-| Read projections | PostgreSQL materialised views | Eventual consistency |
-| API layer | Node.js 20 LTS + Fastify | REST + JSON Schema validation |
-| Message bus | Apache Kafka 3.7 | Domain event streaming |
-| GL adapter | SAP RFC gateway / Oracle REST | Adapter pattern |
-
-### 10.2 ML/AI Layer (Python)
-
-| Component | Library | Version |
-|---|---|---|
-| Numerical computation | numpy | >= 1.26 |
-| Scientific computation | scipy | >= 1.12 |
-| Data manipulation | pandas | >= 2.2 |
-| Statistical models | statsmodels | >= 0.14 |
-| Classical ML | scikit-learn | >= 1.4 |
-| Gradient boosting | xgboost | >= 2.0 |
-| Deep learning | torch (PyTorch) | >= 2.2 |
-| RL framework | stable-baselines3 | >= 2.2 |
-| RL environment | gymnasium | >= 0.29 |
-| API serving | fastapi | >= 0.110 |
-| Experiment tracking | mlflow (Apache-2.0) | >= 2.11 |
-
-### 10.3 Infrastructure
-
-```
-┌─────────────────────────────────────────────────────────────┐
-│                    API Gateway (Nginx)                       │
-├───────────────────────┬─────────────────────────────────────┤
-│  Inventory Service    │    ML Inference Service              │
-│  (Node.js / TS)       │    (FastAPI / Python)               │
-├───────────────────────┴─────────────────────────────────────┤
-│              Apache Kafka (Domain Events)                    │
-├─────────────────────────────────────────────────────────────┤
-│  PostgreSQL 16       │  Object Storage (MinIO)              │
-│  (Event Store +      │  (ML Artefacts, Feature Parquet)     │
-│   Read Models)       │                                      │
-├──────────────────────┴─────────────────────────────────────-┤
-│  Kubernetes 1.28 (Training Jobs, Services, CronJobs)        │
-└─────────────────────────────────────────────────────────────┘
-```
-
-### 10.4 Security Architecture
-
-- All inter-service communication uses mTLS (certificates managed by cert-manager).
-- ERP credentials (SAP RFC, Oracle OAuth) stored in HashiCorp Vault; injected as environment variables at pod startup.
-- ML model artefacts signed with SHA-256 checksum; checksum verified at inference service startup.
-- All API endpoints require JWT authentication (RS256); role-based access control enforced at gateway.
-- Sensitive stock adjustment events are immutable in the event store — no delete capability exposed via API.
-
----
-
-## 11. Change Management & Training
-
-### 11.1 Stakeholder Engagement Plan
-
-| Stakeholder Group | Key Concern | Engagement Approach |
-|---|---|---|
-| Warehouse Operations | Disruption to daily pick/pack workflow | Early involvement in UAT; super-user champions per shift |
-| Inventory Planners | Loss of spreadsheet control; model transparency | Training on parameter tuning; dashboard access |
-| Finance Controllers | GL accuracy; audit trail completeness | Joint design of journal entry schema; parallel run for 1 month |
-| Procurement | Lead time data quality; safety stock changes | Data validation workshops in Phase 0; regular recalibration reviews |
-| IT / ERP Team | Integration complexity; data governance | Detailed interface specifications; dedicated integration team |
-| Senior Leadership | ROI timeline; KPI improvement | Monthly executive dashboard; milestone reporting |
-
-### 11.2 Training Curriculum
-
-**Role: Warehouse Operator**
-- Duration: 4 hours
-- Topics: RFID/barcode scanning procedures, FEFO picking compliance, cycle count process, how to handle discrepancy exceptions
-- Format: Hands-on simulation in UAT environment
-
-**Role: Inventory Planner**
-- Duration: 2 days
-- Topics: ABC-XYZ classification logic, safety stock policy interpretation, replenishment parameter review, ML dashboard interpretation, manual override procedures
-- Format: Classroom + system walkthrough
-
-**Role: Inventory Controller / Analyst**
-- Duration: 3 days
-- Topics: Event sourcing model overview, GL journal structure, reconciliation procedures, Python model parameter tuning (safety stock, EOQ inputs), anomaly alert triage
-- Format: Technical workshop
-
-**Role: Finance Controller**
-- Duration: 1 day
-- Topics: Inventory valuation methods (FIFO/WAC), GL account mapping, month-end closing procedures, audit trail queries
-- Format: Workshop with finance team
-
-### 11.3 Cutover Strategy
-
-**Parallel run period**: 4 weeks minimum before legacy system decommission. During parallel run:
-- All movements posted to both old system and new event store.
-- Daily reconciliation report comparing closing balances; discrepancies > 0.1% investigated immediately.
-- No ML model predictions acted on until parallel run achieves >= 99% balance agreement for 10 consecutive days.
-
-**Cutover sequence**:
-1. Freeze legacy inventory balances at end of business on cutover date.
-2. Load opening balances as `ADJUSTMENT_POSITIVE` events with reference doc `MIGRATION_OPENING_BALANCE_{date}`.
-3. Activate Kafka consumers for ERP movement feeds.
-4. Enable ML inference service in shadow mode (predictions logged but not actioned) for 30 days.
-5. Enable ML action mode (replenishment recommendations acted on) after shadow mode validation.
-
----
-
-## 12. Implementation KPIs
-
-### 12.1 Programme Health KPIs
-
-These KPIs track implementation progress and are reported weekly to the programme steering committee.
-
-| KPI | Measurement Method | Green Threshold | Red Threshold |
-|---|---|---|---|
-| Data migration completeness | % of active SKUs with complete master data | >= 98% | < 90% |
-| Balance reconciliation accuracy | System vs physical match | >= 99.5% | < 97% |
-| Integration uptime | ERP GL posting success rate (30-day rolling) | >= 99.9% | < 99% |
-| Cycle count compliance | % of planned counts completed on schedule | >= 95% | < 85% |
-| ML model AUC (XGBoost) | Holdout set AUC | >= 0.78 | < 0.70 |
-| Stockout incident rate | Stockouts per 1,000 order lines (weekly) | <= 2.0 | >= 8.0 |
-| User adoption | % of planners using system (not spreadsheet) for decisions | >= 90% | < 70% |
-
-### 12.2 Business Outcome KPIs
-
-Measured at 6, 12, and 24 months post go-live against baseline established in Phase 0:
-
-| KPI | Baseline (typical) | 12-Month Target | 24-Month Target |
-|---|---|---|---|
-| Inventory Turnover Ratio | Benchmark varies by industry | +15% vs baseline | +25% vs baseline |
-| DIO (Days Inventory Outstanding) | Benchmark varies | -10 days vs baseline | -18 days vs baseline |
-| Fill Rate (line-item) | ~94% | >= 98.0% | >= 98.5% |
-| OTIF | ~91% | >= 96.0% | >= 97.5% |
-| Inventory Accuracy Rate | ~88% | >= 99.0% | >= 99.5% |
-| Obsolescence write-offs | 3-6% of inventory value | <= 2.0% | <= 1.5% |
-| Stockout incidents | Baseline count | -35% | -50% |
-| Working capital reduction | — | -12% of inventory value | -20% of inventory value |
-
----
-
-## 13. Risk & Mitigation
+## 18. Risks and Mitigations
 
 | Risk | Probability | Impact | Mitigation |
 |---|---|---|---|
-| ERP GL posting failures create reconciliation gaps | Medium | High | Idempotent posting with dead-letter queue; daily reconciliation report; manual repost SOP within 24 hours |
-| Negative inventory during cutover (data migration timing gap) | Medium | High | Enforce `backorderAllowed=false` at go-live; load opening balances before activating movement feeds; reconciliation freeze window |
-| LSTM Autoencoder high false-positive rate causing alert fatigue | Medium | Medium | Threshold calibration at 5% FPR on held-out normal data; tiered alert routing; weekly alert quality review in first 3 months |
-| FEFO non-compliance by warehouse staff (picking by FIFO habit) | High | High | System-enforced lot selection (WMS sends specific lot pick instruction); audit report on lot sequence deviations |
-| Poor demand history quality for XGBoost training (< 24 months) | Medium | Medium | Bootstrap with phase-in: deploy rule-based (r,Q) first; accumulate data; train XGBoost when 18+ months available |
-| RL policy (PPO) underperforms (s,S) in live environment | Low | Medium | Deploy as shadow recommendation only; human planner approval required for RL-generated orders in first 6 months; promote to auto-approve after demonstrated 5% cost reduction |
-| Lead time distribution data insufficient for Method 4 (< 30 PO observations) | High | Medium | Default to Method 3 until N >= 30; flag affected SKU-supplier combinations for tracking in Phase 6 review |
-| SAP/Oracle integration latency causes stale inventory balances | Low | High | Real-time posting with 15-second maximum lag SLA; circuit breaker; fallback to manual posting queue |
-| REACH/UFLPA compliance data missing at go-live | Medium | High | Block goods receipt for affected suppliers until compliance data uploaded; legal/compliance team escalation path |
-| Lot tracking omitted for controlled storage items | Low | Critical | System-enforced: `lotTracked` validation on GOODS_RECEIPT rejects event if null lot number for controlled items |
+| SAP delta extractor misses movements during maintenance window | Medium | High | Daily full reconciliation count vs. SAP MB52; alert if delta count < 95% of expected; fallback to full extract |
+| ADU distortion from promotional demand spikes | High | Medium | Exclude top-5% ADU days from rolling average; maintain separate promotional_demand flag; planner can override |
+| ABC classification instability (frequent reclassification) | Medium | Medium | Implement 2-month smoothing rule: SKU must qualify for new class for 2 consecutive months before reclassifying |
+| Power BI daily refresh failure | Low | High | Azure Monitor alerting; automatic retry 3x; fallback to prior-day dataset with warning banner in report |
+| Missing safety stock for new materials (< 30 days in system) | High | Medium | New materials assigned default SS = 7 x ADU for A/B class until formal SS calculation completed within 30 days |
+| Incorrect plant currency conversion causing value discrepancies | Medium | High | All values stored in local currency cents; EUR conversion applied in report layer via dim_exchange_rate (ECB daily rates) |
+| Obsolete inventory financial exposure not accrued in time | Low | High | Automated 30-day provision reminder to Finance Controller; escalation to CFO if not actioned |
+| Cycle count schedule gaps during peak season | High | Medium | Increase B-class count frequency to weekly during peak season (dim_date.peak_season = 1) |
 
 ---
 
-## 14. Timeline Summary
+## 19. Implementation Checklist
 
-| Phase | Activities | Duration | Start Month | End Month | Dependencies |
-|---|---|---|---|---|---|
-| Phase 0 | AS-IS assessment, data gap analysis, baseline KPIs | 5 weeks | M1 | M2 | None |
-| Phase 1 | Item master governance, event store, GL integration design | 8 weeks | M2 | M4 | Phase 0 complete |
-| Phase 2 | Process standardisation, cycle counting, core analytics | 8 weeks | M4 | M6 | Phase 1 complete |
-| Phase 3 | Mathematical models (ABC/XYZ, safety stock, EOQ, FEFO) | 10 weeks | M6 | M8.5 | Phase 2 complete; 12+ months demand history |
-| Phase 4 | ML/AI pipeline (LSTM, RL, IF, XGBoost) | 14 weeks | M8 | M11.5 | Phase 3 running; 18+ months demand history |
-| Phase 5 | SAP/Oracle integration, RFID, GS1, GL automation | 8 weeks | M6 | M9 | Phase 1 complete; ERP access confirmed |
-| Phase 6 | Continuous improvement, model governance, kaizen | Ongoing | M12 | M24+ | All prior phases complete |
-| Parallel Run | Legacy + new system simultaneous operation | 4 weeks | M9 | M10 | Phase 5 complete |
-| Go-Live | Full production cutover | 1 week | M10 | M10 | Parallel run >= 99% accuracy |
-| Post Go-Live Stabilisation | Hypercare, daily KPI review | 8 weeks | M10 | M12 | Go-live complete |
-
-**Total programme duration (Phase 0 through Go-Live + Stabilisation)**: approximately 12 months.
-**Full SCOR-DS Level 5 maturity (including ML production)**: approximately 24 months.
-
----
-
-## 15. References
-
-### Academic References
-
-- Chopra, S. & Meindl, P. (2016). *Supply Chain Management: Strategy, Planning, and Operation* (6th ed.). Pearson. — Chapters 11 (Safety Stock), 12 (Sourcing), 13 (Transportation).
-- Ballou, R.H. (2004). *Business Logistics/Supply Chain Management* (5th ed.). Pearson.
-- Christopher, M. (2022). *Logistics and Supply Chain Management* (6th ed.). FT Publishing International.
-- Harris, F.W. (1913). How Many Parts to Make at Once. *Factory, The Magazine of Management*, 10(2), 135-136.
-- Wagner, H.M. & Whitin, T.M. (1958). Dynamic Version of the Economic Lot Size Model. *Management Science*, 5(1), 89-96.
-- Silver, E.A. (1976). A Simple Method of Determining Order Quantities in Joint Replenishments Under Deterministic Demand. *Management Science*, 22(12), 1351-1361.
-- Petruzzi, N.C. & Dada, M. (1999). Pricing and the Newsvendor Problem: A Review with Extensions. *Operations Research*, 47(2), 183-194.
-- Hochreiter, S. & Schmidhuber, J. (1997). Long Short-Term Memory. *Neural Computation*, 9(8), 1735-1780.
-- Schulman, J., Wolski, F., Dhariwal, P., Radford, A., & Klimov, O. (2017). Proximal Policy Optimization Algorithms. *arXiv:1707.06347*.
-- Liu, F.T., Ting, K.M., & Zhou, Z-H. (2008). Isolation Forest. *ICDM 2008*, 413-422.
-- Chen, T. & Guestrin, C. (2016). XGBoost: A Scalable Tree Boosting System. *KDD 2016*, 785-794.
-
-### Standards and Regulations
-
-- ASCM (2019). *SCOR Digital Standard*. Association for Supply Chain Management.
-- ISO (2022). *ISO 28000:2022 — Security and Resilience: Supply Chain Security Management Systems*. International Organization for Standardization.
-- ISO (1999). *ISO 2859-1:1999 — Sampling Procedures for Inspection by Attributes*. International Organization for Standardization.
-- ISO (2006). *EU REACH Regulation No 1907/2006*. European Parliament.
-- GS1 (2023). *GS1 General Specifications Version 23.0*. GS1 Global.
-- ICC (2019). *Incoterms® 2020*. International Chamber of Commerce.
-- US Congress (2021). *Uyghur Forced Labor Prevention Act (UFLPA) — Public Law 117-78*.
-- European Parliament (2024). *Directive 2024/1760 on Corporate Sustainability Due Diligence (CSDDD)*.
-
-### Software and Framework Documentation
-
-- PyTorch (2024). *PyTorch Documentation v2.2*. Meta AI. https://pytorch.org/docs/
-- Stable-Baselines3 (2024). *SB3 Documentation v2.2*. https://stable-baselines3.readthedocs.io/
-- scikit-learn (2024). *scikit-learn Documentation v1.4*. https://scikit-learn.org/stable/
-- XGBoost (2024). *XGBoost Documentation v2.0*. https://xgboost.readthedocs.io/
-- SAP SE (2024). *SAP Extended Warehouse Management (EWM) — Configuration Guide*. SAP Help Portal.
-- Oracle (2024). *Oracle WMS Cloud REST API Reference*. Oracle Documentation.
-- GS1 (2023). *GS1 Application Identifiers Standard*. GS1 Global Office.
-
-### Internal References
-
-- `src/departments/01-procurement/domain/PurchaseOrder.ts` — PO approval workflow
-- `src/departments/02-supplier-management/domain/SupplierScorecard.ts` — OTD/OTIF/PPM metrics
-- `src/departments/04-demand-planning/algorithms/Forecasting.ts` — SMA/SES/Holt/Holt-Winters
-- `src/departments/04-demand-planning/algorithms/SafetyStock.ts` — Methods 1-4 implementation
-- `src/departments/10-compliance/UFLPA.ts` — XUAR risk assessment
-- `src/departments/10-compliance/REACH.ts` — SVHC substance tracking
-- `src/shared/types.ts` — Money, UOM, Incoterms shared types
-- `python/05_inventory_management/` — All Python models referenced in Phase 3 and Phase 4
-- `docs/standards/REGULATORY_FRAMEWORK.md` — Full regulatory reference matrix
+- [ ] **1.** Confirm Azure SQL DW environment provisioned with sufficient storage (estimated 500 GB for 36 months of movements at the current movement volume) and appropriate vCores for daily batch processing
+- [ ] **2.** Configure SAP RFC connections for all six data source extractors; validate authorisation objects S_RFC and S_TABU_DIS are granted for the ADF service account
+- [ ] **3.** Deploy ADF pipelines for all six data sources; run first full load and validate row counts against SAP control totals (MB52, MB51, MI23)
+- [ ] **4.** Create and validate all fact and dimension tables in Azure SQL per the Section 6 data model; apply monthly partitioning on fact_inventory_snapshot and fact_stock_movements
+- [ ] **5.** Implement all 15 transformation rules (TR-01 through TR-15) as Azure SQL stored procedures or ADF data flows; unit test each rule with test data per Section 17
+- [ ] **6.** Load dim_movement_type mapping table covering all SAP BWART codes used by the organisation; validate 100% mapping coverage via VC-07
+- [ ] **7.** Execute first ABC classification run (TR-08); review output with Inventory Control Manager; sign off per Section 13 evidence item 3
+- [ ] **8.** Execute first XYZ classification run (TR-09); review output with Demand Planning team; confirm at least 12 weeks of history per SKU
+- [ ] **9.** Load dim_safety_stock from SAP MRP (TR-07); validate completeness for A/B class items per VC-04; generate SS_NOT_MAINTAINED report
+- [ ] **10.** Implement all seven validation controls (VC-01 through VC-07); run against first 7 days of production data; document pass/fail rates
+- [ ] **11.** Build Power BI report with all six pages per Section 14 specifications; apply row-level security at plant level
+- [ ] **12.** Configure row-level security in Power BI: plant controllers see own plants; regional managers see region; global team sees all
+- [ ] **13.** Conduct UAT with three inventory controllers and one regional manager per Section 13 evidence item 7; obtain written sign-off
+- [ ] **14.** Configure daily ADF pipeline schedule (23:00 UTC extract; 05:30 UTC transformation; 06:00 UTC Power BI refresh)
+- [ ] **15.** Set up Azure Monitor alerts for ADF pipeline failures, Power BI refresh failures, and critical data quality breaches (VC-01 failures)
+- [ ] **16.** Implement E&O disposition workflow notifications (email alerts per Section 11 alert logic for Day 1, 7, 14, 30, 90)
+- [ ] **17.** Train inventory controllers and demand planners (2-hour session per role covering dashboard navigation, KPI interpretation, and action protocols)
+- [ ] **18.** Document data lineage from SAP source tables to Power BI visuals in the Data Governance Catalogue
+- [ ] **19.** Obtain Finance Controller sign-off on E&O valuation methodology and financial exposure reporting (Section 13 evidence item 4)
+- [ ] **20.** Schedule monthly ABC/XYZ refresh job; confirm execution on first calendar day of each month; add Azure Monitor monitoring alert
 
 ---
 
-*This document is subject to annual review or upon material change to regulatory requirements, organisational structure, or technology platform. All changes must be approved by the VP Supply Chain and Chief Data Officer before implementation.*
+## 20. Validation Checklist
 
-*Document Owner: Supply Chain Architecture Office*
-*Review Cycle: Annual (next review: 2027-06-20)*
+- [ ] **1.** ADF pipeline row counts for all six sources reconcile to SAP control totals within 0.1% for the first 5 consecutive business days
+- [ ] **2.** fact_inventory_snapshot total on_hand_value_cents reconciles to SAP transaction MB52 valuation report within €10,000 (rounding tolerance) daily
+- [ ] **3.** ADU values for 20 randomly selected A-class SKUs manually verified against SAP MB51 movement history for the 90-day period; tolerance 0.001 units
+- [ ] **4.** Coverage day buckets spot-checked for 50 SKUs across all ABC classes; expected bucket matches actual bucket for all 50
+- [ ] **5.** ABC classification output for first monthly run agrees with manual ACV calculation for top 10 and bottom 10 SKUs by value; tolerance 0 misclassifications
+- [ ] **6.** E&O ratio reported in Power BI matches manual calculation from the exported data file within 0.01%
+- [ ] **7.** Safety stock compliance rate matches manual count of SS violations from SAP MD04 for one plant within 1%
+- [ ] **8.** Cycle count accuracy rate for first month matches SAP transaction MI23 summary report within 0.5%
+- [ ] **9.** Row-level security confirmed: test user with Plant DE01 access cannot see Plant FR01 data in any Power BI visual or exported dataset
+- [ ] **10.** Power BI daily refresh completes by 07:00 CET on 5 consecutive business days without failure
+- [ ] **11.** CRITICAL coverage bucket alert emails received by correct recipients within 1 hour of data load completion on test day
+- [ ] **12.** Negative inventory test case (TC-08) executed: rejected records appear in dq_error_log; KPIs exclude them; alert received within 1 hour
+- [ ] **13.** DIO measure verified: turnover ratio and DIO for two business units match Finance Controller's independent calculation within 0.1 day
+- [ ] **14.** E&O disposition alerts triggered correctly for 3 test SKUs with last_movement_date > 365 days ago inserted in test environment
+
+---
+
+## 21. Pending Information
+
+The following items require clarification before full implementation can be completed:
+
+**PI-01 — Currency conversion source:** Confirm whether EUR exchange rates should come from ECB daily
+rates (publicly available) or the internal SAP TCURR table. If SAP, confirm TCURR is included in the
+RFC authorisation profile.
+
+**PI-02 — Coverage target days for pharmaceutical materials:** Confirm whether pharmaceutical materials
+require a different coverage target (regulatory minimum stock levels may require higher coverage than
+the standard A=30, B=45, C=60 day policy).
+
+**PI-03 — Seasonal demand flag definition:** Confirm the list of material groups and calendar periods
+that qualify for the 50% coverage threshold extension during pre-season buffer build.
+
+**PI-04 — E&O disposition workflow tool:** Confirm the target tool for disposition workflow management
+(SAP QM workflow, ServiceNow, or a bespoke SharePoint list). The Power BI report link-out on Page 3
+depends on the chosen tool URL.
+
+**PI-05 — Historical demand history availability:** For XYZ classification, 12 weeks of weekly demand
+history is required per SKU. Confirm the earliest date to which SAP MSEG data is available in the
+production client (some organisations archive movements older than 2 years).
+
+**PI-06 — Approval thresholds for cycle count adjustments:** Confirm the financial thresholds for
+adjustment authorisation levels (warehouse supervisor vs. inventory controller vs. finance controller)
+as these vary by plant per local financial control policies.
+
+**PI-07 — SAP EWM deployment status:** Confirm which of the 40 countries are live on SAP EWM vs.
+SAP WM. The cycle count extract pipeline must handle both source tables (/SCWM/QUAN for EWM;
+LQUA for WM).
+
+---
+
+## 22. Implementation Roadmap
+
+| Week | Phase | Deliverable | Owner | Dependencies |
+|---|---|---|---|---|
+| 1 | Infrastructure | Azure SQL DW provisioned; resource group and security configured | IT Infrastructure | Cloud subscription confirmed |
+| 1–2 | Infrastructure | SAP RFC connections validated for all 6 data sources | SAP Basis + IT | SAP authorisation objects granted |
+| 2 | Data Ingestion | ADF pipeline DS-01 (daily snapshot) deployed and tested | Data Engineering | Azure SQL ready |
+| 2–3 | Data Ingestion | ADF pipeline DS-02 (movement history) deployed; 36-month backfill complete | Data Engineering | Sufficient Azure SQL storage |
+| 3 | Data Ingestion | ADF pipeline DS-03 (safety stock) deployed | Data Engineering | SAP MARC authorisation |
+| 3 | Data Ingestion | ADF pipeline DS-04 (cycle counts) deployed; EWM and WM handled separately | Data Engineering | PI-07 resolved: EWM vs WM plant list |
+| 4 | Data Ingestion | ADF pipelines DS-05 (demand history) and DS-06 (material master) deployed | Data Engineering | |
+| 4 | Data Model | Star schema tables created in Azure SQL; primary keys and indexes applied | Data Engineering | All pipelines delivering data |
+| 5 | Transformation | TR-01 to TR-05 implemented and unit tested | Data Engineering | fact_stock_movements populated |
+| 5–6 | Transformation | TR-06 to TR-10 implemented and unit tested; TR-11 to TR-15 implemented | Data Engineering | fact_inventory_snapshot populated |
+| 6 | Classification | First ABC classification run (TR-08); first XYZ classification run (TR-09) | Analytics Lead | 12+ weeks demand history confirmed |
+| 6 | Validation | VC-01 to VC-07 implemented; first validation report produced | Data Quality Lead | All transformations complete |
+| 7 | Dashboard | Power BI Pages 1 and 2 (Executive Overview, Shortage Analysis) built and tested | Power BI Developer | fact_inventory_snapshot with all fields |
+| 8 | Dashboard | Power BI Pages 3 and 4 (E&O, ABC/XYZ) built and tested | Power BI Developer | |
+| 8 | Dashboard | Power BI Pages 5 and 6 (Safety Stock, Cycle Count) built and tested | Power BI Developer | fact_cycle_counts populated |
+| 9 | Dashboard | Row-level security configured and tested; UAT user accounts provisioned | Power BI Developer + IT | |
+| 10 | UAT | UAT executed with 3 inventory controllers and 1 regional manager | Analytics Lead | All 6 dashboard pages complete |
+| 11 | UAT | UAT defects resolved; retest completed; sign-off obtained | Analytics Lead | UAT findings documented |
+| 12 | Finance Review | E&O financial exposure report reconciled to Finance Controller (Section 13 item 4) | Finance Controller | Page 3 validated |
+| 13 | Automation | Daily ADF schedule confirmed; Power BI refresh configured; Azure Monitor alerts active | Data Engineering | UAT sign-off |
+| 14 | Training | Inventory controller training (2-hour session, all regions); demand planner training | Analytics Lead | Dashboard final |
+| 15 | Go-Live | Production go-live: all 40 countries (phased by region per Section 3) | Programme Manager | All checklists complete |
+| 15 | Go-Live | Post go-live monitoring: daily pipeline and KPI review for first 5 business days | Analytics Lead | |
+| 16 | Handover | Runbook delivered; data governance catalogue updated; hypercare period begins (4 weeks) | Analytics Lead | Go-live stable |
+
+---
+
+## References
+
+- Chopra, S. & Meindl, P. (2016). *Supply Chain Management*, 6th Ed. Pearson.
+- Ballou, R.H. (2004). *Business Logistics/Supply Chain Management*, 5th Ed. Pearson.
+- Christopher, M. (2022). *Logistics and Supply Chain Management*, 6th Ed. FT Publishing.
+- ASCM (2024). *APICS Dictionary*, 16th Ed.
+- ASCM (2019). *SCOR Digital Standard*.
+- ISO 9001:2015 §8.5.2 — Identification and Traceability.
+- ISO 28000:2022 — Specification for Security Management Systems for the Supply Chain.
+- GS1 General Specifications v23.0.
+- EU Regulation 1907/2006 (REACH).
+- EU Directive 2024/1760 (CSDDD) — Article 23 (Data Retention).
+- IFRS IAS 2 — Inventories.
+- Harris, F.W. (1913). How Many Parts to Make at Once. *Factory, The Magazine of Management*, 10(2).
+- Holt, C.C. (1957). Forecasting Seasonals and Trends by Exponentially Weighted Moving Averages.
+  Carnegie Institute of Technology.
+- Silver, E.A. & Meal, H.C. (1973). A Heuristic for Selecting Lot Size Quantities.
+  *Production and Inventory Management*, 14(2), 64–74.

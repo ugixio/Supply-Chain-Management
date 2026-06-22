@@ -4,7 +4,7 @@
 > Scope: Demand Variation Analysis, Forecast Accuracy (MAPE/MAE/RMSE/Bias),
 > Statistical Baseline vs. Actual, Safety Stock Analysis, ABC/XYZ Segmentation.
 > Context: €50B multinational, 40 countries, SAP S/4HANA + SAP IBP for Demand,
-> Power BI, Azure SQL, Python. Data updated daily; planning monthly + weekly sensing.
+> Apache Superset, PostgreSQL, Python. Data updated daily; planning monthly + weekly sensing.
 
 ---
 
@@ -16,7 +16,7 @@ KPIs, validations, and dashboards required to quantify forecast accuracy and bia
 characterise demand variability, validate safety-stock adequacy, and segment SKUs
 (ABC/XYZ) to drive the right planning policy.
 
-The deliverable is a governed Power BI solution on Azure SQL, refreshed daily, used
+The deliverable is a governed Apache Superset solution on PostgreSQL, refreshed daily, used
 by Demand Planners, Supply Planners, and S&OP leadership. Every accuracy figure
 reconciles to SAP IBP key figures and SAP S/4HANA actual sales.
 
@@ -135,7 +135,7 @@ parts with intermittent demand handled by a dedicated Croston/intermittent model
 
 ## 6. Data Model
 
-Star schema (Azure SQL → Power BI import):
+Star schema (PostgreSQL → Apache Superset materialized SQL views):
 
 **Fact tables**
 - `fact_actuals` — grain: product × location × period (month) [+ week variant].
@@ -277,8 +277,7 @@ Star schema (Azure SQL → Power BI import):
 
 ### KPI: MAPE
 - **Objective**: average percentage forecast error.
-- **Formula (DAX)**: `MAPE = AVERAGEX(FILTER(fact_accuracy, fact_accuracy[actual_qty]>0),
-  fact_accuracy[ape]) * 100`
+- **Formula (SQL)**: `SELECT AVG(ape) * 100 AS MAPE FROM fact_accuracy WHERE actual_qty > 0`
 - **Data Source**: fact_accuracy
 - **Calculation Level**: item/family/region/planner × lag
 - **Frequency**: monthly
@@ -290,15 +289,14 @@ Star schema (Azure SQL → Power BI import):
 
 ### KPI: WMAPE (volume-weighted)
 - **Objective**: error robust to intermittent/zero demand.
-- **Formula (DAX)**: `WMAPE = DIVIDE(SUM(fact_accuracy[abs_error]),
-  SUM(fact_accuracy[actual_qty])) * 100`
+- **Formula (SQL)**: `SELECT SUM(abs_error) / NULLIF(SUM(actual_qty),0) * 100 AS WMAPE FROM fact_accuracy`
 - **Thresholds**: Green <15 %, Yellow 15–30 %, Red >30 %
 - **Recommended Action**: Red → review high-volume error drivers.
 - **Validation vs Source**: SUM(abs_error)/SUM(actual) cross-check.
 
 ### KPI: MAE
 - **Objective**: average absolute error in units.
-- **Formula (DAX)**: `MAE = AVERAGE(fact_accuracy[abs_error])`
+- **Formula (SQL)**: `SELECT AVG(abs_error) AS MAE FROM fact_accuracy`
 - **Interpretation**: unit error magnitude; compare across similar SKUs.
 - **Thresholds**: relative to SKU volume — *Pending to confirm targets*.
 - **Recommended Action**: rank top absolute-error SKUs for review.
@@ -306,15 +304,14 @@ Star schema (Azure SQL → Power BI import):
 
 ### KPI: RMSE
 - **Objective**: error metric penalising large misses.
-- **Formula (DAX)**: `RMSE = SQRT(AVERAGEX(fact_accuracy, fact_accuracy[abs_error]^2))`
+- **Formula (SQL)**: `SELECT SQRT(AVG(abs_error * abs_error)) AS RMSE FROM fact_accuracy`
 - **Interpretation**: high vs MAE indicates large outlier errors.
 - **Recommended Action**: investigate outlier periods (promos, events).
 - **Validation vs Source**: sample recompute.
 
 ### KPI: Forecast Bias
 - **Objective**: detect systematic over/under-forecasting.
-- **Formula (DAX)**: `Bias % = DIVIDE(SUM(fact_accuracy[signed_error]),
-  SUM(fact_accuracy[actual_qty])) * 100`
+- **Formula (SQL)**: `SELECT SUM(signed_error) / NULLIF(SUM(actual_qty),0) * 100 AS bias_pct FROM fact_accuracy`
 - **Interpretation**: + = over-forecast, − = under-forecast.
 - **Thresholds**: Green |bias|<5 %, Yellow 5–15 %, Red >15 %
 - **Recommended Action**: Red → de-bias model / planner coaching.
@@ -330,7 +327,7 @@ Star schema (Azure SQL → Power BI import):
 
 ### KPI: Demand CV
 - **Objective**: quantify demand variability.
-- **Formula (DAX)**: `CV = DIVIDE(STDEVX.P(...actual_qty), AVERAGE(...actual_qty))`
+- **Formula (SQL)**: `SELECT STDDEV_POP(actual_qty) / NULLIF(AVG(actual_qty),0) AS CV FROM fact_actuals`
 - **Interpretation**: drives XYZ class and forecastability.
 - **Thresholds**: X<0.10, Y 0.10–0.25, Z>0.25
 - **Recommended Action**: Z → consider safety stock over forecast accuracy.
@@ -349,7 +346,7 @@ Star schema (Azure SQL → Power BI import):
   ```
   Method 3: SS = z * demand_std * SQRT(lead_time_days)
   Method 4: SS = z * SQRT(lead_time_days*demand_std^2 + ADU^2*lead_time_std^2)
-  z = NORM.S.INV(target_service_level)
+  z = scipy.stats.norm.ppf(target_service_level)  # Python
   ```
 - **Interpretation**: Method 4 accounts for lead-time variability (recommended).
 - **Recommended Action**: align actual SS to Method 4 ±tolerance.
@@ -401,7 +398,7 @@ Star schema (Azure SQL → Power BI import):
 
 ### Validation: Service-level → z consistency
 - **Field/Table**: fact_safety_stock.z_value
-- **Validation Rule**: z = NORM.S.INV(service_level).
+- **Validation Rule**: z = scipy.stats.norm.ppf(service_level) (Python).
 - **Validation Method**: recompute and compare.
 - **Expected Result**: match within rounding.
 - **Action if Fails**: correct z mapping.
@@ -419,7 +416,7 @@ Star schema (Azure SQL → Power BI import):
 
 ---
 
-## 14. Dashboard / Report Design (Power BI)
+## 14. Dashboard / Report Design (Apache Superset)
 
 **Page 1 — Accuracy Overview**: MAPE/WMAPE/Bias cards; trend; accuracy by family/region.
 **Page 2 — Lag Analysis**: accuracy by lag (1/3/6); waterfall of error sources.
@@ -522,17 +519,17 @@ Star schema (Azure SQL → Power BI import):
 ## 19. Implementation Checklist
 
 1. Confirm forecast hierarchy and lag definition with Demand Planning.
-2. Build Azure SQL staging for Sources 1–5.
+2. Build PostgreSQL staging for Sources 1–5.
 3. Extract IBP snapshots (STAT + CONSENSUS) with snapshot_date.
 4. Build fact/dim model per §6.
 5. Implement transformations §8 (netting, lag, errors, CV).
 6. Build fact_accuracy compute.
 7. Build ABC/XYZ segmentation.
 8. Compute SS Method 3 & 4 and gaps.
-9. Build Power BI model + relationships.
+9. Build Apache Superset model + relationships.
 10. Author KPI measures (MAPE, WMAPE, Bias, FVA, CV, SS).
 11. Build 5 dashboard pages.
-12. Configure RLS (region/planner).
+12. Configure Apache Superset row-level security (RLS) (region/planner).
 13. Set daily refresh + monthly snapshot.
 14. Implement validations §12 as ETL gates.
 15. Build reconciliation pack to IBP.
@@ -552,7 +549,7 @@ Star schema (Azure SQL → Power BI import):
 6. XYZ boundaries correct.
 7. SS Method 4 matches manual test case.
 8. z-value consistent with service level.
-9. RLS verified.
+9. Apache Superset row-level security (RLS) verified.
 10. Refresh schedule confirmed.
 11. FVA logic validated (improved/worsened).
 
@@ -566,7 +563,7 @@ Star schema (Azure SQL → Power BI import):
 - Intermittent-demand SKU list (Croston handling). — *Pending to confirm*
 - Snapshot lock calendar from IBP. — *Pending to confirm*
 - Planner-to-product assignment source. — *Pending to confirm*
-- RLS security groups. — *Pending to confirm*
+- Apache Superset row-level security (RLS) groups. — *Pending to confirm*
 
 ---
 
@@ -578,7 +575,7 @@ Star schema (Azure SQL → Power BI import):
 | 3–5 | Staging + IBP extraction | Loaded snapshots | Data Eng | Pending |
 | 6–8 | Fact/dim + transforms | Model v1 | Data Eng | Pending |
 | 9–10 | Accuracy + ABC/XYZ + SS | Computed facts | Analytics | Pending |
-| 11–13 | Power BI + KPIs | Dashboard draft | BI Dev | Pending |
+| 11–13 | Apache Superset + KPIs | Dashboard draft | BI Dev | Pending |
 | 14–15 | Validations + reconciliation | Recon pack | Data Quality | Pending |
 | 16–17 | UAT | Sign-off | Demand Planning | Pending |
 | 18 | Go-live + hypercare | Production report | BI Lead | Pending |

@@ -3,7 +3,7 @@
 
 **Classification**: Internal — Senior Consultant Grade
 **Standard Alignment**: SCOR-DS v4.0, SAP S/4HANA SD/MM, EDI X12 850/856/810, ISO 9001:2015, Incoterms 2020
-**Systems**: SAP S/4HANA SD/MM · Azure SQL · Power BI · EDI 850/856/810
+**Systems**: SAP S/4HANA SD/MM · PostgreSQL · Apache Superset · EDI 850/856/810
 **Revision**: 2.0
 **Date**: 2026-06-22
 
@@ -40,7 +40,7 @@
 
 Order Management Analytics constitutes the commercial nerve centre of enterprise supply chain performance measurement. In a B2B environment driven by SAP S/4HANA SD/MM and daily EDI interchange with retail and distribution customers, the ability to track open order risk in real time, measure Perfect Order Rate at line-item granularity, and decompose Order-to-Cash cycle time into actionable sub-intervals separates organisations that retain strategic accounts from those that lose them to chargebacks, deductions, and attrition.
 
-This implementation guide delivers a complete Order Management Analytics capability covering five analytical domains: Open Order Risk Analysis, Order Fill Rate and Perfect Order Rate, Customer Service Level by segment, ATP/CTP promise accuracy, and Order-to-Cash Cycle Time decomposition. The analytical output feeds daily Power BI dashboards consumed by Customer Service Representatives, Order Management leads, and VP-level customer-facing KPI reviews.
+This implementation guide delivers a complete Order Management Analytics capability covering five analytical domains: Open Order Risk Analysis, Order Fill Rate and Perfect Order Rate, Customer Service Level by segment, ATP/CTP promise accuracy, and Order-to-Cash Cycle Time decomposition. The analytical output feeds daily Apache Superset dashboards consumed by Customer Service Representatives, Order Management leads, and VP-level customer-facing KPI reviews.
 
 The business case rests on three measurable outcomes: (1) reducing open-order late-risk exposure through proactive exception management, targeting a 35% reduction in unplanned backorders within 90 days of go-live; (2) improving Perfect Order Rate from a typical industry baseline of 88–92% toward a world-class target of 95%+; and (3) compressing Order-to-Cash cycle time by 8–12 days through ATP promise accuracy improvement and automated invoice generation, directly reducing Days Sales Outstanding (DSO).
 
@@ -56,7 +56,7 @@ Specific objectives are:
 
 1. **Open Order Risk**: Classify every open order line daily as Critical / High / Medium / Low risk based on available stock versus committed quantity and days remaining to promise date. Surface at-risk lines to the responsible CSR before the ship window closes.
 
-2. **Order Fill Rate and Perfect Order Rate**: Measure fulfillment quality at order-line level across four independent dimensions — On-Time, In-Full, Damage-Free, Correct Documents — and aggregate to order, customer, channel, and period levels with Power BI drill-down.
+2. **Order Fill Rate and Perfect Order Rate**: Measure fulfillment quality at order-line level across four independent dimensions — On-Time, In-Full, Damage-Free, Correct Documents — and aggregate to order, customer, channel, and period levels with Apache Superset drill-down.
 
 3. **Customer Service Level by Segment**: Disaggregate all service metrics by customer tier (A/B/C by revenue), channel (EDI / API / Portal / Manual), and retailer standard (Walmart / Target / Amazon / Other) to enable targeted improvement by segment.
 
@@ -147,13 +147,13 @@ The following business questions drive the analytical design. Each maps to one o
 | System | SAP S/4HANA (on-premise or BTP-connected) |
 | Table | VBAK (order header), VBAP (order lines), VBEP (schedule lines), VBFA (document flow) |
 | Owner | IT Order Management team |
-| Frequency | Real-time via SAP ODP delta extraction; Azure SQL staging refresh every 15 minutes |
+| Frequency | Real-time via SAP ODP delta extraction; PostgreSQL staging refresh every 15 minutes |
 | Fields | VBELN (order number), POSNR (line item), MATNR (material/SKU), KUNNR (customer), KDAUF (customer PO reference), VRKME (sales unit), KWMENG (ordered quantity), WAERK (currency), NETPR (net price), EDATU (requested delivery date), LPEIN (ATP committed delivery date), ABGRU (rejection reason code), GBSTK (overall processing status), LFSTK (delivery status), FKSTK (billing status) |
 | Critical Fields | VBELN, POSNR, MATNR, KUNNR, KWMENG, EDATU, LPEIN, GBSTK |
 | Primary Key | VBELN + POSNR |
 | Validations | KWMENG > 0; EDATU >= order creation date; LPEIN not null for CONFIRMED status; WAERK is valid ISO 4217 code |
 | Known Errors | Duplicate VBELN across client splits; LPEIN null for MTO orders before CTP confirmation; ABGRU codes inconsistently applied across plants |
-| Evidence | SAP SD configuration document; ABAP data dictionary SE11; Azure SQL extraction log |
+| Evidence | SAP SD configuration document; ABAP data dictionary SE11; PostgreSQL extraction log |
 
 ### 5.2 SAP S/4HANA SD — Deliveries and Shipments
 
@@ -163,7 +163,7 @@ The following business questions drive the analytical design. Each maps to one o
 | System | SAP S/4HANA |
 | Table | LIKP (delivery header), LIPS (delivery lines), VTTK (shipment header), VTTP (shipment items) |
 | Owner | Logistics / Warehouse IT |
-| Frequency | Real-time ODP delta; Azure SQL refresh every 15 minutes |
+| Frequency | Real-time ODP delta; PostgreSQL refresh every 15 minutes |
 | Fields | VBELN (delivery number), POSNR (delivery line), MATNR, LGORT (storage location), LFIMG (delivered quantity), VGBEL (reference sales order), KODAT (pick date), WADAT (goods issue date — actual ship date), TDLNR (carrier ID), VSTEL (shipping point) |
 | Critical Fields | VBELN, VGBEL (link to sales order), LFIMG, WADAT |
 | Primary Key | LIKP.VBELN + LIPS.POSNR |
@@ -179,7 +179,7 @@ The following business questions drive the analytical design. Each maps to one o
 | System | SAP S/4HANA FI |
 | Table | VBRK (billing header), VBRP (billing lines), BSID (open AR items), BSAD (cleared AR items) |
 | Owner | Finance / AR team |
-| Frequency | Daily batch load to Azure SQL at 06:00 UTC |
+| Frequency | Daily batch load to PostgreSQL at 06:00 UTC |
 | Fields | VBELN (invoice number), FKDAT (billing date), NETWR (net value), WAERK (currency), AUGDT (payment clearing date), ZTERM (payment terms code), KUNNR (customer), VGBEL (reference delivery), FKART (billing type — distinguish invoices from credit memos) |
 | Critical Fields | VBELN, FKDAT, AUGDT, NETWR, KUNNR, FKART |
 | Primary Key | VBRK.VBELN |
@@ -192,7 +192,7 @@ The following business questions drive the analytical design. Each maps to one o
 | Attribute | Detail |
 |-----------|--------|
 | Name | EDI Transaction Archive |
-| System | Azure SQL (EDI middleware — Sterling Commerce or Boomi) |
+| System | PostgreSQL (EDI middleware — Sterling Commerce or Boomi) |
 | Table | EDI_TRANSACTIONS (custom), EDI_ACKNOWLEDGEMENTS |
 | Owner | IT Integration team |
 | Frequency | Real-time append; read for analytics daily |
@@ -208,7 +208,7 @@ The following business questions drive the analytical design. Each maps to one o
 | Attribute | Detail |
 |-----------|--------|
 | Name | ATP/CTP Promise Log |
-| System | Azure SQL (domain service log) |
+| System | PostgreSQL (domain service log) |
 | Table | ATP_COMMITMENTS (custom domain service table) |
 | Owner | Order Management IT |
 | Frequency | Real-time insert on each ATP/CTP invocation; daily read for accuracy reporting |
@@ -227,7 +227,7 @@ The following business questions drive the analytical design. Each maps to one o
 | System | SAP S/4HANA |
 | Table | KNA1 (general data), KNB1 (company code data), KNVV (sales area data) |
 | Owner | Master Data Management team |
-| Frequency | Daily refresh to Azure SQL |
+| Frequency | Daily refresh to PostgreSQL |
 | Fields | KUNNR (customer ID), NAME1 (name), LAND1 (country), VKORG (sales org), KDKG (customer group / tier code), WAERS (currency), ZTERM (payment terms), KLIMK (credit limit cents), KNKLI (credit account group) |
 | Critical Fields | KUNNR, KDKG (tier), KLIMK, ZTERM |
 | Primary Key | KUNNR + VKORG |
@@ -251,7 +251,7 @@ CUSTOMER ──< SALES_ORDER >── ORDER_LINE ──< DELIVERY_LINE
                              AR_PAYMENT
 ```
 
-### 6.2 Star Schema for Power BI
+### 6.2 Star Schema for Apache Superset
 
 **Fact table: FACT_ORDER_LINE**
 
@@ -417,7 +417,7 @@ Each row represents one sales order line captured as a daily snapshot. Grain: or
 All monetary values are stored and processed as integer cents in the original transaction currency. For cross-currency KPI roll-ups, apply the SAP-sourced exchange rate from table TCURR at the order creation date. Store both original-currency cents and USD-equivalent cents as separate columns. Never store or compute floating-point monetary values.
 
 ```sql
--- Azure SQL transformation: currency normalisation
+-- PostgreSQL transformation: currency normalisation
 SELECT
     ol.order_id,
     ol.line_value_cents                                               AS line_value_original_cents,
@@ -448,7 +448,7 @@ Store the threshold applied as `in_full_threshold_pct` in FACT_ORDER_LINE for fu
 
 ### 8.4 Working Days Calculation
 
-Order Cycle Time (OCT) between ship_date and order_confirmed_date must be expressed in working days, excluding weekends and public holidays. Use the factory calendar from SAP transaction SCAL. In Azure SQL, maintain a DIM_WORKING_DAY table populated from the SAP calendar export. Do not approximate using division by 5.
+Order Cycle Time (OCT) between ship_date and order_confirmed_date must be expressed in working days, excluding weekends and public holidays. Use the factory calendar from SAP transaction SCAL. In PostgreSQL, maintain a DIM_WORKING_DAY table populated from the SAP calendar export. Do not approximate using division by 5.
 
 ### 8.5 Backorder Flag Logic
 
@@ -726,7 +726,7 @@ Tier A service differentiators:
 ### 12.2 Monthly KPI Reconciliation Controls
 
 Reconcile monthly between:
-- Power BI fill rate (MART_ORDER_FILL_RATE) vs. SAP S/4HANA standard OTIF report (VL06O or equivalent). Tolerance: < 0.5 percentage points.
+- Apache Superset fill rate (MART_ORDER_FILL_RATE) vs. SAP S/4HANA standard OTIF report (VL06O or equivalent). Tolerance: < 0.5 percentage points.
 - O2C mean days average vs. DSO from SAP FI aging report. Tolerance: < 1 day.
 - Complaint count vs. SAP QM notification count (if QM module active). Tolerance: exact match.
 
@@ -734,10 +734,10 @@ Discrepancies exceeding tolerance must be investigated and resolved before month
 
 ### 12.3 Access Controls
 
-- FACT_ORDER_LINE: read-only for Analytics team and Power BI service account
+- FACT_ORDER_LINE: read-only for Analytics team and Apache Superset service account
 - ATP_COMMITMENTS: write access only for ATP service account; read for Analytics
-- Customer credit data (KLIMK, credit exposure): restricted to Finance and Order Management leads; masked in CSR-facing Power BI views
-- MART_OPEN_ORDER_RISK: CSR access scoped to assigned customer portfolio via Power BI row-level security
+- Customer credit data (KLIMK, credit exposure): restricted to Finance and Order Management leads; masked in CSR-facing Apache Superset views
+- MART_OPEN_ORDER_RISK: CSR access scoped to assigned customer portfolio via Apache Superset row-level security (RLS)
 
 ---
 
@@ -745,7 +745,7 @@ Discrepancies exceeding tolerance must be investigated and resolved before month
 
 The following evidence items must be documented and signed off before go-live:
 
-1. **SAP data extraction test**: Extract 3 months of VBAK, VBAP, LIKP, LIPS to Azure SQL staging. Validate row counts and critical field completeness against SAP standard reports. Sign-off by IT lead.
+1. **SAP data extraction test**: Extract 3 months of VBAK, VBAP, LIKP, LIPS to PostgreSQL staging. Validate row counts and critical field completeness against SAP standard reports. Sign-off by IT lead.
 
 2. **Fill rate baseline calculation**: Run MART_ORDER_FILL_RATE for the most recent complete quarter. Validate against the manually computed fill rate from the existing Customer Service spreadsheet. Difference must be < 1 percentage point. Sign-off by Order Management Lead.
 
@@ -822,7 +822,7 @@ The following evidence items must be documented and signed off before go-live:
 
 ### 15.1 Daily At-Risk Order Intervention
 
-**Trigger**: Morning daily batch updates MART_OPEN_ORDER_RISK at 06:00 UTC. Power BI refreshes at 06:30 UTC. CSR team begins shift at 07:00 UTC.
+**Trigger**: Morning daily batch updates MART_OPEN_ORDER_RISK at 06:00 UTC. Apache Superset refreshes at 06:30 UTC. CSR team begins shift at 07:00 UTC.
 
 **Workflow**: CSR opens Page 1. Reviews all CRITICAL lines in their portfolio. For each CRITICAL line: (a) checks if additional supply can be expedited from an alternate warehouse; (b) contacts carrier for expedite routing if goods issue is imminent; (c) if delay is unavoidable, contacts customer proactively before the ship window closes and commits a revised delivery date. All actions logged in SAP CRM activity.
 
@@ -854,7 +854,7 @@ The following evidence items must be documented and signed off before go-live:
 
 ### 16.1 Immediate (Days 1–30)
 
-1. Deploy MART_OPEN_ORDER_RISK daily refresh and publish Page 1 to CSR team. Eliminate manual Excel-based open order tracking immediately.
+1. Deploy MART_OPEN_ORDER_RISK daily refresh and publish Page 1 to CSR team. Eliminate manual spreadsheet (CSV)-based open order tracking immediately.
 2. Establish ATP Accuracy baseline from 90 days of ATP_COMMITMENTS history. Identify top 10 under-performing SKUs.
 3. Align Walmart and Target OTIF calculation methodology with retailer vendor relations teams. Document agreed delivery date definition before publishing compliance KPIs.
 
@@ -955,12 +955,12 @@ Expected: Row excluded from mean calculation per cap rule (max 180 days); includ
 
 | Risk | Probability | Impact | Mitigation |
 |------|------------|--------|-----------|
-| SAP ODP extraction latency exceeds 15-minute target during month-end peaks | Medium | High | Implement queue-based extraction with priority ordering; add dedicated Azure SQL reader instance; alert at > 30 minutes extraction lag |
+| SAP ODP extraction latency exceeds 15-minute target during month-end peaks | Medium | High | Implement queue-based extraction with priority ordering; add dedicated PostgreSQL reader instance; alert at > 30 minutes extraction lag |
 | Goods issue posting date in SAP lags actual physical ship by up to 24 hours | High | Medium | Document date-adjustment rule: if WADAT posted between 17:00 and 23:59 local time, treat ship date as WADAT; align with warehouse operations |
 | ATP commitment log missing for pre-system-migration historical orders | High | Medium | For pre-migration orders, use VBEP.LPEIN as proxy promised date; flag as LEGACY_PROXY in atp_method column; exclude from ATP Accuracy KPI if volume exceeds 10% of denominator |
 | Retailer OTIF calculation discrepancy (internal definition vs. retailer portal) | Medium | High | Formal alignment session with each retailer before publishing retailer-specific OTIF; document agreed rules in a Retailer OTIF Methodology register; validate monthly against portal |
 | Customer master tier classification stale between quarterly updates | Low | Medium | Add last_tier_review_date to DIM_CUSTOMER; flag customers where last_tier_review_date > 95 days in data quality check |
-| Power BI row-level security misconfiguration exposes Tier A customer data to other CSRs | Low | High | Implement RLS on CSR-customer assignment table; include in pre-go-live penetration test; separate test case in UAT script |
+| Apache Superset row-level security misconfiguration exposes Tier A customer data to other CSRs | Low | High | Implement RLS on CSR-customer assignment table; include in pre-go-live penetration test; separate test case in UAT script |
 | EDI 850 resubmission creates duplicate sales orders before idempotency validation | Medium | High | Validate idempotency key in EDI middleware before creating SAP sales order; maintain deduplication log with 90-day retention |
 | XGBoost delay model underperforms on new customer segments not in training data | Low | Medium | Flag predictions with confidence < 0.60 for manual CSR review; retrain quarterly with rolling 12-month data |
 
@@ -971,7 +971,7 @@ Expected: Row excluded from mean calculation per cap rule (max 180 days); includ
 ### Phase 1: Data Foundation (Weeks 1–4)
 
 - [ ] SAP S/4HANA ODP extraction configured for VBAK, VBAP, VBEP, VBFA, LIKP, LIPS, VBRK, VBRP, BSID, BSAD, KNA1, KNB1, KNVV, MARA, TCURR
-- [ ] Azure SQL staging schema created with all source tables and correct data types
+- [ ] PostgreSQL staging schema created with all source tables and correct data types
 - [ ] DIM_CUSTOMER loaded with tier classification and retailer_standard field
 - [ ] DIM_SKU loaded with ABC/XYZ class, lead_time_days, atp_safety_buffer
 - [ ] DIM_DATE populated 2020-01-01 to 2030-12-31 with working day flag from SAP SCAL
@@ -992,7 +992,7 @@ Expected: Row excluded from mean calculation per cap rule (max 180 days); includ
 
 ### Phase 3: Dashboard and User Acceptance (Weeks 9–13)
 
-- [ ] All five Power BI pages built per Section 14 specifications
+- [ ] All five Apache Superset pages built per Section 14 specifications
 - [ ] Row-level security implemented and tested for CSR portfolio scope
 - [ ] Tier A CRITICAL alert push notification configured
 - [ ] Retailer OTIF methodology validated with Walmart and Target
@@ -1026,7 +1026,7 @@ Expected: Row excluded from mean calculation per cap rule (max 180 days); includ
 
 ### Dashboard Validation
 
-- [ ] All five Power BI pages render within 5 seconds at full production data volume
+- [ ] All five Apache Superset pages render within 5 seconds at full production data volume
 - [ ] All slicers and drill-downs function correctly
 - [ ] RLS: CSR users cannot access customers outside their assigned portfolio
 - [ ] Tier A CRITICAL alert fires correctly in UAT environment for a simulated CRITICAL line
@@ -1045,7 +1045,7 @@ Expected: Row excluded from mean calculation per cap rule (max 180 days); includ
 | EDI partner IDs for all active retail customers | IT EDI team | Week 2 | EDI transaction source table mapping |
 | In-full threshold for non-retail customers (internal policy confirmation) | VP Order Management | Week 3 | FACT_ORDER_LINE in_full_flag business rule |
 | Credit memo inclusion/exclusion rule for fill rate denominator | Finance Director | Week 3 | Business Rule 1 implementation |
-| CSR-to-customer portfolio assignment table for Power BI RLS | Customer Service Manager | Week 8 | Dashboard row-level security |
+| CSR-to-customer portfolio assignment table for Apache Superset RLS | Customer Service Manager | Week 8 | Dashboard row-level security |
 
 ---
 
@@ -1055,12 +1055,12 @@ Expected: Row excluded from mean calculation per cap rule (max 180 days); includ
 
 | Week | Milestone | Owner |
 |------|-----------|-------|
-| 1–2 | SAP ODP extraction live; Azure SQL staging operational | IT Data Engineering |
+| 1–2 | SAP ODP extraction live; PostgreSQL staging operational | IT Data Engineering |
 | 3–4 | All dimension tables loaded; FACT_ORDER_LINE daily pipeline live | Analytics Engineering |
 | 5–6 | MART_ORDER_FILL_RATE and MART_PERFECT_ORDER built and validated | Analytics Engineering |
 | 7–8 | MART_O2C_CYCLE_TIME and MART_ATP_ACCURACY built | Analytics Engineering |
 | 9 | MART_OPEN_ORDER_RISK daily refresh live; all data quality alerts deployed | Analytics Engineering |
-| 10–11 | Power BI Pages 1–3 built and in UAT with CSR and Order Management lead | Analytics + Business |
+| 10–11 | Apache Superset Pages 1–3 built and in UAT with CSR and Order Management lead | Analytics + Business |
 | 12 | Pages 4–5 built; retailer OTIF validated with Walmart and Target | Analytics + Customer Service |
 | 13 | Go-live: all five pages published to production; CSR team trained | Programme Manager |
 
@@ -1069,7 +1069,7 @@ Expected: Row excluded from mean calculation per cap rule (max 180 days); includ
 | Week | Milestone | Owner |
 |------|-----------|-------|
 | 14–16 | Retailer OTIF compliance report validated and signed off with all retailers | Customer Service + IT |
-| 17–18 | Tier A CRITICAL automated push notification deployed (Power BI + email) | Analytics Engineering |
+| 17–18 | Tier A CRITICAL automated push notification deployed (Apache Superset + email) | Analytics Engineering |
 | 19–22 | XGBoost order delay prediction model trained; delay probability score added to FACT_ORDER_LINE | Data Science |
 | 23–24 | ATP buffer auto-recalibration logic built and tested | Order Mgmt IT |
 | 25–26 | Month 6 KPI review: baselines established; improvement targets set for next 6 months | VP Order Management |
@@ -1092,7 +1092,7 @@ Expected: Row excluded from mean calculation per cap rule (max 180 days); includ
 | ATP Accuracy | Measured at go-live | >= 92% |
 | O2C Cycle Time | Measured at go-live | Reduce by >= 5 calendar days |
 | Customer Complaint Rate | Measured at go-live | < 1% |
-| CSR daily active Power BI users | 0 | >= 90% of CSR team |
+| CSR daily active Apache Superset users | 0 | >= 90% of CSR team |
 
 ---
 

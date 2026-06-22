@@ -4,7 +4,7 @@
 > Scope: MRP Exceptions, Production Plan Attainment, Capacity Utilisation,
 > DDMRP Buffer Status, Bullwhip Effect.
 > Context: €50B multinational, 40 countries, SAP S/4HANA PP/MM + SAP IBP for Supply,
-> Power BI, Azure SQL, Python.
+> Apache Superset, PostgreSQL, Python.
 
 ---
 
@@ -16,7 +16,7 @@ transformations, KPIs, validations, and dashboards required to triage MRP except
 messages, measure production plan attainment and capacity utilisation, monitor DDMRP
 buffer health, and quantify the bullwhip effect across supply links.
 
-The deliverable is a governed Power BI solution on Azure SQL, refreshed daily after
+The deliverable is a governed Apache Superset solution on PostgreSQL, refreshed daily after
 the MRP run, used by Supply Planners, Production Schedulers, and Plant Managers.
 Every metric reconciles to SAP PP/MM and IBP source data.
 
@@ -134,7 +134,7 @@ phantom assemblies (analysed through parent).
 
 ## 6. Data Model
 
-Star schema (Azure SQL → Power BI):
+Star schema (PostgreSQL → Apache Superset):
 
 **Fact tables**
 - `fact_mrp_exception` — grain: material × plant × mrp_element × run_date.
@@ -307,8 +307,7 @@ Star schema (Azure SQL → Power BI):
 
 ### KPI: MRP Exception Rate
 - **Objective**: share of planned items with open exceptions.
-- **Formula (DAX)**: `Exception Rate % = DIVIDE(DISTINCTCOUNT(fact_mrp_exception[matnr]),
-  [Total MRP Materials]) * 100`
+- **Formula (SQL)**: `SELECT COUNT(DISTINCT matnr) / NULLIF((SELECT COUNT(*) FROM dim_material),0) * 100 AS exception_rate_pct FROM fact_mrp_exception`
 - **Data Source**: fact_mrp_exception
 - **Calculation Level**: plant / planner / period
 - **Frequency**: daily
@@ -320,7 +319,7 @@ Star schema (Azure SQL → Power BI):
 
 ### KPI: Exception Exposure Value
 - **Objective**: prioritise exceptions by financial impact.
-- **Formula (DAX)**: `Exposure = SUM(fact_mrp_exception[exposure_value])`
+- **Formula (SQL)**: `SELECT SUM(exposure_value) AS exposure FROM fact_mrp_exception`
 - **Calculation Level**: exception / planner / plant
 - **Interpretation**: focus highest value first.
 - **Thresholds**: ranked (top decile = priority).
@@ -329,8 +328,7 @@ Star schema (Azure SQL → Power BI):
 
 ### KPI: Production Plan Attainment
 - **Objective**: how much of the plan was actually produced on time.
-- **Formula (DAX)**: `Attainment % = DIVIDE(SUM(fact_production[attainment_qty]),
-  SUM(fact_production[planned_qty])) * 100`
+- **Formula (SQL)**: `SELECT SUM(attainment_qty) / NULLIF(SUM(planned_qty),0) * 100 AS attainment_pct FROM fact_production`
 - **Calculation Level**: plant / line / week
 - **Frequency**: daily/weekly
 - **Owner**: Production Control
@@ -341,16 +339,14 @@ Star schema (Azure SQL → Power BI):
 
 ### KPI: Schedule Adherence
 - **Objective**: orders finished on time.
-- **Formula (DAX)**: `Schedule Adherence % = DIVIDE(CALCULATE(COUNTROWS(fact_production),
-  fact_production[on_time_flag]=1), COUNTROWS(fact_production)) * 100`
+- **Formula (SQL)**: `SELECT COUNT(*) FILTER (WHERE on_time_flag = 1) / NULLIF(COUNT(*),0) * 100 AS schedule_adherence_pct FROM fact_production`
 - **Thresholds**: Green ≥92 %, Yellow 85–92 %, Red <85 %
 - **Recommended Action**: Red → scheduling/capacity review.
 - **Validation vs Source**: date comparison sample.
 
 ### KPI: Capacity Utilisation
 - **Objective**: load vs available capacity.
-- **Formula (DAX)**: `Utilisation % = DIVIDE(SUM(fact_capacity[required_hrs]),
-  SUM(fact_capacity[available_hrs])) * 100`
+- **Formula (SQL)**: `SELECT SUM(required_hrs) / NULLIF(SUM(available_hrs),0) * 100 AS utilisation_pct FROM fact_capacity`
 - **Calculation Level**: work centre / plant / period
 - **Interpretation**: >100 % = overload; <60 % = underutilised.
 - **Thresholds**: Green 70–90 %, Yellow 90–100 %, Red >100 % (or <60 %)
@@ -359,8 +355,7 @@ Star schema (Azure SQL → Power BI):
 
 ### KPI: DDMRP Red-Zone Penetration Rate
 - **Objective**: buffer health at decoupling points.
-- **Formula (DAX)**: `Red Penetration % = DIVIDE(CALCULATE(COUNTROWS(fact_ddmrp),
-  fact_ddmrp[zone]="RED"), COUNTROWS(fact_ddmrp)) * 100`
+- **Formula (SQL)**: `SELECT COUNT(*) FILTER (WHERE zone = 'RED') / NULLIF(COUNT(*),0) * 100 AS red_penetration_pct FROM fact_ddmrp`
 - **Calculation Level**: material / plant / month
 - **Thresholds**: Green <10 %, Yellow 10–20 %, Red >20 %
 - **Recommended Action**: Red → increase buffer / expedite; investigate ADU.
@@ -369,7 +364,7 @@ Star schema (Azure SQL → Power BI):
 ### KPI: Bullwhip Ratio
 - **Objective**: demand amplification per supply link.
 - **Formula**: `Bullwhip = VAR(order_qty) / VAR(demand_qty)` over rolling 12 periods.
-  (Python/DAX `VARX.P`.)
+  (Python / SQL `VAR_POP`.)
 - **Calculation Level**: material × supplier
 - **Interpretation**: ≈1 ideal; >1 amplification.
 - **Thresholds**: Green ≤1.3, Yellow 1.3–2.0, Red >2.0
@@ -446,7 +441,7 @@ Star schema (Azure SQL → Power BI):
 
 ---
 
-## 14. Dashboard / Report Design (Power BI)
+## 14. Dashboard / Report Design (Apache Superset)
 
 **Page 1 — Planning Health Overview**: exception rate, attainment, top bottlenecks,
 red-buffer count.
@@ -553,7 +548,7 @@ drill-through to element detail; planner workload.
 ## 19. Implementation Checklist
 
 1. Confirm exception code catalog + severity mapping with Planning.
-2. Build Azure SQL staging for Sources 1–5.
+2. Build PostgreSQL staging for Sources 1–5.
 3. Extract MRP list, production orders, capacity, DDMRP, orders/demand.
 4. Build fact/dim model per §6.
 5. Implement transformations §8 (exposure, zone, utilisation, variance).
@@ -561,10 +556,10 @@ drill-through to element detail; planner workload.
 7. Build capacity utilisation + bottleneck logic.
 8. Build DDMRP zone + penetration logic.
 9. Build bullwhip variance computation.
-10. Build Power BI model + relationships.
+10. Build Apache Superset model + relationships.
 11. Author KPI measures.
 12. Build 5 dashboard pages.
-13. Configure RLS (plant/planner).
+13. Configure Apache Superset row-level security (RLS) (plant/planner).
 14. Set daily refresh after MRP run; add freshness gate.
 15. Implement validations §12.
 16. Build reconciliation pack to SAP.
@@ -583,7 +578,7 @@ drill-through to element detail; planner workload.
 6. Attainment bounded 0..planned.
 7. Bullwhip ratio recomputed on sample.
 8. Buffer ordering TOR≤TOY≤TOP enforced.
-9. RLS verified.
+9. Apache Superset row-level security (RLS) verified.
 10. Refresh schedule confirmed.
 
 ---
@@ -596,7 +591,7 @@ drill-through to element detail; planner workload.
 - DDMRP buffer parameter source (IBP vs custom). — *Pending to confirm*
 - Net-demand series definition for bullwhip. — *Pending to confirm*
 - MRP run schedule/calendar. — *Pending to confirm*
-- RLS security groups (plant/planner). — *Pending to confirm*
+- Apache Superset row-level security (RLS) groups (plant/planner). — *Pending to confirm*
 
 ---
 
@@ -609,7 +604,7 @@ drill-through to element detail; planner workload.
 | 6–8 | Fact/dim + transforms | Model v1 | Data Eng | Pending |
 | 9–10 | Exception/attainment/capacity | Computed facts | Analytics | Pending |
 | 11–12 | DDMRP + bullwhip | Computed facts | Analytics | Pending |
-| 13–14 | Power BI + KPIs | Dashboard draft | BI Dev | Pending |
+| 13–14 | Apache Superset + KPIs | Dashboard draft | BI Dev | Pending |
 | 15–16 | Validations + reconciliation | Recon pack | Data Quality | Pending |
 | 17 | UAT | Sign-off | Planning | Pending |
 | 18 | Go-live + hypercare | Production report | BI Lead | Pending |

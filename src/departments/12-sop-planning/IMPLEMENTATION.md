@@ -6,7 +6,7 @@
 **Version:** 2.0.0
 **Date:** 2026-06-22
 **Classification:** Internal — Senior Leadership and S&OP Programme Team
-**Systems:** SAP IBP for S&OP | SAP S/4HANA | Power BI | Azure SQL
+**Systems:** SAP IBP for S&OP | SAP S/4HANA | Apache Superset | PostgreSQL
 
 ---
 
@@ -41,7 +41,7 @@
 
 Sales & Operations Planning (S&OP) and its advanced form, Integrated Business Planning (IBP), are the central management processes that align commercial commitments with operational capabilities and financial targets across a 24-to-36-month rolling horizon. When executed with analytical rigour, S&OP/IBP eliminates the chronic misalignment between what Sales promises, what Operations can deliver, and what Finance plans — a gap that costs the median enterprise between 2% and 4% of annual revenue in excess inventory, expediting costs, and lost sales.
 
-This implementation guide defines the complete analytics framework for the S&OP/IBP Planning department, covering five core analytical domains: Plan vs. Actual Analysis (demand, supply, and financial plans), Consensus Forecast Bias and Accuracy, 12-Month Rolling Inventory Projection, Capacity Utilisation across the S&OP planning horizon, and the monthly S&OP Executive Meeting Pack. The framework is built on SAP IBP for S&OP as the planning engine, SAP S/4HANA as the ERP system of record, Azure SQL as the analytical warehouse, and Power BI as the reporting and visualisation layer.
+This implementation guide defines the complete analytics framework for the S&OP/IBP Planning department, covering five core analytical domains: Plan vs. Actual Analysis (demand, supply, and financial plans), Consensus Forecast Bias and Accuracy, 12-Month Rolling Inventory Projection, Capacity Utilisation across the S&OP planning horizon, and the monthly S&OP Executive Meeting Pack. The framework is built on SAP IBP for S&OP as the planning engine, SAP S/4HANA as the ERP system of record, PostgreSQL as the analytical warehouse, and Apache Superset as the reporting and visualisation layer.
 
 ### Strategic Value
 
@@ -124,23 +124,23 @@ The primary objective of this analytics implementation is to give the S&OP leade
 
 ```
 SAP IBP for S&OP (Planning Engine)
-    |-- Statistical forecast (SES, Holt-Winters, MLR)  →  Azure SQL [stg_ibp_stat_forecast]
-    |-- Adjusted/consensus forecast                     →  Azure SQL [stg_ibp_consensus_forecast]
-    |-- Supply plan                                     →  Azure SQL [stg_ibp_supply_plan]
-    |-- Inventory projection                            →  Azure SQL [stg_ibp_inventory_projection]
-    |-- Capacity plan                                   →  Azure SQL [stg_ibp_capacity_plan]
+    |-- Statistical forecast (SES, Holt-Winters, MLR)  →  PostgreSQL [stg_ibp_stat_forecast]
+    |-- Adjusted/consensus forecast                     →  PostgreSQL [stg_ibp_consensus_forecast]
+    |-- Supply plan                                     →  PostgreSQL [stg_ibp_supply_plan]
+    |-- Inventory projection                            →  PostgreSQL [stg_ibp_inventory_projection]
+    |-- Capacity plan                                   →  PostgreSQL [stg_ibp_capacity_plan]
 
 SAP S/4HANA (System of Record)
-    |-- Actual sales (VBRP billing documents)           →  Azure SQL [stg_sd_vbrp]
-    |-- Actual production (PP orders CO11N)             →  Azure SQL [stg_pp_aufm]
-    |-- Actual inventory (MB52/MMBE)                   →  Azure SQL [stg_mm_mard]
-    |-- Financial plan (CO-PA / BPC)                   →  Azure SQL [stg_copa_plan]
-    |-- Actual financials (FAGLFLEXT / ACDOCA)         →  Azure SQL [stg_fi_actuals]
+    |-- Actual sales (VBRP billing documents)           →  PostgreSQL [stg_sd_vbrp]
+    |-- Actual production (PP orders CO11N)             →  PostgreSQL [stg_pp_aufm]
+    |-- Actual inventory (MB52/MMBE)                   →  PostgreSQL [stg_mm_mard]
+    |-- Financial plan (CO-PA / BPC)                   →  PostgreSQL [stg_copa_plan]
+    |-- Actual financials (FAGLFLEXT / ACDOCA)         →  PostgreSQL [stg_fi_actuals]
 
-Azure SQL (Analytical Data Warehouse)
+PostgreSQL (Analytical Data Warehouse)
     |-- Staging, dimensions, facts, reporting tables
 
-Power BI (Reporting Layer)
+Apache Superset (Reporting Layer)
     |-- S&OP Analytics Hub (7 pages)
     |-- Automated S&OP meeting pack export
     |-- Weekly demand sensing dashboard
@@ -197,7 +197,7 @@ Are all required data submissions (statistical forecast, commercial overrides, s
 |-----------|--------|
 | Name | SAP IBP Statistical Baseline Forecast |
 | System | SAP Integrated Business Planning for S&OP |
-| Tables / API | SAP IBP OData API: ForecastResultSet; Azure SQL staging: stg_ibp_stat_forecast |
+| Tables / API | SAP IBP OData API: ForecastResultSet; PostgreSQL staging: stg_ibp_stat_forecast |
 | Owner | Demand Planning team |
 | Extraction Frequency | Daily delta (IBP planning run results); full reload at each monthly statistical run |
 | Critical Fields | planning_level_id, product_id, location_id, customer_group_id, fiscal_period (YYYYMM), horizon_bucket, stat_forecast_qty, stat_forecast_value, algorithm_used (SES/HW/MLR/ARIMA), mape_in_sample, bias_in_sample, model_version |
@@ -212,7 +212,7 @@ Are all required data submissions (statistical forecast, commercial overrides, s
 |-----------|--------|
 | Name | SAP IBP Consensus Demand Plan (after commercial override) |
 | System | SAP IBP for S&OP — Demand Review step |
-| Tables / API | SAP IBP OData API: ConsensusKeyFigure; Azure SQL staging: stg_ibp_consensus_forecast |
+| Tables / API | SAP IBP OData API: ConsensusKeyFigure; PostgreSQL staging: stg_ibp_consensus_forecast |
 | Owner | Demand Planning Manager (process owner); Commercial / Sales teams (contributors) |
 | Extraction Frequency | Daily (captures incremental overrides); locked version snapshot at Demand Review gate |
 | Critical Fields | product_id, location_id, customer_group_id, fiscal_period, horizon_bucket, consensus_forecast_qty, consensus_forecast_value, commercial_override_qty, commercial_override_reason_code, override_by_user, override_timestamp, is_locked (1 at demand review gate), lock_version |
@@ -227,7 +227,7 @@ Are all required data submissions (statistical forecast, commercial overrides, s
 |-----------|--------|
 | Name | SAP IBP Supply Plan (after supply review) |
 | System | SAP IBP for S&OP — Supply Review step |
-| Tables / API | SAP IBP OData API: SupplyPlanKeyFigure; Azure SQL staging: stg_ibp_supply_plan |
+| Tables / API | SAP IBP OData API: SupplyPlanKeyFigure; PostgreSQL staging: stg_ibp_supply_plan |
 | Owner | Supply Planning Manager |
 | Extraction Frequency | Daily delta; locked version snapshot at Supply Review gate |
 | Critical Fields | product_id, location_id, resource_id, fiscal_period, horizon_bucket, supply_plan_qty, supply_plan_value, confirmed_capacity_qty, capacity_utilisation_pct, supply_gap_qty (consensus_forecast_qty - supply_plan_qty), is_locked, lock_version |
@@ -243,7 +243,7 @@ Are all required data submissions (statistical forecast, commercial overrides, s
 | Name | SAP SD Billing Documents (Actual Revenue) |
 | System | SAP S/4HANA SD module |
 | Tables | VBRK (billing document header), VBRP (billing document line items), VBAK (sales order header), VBAP (sales order items) |
-| Azure SQL Staging | stg_sd_vbrk, stg_sd_vbrp |
+| PostgreSQL Staging | stg_sd_vbrk, stg_sd_vbrp |
 | Owner | Sales / Order-to-Cash team |
 | Extraction Frequency | Near-real-time CDC; full period reload nightly |
 | Critical Fields | VBELN (billing document), POSNR (line), MATNR (material), KUNAG (sold-to customer), FKDAT (billing date), FKIMG (billed quantity), VRKME (sales UOM), NETWR (net value), WAERS (currency), AUBEL (sales order reference), WERKS (plant), VTWEG (distribution channel), SPART (division) |
@@ -259,7 +259,7 @@ Are all required data submissions (statistical forecast, commercial overrides, s
 | Name | SAP MM Stock Overview (Period-End Inventory Snapshot) |
 | System | SAP S/4HANA MM module |
 | Tables | MARD (storage location stock), MARC (plant-level MRP data), MBEWH (material valuation history by period) |
-| Azure SQL Staging | stg_mm_mard, stg_mm_mbewh |
+| PostgreSQL Staging | stg_mm_mard, stg_mm_mbewh |
 | Owner | Inventory Management / Supply Planning team |
 | Extraction Frequency | Daily snapshot (MARD); Monthly period-end snapshot (MBEWH) |
 | Critical Fields | MATNR (material), WERKS (plant), LGORT (storage location), LABST (unrestricted stock), EINME (GR blocked), SPEME (blocked stock), UMLME (in-transfer), LFGJA (fiscal year), LFMON (period), LBKUM (total valuated stock qty from MBEWH), SALK3 (total stock value) |
@@ -274,7 +274,7 @@ Are all required data submissions (statistical forecast, commercial overrides, s
 |-----------|--------|
 | Name | Financial Plan — Revenue, COGS, Gross Margin by Product Family |
 | System | SAP BPC (Business Planning and Consolidation) or SAP CO-PA |
-| Tables | Azure SQL staging: stg_copa_plan (extracted from CO-PA CE1XXXX planning version) |
+| Tables | PostgreSQL staging: stg_copa_plan (extracted from CO-PA CE1XXXX planning version) |
 | Owner | Finance Business Partners / FP&A team |
 | Extraction Frequency | Monthly (updated at each financial planning cycle); locked version at S&OP financial reconciliation gate |
 | Critical Fields | product_family_id, region_id, channel_id, fiscal_period, plan_version, plan_revenue, plan_cogs, plan_gross_margin, plan_volume_units, plan_avg_selling_price, plan_gross_margin_pct, created_by, lock_timestamp |
@@ -341,7 +341,7 @@ fact_sop_cycle_kpi ────────────────────�
      inventory_projection_accuracy_m3, avg_capacity_utilisation)      │
 ```
 
-### Star Schema Design (Azure SQL)
+### Star Schema Design (PostgreSQL)
 
 ```sql
 -- Conformed Dimensions
@@ -789,7 +789,7 @@ For product families with persistent forecast bias (> +/- 5% for 3+ months), the
 
 ### S&OP Meeting Pack Generation
 
-The automated S&OP executive pack is generated from the following analytical components, assembled into a single Power BI bookmarked report exported to PDF:
+The automated S&OP executive pack is generated from the following analytical components, assembled into a single Apache Superset bookmarked report exported to PDF:
 
 1. **Cover page**: S&OP cycle month, key decisions required, pre-read summary
 2. **Demand review summary**: Accuracy and bias KPIs by product family; top 5 upside and downside demand risks
@@ -866,7 +866,7 @@ The automated S&OP executive pack is generated from the following analytical com
 
 ## 14. Dashboard Design
 
-### Power BI Report Structure
+### Apache Superset Report Structure
 
 **Page 1: S&OP Executive Summary**
 - KPI scorecard: All 7 KPIs in RAG (Red/Amber/Green) card format
@@ -1105,11 +1105,11 @@ The automated S&OP executive pack is generated from the following analytical com
 | R-01 | SAP IBP forecast extract fails during S&OP week, blocking pack generation | Medium | High | Implement daily automated extraction with email alert on failure; maintain T-1 day snapshot as fallback |
 | R-02 | Actual sales data from SD module not available at period close due to billing backlog | Medium | High | Implement accrual logic using confirmed orders as proxy; reconcile within 5 days of period end |
 | R-03 | S&OP process discipline low — commercial teams submit overrides without reason codes | High | Medium | Enforce in IBP workflow: system blocks submission without reason code; track override compliance as a visible KPI |
-| R-04 | Financial plan and volume plan not reconciled — two versions of truth in Executive meeting | Medium | High | Gate: Power BI shows financial reconciliation gap status; Executive S&OP pack not marked as ready until gap < 2% |
+| R-04 | Financial plan and volume plan not reconciled — two versions of truth in Executive meeting | Medium | High | Gate: Apache Superset shows financial reconciliation gap status; Executive S&OP pack not marked as ready until gap < 2% |
 | R-05 | Capacity data not available for third-party manufacturers — blind spots in capacity plan | Medium | Medium | Request monthly capacity confirmation from CMOs; use historical utilisation as proxy where not available; flag as estimated |
 | R-06 | Safety stock targets not refreshed monthly — stale targets distort stockout/excess flags | Medium | Medium | Automate safety stock calculation trigger as part of monthly S&OP planning run; alert if safety stock data > 30 days old |
 | R-07 | S&OP at product family level masks SKU-level risks — executive decision made on aggregated data may miss critical SKU constraints | High | Medium | Maintain SKU-level detail in backend; Surface top-3 SKU-level exceptions in the executive pack as supporting data |
-| R-08 | Power BI performance degrades with 24-month rolling projection × all product families | Medium | Low | Pre-aggregate 12-month projections at product family level; use import mode for historical data; DirectQuery only for current cycle |
+| R-08 | Apache Superset performance degrades with 24-month rolling projection × all product families | Medium | Low | Pre-aggregate 12-month projections at product family level; use materialized SQL views for historical data; live SQL query (SQLAlchemy connection) only for current cycle |
 
 ---
 
@@ -1138,7 +1138,7 @@ The automated S&OP executive pack is generated from the following analytical com
 - [ ] Safety stock integration: safety stock targets loaded from Department 03 module
 
 ### Reporting and Dashboards
-- [ ] Power BI semantic model created with all fact and dimension tables
+- [ ] Apache Superset semantic model created with all fact and dimension tables
 - [ ] All 7 dashboard pages designed and implemented
 - [ ] RAG thresholds configured for all KPI scorecards (configurable)
 - [ ] S&OP pack PDF export configured (bookmarks + export automation)
@@ -1149,7 +1149,7 @@ The automated S&OP executive pack is generated from the following analytical com
 ### Process and Governance
 - [ ] S&OP calendar configured in dim_sop_cycle_version for 12 months
 - [ ] IBP submission deadlines and owners documented
-- [ ] Override reason code list confirmed and loaded to IBP and Azure SQL reference table
+- [ ] Override reason code list confirmed and loaded to IBP and PostgreSQL reference table
 - [ ] Financial reconciliation tolerance (2%) confirmed with CFO
 - [ ] Safety stock threshold multipliers for excess/stockout flags confirmed with Supply Planning Manager
 - [ ] Capacity bottleneck thresholds (85% amber, 100% red) confirmed with VP Operations
@@ -1160,7 +1160,7 @@ The automated S&OP executive pack is generated from the following analytical com
 
 ### Pre-Go-Live Validation
 
-- [ ] Demand plan accuracy (M+1) for prior 6 months calculated and manually spot-checked against Excel-based tracking: all values within 0.5 percentage points
+- [ ] Demand plan accuracy (M+1) for prior 6 months calculated and manually spot-checked against spreadsheet (CSV) export-based tracking: all values within 0.5 percentage points
 - [ ] Revenue bridge decomposition for 3 prior months validated against Finance manual bridge: all effects reconcile within $1,000
 - [ ] 12-month inventory projection for 5 product families validated: projected closing stock for M+1 matches actual opening stock of next month (continuity check)
 - [ ] Capacity utilisation for 3 production lines validated against PP CRP report in SAP for the prior month: within 2% of SAP CRP output
@@ -1169,7 +1169,7 @@ The automated S&OP executive pack is generated from the following analytical com
 - [ ] S&OP cycle discipline tracker validated: submission timestamps match IBP audit log
 - [ ] P10/P50/P90 inventory bands validated: P10 always >= P50 (lower demand = higher stock), P90 always <= P50
 - [ ] All ETL pipelines complete without error for two full monthly S&OP cycles (parallel run)
-- [ ] Power BI Executive S&OP Pack PDF export tested and confirmed readable by CFO
+- [ ] Apache Superset Executive S&OP Pack PDF export tested and confirmed readable by CFO
 
 ### Monthly Ongoing Validation (First 3 Months)
 
@@ -1194,7 +1194,7 @@ The automated S&OP executive pack is generated from the following analytical com
 | S&OP calendar for next 12 months (cycle start dates, gate deadlines per step) | S&OP Process Owner | 2026-07-10 | Cannot populate dim_sop_cycle_version or track cycle discipline |
 | Financial reconciliation tolerance confirmed by CFO | CFO / Finance Director | 2026-07-22 | Cannot implement financial gate check |
 | Excess inventory multiplier threshold (currently 3.0×) confirmed by Supply Planning | Supply Planning Manager | 2026-07-22 | Cannot implement excess flag in projection |
-| Power BI workspace provisioning and Azure SQL connection approval | IT Security / Azure Admin | 2026-07-10 | Blocks all dashboard development |
+| Apache Superset workspace provisioning and PostgreSQL connection approval | IT Security / Database Admin | 2026-07-10 | Blocks all dashboard development |
 
 ---
 
@@ -1206,12 +1206,12 @@ The automated S&OP executive pack is generated from the following analytical com
 
 | Week | Activities |
 |------|-----------|
-| 1 | SAP IBP OData API connection and authentication; SAP S/4HANA CDC configured for VBRK/VBRP and MARD/MBEWH; Azure SQL environment provisioned |
+| 1 | SAP IBP OData API connection and authentication; SAP S/4HANA CDC configured for VBRK/VBRP and MARD/MBEWH; PostgreSQL environment provisioned |
 | 2 | Staging tables created; initial data extraction for IBP forecast, SD sales actuals, inventory snapshots; data quality assessment |
 | 3 | Conformed dimension tables populated: dim_product_family, dim_location, dim_resource, dim_sop_cycle_version, dim_channel, dim_date; product family hierarchy validated with IBP team |
 | 4 | BPC/CO-PA financial plan extraction configured; FX rate feed operational; S&OP calendar loaded; data quality baseline report shared with S&OP Process Owner |
 
-**Gate:** All six source systems extracting to Azure SQL; data quality baseline established; product family hierarchy confirmed.
+**Gate:** All six source systems extracting to PostgreSQL; data quality baseline established; product family hierarchy confirmed.
 
 ### Phase 2: Core Analytics (Weeks 5-10)
 
@@ -1226,15 +1226,15 @@ The automated S&OP executive pack is generated from the following analytical com
 | 9 | fact_capacity_utilisation ETL: resource load calculation; utilisation %; bottleneck flags; overtime computation |
 | 10 | fact_sop_cycle_kpi ETL: aggregated cycle-level KPI summary; cycle discipline tracking (submission timestamps) |
 
-**Gate:** All five fact tables populated; TC-01 through TC-05 test cases pass; parallel comparison with manual S&OP Excel tracker for prior 3 cycles.
+**Gate:** All five fact tables populated; TC-01 through TC-05 test cases pass; parallel comparison with manual S&OP spreadsheet (CSV) tracker for prior 3 cycles.
 
 ### Phase 3: Dashboard and Reporting (Weeks 11-14)
 
-**Objective:** Deliver Power BI dashboards and automate S&OP meeting pack.
+**Objective:** Deliver Apache Superset dashboards and automate S&OP meeting pack.
 
 | Week | Activities |
 |------|-----------|
-| 11 | Power BI semantic model built; Page 1 (Executive Summary) and Page 2 (Demand Accuracy/Bias) developed; stakeholder review with Demand Planning Manager |
+| 11 | Apache Superset semantic model built; Page 1 (Executive Summary) and Page 2 (Demand Accuracy/Bias) developed; stakeholder review with Demand Planning Manager |
 | 12 | Pages 3-4 (Revenue Bridge, Supply Attainment) developed; RLS security model by region configured |
 | 13 | Pages 5-7 (Inventory Projection, Capacity, S&OP Discipline) developed; PDF export automation configured; alert rules activated |
 | 14 | UAT with S&OP Process Owner, VP Sales representative, VP Operations representative, Finance BP; defect resolution |
@@ -1247,7 +1247,7 @@ The automated S&OP executive pack is generated from the following analytical com
 
 | Week | Activities |
 |------|-----------|
-| 15-16 | Parallel run: S&OP cycle Month 1 run on both new platform and legacy Excel; all KPIs compared; discrepancies resolved |
+| 15-16 | Parallel run: S&OP cycle Month 1 run on both new platform and legacy spreadsheet (CSV); all KPIs compared; discrepancies resolved |
 | 17 | Executive S&OP meeting pack generated from new platform for first time (presented alongside legacy pack for comparison); executive feedback incorporated |
 | 18 | Go-live decision gate; user training delivered to all S&OP participants; hypercare plan activated (dedicated support for first 3 live cycles) |
 

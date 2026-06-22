@@ -6,7 +6,7 @@
 **Version:** 2.0.0
 **Date:** 2026-06-22
 **Classification:** Internal — Restricted (Finance Controllers + Supply Chain Leadership)
-**Systems:** SAP S/4HANA FI/CO/MM | Power BI | Azure SQL | SAP Analytics Cloud
+**Systems:** SAP S/4HANA FI/CO/MM | Apache Superset | PostgreSQL | SAP Analytics Cloud
 
 ---
 
@@ -41,7 +41,7 @@
 
 Supply chain finance analytics is the discipline of translating physical goods flows — purchase orders, receipts, shipments, stock movements — into financial signals that drive working capital optimisation, cost control, and procurement governance. This implementation guide defines the complete analytical framework for the Finance & Supply Chain Controlling department, covering six core analytical domains: Purchase Price Variance (PPV), Working Capital (CCC/DIO/DSO/DPO), Inventory Valuation (FIFO vs. Moving Average), Landed Cost, 3-Way Match Exception Tracking, and Freight Cost Allocation.
 
-The framework is built on SAP S/4HANA FI/CO/MM as the system of record, with Azure SQL as the analytical data warehouse layer and Power BI as the front-end reporting and alerting platform. The monthly close cycle drives the primary reporting cadence, with near-real-time alerting for exception conditions (invoice mismatches, PPV spikes, freight cost anomalies).
+The framework is built on SAP S/4HANA FI/CO/MM as the system of record, with PostgreSQL as the analytical data warehouse layer and Apache Superset as the front-end reporting and alerting platform. The monthly close cycle drives the primary reporting cadence, with near-real-time alerting for exception conditions (invoice mismatches, PPV spikes, freight cost anomalies).
 
 ### Strategic Value
 
@@ -129,21 +129,21 @@ The primary objective of this analytics implementation is to provide Finance Con
 
 ```
 SAP S/4HANA (MM/FI/CO)
-    |-- Purchase Orders (ME21N/ME22N)  →  Azure SQL [stg_mm_ekko, stg_mm_ekpo]
-    |-- Goods Receipts (MIGO)          →  Azure SQL [stg_mm_mseg, stg_mm_mkpf]
-    |-- Invoice Receipts (MIRO/FB60)   →  Azure SQL [stg_fi_rbkp, stg_fi_rseg]
-    |-- Material Ledger (CKMLCR)       →  Azure SQL [stg_co_ckmlcr]
-    |-- Cost Centers (KSB1)            →  Azure SQL [stg_co_cost_centers]
-    |-- Freight/Conditions (EKKO/EKPO) →  Azure SQL [stg_mm_konv]
+    |-- Purchase Orders (ME21N/ME22N)  →  PostgreSQL [stg_mm_ekko, stg_mm_ekpo]
+    |-- Goods Receipts (MIGO)          →  PostgreSQL [stg_mm_mseg, stg_mm_mkpf]
+    |-- Invoice Receipts (MIRO/FB60)   →  PostgreSQL [stg_fi_rbkp, stg_fi_rseg]
+    |-- Material Ledger (CKMLCR)       →  PostgreSQL [stg_co_ckmlcr]
+    |-- Cost Centers (KSB1)            →  PostgreSQL [stg_co_cost_centers]
+    |-- Freight/Conditions (EKKO/EKPO) →  PostgreSQL [stg_mm_konv]
 
-Azure SQL (Data Warehouse)
+PostgreSQL (Data Warehouse)
     |-- Staging tables (stg_*)
     |-- Conformed dimension tables (dim_*)
     |-- Fact tables (fact_*)
     |-- Aggregated reporting tables (rpt_*)
 
-Power BI (Reporting Layer)
-    |-- Semantic model (DirectQuery on Azure SQL)
+Apache Superset (Reporting Layer)
+    |-- Semantic model (live SQL query (SQLAlchemy connection) on PostgreSQL)
     |-- Dashboard: Finance Supply Chain Analytics Hub
     |-- Scheduled refresh: 4x daily (06:00, 12:00, 18:00, 23:00 UTC)
     |-- Alert engine: PPV threshold, match exception aging
@@ -202,7 +202,7 @@ Are all financial sub-ledger reconciliations complete (AP, AR, Inventory), and w
 | Name | SAP MM Purchase Order Header and Line Items |
 | System | SAP S/4HANA MM module |
 | Tables | EKKO (header), EKPO (line items), EKET (schedule lines) |
-| Azure SQL Staging | stg_mm_ekko, stg_mm_ekpo, stg_mm_eket |
+| PostgreSQL Staging | stg_mm_ekko, stg_mm_ekpo, stg_mm_eket |
 | Owner | Procurement Master Data team |
 | Extraction Frequency | Near-real-time via SAP CDC (Change Data Capture); full reload nightly |
 | Critical Fields | EBELN (PO number), EBELP (line), MATNR (material), LIFNR (vendor), NETPR (net price), MENGE (quantity), MEINS (UOM), WERKS (plant), EKGRP (purchasing group), BSART (PO type), LOEKZ (deletion flag) |
@@ -218,7 +218,7 @@ Are all financial sub-ledger reconciliations complete (AP, AR, Inventory), and w
 | Name | SAP MM Material Document (Goods Receipts) |
 | System | SAP S/4HANA MM module |
 | Tables | MKPF (material document header), MSEG (material document line items) |
-| Azure SQL Staging | stg_mm_mkpf, stg_mm_mseg |
+| PostgreSQL Staging | stg_mm_mkpf, stg_mm_mseg |
 | Owner | Warehouse / Inventory Management team |
 | Extraction Frequency | Near-real-time CDC; full reload nightly |
 | Critical Fields | MBLNR (material document), MJAHR (year), ZEILE (item), MATNR (material), EBELN (PO reference), EBELP (PO line reference), MENGE (GR quantity), MEINS (UOM), WERKS (plant), BWART (movement type), BUDAT (posting date), DMBTR (amount local currency) |
@@ -234,7 +234,7 @@ Are all financial sub-ledger reconciliations complete (AP, AR, Inventory), and w
 | Name | SAP FI Invoice Receipts (Logistics Invoice Verification) |
 | System | SAP S/4HANA FI/MM module |
 | Tables | RBKP (invoice header), RSEG (invoice line items), BKPF (FI document header), BSEG (FI document line items) |
-| Azure SQL Staging | stg_fi_rbkp, stg_fi_rseg, stg_fi_bkpf, stg_fi_bseg |
+| PostgreSQL Staging | stg_fi_rbkp, stg_fi_rseg, stg_fi_bkpf, stg_fi_bseg |
 | Owner | Accounts Payable team |
 | Extraction Frequency | Near-real-time CDC; full reload nightly |
 | Critical Fields | BELNR (invoice document), GJAHR (fiscal year), BUZEI (line), LIFNR (vendor), MATNR (material), EBELN (PO), EBELP (PO line), MENGE (invoiced quantity), MEINS (UOM), WRBTR (gross amount), WAERS (currency), ZFBDT (baseline date), ZBD1T (payment terms days), RBSTAT (invoice status) |
@@ -250,7 +250,7 @@ Are all financial sub-ledger reconciliations complete (AP, AR, Inventory), and w
 | Name | SAP CO-PC Material Ledger (Actual Costing) |
 | System | SAP S/4HANA CO-PC module |
 | Tables | CKMLCR (material ledger header), CKMVFM (material ledger movements), MBEWH (material valuation history) |
-| Azure SQL Staging | stg_co_ckmlcr, stg_co_ckmvfm, stg_co_mbewh |
+| PostgreSQL Staging | stg_co_ckmlcr, stg_co_ckmvfm, stg_co_mbewh |
 | Owner | Controlling / Cost Accounting team |
 | Extraction Frequency | Monthly (period close trigger) + interim snapshot on demand |
 | Critical Fields | MATNR (material), BWKEY (valuation area), PEINH (price unit), STPRS (standard price), VERPR (moving average price), LBKUM (total valuated stock), SALK3 (total stock value), VPRSV (price control indicator: S=standard, V=moving average), LFGJA (fiscal year), LFMON (period) |
@@ -266,7 +266,7 @@ Are all financial sub-ledger reconciliations complete (AP, AR, Inventory), and w
 | Name | SAP MM Pricing Conditions (Freight and Surcharges) |
 | System | SAP S/4HANA MM module |
 | Tables | KONV (conditions per document), KONP (condition item), T685T (condition types) |
-| Azure SQL Staging | stg_mm_konv, stg_mm_konp |
+| PostgreSQL Staging | stg_mm_konv, stg_mm_konp |
 | Owner | Procurement / Logistics Controlling team |
 | Extraction Frequency | Daily delta extraction |
 | Critical Fields | KNUMV (condition document number), KPOSN (condition item), KAPPL (application: M=purchasing), KSCHL (condition type: FRB1=freight, ZFR1=custom freight), KWERT (condition value in document currency), WAERS (currency), KBETR (condition rate), KMEIN (condition UOM), EBELN (PO reference via EKKO.KNUMV) |
@@ -281,7 +281,7 @@ Are all financial sub-ledger reconciliations complete (AP, AR, Inventory), and w
 |-----------|--------|
 | Name | Freight Carrier and Forwarder Invoice Data |
 | System | External TMS (e.g., SAP TM, Blue Yonder, Transplace) or manual upload |
-| Tables | Azure SQL: stg_freight_invoices, stg_freight_shipment_lines |
+| Tables | PostgreSQL: stg_freight_invoices, stg_freight_shipment_lines |
 | Owner | Logistics Controlling / Transport Management team |
 | Extraction Frequency | Daily file-based upload (EDI 210 / EDIFACT INVOIC) or API pull |
 | Critical Fields | freight_invoice_id, carrier_id, shipment_id, origin_port, destination_port, transport_mode, weight_kg, volume_cbm, contracted_rate_usd, actual_rate_usd, surcharge_type, surcharge_amount_usd, invoice_date, payment_due_date, po_reference |
@@ -355,7 +355,7 @@ fact_working_capital ──── (entity FK, period FK,
                             working_capital_value)
 ```
 
-### Star Schema Design (Azure SQL)
+### Star Schema Design (PostgreSQL)
 
 The data model follows a Kimball-style star schema with conformed dimensions shared across all fact tables. Each fact table is partitioned by fiscal_year_period (YYYYMM) for query performance.
 
@@ -930,7 +930,7 @@ Before the monthly period close report is published:
 
 ## 14. Dashboard Design
 
-### Power BI Report Structure
+### Apache Superset Report Structure
 
 **Page 1: Finance Supply Chain Executive Summary**
 - KPI cards: CCC (current vs. prior month vs. benchmark), PPV total ($, favorable vs. unfavorable), 3-Way Match Auto Rate, Freight % COGS
@@ -1149,17 +1149,17 @@ Before the monthly period close report is published:
 | R-05 | Poor supplier data quality → High orphan invoice rate degrading 3-way match | Medium | High | Supplier portal onboarding with data quality validation; reject invoices without PO reference after 90-day grace period |
 | R-06 | Multiple ERP instances across entities → Data inconsistency in consolidated reports | Medium | High | Establish golden record hierarchy; master data governance council; SAP MDG implementation roadmap |
 | R-07 | LCNRV assessment depends on NRV estimates which may be subjective | High | Medium | Define NRV methodology in accounting policy; require Finance Controller sign-off; external audit sampling |
-| R-08 | Power BI DirectQuery performance degradation on large exception table | Medium | Low | Implement aggregation tables in Azure SQL; partition fact tables by YYYYMM; limit default date range to 3 months |
+| R-08 | Apache Superset live SQL query (SQLAlchemy connection) performance degradation on large exception table | Medium | Low | Implement aggregation tables in PostgreSQL; partition fact tables by YYYYMM; limit default date range to 3 months |
 
 ---
 
 ## 19. Implementation Checklist
 
 ### Data Foundation
-- [ ] SAP S/4HANA EKKO, EKPO, MKPF, MSEG, RBKP, RSEG, CKMLCR tables extracted to Azure SQL staging
+- [ ] SAP S/4HANA EKKO, EKPO, MKPF, MSEG, RBKP, RSEG, CKMLCR tables extracted to PostgreSQL staging
 - [ ] SAP CDC (Change Data Capture) configured for near-real-time delta loads
 - [ ] Material Ledger activated and standard cost estimates created for all active materials
-- [ ] FX rate data feed configured (ECB/FRB daily rates loaded to Azure SQL dim_exchange_rate)
+- [ ] FX rate data feed configured (ECB/FRB daily rates loaded to PostgreSQL dim_exchange_rate)
 - [ ] Freight invoice data source connected (TMS API or EDI 210 file ingestion)
 - [ ] Carrier master table populated with contracted rate data
 - [ ] Customs duty/tariff rate table loaded with HS code classifications
@@ -1177,7 +1177,7 @@ Before the monthly period close report is published:
 - [ ] Working capital calculation procedure implemented
 
 ### Reporting and Dashboards
-- [ ] Power BI semantic model created with all fact and dimension tables
+- [ ] Apache Superset semantic model created with all fact and dimension tables
 - [ ] All 7 dashboard pages designed and implemented
 - [ ] Scheduled refresh configured (4x daily)
 - [ ] Row-level security (RLS) configured by entity/region
@@ -1190,7 +1190,7 @@ Before the monthly period close report is published:
 - [ ] Tolerance configuration approved by AP Manager and Finance Director
 - [ ] LCNRV accounting policy documented and approved
 - [ ] Data quality checks implemented in ETL (per VC-01 to VC-04)
-- [ ] Period close readiness gate checklist automated in Power BI
+- [ ] Period close readiness gate checklist automated in Apache Superset
 - [ ] Audit trail configured for exception resolution actions
 
 ---
@@ -1207,7 +1207,7 @@ Before the monthly period close report is published:
 - [ ] Freight allocation validated for 3 consolidated shipments — allocated amounts sum to total invoice
 - [ ] LCNRV write-down list validated against Finance Controller manual assessment — all high-risk items included
 - [ ] All ETL pipelines complete without error for one full fiscal period (parallel run)
-- [ ] Power BI data matches Azure SQL queries for all 7 dashboard pages
+- [ ] Apache Superset data matches PostgreSQL queries for all 7 dashboard pages
 - [ ] Exception escalation alerts tested (inserted aging test records — confirmed alert emails received)
 
 ### Monthly Ongoing Validation (First 3 Months)
@@ -1232,7 +1232,7 @@ Before the monthly period close report is published:
 | HS code classification for top 200 purchased materials | Trade Compliance / Procurement | 2026-08-01 | Cannot compute customs duty in landed cost |
 | SAP Material Ledger activation status per plant | SAP CO Team | 2026-07-15 | Determines FIFO calculation approach (ML-based vs. manual FIFO) |
 | Commodity index data feeds (LME, oil, etc.) for PPV classification | Finance / Treasury | 2026-08-01 | Cannot classify COMMODITY_PRICE PPV automatically |
-| Power BI workspace and Azure SQL connection approval | IT Security | 2026-07-10 | Blocks all dashboard development |
+| Apache Superset workspace and PostgreSQL connection approval | IT Security | 2026-07-10 | Blocks all dashboard development |
 | Confirmed fiscal year variant (K4 or custom) for all entities | SAP Finance | 2026-07-15 | Affects period alignment in all ETL logic |
 
 ---
@@ -1245,7 +1245,7 @@ Before the monthly period close report is published:
 
 | Week | Activities |
 |------|-----------|
-| 1 | SAP extraction configuration: CDC setup for EKKO, EKPO, MKPF, MSEG, RBKP, RSEG, CKMLCR; Azure SQL environment provisioning |
+| 1 | SAP extraction configuration: CDC setup for EKKO, EKPO, MKPF, MSEG, RBKP, RSEG, CKMLCR; PostgreSQL environment provisioning |
 | 2 | Staging table creation; initial full-load data extraction; data quality assessment (record counts, null rates, key violations) |
 | 3 | Conformed dimension tables created (dim_material, dim_vendor, dim_plant, dim_date, dim_gl_account); master data quality remediation |
 | 4 | Freight invoice ingestion configured; carrier master loaded; FX rate feed operational; first data quality report shared with Finance Controller |
@@ -1269,11 +1269,11 @@ Before the monthly period close report is published:
 
 ### Phase 3: Dashboard and Reporting (Weeks 11-14)
 
-**Objective:** Deliver Power BI dashboards and reporting layer.
+**Objective:** Deliver Apache Superset dashboards and reporting layer.
 
 | Week | Activities |
 |------|-----------|
-| 11 | Power BI semantic model built; Page 1 (Executive Summary) and Page 2 (PPV Detail) developed; stakeholder review |
+| 11 | Apache Superset semantic model built; Page 1 (Executive Summary) and Page 2 (PPV Detail) developed; stakeholder review |
 | 12 | Pages 3-4 (Working Capital, Inventory Valuation) developed; RLS security model implemented |
 | 13 | Pages 5-7 (Landed Cost, 3-Way Match, Freight) developed; alert rules configured; scheduled refresh operational |
 | 14 | User acceptance testing (UAT) with Finance Controllers and AP team; defect resolution; dashboard sign-off |

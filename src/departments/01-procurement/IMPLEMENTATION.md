@@ -3,7 +3,7 @@
 **Department**: Procurement  
 **Workstream**: Purchase Order Follow-up, Open Orders Risk, Spend Analysis, Supplier Compliance  
 **Organization**: €50B Global Multinational | 40 Countries | 10,000+ Active Suppliers  
-**Technology Stack**: SAP S/4HANA · SAP Ariba · Azure SQL · Power BI · Python · Power Automate  
+**Technology Stack**: SAP S/4HANA · SAP Ariba · PostgreSQL · Apache Superset · Python · Apache Airflow  
 **Document Version**: 1.0  
 **Last Updated**: 2026-06-22  
 **Classification**: Internal — Restricted
@@ -14,11 +14,11 @@
 
 Procurement is the largest single controllable cost lever in a €50B global multinational. Direct and indirect spend typically represents 50–70% of total revenue, meaning even a 2% efficiency gain generates €500M–€700M in measurable bottom-line impact. This implementation document provides a rigorous, technically complete specification for the Procurement Analytics workstream, translating raw transactional data from SAP S/4HANA and SAP Ariba into actionable intelligence across four analytical domains: Purchase Order (PO) Follow-up, Open Orders Risk, Spend Analysis, and Supplier Compliance (UFLPA and CSDDD).
 
-The analytics architecture is built on a Microsoft Azure SQL data warehouse feeding Power BI dashboards, with Python-based transformation pipelines orchestrated via Azure Data Factory and monitored through Power Automate alerts. The data model follows a star schema optimized for slice-and-dice analysis across 40 countries, 14 commodity categories, and the full supplier base.
+The analytics architecture is built on a PostgreSQL data warehouse feeding Apache Superset dashboards, with Python-based transformation pipelines orchestrated via Apache Airflow and monitored through Apache Airflow alerts. The data model follows a star schema optimized for slice-and-dice analysis across 40 countries, 14 commodity categories, and the full supplier base.
 
 Regulatory compliance coverage spans the US Uyghur Forced Labor Prevention Act (UFLPA, Pub.L. 117-78, effective June 2022), the EU Corporate Sustainability Due Diligence Directive (CSDDD, Directive 2024/1760, phased enforcement from 2027), and EU REACH Regulation 1907/2006. Non-compliance exposure at this revenue scale represents fines up to 5% of global turnover (CSDDD Art. 22) and US import bans with seizure of goods.
 
-The primary deliverable is a Power BI solution with five report pages, automated daily data refresh, and Power Automate alerts for high-risk purchase orders, overdue deliveries, and compliance flags.
+The primary deliverable is an Apache Superset solution with five report pages, automated daily data refresh, and Apache Airflow alerts for high-risk purchase orders, overdue deliveries, and compliance flags.
 
 ---
 
@@ -86,8 +86,8 @@ This analytics implementation answers the following specific business questions:
 ### Source 1: SAP S/4HANA — Purchase Order Header
 
 - **Source Name**: SAP S/4HANA Purchase Order Header
-- **Origin System**: SAP S/4HANA 2023 (on-premise, Azure-hosted)
-- **Report/Table/Query**: Table EKKO (Purchasing Document Header); extracted via Azure Data Factory SAP connector or SAP BW/4HANA ODP extraction
+- **Origin System**: SAP S/4HANA 2023 (on-premise)
+- **Report/Table/Query**: Table EKKO (Purchasing Document Header); extracted via Apache Airflow SAP connector or SAP BW/4HANA ODP extraction
 - **Data Owner**: Global Procurement Operations — Director of Procurement Systems
 - **Update Frequency**: Daily batch at 01:00 UTC; near-real-time CDC available via SAP LT Replication Server (SLT) for P1 use cases
 - **Required Fields**: EBELN (PO Number), BUKRS (Company Code), BSART (PO Type), LIFNR (Vendor Number), EKGRP (Purchasing Group), EKORG (Purchasing Organization), WAERS (Currency), BEDAT (PO Date), AEDAT (Last Change Date), FRGKE (Release Indicator), LOEKZ (Deletion Flag)
@@ -95,7 +95,7 @@ This analytics implementation answers the following specific business questions:
 - **Primary/Logical Key**: EBELN (10-digit alphanumeric, unique per client)
 - **Required Validations**: EBELN must be 10 characters; BUKRS must exist in company code master (T001); WAERS must be a valid ISO 4217 currency code; BEDAT must be ≥ 2023-01-01; LOEKZ ≠ 'L'
 - **Possible Errors**: Duplicate EBELN records due to SLT replication lag; NULL LIFNR for plan-driven POs (handle by joining to EBAN for source of supply); currency conversion errors when WAERS ≠ EUR
-- **Extraction Evidence**: Azure Data Factory pipeline run log (Pipeline: SAP_EKKO_Daily_Extract); row count reconciliation report comparing SAP SE16N transaction count vs. Azure SQL staging table count, signed off by SAP Basis team
+- **Extraction Evidence**: Apache Airflow pipeline run log (Pipeline: SAP_EKKO_Daily_Extract); row count reconciliation report comparing SAP SE16N transaction count vs. PostgreSQL staging table count, signed off by SAP Basis team
 
 ### Source 2: SAP S/4HANA — Purchase Order Line Items
 
@@ -109,7 +109,7 @@ This analytics implementation answers the following specific business questions:
 - **Primary/Logical Key**: EBELN + EBELP (composite key)
 - **Required Validations**: NETWR ≥ 0 (no negative PO values in scope); MEINS must be a valid GS1 UOM code; EINDT must be ≥ PO creation date (EKKO.BEDAT); MENGE > 0 for standard items
 - **Possible Errors**: MATNR = blank for text-based service POs (expected — use TXZ01 as description); EINDT = NULL for framework orders without schedule lines (join EKET for schedule lines); LOEKZ = 'L' at item level while header LOEKZ is blank (must filter at both levels)
-- **Extraction Evidence**: Row count and NETWR sum reconciliation between SAP ME2M report output and Azure SQL fact_po_line staging table, signed by Category Management lead
+- **Extraction Evidence**: Row count and NETWR sum reconciliation between SAP ME2M report output and PostgreSQL fact_po_line staging table, signed by Category Management lead
 
 ### Source 3: SAP S/4HANA — PO Schedule Lines and Confirmations
 
@@ -151,7 +151,7 @@ This analytics implementation answers the following specific business questions:
 - **Primary/Logical Key**: SupplierId (Ariba ANID, 16-character alphanumeric)
 - **Required Validations**: SupplierId must have a matching LIFNR in SAP S/4HANA vendor master (LFA1) via cross-reference table; ComplianceStatus cannot be NULL for active suppliers; CSDDD_Assessment_Date must be populated for all Tier-1 suppliers
 - **Possible Errors**: Ariba API rate limit (429 errors — implement exponential backoff); supplier name mismatches between Ariba and S/4HANA (use SupplierId-LIFNR mapping table as authoritative join); questionnaire responses in multiple languages (normalize to English)
-- **Extraction Evidence**: Ariba API call log in Azure Data Factory with HTTP response codes; row count comparison between Ariba SLP portal supplier count and Azure SQL staging table
+- **Extraction Evidence**: Ariba API call log in Apache Airflow with HTTP response codes; row count comparison between Ariba SLP portal supplier count and PostgreSQL staging table
 
 ### Source 6: UFLPA Entity List (US CBP)
 
@@ -179,13 +179,13 @@ This analytics implementation answers the following specific business questions:
 - **Primary/Logical Key**: CURRENCY + DATE
 - **Required Validations**: All 40 country currencies must be present for each business day; weekends/holidays use prior business day rate (Friday rate); EUR_RATE > 0; no rate older than 3 business days should be used as current rate
 - **Possible Errors**: ECB API downtime (fallback to prior day rate with alert); exotic currencies for certain operating countries may not be available from ECB (use Bloomberg terminal extract via Finance)
-- **Extraction Evidence**: Azure Data Factory pipeline log; Finance sign-off that ECB rates match SAP TCURR table rates for the same date (reconciliation tolerance: ±0.01%)
+- **Extraction Evidence**: Apache Airflow pipeline log; Finance sign-off that ECB rates match SAP TCURR table rates for the same date (reconciliation tolerance: ±0.01%)
 
 ---
 
 ## 6. Data Model
 
-The Procurement Analytics data model follows a **star schema** hosted in Azure SQL Database (Premium tier, 500 DTU, with read replicas for Power BI DirectQuery).
+The Procurement Analytics data model follows a **star schema** hosted in PostgreSQL Database (with read replicas for Apache Superset live SQL query (SQLAlchemy connection)).
 
 ### Fact Tables
 
@@ -317,7 +317,7 @@ The Procurement Analytics data model follows a **star schema** hosted in Azure S
   - assessment_result | VARCHAR(20) | COMPLIANT / NON_COMPLIANT / PENDING / WAIVED
   - risk_score | DECIMAL(5,2) | Numeric risk score 0–100 (higher = higher risk)
   - assessor_id | VARCHAR(50) | User ID of assessor (from Ariba or manual input)
-  - document_ref | VARCHAR(500) | Reference to supporting document (SharePoint URL or Ariba doc ID)
+  - document_ref | VARCHAR(500) | Reference to supporting document (the Git document repository URL or Ariba doc ID)
   - next_review_date | DATE | Scheduled next assessment date
   - notes | VARCHAR(2000) | Free-text notes from assessor
   - load_date | DATETIME | ETL timestamp
@@ -374,7 +374,7 @@ The Procurement Analytics data model follows a **star schema** hosted in Azure S
 - **Expected Result**: POs above threshold show approval_status = 'PENDING' until approved; released POs show 'RELEASED'; SLA breach alert fired when approval not completed within SLA window
 - **Example**: PO 4500012345 for €75,000 for metal components requires Director approval within 48 hours of PO creation
 - **Exception**: Emergency POs (PO type 'FO' — Framework Call-off) are pre-approved under the framework agreement; BSART = 'FO' bypasses individual approval workflow
-- **Required Evidence**: SAP release strategy configuration screenshot (transaction OME9); approval log from SAP workflow (SWWL); Power Automate flow run history showing escalation alert sent after SLA breach
+- **Required Evidence**: SAP release strategy configuration screenshot (transaction OME9); approval log from SAP workflow (SWWL); Apache Airflow flow run history showing escalation alert sent after SLA breach
 
 ### Rule 2: UFLPA Mandatory Clearance
 
@@ -410,10 +410,10 @@ The Procurement Analytics data model follows a **star schema** hosted in Azure S
 
 - **Rule Name**: PO_SOFT_DELETE_ONLY
 - **Description**: Purchase order lines must never be physically deleted from the analytics data warehouse; cancellation must be reflected via deletion_flag = 1 and po_status = 'CANCELLED'
-- **Logic Condition**: When EKPO.LOEKZ = 'L' is detected in delta load, set deletion_flag = 1 and po_status = 'CANCELLED' on the existing fact_po_line record; do NOT delete the row from Azure SQL
+- **Logic Condition**: When EKPO.LOEKZ = 'L' is detected in delta load, set deletion_flag = 1 and po_status = 'CANCELLED' on the existing fact_po_line record; do NOT delete the row from PostgreSQL
 - **Expected Result**: Cancelled POs remain in fact_po_line with deletion_flag = 1; excluded from active spend and open order calculations; retained for audit trail and spend history
-- **Exception**: Test POs created in SAP QAS (quality assurance system) system — these are excluded entirely during initial load by filtering on system ID; they are never loaded into production Azure SQL
-- **Required Evidence**: Row count comparison before and after delta load showing existing PO rows updated (not deleted); Azure SQL audit log confirming no DELETE statements executed on fact_po_line
+- **Exception**: Test POs created in SAP QAS (quality assurance system) system — these are excluded entirely during initial load by filtering on system ID; they are never loaded into production PostgreSQL
+- **Required Evidence**: Row count comparison before and after delta load showing existing PO rows updated (not deleted); PostgreSQL audit log confirming no DELETE statements executed on fact_po_line
 
 ### Rule 6: 3-Way Match Mandatory for GR-Based POs
 
@@ -423,7 +423,7 @@ The Procurement Analytics data model follows a **star schema** hosted in Azure S
 - **Expected Result**: Matched invoices proceed to payment; exceptions routed to buyer for review and approval within 5 business days
 - **Example**: Invoice for PO 4500099001, item 10, for 100 units at €50 each; GR posted for only 80 units → exception flagged; buyer contacts supplier to hold invoice pending remaining GR
 - **Exception**: Service POs (PSTYP = 'D') use 2-way match (PO → Invoice); no GR required
-- **Required Evidence**: SAP MRBR report (blocked invoice list) vs. Power BI match exception count; Finance AP team sign-off on reconciliation
+- **Required Evidence**: SAP MRBR report (blocked invoice list) vs. Apache Superset match exception count; Finance AP team sign-off on reconciliation
 
 ---
 
@@ -434,13 +434,11 @@ The Procurement Analytics data model follows a **star schema** hosted in Azure S
 - **KPI Name**: PO On-Time Delivery Rate
 - **Objective**: Measure the percentage of PO lines where goods receipt date ≤ committed delivery date, indicating supplier delivery reliability at the purchase order level
 - **Formula**:
-  ```dax
-  PO_OTD_Rate =
-  DIVIDE(
-    COUNTROWS(FILTER(fact_po_line, fact_po_line[is_overdue] = 0 && fact_po_line[po_status] = "DELIVERED")),
-    COUNTROWS(FILTER(fact_po_line, fact_po_line[po_status] = "DELIVERED")),
-    0
-  )
+  ```sql
+  SELECT
+    COUNT(*) FILTER (WHERE is_overdue = 0 AND po_status = 'DELIVERED')
+    / NULLIF(COUNT(*) FILTER (WHERE po_status = 'DELIVERED'), 0) AS po_otd_rate
+  FROM fact_po_line;
   ```
   SQL equivalent: `COUNT(CASE WHEN gr_date <= scheduled_delivery_date THEN 1 END) / COUNT(*) WHERE po_status = 'DELIVERED'`
 - **Data Source**: fact_po_line joined to fact_gr_receipt (first GR posting date per PO item)
@@ -451,20 +449,18 @@ The Procurement Analytics data model follows a **star schema** hosted in Azure S
 - **Thresholds**: Green ≥ 95% | Yellow 90–94% | Red < 90%
 - **Traffic Light**: Green = world-class; Yellow = improvement required; Red = escalation to Supplier Performance team
 - **Recommended Action**: Red suppliers: initiate formal supplier performance improvement plan (PIP) within 10 business days; root cause analysis (carrier delay vs. production delay vs. incorrect EINDT in SAP)
-- **Validation vs Source**: Cross-validate monthly PO OTD from Power BI against ME2M report exported from SAP; tolerance ±0.5 percentage points
+- **Validation vs Source**: Cross-validate monthly PO OTD from Apache Superset against ME2M report exported from SAP; tolerance ±0.5 percentage points
 
 ### KPI 2: Spend Under Management (SUM) Rate
 
 - **KPI Name**: Spend Under Management Rate
 - **Objective**: Quantify the percentage of total addressable spend routed through approved procurement channels (PO-based or catalogue), indicating procurement compliance and control effectiveness
 - **Formula**:
-  ```dax
-  SUM_Rate =
-  DIVIDE(
-    SUMX(FILTER(fact_po_line, fact_po_line[spend_channel] = "MANAGED"), fact_po_line[net_value_eur]),
-    SUM(fact_po_line[net_value_eur]) + [Maverick_Spend_EUR],
-    0
-  )
+  ```sql
+  SELECT
+    SUM(net_value_eur) FILTER (WHERE spend_channel = 'MANAGED')
+    / NULLIF(SUM(net_value_eur) + (SELECT Maverick_Spend_EUR), 0) AS sum_rate
+  FROM fact_po_line;
   ```
   Where Maverick_Spend_EUR = sum of invoice amounts with no PO reference, sourced from AP invoice table
 - **Data Source**: fact_po_line (managed spend) + fact_ap_invoice (total AP spend including maverick)
@@ -475,23 +471,19 @@ The Procurement Analytics data model follows a **star schema** hosted in Azure S
 - **Thresholds**: Green ≥ 90% | Yellow 80–89% | Red < 80%
 - **Traffic Light**: Target is ≥ 90%; below 80% indicates systemic procurement bypass that requires process controls or system enforcement (SAP SRM mandatory PO requirement)
 - **Recommended Action**: For Red cost centers: enforce mandatory PO policy via SAP FI blocking of non-PO invoices; review with Finance Controller; training for cost center owners
-- **Validation vs Source**: Total managed spend in Power BI must reconcile to SAP ME2N total PO value within ±1%; maverick spend must reconcile to SAP MRBR non-PO invoices
+- **Validation vs Source**: Total managed spend in Apache Superset must reconcile to SAP ME2N total PO value within ±1%; maverick spend must reconcile to SAP MRBR non-PO invoices
 
 ### KPI 3: Open Order Overdue Value
 
 - **KPI Name**: Open Order Overdue Value (EUR)
 - **Objective**: Quantify the total EUR value of purchase orders that are past their committed delivery date and have not been fully received, representing immediate supply chain risk
 - **Formula**:
-  ```dax
-  Overdue_Open_Value_EUR =
-  SUMX(
-    FILTER(fact_po_line,
-      fact_po_line[is_overdue] = 1 &&
-      fact_po_line[po_status] IN {"OPEN", "PARTIALLY_DELIVERED"} &&
-      fact_po_line[deletion_flag] = 0
-    ),
-    fact_po_line[open_value_eur]
-  )
+  ```sql
+  SELECT SUM(open_value_eur) AS overdue_open_value_eur
+  FROM fact_po_line
+  WHERE is_overdue = 1
+    AND po_status IN ('OPEN', 'PARTIALLY_DELIVERED')
+    AND deletion_flag = 0;
   ```
 - **Data Source**: fact_po_line
 - **Calculation Level**: Supplier, commodity, plant, buyer, company code
@@ -501,33 +493,25 @@ The Procurement Analytics data model follows a **star schema** hosted in Azure S
 - **Thresholds**: Green < €1M total | Yellow €1M–€5M | Red > €5M (thresholds adjustable by category)
 - **Traffic Light**: Red threshold triggers automatic escalation to Supply Chain Risk committee
 - **Recommended Action**: Contact top-5 overdue suppliers within 24 hours; evaluate expediting options (air freight); activate alternative suppliers if lead time for recovery > 30 days
-- **Validation vs Source**: Sum of open_value_eur in Power BI must reconcile to ME2M report "PO Value Not Yet Delivered" field in SAP ±€10,000
+- **Validation vs Source**: Sum of open_value_eur in Apache Superset must reconcile to ME2M report "PO Value Not Yet Delivered" field in SAP ±€10,000
 
 ### KPI 4: UFLPA Compliance Coverage Rate
 
 - **KPI Name**: UFLPA Compliance Coverage Rate
 - **Objective**: Ensure 100% screening of active suppliers against the UFLPA entity list and track clearance documentation completion for flagged suppliers
 - **Formula**:
-  ```dax
-  UFLPA_Coverage_Rate =
-  DIVIDE(
-    COUNTROWS(FILTER(dim_supplier,
-      dim_supplier[is_active] = 1 &&
-      dim_supplier[uflpa_screening_date] >= DATE(YEAR(TODAY()), 1, 1)
-    )),
-    COUNTROWS(FILTER(dim_supplier, dim_supplier[is_active] = 1)),
-    0
-  )
+  ```sql
+  -- UFLPA_Coverage_Rate
+  SELECT
+    COUNT(*) FILTER (WHERE is_active = 1 AND uflpa_screening_date >= DATE_TRUNC('year', CURRENT_DATE))
+    / NULLIF(COUNT(*) FILTER (WHERE is_active = 1), 0) AS uflpa_coverage_rate
+  FROM dim_supplier;
 
-  UFLPA_Clearance_Rate =
-  DIVIDE(
-    COUNTROWS(FILTER(dim_supplier,
-      dim_supplier[uflpa_flag] = 1 &&
-      dim_supplier[uflpa_clearance_doc] <> BLANK()
-    )),
-    COUNTROWS(FILTER(dim_supplier, dim_supplier[uflpa_flag] = 1)),
-    0
-  )
+  -- UFLPA_Clearance_Rate
+  SELECT
+    COUNT(*) FILTER (WHERE uflpa_flag = 1 AND uflpa_clearance_doc IS NOT NULL)
+    / NULLIF(COUNT(*) FILTER (WHERE uflpa_flag = 1), 0) AS uflpa_clearance_rate
+  FROM dim_supplier;
   ```
 - **Data Source**: dim_supplier, fact_compliance_assessment
 - **Calculation Level**: Supplier, country, commodity category
@@ -537,23 +521,18 @@ The Procurement Analytics data model follows a **star schema** hosted in Azure S
 - **Thresholds**: Coverage: Green = 100% | Yellow 95–99% | Red < 95%. Clearance (for flagged): Green = 100% | Yellow 80–99% | Red < 80%
 - **Traffic Light**: Any Red on either metric triggers legal escalation
 - **Recommended Action**: Uncovered suppliers: run immediate screening; flagged without clearance: suspend new PO issuance within 5 business days pending clearance document receipt
-- **Validation vs Source**: Supplier count in Power BI vs. SAP LFA1 active vendor count (SPERR ≠ 'X') within ±5 records; UFLPA flag count vs. Trade Compliance manual list
+- **Validation vs Source**: Supplier count in Apache Superset vs. SAP LFA1 active vendor count (SPERR ≠ 'X') within ±5 records; UFLPA flag count vs. Trade Compliance manual list
 
 ### KPI 5: PO Approval SLA Compliance Rate
 
 - **KPI Name**: PO Approval SLA Compliance Rate
 - **Objective**: Measure the percentage of purchase orders that received required approvals within the defined SLA window, indicating procurement process efficiency and internal control health
 - **Formula**:
-  ```dax
-  Approval_SLA_Rate =
-  DIVIDE(
-    COUNTROWS(FILTER(fact_po_line,
-      fact_po_line[approval_sla_breached] = 0 &&
-      fact_po_line[requires_approval] = 1
-    )),
-    COUNTROWS(FILTER(fact_po_line, fact_po_line[requires_approval] = 1)),
-    0
-  )
+  ```sql
+  SELECT
+    COUNT(*) FILTER (WHERE approval_sla_breached = 0 AND requires_approval = 1)
+    / NULLIF(COUNT(*) FILTER (WHERE requires_approval = 1), 0) AS approval_sla_rate
+  FROM fact_po_line;
   ```
 - **Data Source**: fact_po_line (requires_approval, approval_sla_breached flags derived from EKKO.FRGKE and approval workflow timestamps)
 - **Calculation Level**: Purchasing group, approver, company code, PO value bucket
@@ -563,7 +542,7 @@ The Procurement Analytics data model follows a **star schema** hosted in Azure S
 - **Thresholds**: Green ≥ 95% | Yellow 85–94% | Red < 85%
 - **Traffic Light**: Red triggers review of approval delegation rules in SAP
 - **Recommended Action**: Top breaching approvers receive weekly SLA report; sustained Red → review delegation authority settings and add backup approvers
-- **Validation vs Source**: SAP workflow transaction SWI1 approval log vs. Power BI approval timestamps; reconcile breach count ±2%
+- **Validation vs Source**: SAP workflow transaction SWI1 approval log vs. Apache Superset approval timestamps; reconcile breach count ±2%
 
 ### KPI 6: CSDDD Tier-1 Assessment Coverage
 
@@ -590,7 +569,7 @@ The Procurement Analytics data model follows a **star schema** hosted in Azure S
 - **Thresholds**: Green ≥ 90% | Yellow 70–89% | Red < 70% (2026 target); Green = 100% (2027 mandatory)
 - **Traffic Light**: Red = material regulatory risk; requires immediate program acceleration
 - **Recommended Action**: Prioritize assessments by spend value; use Ariba SLP assessment questionnaire; engage third-party ESG assessment provider for complex suppliers
-- **Validation vs Source**: Ariba SLP portal Tier-1 supplier count vs. Power BI CSDDD dashboard supplier count; reconcile monthly
+- **Validation vs Source**: Ariba SLP portal Tier-1 supplier count vs. Apache Superset CSDDD dashboard supplier count; reconcile monthly
 
 ---
 
@@ -649,7 +628,7 @@ Apply commodity-level spend clustering using Python K-means (k=5) on dimensions:
 
 ### Alert Priority Logic
 
-Power Automate alerts are tiered:
+Apache Airflow alerts are tiered:
 - **P1 — Immediate** (within 2 hours): UFLPA-flagged supplier with new PO > €50K; PO approval SLA breach > 72 hours; overdue critical-item PO (ABC-A) > 30 days
 - **P2 — Same Day**: New overdue PO line (days_overdue = 1); CSDDD assessment expiring within 60 days; price variance > 10% on PO vs. contract
 - **P3 — Weekly Digest**: Spend Under Management rate below Yellow threshold; approval SLA trending Yellow; supplier with decreasing delivery score for 3 consecutive months
@@ -663,20 +642,20 @@ Power Automate alerts are tiered:
 - **Validation Name**: EKPO_ROW_COUNT_RECONCILIATION
 - **Field or Table Validated**: fact_po_line row count vs. SAP EKPO
 - **Validation Rule**: COUNT(*) in fact_po_line (excluding test POs and cancelled lines) must equal COUNT(*) in SAP EKPO for the same date range and filter criteria ±0.1%
-- **Validation Method**: Automated Python script in Azure Data Factory post-load activity; pulls EKPO count via SAP RFC function module; compares to Azure SQL count; logs result to audit table
+- **Validation Method**: Automated Python script in Apache Airflow post-load activity; pulls EKPO count via SAP RFC function module; compares to PostgreSQL count; logs result to audit table
 - **Expected Result**: Variance ≤ 0.1% of total row count; zero variance for current fiscal year
-- **Action if Fails**: Stop downstream Power BI refresh; alert data engineering team; hold report publication until reconciled; investigate missing or duplicate records
-- **Verifiable Evidence**: Azure Data Factory pipeline run log showing row count comparison; audit_reconciliation table in Azure SQL with timestamp, source count, target count, variance
+- **Action if Fails**: Stop downstream Apache Superset refresh; alert data engineering team; hold report publication until reconciled; investigate missing or duplicate records
+- **Verifiable Evidence**: Apache Airflow pipeline run log showing row count comparison; audit_reconciliation table in PostgreSQL with timestamp, source count, target count, variance
 
 ### Validation 2: Spend Value Reconciliation
 
 - **Validation Name**: SPEND_EUR_RECONCILIATION
 - **Field or Table Validated**: fact_po_line.net_value_eur SUM vs. SAP ME2N report
-- **Validation Rule**: Total SUM(net_value_eur) in Power BI for any given fiscal period must match SAP ME2N "Net Order Value" (converted to EUR) ±1%
-- **Validation Method**: Monthly manual reconciliation by Procurement Controller; SAP ME2N exported to Excel; compared to Power BI KPI card value
+- **Validation Rule**: Total SUM(net_value_eur) in Apache Superset for any given fiscal period must match SAP ME2N "Net Order Value" (converted to EUR) ±1%
+- **Validation Method**: Monthly manual reconciliation by Procurement Controller; SAP ME2N exported to CSV; compared to Apache Superset KPI card value
 - **Expected Result**: Variance ≤ 1% for any fiscal period
 - **Action if Fails**: Investigate FX rate discrepancies (most common cause); recheck LOEKZ filter; rerun currency conversion with corrected ECB rates
-- **Verifiable Evidence**: Signed reconciliation worksheet (Excel) stored in SharePoint: Procurement Analytics / Monthly Reconciliation / [YYYY-MM]
+- **Verifiable Evidence**: Signed reconciliation worksheet (CSV) stored in the Git document repository: Procurement Analytics / Monthly Reconciliation / [YYYY-MM]
 
 ### Validation 3: Supplier Count Completeness
 
@@ -686,17 +665,17 @@ Power Automate alerts are tiered:
 - **Validation Method**: Automated script comparing SAP LFA1 active vendor count to dim_supplier is_active=1 count; tolerance ±10 records (accounts for new vendors created same day as extract)
 - **Expected Result**: 100% of active vendors with recent PO activity present in dim_supplier
 - **Action if Fails**: Identify missing LIFNR values; check ETL join logic on LFA1/LFB1; rerun vendor master extract
-- **Verifiable Evidence**: vendor_completeness_check table in Azure SQL showing missing LIFNRs; data engineer sign-off
+- **Verifiable Evidence**: vendor_completeness_check table in PostgreSQL showing missing LIFNRs; data engineer sign-off
 
 ### Validation 4: FX Rate Coverage
 
 - **Validation Name**: FX_RATE_DAILY_COVERAGE
 - **Field or Table Validated**: dim_fx_rate completeness for all 40 country currencies
 - **Validation Rule**: For every business day in the reporting period, dim_fx_rate must contain a rate for all 40 currencies used by active company codes; no NULL EUR_RATE values
-- **Validation Method**: Automated check in Azure Data Factory: for each business day, count distinct CURRENCY values in dim_fx_rate; alert if count < 40 for any business day
+- **Validation Method**: Automated check in Apache Airflow: for each business day, count distinct CURRENCY values in dim_fx_rate; alert if count < 40 for any business day
 - **Expected Result**: 40 currencies present for every business day; weekend/holiday rates copied from prior business day
-- **Action if Fails**: Trigger fallback ECB API retry; if ECB rate unavailable after 3 retries, use Bloomberg rate from Finance Treasury (manual upload to Azure SQL); block currency conversion until resolved
-- **Verifiable Evidence**: dim_fx_rate audit log; Azure Data Factory pipeline monitoring dashboard screenshot
+- **Action if Fails**: Trigger fallback ECB API retry; if ECB rate unavailable after 3 retries, use Bloomberg rate from Finance Treasury (manual upload to PostgreSQL); block currency conversion until resolved
+- **Verifiable Evidence**: dim_fx_rate audit log; Apache Airflow pipeline monitoring dashboard screenshot
 
 ### Validation 5: UFLPA Screening Completeness
 
@@ -715,23 +694,23 @@ Power Automate alerts are tiered:
 The following evidence items must be collected, reviewed, and signed off before the analytics solution is considered production-ready:
 
 1. **Row Count Reconciliation Report**: Signed comparison of SAP EKPO row count vs. fact_po_line row count for a full fiscal year, signed by Procurement Data Engineer and Procurement Controller
-2. **Spend Value Reconciliation Report**: Month-by-month comparison of SAP ME2N totals vs. Power BI spend KPIs for the past 12 months, signed by Finance Controller
+2. **Spend Value Reconciliation Report**: Month-by-month comparison of SAP ME2N totals vs. Apache Superset spend KPIs for the past 12 months, signed by Finance Controller
 3. **UFLPA Screening Log**: Complete audit trail of CBP entity list fuzzy match runs, including all match confidence scores ≥70%, signed by Global Trade Compliance Manager
 4. **CSDDD Tier-1 Supplier List**: Approved list of CSDDD Tier-1 suppliers (≥€1M annual spend) with current assessment status, signed by Head of Sustainability
-5. **FX Rate Source Confirmation**: Written confirmation from Finance Treasury that ECB rates used in Power BI match SAP TCURR table rates, with monthly reconciliation tolerance documented
-6. **Power BI UAT Sign-off**: User Acceptance Testing sign-off from at least 3 Category Managers and 1 Procurement Director, confirming KPI values match their manual calculations
-7. **Data Governance Approval**: Data Classification and Ownership sign-off confirming Azure SQL database contains no PII beyond business contact names, compliant with GDPR Art. 6 and company data policy
-8. **SAP Authorization Concept**: Documentation confirming Azure Data Factory service account has minimum required SAP authorizations (read-only on EKKO, EKPO, EKET, MSEG, LFA1, LFB1) without access to HR or FI documents
-9. **Power Automate Alert Testing Evidence**: Screenshots of test alert runs for each P1/P2 alert scenario, confirming correct recipients and message content
-10. **Dashboard Screenshots**: Production Power BI screenshots with real data (data masked for external sharing) showing all 5 report pages functioning correctly
+5. **FX Rate Source Confirmation**: Written confirmation from Finance Treasury that ECB rates used in Apache Superset match SAP TCURR table rates, with monthly reconciliation tolerance documented
+6. **Apache Superset UAT Sign-off**: User Acceptance Testing sign-off from at least 3 Category Managers and 1 Procurement Director, confirming KPI values match their manual calculations
+7. **Data Governance Approval**: Data Classification and Ownership sign-off confirming PostgreSQL database contains no PII beyond business contact names, compliant with GDPR Art. 6 and company data policy
+8. **SAP Authorization Concept**: Documentation confirming Apache Airflow service account has minimum required SAP authorizations (read-only on EKKO, EKPO, EKET, MSEG, LFA1, LFB1) without access to HR or FI documents
+9. **Apache Airflow Alert Testing Evidence**: Screenshots of test alert runs for each P1/P2 alert scenario, confirming correct recipients and message content
+10. **Dashboard Screenshots**: Production Apache Superset screenshots with real data (data masked for external sharing) showing all 5 report pages functioning correctly
 
 ---
 
 ## 14. Dashboard / Report Design
 
-### Power BI Solution Structure
+### Apache Superset Solution Structure
 
-The Procurement Analytics Power BI solution consists of 5 report pages accessed via a shared workspace with Row-Level Security (RLS) enforced by purchasing organization and company code.
+The Procurement Analytics Apache Superset solution consists of 5 report pages accessed via a shared workspace with Row-Level Security (RLS) enforced by purchasing organization and company code.
 
 ### Page 1: Executive Procurement Overview
 
@@ -742,7 +721,7 @@ The Procurement Analytics Power BI solution consists of 5 report pages accessed 
 - Donut Chart: Spend by commodity category (top 10 + other)
 - Bar Chart: Top 10 suppliers by PO value with OTD indicator (green/yellow/red dot)
 - Gauge: SUM rate vs. 90% target
-- Map Visual (Azure Maps): Spend bubble map by supplier country with UFLPA country heat overlay
+- Map Visual (Superset map): Spend bubble map by supplier country with UFLPA country heat overlay
 
 **Filters/Slicers**: Fiscal Year, Fiscal Period, Company Code (multi-select), Commodity Category  
 **Drill-down**: Click supplier bar → drill to Supplier Detail page; click overdue value → drill to PO Follow-up page  
@@ -760,7 +739,7 @@ The Procurement Analytics Power BI solution consists of 5 report pages accessed 
 
 **Filters/Slicers**: Risk Level, Days Overdue Range, Buyer/Purchasing Group, Commodity, Plant, Company Code  
 **Drill-down**: Click PO number → tooltip showing full PO details, last GR date, supplier contact  
-**Export**: Export to Excel button for buyer action lists
+**Export**: CSV export button for buyer action lists
 
 ### Page 3: Spend Analysis
 
@@ -841,7 +820,7 @@ The Procurement Analytics Power BI solution consists of 5 report pages accessed 
 **Analysis Steps**:
 1. Open Compliance Dashboard; search supplier by PO number 4500099123
 2. Identify supplier "Xinjiang Apparel Manufacturing Co." — uflpa_flag = 1 (set 3 months ago via fuzzy match), uflpa_clearance_doc = NULL
-3. Verify: PO was created 4 months ago; UFLPA flag was set 3 months ago; PO was not blocked because Power Automate alert was dismissed without action (P2 alert, not P1)
+3. Verify: PO was created 4 months ago; UFLPA flag was set 3 months ago; PO was not blocked because Apache Airflow alert was dismissed without action (P2 alert, not P1)
 4. Total open exposure: 3 additional POs from this supplier totaling €1.8M (not yet shipped)
 
 **Decision**: Immediate suspension of all POs to this supplier. Trade Compliance team engages CBP broker to prepare rebuttal documentation. CPO notified. Category Manager tasked with identifying alternative approved supplier within 30 days. Alert logic updated to escalate UFLPA-flagged POs to P1 regardless of value.
@@ -874,8 +853,8 @@ The Procurement Analytics Power BI solution consists of 5 report pages accessed 
 - **Input Data**: PO 4500099999, Item 10, scheduled_delivery_date = 2026-06-01, gr_quantity = 0, po_quantity = 100, po_status = 'OPEN', load_date = 2026-06-22
 - **Expected Result**: is_overdue = 1, days_overdue = 21, po_status = 'OPEN', open_value_eur = 100 * net_price_eur
 - **Result to Avoid**: is_overdue = 0 (incorrect — would miss a real overdue order); days_overdue = NULL or negative
-- **Required Validation**: SQL SELECT on fact_po_line for this PO confirms is_overdue=1 and days_overdue=21; confirm in Power BI PO Follow-up page table
-- **Evidence**: Screenshot of Power BI table row for PO 4500099999; SQL query result exported to Excel
+- **Required Validation**: SQL SELECT on fact_po_line for this PO confirms is_overdue=1 and days_overdue=21; confirm in Apache Superset PO Follow-up page table
+- **Evidence**: Screenshot of Apache Superset table row for PO 4500099999; SQL query result exported to CSV
 
 ### TC-002: Currency Conversion EUR Calculation
 
@@ -900,22 +879,22 @@ The Procurement Analytics Power BI solution consists of 5 report pages accessed 
 ### TC-004: Soft Delete Retention
 
 - **Test ID**: TC-004
-- **Scenario**: Verify that a cancelled PO line (LOEKZ set to 'L' in SAP) is updated to deletion_flag=1 in Azure SQL but the row is NOT deleted
+- **Scenario**: Verify that a cancelled PO line (LOEKZ set to 'L' in SAP) is updated to deletion_flag=1 in PostgreSQL but the row is NOT deleted
 - **Input Data**: PO 4500077001 Item 10, currently in fact_po_line with deletion_flag=0; simulate SAP delta showing LOEKZ='L' for this item
 - **Expected Result**: Row remains in fact_po_line with deletion_flag=1, po_status='CANCELLED'; row count in fact_po_line unchanged
 - **Result to Avoid**: Row physically deleted from fact_po_line (audit trail lost); deletion_flag remains 0 after delta load
 - **Required Validation**: COUNT(*) from fact_po_line before and after delta load (counts must be equal); SELECT on specific PO item confirming deletion_flag=1
-- **Evidence**: Azure SQL audit log confirming no DELETE DML executed; SQL query results before/after showing flag update only
+- **Evidence**: PostgreSQL audit log confirming no DELETE DML executed; SQL query results before/after showing flag update only
 
 ### TC-005: CSDDD Non-Compliant Alert Trigger
 
 - **Test ID**: TC-005
 - **Scenario**: Verify that a Tier-1 supplier with an expired CSDDD assessment (> 3 years old) triggers the compliance alert and appears as NON_COMPLIANT in the dashboard
 - **Input Data**: dim_supplier row: csddd_tier='TIER1', csddd_assessment_date='2022-06-01', csddd_status='COMPLIANT' (as-was); current date = 2026-06-22 (assessment is 4 years old)
-- **Expected Result**: csddd_status updated to 'NON_COMPLIANT' in nightly ETL run; supplier appears in Red on CSDDD dashboard; Power Automate alert sent to SLP Team
+- **Expected Result**: csddd_status updated to 'NON_COMPLIANT' in nightly ETL run; supplier appears in Red on CSDDD dashboard; Apache Airflow alert sent to SLP Team
 - **Result to Avoid**: csddd_status remains 'COMPLIANT' despite expired assessment; no alert sent; supplier not highlighted in dashboard
-- **Required Validation**: Check dim_supplier after ETL run for this LIFNR; verify Power BI CSDDD page shows this supplier in red; check Power Automate run history for alert execution
-- **Evidence**: dim_supplier query before/after ETL; Power BI screenshot; Power Automate flow run log with recipient confirmation
+- **Required Validation**: Check dim_supplier after ETL run for this LIFNR; verify Apache Superset CSDDD page shows this supplier in red; check Apache Airflow run history for alert execution
+- **Evidence**: dim_supplier query before/after ETL; Apache Superset screenshot; Apache Airflow flow run log with recipient confirmation
 
 ---
 
@@ -923,36 +902,36 @@ The Procurement Analytics Power BI solution consists of 5 report pages accessed 
 
 | Risk | Probability | Impact | Preventive Control | Corrective Control |
 |---|---|---|---|---|
-| SAP data extraction failure (ADF pipeline) | Medium | High | Daily pipeline health monitoring with Azure Monitor alerts; retry logic (3 attempts with 15-min backoff) | Manual SAP ME2M report export as fallback; notify users of data staleness via Power BI banner |
+| SAP data extraction failure (Airflow pipeline) | Medium | High | Daily pipeline health monitoring with Grafana alerts; retry logic (3 attempts with 15-min backoff) | Manual SAP ME2M report export as fallback; notify users of data staleness via Superset banner |
 | FX rate API downtime (ECB) | Low | Medium | Fallback to prior business day rate automatically; Finance backup Bloomberg rate file | Manual rate upload to dim_fx_rate by Finance Treasury within 4 hours |
 | UFLPA entity list false positive (reputation risk) | Medium | High | 85% confidence threshold with manual review for 70-84% matches; Trade Compliance sign-off required | Vendor dispute process; re-screening within 5 business days; legal review for high-spend suppliers |
-| Power BI RLS misconfiguration (data leak) | Low | Critical | RLS unit tested with each user role; annual RLS audit by IT Security | Immediate workspace take-down; IT Security incident response; user notification per GDPR breach requirements |
+| Apache Superset RLS misconfiguration (data leak) | Low | Critical | RLS unit tested with each user role; annual RLS audit by IT Security | Immediate workspace take-down; IT Security incident response; user notification per GDPR breach requirements |
 | Vendor master data quality (duplicate LIFNRs) | High | Medium | Automated deduplication check in ETL; parent_vendor_id mapping for same legal entity | Data cleansing sprint; SAP vendor merge (MK06) for confirmed duplicates; MDM governance process |
-| CSDDD assessment data incomplete in Ariba | High | High | SLP team trained on mandatory fields; Ariba form validation rules enforced | Manual data entry fallback via SharePoint list; SLP team chased weekly until 100% complete |
-| Azure SQL performance degradation (large data volumes) | Medium | Medium | Fact table partitioning by fiscal year; indexed views for common aggregations; Premium tier with 500 DTU | Scale up to Business Critical tier temporarily; optimize slow queries; add columnstore indexes |
-| GDPR compliance risk (supplier contact data in Power BI) | Low | High | PII review of all fields loaded to Azure SQL; limit to business contacts only; data retention policy enforced | Remove PII fields immediately; notify DPO; conduct DPIA review |
+| CSDDD assessment data incomplete in Ariba | High | High | SLP team trained on mandatory fields; Ariba form validation rules enforced | Manual data entry fallback via PostgreSQL; SLP team chased weekly until 100% complete |
+| PostgreSQL performance degradation (large data volumes) | Medium | Medium | Fact table partitioning by fiscal year; materialized SQL views for common aggregations; provisioned read replicas | Scale up database instance temporarily; optimize slow queries; add appropriate indexes |
+| GDPR compliance risk (supplier contact data in Apache Superset) | Low | High | PII review of all fields loaded to PostgreSQL; limit to business contacts only; data retention policy enforced | Remove PII fields immediately; notify DPO; conduct DPIA review |
 
 ---
 
 ## 19. Implementation Checklist
 
-1. Confirm SAP S/4HANA system access for Azure Data Factory service account (read-only RFC user) — signed off by SAP Basis team
-2. Configure Azure Data Factory pipelines for EKKO, EKPO, EKET, MSEG, LFA1, LFB1, LFM1 extraction with incremental delta load logic
-3. Build Azure SQL star schema (fact_po_line, fact_gr_receipt, fact_compliance_assessment, dim_supplier, dim_material, dim_date, dim_company_code, dim_plant, dim_purchasing_org, dim_commodity, dim_fx_rate)
+1. Confirm SAP S/4HANA system access for Apache Airflow service account (read-only RFC user) — signed off by SAP Basis team
+2. Configure Apache Airflow pipelines for EKKO, EKPO, EKET, MSEG, LFA1, LFB1, LFM1 extraction with incremental delta load logic
+3. Build PostgreSQL star schema (fact_po_line, fact_gr_receipt, fact_compliance_assessment, dim_supplier, dim_material, dim_date, dim_company_code, dim_plant, dim_purchasing_org, dim_commodity, dim_fx_rate)
 4. Implement MATKL → UNSPSC commodity mapping table; achieve ≥95% mapping coverage by PO value; residual unmapped items assigned for manual classification
 5. Configure ECB FX rate daily extract pipeline; test fallback mechanism for weekends and API downtime
 6. Develop and test Python UFLPA fuzzy matching script; set 85% threshold; build uflpa_match audit log table; test against CBP entity list current version
-7. Set up Ariba SLP API connection via Azure API Management; implement rate limit handling and exponential backoff; schedule daily pull at 02:00 UTC
+7. Set up Ariba SLP API connection via an API gateway; implement rate limit handling and exponential backoff; schedule daily pull at 02:00 UTC
 8. Build LIFNR ↔ Ariba ANID cross-reference table; coordinate with Ariba admin for ANID extraction; handle unmatched records
-9. Implement PO risk scoring logic in Azure SQL computed columns or Python ETL step; validate risk_score distribution against Category Manager expert judgment
-10. Build Power BI data model with star schema relationships; configure RLS roles (Global, Company Code, Purchasing Organization); test RLS with 5 user profiles
-11. Develop all 5 Power BI report pages (Executive Overview, PO Follow-up, Spend Analysis, Compliance Dashboard, Process Health); apply company brand template
-12. Configure all KPI DAX measures; validate each KPI against SAP source system (ME2N, ME2M reports); sign off with Finance Controller
-13. Build Power Automate flows for P1, P2, P3 alerts; test each alert scenario with real data; confirm recipient lists with Category Management and Trade Compliance
+9. Implement PO risk scoring logic in PostgreSQL computed columns or Python ETL step; validate risk_score distribution against Category Manager expert judgment
+10. Build Apache Superset data model with star schema relationships; configure RLS roles (Global, Company Code, Purchasing Organization); test RLS with 5 user profiles
+11. Develop all 5 Apache Superset report pages (Executive Overview, PO Follow-up, Spend Analysis, Compliance Dashboard, Process Health); apply company brand template
+12. Configure all KPI SAP metrics; validate each KPI against SAP source system (ME2N, ME2M reports); sign off with Finance Controller
+13. Build Apache Airflow flows for P1, P2, P3 alerts; test each alert scenario with real data; confirm recipient lists with Category Management and Trade Compliance
 14. Conduct User Acceptance Testing (UAT) with 3 Category Managers, 1 Procurement Director, 1 Trade Compliance Manager, 1 Finance Controller
 15. Resolve all UAT defects (Severity 1 and 2 must be zero before go-live)
-16. Configure Power BI workspace data refresh schedule (daily 06:00 UTC); confirm Azure SQL firewall rules allow Power BI service IP ranges
-17. Publish Power BI solution to production workspace; distribute access per authorization matrix
+16. Configure Apache Superset workspace data refresh schedule (daily 06:00 UTC); confirm PostgreSQL firewall rules allow Apache Superset service IP ranges
+17. Publish Apache Superset solution to production workspace; distribute access per authorization matrix
 18. Train end users: 2-hour training session for buyers (PO Follow-up + Spend Analysis); 1-hour session for Compliance team (Compliance Dashboard); 30-min executive briefing
 19. Complete documentation: data dictionary finalized, ETL design document signed, data lineage diagram approved
 20. Hypercare support period: 4 weeks post go-live with data engineer on-call for pipeline issues; weekly check-in with key users
@@ -962,20 +941,20 @@ The Procurement Analytics Power BI solution consists of 5 report pages accessed 
 ## 20. Validation Checklist
 
 1. Confirm fact_po_line row count matches SAP EKPO count for at least 3 fiscal periods (tolerance ±0.1%)
-2. Confirm total SUM(net_value_eur) in Power BI matches SAP ME2N value for current fiscal year (tolerance ±1%)
+2. Confirm total SUM(net_value_eur) in Apache Superset matches SAP ME2N value for current fiscal year (tolerance ±1%)
 3. Confirm all 40 company code currencies have FX rates in dim_fx_rate for each business day in the past 12 months
 4. Confirm UFLPA screening coverage = 100% for all active suppliers (no NULL screening dates)
 5. Confirm CSDDD Tier-1 supplier list has been agreed and signed off by Head of Sustainability and Legal Counsel
-6. Confirm all 6 KPI DAX formulas produce results that reconcile to SAP source reports (ME2N, ME2M, MRBR) within stated tolerances
-7. Confirm Power BI RLS restricts user access correctly: test with 3 users from different purchasing organizations; verify each sees only their authorized data
-8. Confirm all 5 Power Automate alert flows trigger correctly in UAT: test each with synthetic trigger data; confirm email delivery within defined SLA (P1 ≤ 2 hours)
-9. Confirm soft delete logic is working: cancel a test PO in SAP QAS; run ETL; verify deletion_flag=1 and row count unchanged in Azure SQL
+6. Confirm all 6 KPI SQL formulas produce results that reconcile to SAP source reports (ME2N, ME2M, MRBR) within stated tolerances
+7. Confirm Apache Superset RLS restricts user access correctly: test with 3 users from different purchasing organizations; verify each sees only their authorized data
+8. Confirm all 5 Apache Airflow alert flows trigger correctly in UAT: test each with synthetic trigger data; confirm email delivery within defined SLA (P1 ≤ 2 hours)
+9. Confirm soft delete logic is working: cancel a test PO in SAP QAS; run ETL; verify deletion_flag=1 and row count unchanged in PostgreSQL
 10. Confirm 3-year historical data load is complete: spot-check 10 POs per fiscal year for 2023, 2024, 2025; verify accuracy of all fields
 11. Confirm commodity UNSPSC mapping coverage ≥ 95% by PO value; residual unmapped items documented and assigned for manual classification
 12. Confirm dim_supplier is_active flag correctly excludes blocked vendors (SAP LFM1.SPERM = 'X'); verify with 5 known blocked vendors
 13. Confirm days_overdue = 0 for non-overdue POs and correctly computed positive integer for overdue POs (test with 10 known overdue POs from SAP ME2M)
-14. Confirm Power BI report refresh completes within 30 minutes for full dataset load; performance test with simulated peak usage (20 concurrent users)
-15. Confirm all evidence documents (reconciliation reports, sign-offs, UAT results) are filed in SharePoint audit folder before go-live approval
+14. Confirm Apache Superset report refresh completes within 30 minutes for full dataset load; performance test with simulated peak usage (20 concurrent users)
+15. Confirm all evidence documents (reconciliation reports, sign-offs, UAT results) are filed in the Git document repository audit folder before go-live approval
 
 ---
 
@@ -987,12 +966,12 @@ The Procurement Analytics Power BI solution consists of 5 report pages accessed 
 4. **Ariba ANID Cross-Reference Table**: Confirm availability of LIFNR ↔ Ariba ANID mapping table from Ariba admin team; if not maintained, confirm process for manual creation
 5. **Maverick Spend Data Source**: Confirm which SAP table or report is the authoritative source for non-PO invoices (AP invoices without PO reference) — RBKP/RSEG or a custom Z-table maintained by Finance
 6. **UFLPA Screening Frequency**: Confirm with Trade Compliance whether annual screening is sufficient or if quarterly re-screening of flagged suppliers is required
-7. **Power Automate Alert Recipients**: Confirm named recipients (email addresses and distribution lists) for each P1, P2, P3 alert type by commodity category and country
+7. **Apache Airflow Alert Recipients**: Confirm named recipients (email addresses and distribution lists) for each P1, P2, P3 alert type by commodity category and country
 8. **Historical Load Period**: Confirm whether 3-year history (2023–2025) is the agreed scope or whether a longer period (5 years) is required for trend analysis and CSDDD document retention
-9. **Data Retention Policy**: Confirm with IT Security and Legal the agreed data retention period for Azure SQL (proposed: 7 years aligned with UK Modern Slavery Act and CSDDD Art. 23 minimum 5 years)
+9. **Data Retention Policy**: Confirm with IT Security and Legal the agreed data retention period for PostgreSQL (proposed: 7 years aligned with UK Modern Slavery Act and CSDDD Art. 23 minimum 5 years)
 10. **Price Variance Tolerance**: Confirm with Finance Controller whether 5% price variance tolerance for PO-vs-contract comparison is the agreed threshold or if it varies by commodity (e.g., commodities with volatile spot pricing may need 10-15%)
-11. **Azure SQL Tier Confirmation**: Confirm with IT Infrastructure that Azure SQL Premium 500 DTU is pre-approved and provisioned; confirm backup and DR configuration
-12. **Power BI Licensing**: Confirm all end users have Power BI Pro or Premium Per User license; estimated 50 report users + 5 admin users
+11. **PostgreSQL Tier Confirmation**: Confirm with IT Infrastructure that the PostgreSQL instance is pre-approved and provisioned; confirm backup and DR configuration
+12. **Apache Superset Access**: Confirm all end users have Apache Superset accounts and role assignments; estimated 50 report users + 5 admin users
 
 ---
 
@@ -1000,17 +979,17 @@ The Procurement Analytics Power BI solution consists of 5 report pages accessed 
 
 | Week | Activity | Deliverable | Owner | Status |
 |---|---|---|---|---|
-| Week 1 | SAP access provisioning; ADF environment setup; commodity mapping table build | ADF service account active; Azure SQL schema created; 95% UNSPSC mapping achieved | Data Engineer + Procurement Ops | Not Started |
+| Week 1 | SAP access provisioning; ADF environment setup; commodity mapping table build | ADF service account active; PostgreSQL schema created; 95% UNSPSC mapping achieved | Data Engineer + Procurement Ops | Not Started |
 | Week 2 | EKKO/EKPO/EKET extraction pipelines; historical 3-year load; row count reconciliation | fact_po_line populated with 3 years of data; reconciliation report signed | Data Engineer | Not Started |
 | Week 3 | MSEG (GR) extraction; GR quantities aggregated to PO line; overdue flags derived | fact_gr_receipt populated; is_overdue and days_overdue computed and validated | Data Engineer | Not Started |
 | Week 4 | LFA1/LFB1 vendor master load; Ariba API connection; LIFNR-ANID mapping | dim_supplier populated; Ariba data merged; ANID cross-reference confirmed | Data Engineer + Ariba Admin | Not Started |
 | Week 5 | UFLPA fuzzy matching Python script; CBP entity list integration; UFLPA audit log | uflpa_flag set for all active suppliers; 100% screening coverage achieved; Trade Compliance sign-off | Data Engineer + Trade Compliance | Not Started |
 | Week 6 | CSDDD assessment data from Ariba SLP; fact_compliance_assessment load; CSDDD logic | fact_compliance_assessment populated; Tier-1 list confirmed; CSDDD status derived | SLP Team + Data Engineer | Not Started |
 | Week 7 | ECB FX rate pipeline; currency conversion logic; spend value reconciliation | dim_fx_rate complete for 3 years; net_value_eur populated; Finance reconciliation signed | Data Engineer + Finance Controller | Not Started |
-| Week 8 | Power BI data model build; star schema relationships; RLS configuration | Power BI dataset published to dev workspace; RLS tested with 3 roles | BI Developer | Not Started |
-| Week 9 | Power BI Page 1 (Executive Overview) + Page 2 (PO Follow-up) build; KPI DAX measures | Pages 1-2 complete with all visuals and KPIs; validated against SAP ME2N/ME2M | BI Developer | Not Started |
-| Week 10 | Power BI Page 3 (Spend Analysis) + Page 4 (Compliance Dashboard) + Page 5 (Process Health) | Pages 3-5 complete; all 6 KPIs reconciled to source; company branding applied | BI Developer | Not Started |
-| Week 11 | Power Automate alert flows (P1, P2, P3); test all alert scenarios | All alert flows active and tested; recipient lists confirmed; test run logs saved | BI Developer + Procurement Ops | Not Started |
+| Week 8 | Apache Superset data model build; star schema relationships; RLS configuration | Apache Superset dataset published to dev workspace; RLS tested with 3 roles | BI Developer | Not Started |
+| Week 9 | Apache Superset Page 1 (Executive Overview) + Page 2 (PO Follow-up) build; KPI SQL metrics | Pages 1-2 complete with all visuals and KPIs; validated against SAP ME2N/ME2M | BI Developer | Not Started |
+| Week 10 | Apache Superset Page 3 (Spend Analysis) + Page 4 (Compliance Dashboard) + Page 5 (Process Health) | Pages 3-5 complete; all 6 KPIs reconciled to source; company branding applied | BI Developer | Not Started |
+| Week 11 | Apache Airflow alert flows (P1, P2, P3); test all alert scenarios | All alert flows active and tested; recipient lists confirmed; test run logs saved | BI Developer + Procurement Ops | Not Started |
 | Week 12 | User Acceptance Testing (UAT) with Category Managers, Trade Compliance, Finance | Signed UAT sign-off from all 6 testers; defect log with zero S1/S2 open items | All stakeholders | Not Started |
 | Week 13 | UAT defect resolution; final reconciliation reports; documentation completion | All defects resolved; data dictionary finalized; go-live approval from CPO | Data Engineer + BI Developer | Not Started |
 | Week 14 | Production go-live; user training sessions; hypercare begins | Solution live in production workspace; 50 users trained; hypercare schedule active | Project Manager + Data Engineer | Not Started |

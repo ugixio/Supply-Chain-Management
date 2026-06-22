@@ -5,7 +5,7 @@
 **Standard Alignment**: Incoterms® 2020, GLEC Framework v3, ISO 28000:2022, WCO HS Nomenclature 2022,
 EU CBAM Regulation 2023/956, C-TPAT, AEO, WTO TFA Art. 7, IMO/IMDG, IATA DGR
 **Systems**: SAP S/4HANA, SAP TM (Transportation Management), SAP GTS (Global Trade Services),
-Power BI, Azure SQL, EDI DESADV / IFTSTA
+Apache Superset, PostgreSQL, EDI DESADV / IFTSTA
 **Author**: Supply Chain Centre of Excellence
 **Version**: 3.0 — 2026-06-22
 **Status**: Approved for Implementation
@@ -213,7 +213,7 @@ and are all required CBAM declarant certificates in place?
 | System | SAP TM 9.6 (integrated with SAP S/4HANA 2023) |
 | Table / Report | /SCMTMS/D_TOR (Transportation Order), /SCMTMS/D_TORITEM (Order Items) |
 | Owner | Global Logistics Operations — TM System Administrator |
-| Frequency | Real-time via RFC/iDoc; Power BI refresh every 4 hours |
+| Frequency | Real-time via RFC/iDoc; Superset refresh every 4 hours |
 | Required Fields | TOR_ID, CARRIER_ID, ORIGIN_LOC, DEST_LOC, PLANNED_DEP_DATE, PLANNED_ARR_DATE, ACTUAL_DEP_DATE, ACTUAL_ARR_DATE, FREIGHT_COST_LC, FREIGHT_COST_GC, WEIGHT_KG, VOLUME_CBM, DISTANCE_KM, TRANSPORT_MODE, INCOTERM_CODE, CURRENCY, STATUS |
 | Critical Fields | ACTUAL_ARR_DATE (null = in-transit), FREIGHT_COST_GC (must not be zero for settled orders), CARRIER_ID (must resolve to approved carrier master) |
 | Primary Key | TOR_ID |
@@ -242,7 +242,7 @@ and are all required CBAM declarant certificates in place?
 | Attribute | Detail |
 |-----------|--------|
 | Source Name | EDI DESADV — Supplier Despatch Advice Messages |
-| System | EDI middleware (Azure Integration Services) mapped to Azure SQL staging table |
+| System | EDI middleware (Apache Airflow) mapped to PostgreSQL staging table |
 | Table / Report | stg.EDI_DESADV, stg.EDI_DESADV_LINE |
 | Owner | Supplier Integration Team / EDI Operations |
 | Frequency | Real-time on despatch; processed within 15 minutes of receipt |
@@ -258,7 +258,7 @@ and are all required CBAM declarant certificates in place?
 | Attribute | Detail |
 |-----------|--------|
 | Source Name | EDI IFTSTA — Carrier Status Updates |
-| System | Azure Integration Services → Azure SQL stg.EDI_IFTSTA |
+| System | Apache Airflow → PostgreSQL stg.EDI_IFTSTA |
 | Table / Report | stg.EDI_IFTSTA, stg.EDI_IFTSTA_EVENT |
 | Owner | Carrier Integration Team |
 | Frequency | Real-time event streaming; carriers transmit at each status milestone |
@@ -290,7 +290,7 @@ and are all required CBAM declarant certificates in place?
 | Attribute | Detail |
 |-----------|--------|
 | Source Name | GLEC Framework v3 Emission Factors — Reference Table |
-| System | Azure SQL ref.GLEC_EMISSION_FACTORS (manually maintained, version-controlled) |
+| System | PostgreSQL ref.GLEC_EMISSION_FACTORS (manually maintained, version-controlled) |
 | Table / Report | ref.GLEC_EMISSION_FACTORS |
 | Owner | Sustainability / ESG Analytics Team |
 | Frequency | Annual update aligned with GLEC Framework release cycle |
@@ -306,7 +306,7 @@ and are all required CBAM declarant certificates in place?
 | Attribute | Detail |
 |-----------|--------|
 | Source Name | Carrier Master and Trade Lane Configuration |
-| System | Azure SQL ref.CARRIER_MASTER, ref.TRADE_LANE |
+| System | PostgreSQL ref.CARRIER_MASTER, ref.TRADE_LANE |
 | Table / Report | ref.CARRIER_MASTER, ref.TRADE_LANE, ref.CARRIER_CONTRACT |
 | Owner | Procurement — Logistics Category Manager |
 | Frequency | Updated on contract changes; at minimum quarterly review |
@@ -321,8 +321,8 @@ and are all required CBAM declarant certificates in place?
 
 ## 6. Data Model
 
-The logistics analytics data model follows a star schema optimised for Power BI DirectQuery
-and Azure SQL analytical queries. The central fact table is FACT_SHIPMENT, joined to seven
+The logistics analytics data model follows a star schema optimised for Apache Superset live SQL query (SQLAlchemy connection)
+and PostgreSQL analytical queries. The central fact table is FACT_SHIPMENT, joined to seven
 dimension tables.
 
 ```
@@ -464,7 +464,7 @@ insurance obligation, and typical usage by mode.
 ### TR-01: OTD Flag Calculation
 
 ```sql
--- Applied in Azure SQL transformation layer
+-- Applied in PostgreSQL transformation layer
 UPDATE FACT_SHIPMENT
 SET IS_ON_TIME = CASE
     WHEN ACTUAL_ARR_DATE IS NULL THEN NULL  -- in transit; cannot determine yet
@@ -498,7 +498,7 @@ WHERE ACTUAL_ARR_DATE IS NOT NULL;
 ### TR-03: Freight Cost per kg and per km
 
 ```sql
--- Applied as calculated columns in the Azure SQL analytical view
+-- Applied as calculated columns in the PostgreSQL analytical view
 ALTER VIEW analytics.v_shipment_cost AS
 SELECT
     TOR_ID,
@@ -867,7 +867,7 @@ Delivery performance and cost analytics are segmented across six dimensions:
 
 ### Reconciliation Controls
 
-- Daily reconciliation: Count of TOR records in Azure SQL vs. SAP TM report S_ALR_87013570.
+- Daily reconciliation: Count of TOR records in PostgreSQL vs. SAP TM report S_ALR_87013570.
   Tolerance: zero unmatched records.
 - Weekly reconciliation: Total FREIGHT_COST_GC in FACT_FREIGHT_INVOICE vs. SAP FI cost
   centre report. Tolerance: < EUR 500 rounding difference.
@@ -889,7 +889,7 @@ Delivery performance and cost analytics are segmented across six dimensions:
 | EV-07 | Carrier contract rate cards (all active carriers) | Logistics Category Manager | Phase 2 |
 | EV-08 | UFLPA supplier list — XUAR exposure mapping | Compliance Officer | Phase 1 |
 | EV-09 | EDI DESADV message specification per supplier | EDI Operations | Phase 2 |
-| EV-10 | Power BI workspace and Azure SQL connection approved | IT Security | Phase 1 |
+| EV-10 | Apache Superset workspace and PostgreSQL connection approved | IT Security | Phase 1 |
 | EV-11 | HS code to CBAM commodity mapping table | Trade Compliance | Phase 3 |
 | EV-12 | Cargo claims data extract from insurance system | Risk Management | Phase 3 |
 
@@ -1081,7 +1081,7 @@ rankings in annual ESG report.
 5 arrive 2+ days late.
 **Expected OTD**: 80 / 100 = 80.0%
 **Test Method**: Insert synthetic records into FACT_SHIPMENT; execute OTD measure;
-verify Power BI KPI card displays 80.0%.
+verify Apache Superset KPI card displays 80.0%.
 **Pass Criteria**: OTD = 80.0% ± 0.1%; late shipments appear in drill-through.
 
 ### TC-02: CO2 Calculation Accuracy
@@ -1141,7 +1141,7 @@ invoice accuracy = 96%, doc accuracy = 98%, sustainability = 75.
 | R-06 | UFLPA supplier list not kept current | High | Critical | Monthly refresh from compliance database; blocking rule in SAP GTS |
 | R-07 | Air freight modal shift justification codes not used by logistics planners | Medium | Medium | Mandatory field in SAP TM booking workflow; training; monthly exception report |
 | R-08 | CO2 calculation methodology challenged in CBAM audit | Low | High | GLEC certification; full audit trail of emission factors and versions used |
-| R-09 | Power BI DirectQuery performance on large FACT_SHIPMENT table | Medium | Medium | Partitioning by year-month; pre-aggregated summary tables for executive views |
+| R-09 | Apache Superset live SQL query (SQLAlchemy connection) performance on large FACT_SHIPMENT table | Medium | Medium | Partitioning by year-month; pre-aggregated summary tables for executive views |
 | R-10 | Currency conversion errors in multi-currency freight invoices | Medium | High | Daily FX rates from ECB; all costs converted to EUR at invoice date rate |
 
 ---
@@ -1152,7 +1152,7 @@ invoice accuracy = 96%, doc accuracy = 98%, sustainability = 75.
 
 - [ ] SAP TM field mapping document completed and signed off
 - [ ] SAP GTS customs declaration field mapping completed
-- [ ] Azure SQL database schemas created (FACT, DIM, stg, ref tables)
+- [ ] PostgreSQL database schemas created (FACT, DIM, stg, ref tables)
 - [ ] Carrier master extract loaded into DIM_CARRIER
 - [ ] DIM_LOCATION populated with UN/LOCODE and geocoordinates
 - [ ] GLEC emission factor reference table loaded (ref.GLEC_EMISSION_FACTORS)
@@ -1161,7 +1161,7 @@ invoice accuracy = 96%, doc accuracy = 98%, sustainability = 75.
 - [ ] EDI DESADV staging table created and tested with 3 pilot suppliers
 - [ ] EDI IFTSTA staging table created and tested with 3 pilot carriers
 - [ ] UFLPA supplier flag data loaded from compliance database
-- [ ] SAP TM → Azure SQL ETL pipeline deployed (initial load)
+- [ ] SAP TM → PostgreSQL ETL pipeline deployed (initial load)
 
 ### Phase 2: KPI Layer (Weeks 9–16)
 
@@ -1172,7 +1172,7 @@ invoice accuracy = 96%, doc accuracy = 98%, sustainability = 75.
 - [ ] Customs clearance lead time calculation validated against GTS
 - [ ] UFLPA block logic validated (TC-05 pass)
 - [ ] Alert engine deployed for all 7 alert trigger conditions
-- [ ] Power BI data model connected and relationships validated
+- [ ] Apache Superset data model connected and relationships validated
 - [ ] All 5 dashboards built and reviewed by business users
 
 ### Phase 3: Carrier Scorecard and Lane Risk (Weeks 17–22)
@@ -1180,7 +1180,7 @@ invoice accuracy = 96%, doc accuracy = 98%, sustainability = 75.
 - [ ] Carrier scorecard model implemented and back-tested on 6 months of history
 - [ ] Carrier tier assignments reviewed and approved by Category Manager
 - [ ] Lane risk scoring model implemented and calibrated
-- [ ] QBR reporting pack template built in Power BI
+- [ ] QBR reporting pack template built in Apache Superset
 - [ ] Training delivered to Logistics team (8 hours)
 - [ ] User acceptance testing completed with sign-off from Logistics Director
 
@@ -1212,7 +1212,7 @@ invoice accuracy = 96%, doc accuracy = 98%, sustainability = 75.
 | PI-05 | CBAM-covered HS code mapping for company's product portfolio | Trade Compliance / Finance | CBAM reporting scope incomplete | Week 8 |
 | PI-06 | Cargo claims data source — insurance system API or manual extract | Risk Management | Claims rate KPI unavailable until resolved | Week 10 |
 | PI-07 | Geopolitical risk score source for lane risk model | SCM Risk Team | Lane risk model incomplete; country risk defaults applied | Week 12 |
-| PI-08 | Confirmation of Power BI Premium workspace allocation | IT | Dashboard publishing blocked | Week 1 |
+| PI-08 | Confirmation of Apache Superset workspace allocation | IT | Dashboard publishing blocked | Week 1 |
 
 ---
 
@@ -1222,12 +1222,12 @@ invoice accuracy = 96%, doc accuracy = 98%, sustainability = 75.
 
 **Objective**: Establish all data pipelines, master data, and reference tables.
 
-Week 1–2: Environment setup — Azure SQL provisioning, Power BI workspace, ETL tooling
+Week 1–2: Environment setup — PostgreSQL provisioning, Apache Superset workspace, ETL tooling
 Week 3–4: SAP TM and SAP GTS extraction development and initial load
 Week 5–6: EDI DESADV and IFTSTA staging pipelines; carrier master and location master loaded
 Week 7–8: Reference tables loaded (GLEC, country SLA, CBAM scope, UFLPA supplier list)
 
-**Milestone**: Full historical load of 24 months of shipment data in Azure SQL validated.
+**Milestone**: Full historical load of 24 months of shipment data in PostgreSQL validated.
 
 ### Phase 2: KPI Implementation and Analytics Layer (Months 3–4)
 
@@ -1235,7 +1235,7 @@ Week 7–8: Reference tables loaded (GLEC, country SLA, CBAM scope, UFLPA suppli
 
 Week 9–10: Transformation rules TR-01 through TR-05 developed and tested
 Week 11–12: CO2 calculation (TR-04) validated; customs lead time calculated (TR-06)
-Week 13–14: Alert engine built and tested; Power BI data model connected
+Week 13–14: Alert engine built and tested; Apache Superset data model connected
 Week 15–16: All 5 dashboards built; initial UAT with 3 business users
 
 **Milestone**: OTD, OTIF, Cost per kg, CO2, and Clearance Lead Time KPIs validated and signed off.

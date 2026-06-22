@@ -1038,7 +1038,7 @@ Special rule: For UFLPA_CLEARANCE documents linked to HIGH_RISK suppliers, CRITI
 | REACH Art.33 notification letters | 5 years | Chemical Compliance | SAP DMS |
 | Sanctions screening logs + resolution rationale | 7 years | Trade Compliance | OpenSearch index + cold archive |
 | SVHC SDS versions | 5 years | Chemical Compliance | SAP DMS |
-| Modern Slavery statements | 6 years (UK registry + internal) | Legal | SharePoint + UK Gov registry URL |
+| Modern Slavery statements | 6 years (UK registry + internal) | Legal | the Git document repository + UK Gov registry URL |
 | LkSG BAFA annual reports | 7 years (LkSG §24) | ESG Compliance | SAP DMS |
 | Compliance document approval chain | 5 years | Compliance | SAP DMS workflow log |
 | GDPR RoPA entries for screening activities | Duration of processing + 3 years | DPO | GDPR tool |
@@ -1376,7 +1376,7 @@ Special rule: For UFLPA_CLEARANCE documents linked to HIGH_RISK suppliers, CRITI
 
 ### Phase 3: Dashboards (Weeks 17–22)
 
-- [ ] Deploy all 5 dashboards in SAP Analytics Cloud (or Power BI as fallback)
+- [ ] Deploy all 5 dashboards in SAP Analytics Cloud (or Apache Superset as fallback)
 - [ ] Configure daily data refresh pipelines
 - [ ] Configure email alert workflows for CRITICAL document expiry
 - [ ] Configure GRC task creation for new HIGH_RISK UFLPA suppliers

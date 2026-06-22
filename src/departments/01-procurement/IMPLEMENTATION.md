@@ -549,17 +549,15 @@ The Procurement Analytics data model follows a **star schema** hosted in Postgre
 - **KPI Name**: CSDDD Tier-1 Supplier Assessment Coverage
 - **Objective**: Track the percentage of Tier-1 suppliers (annual spend ≥€1M) with a valid, current (≤3 years old) CSDDD Art. 7 human rights and environmental risk assessment
 - **Formula**:
-  ```dax
-  CSDDD_Coverage =
-  DIVIDE(
-    COUNTROWS(FILTER(dim_supplier,
-      dim_supplier[csddd_tier] = "TIER1" &&
-      dim_supplier[csddd_status] = "COMPLIANT" &&
-      DATEDIFF(dim_supplier[csddd_assessment_date], TODAY(), YEAR) < 3
-    )),
-    COUNTROWS(FILTER(dim_supplier, dim_supplier[csddd_tier] = "TIER1")),
-    0
-  )
+  ```sql
+  SELECT
+    COUNT(*) FILTER (
+      WHERE csddd_tier = 'TIER1'
+        AND csddd_status = 'COMPLIANT'
+        AND DATE_PART('year', AGE(CURRENT_DATE, csddd_assessment_date)) < 3
+    )
+    / NULLIF(COUNT(*) FILTER (WHERE csddd_tier = 'TIER1'), 0) AS csddd_coverage
+  FROM dim_supplier;
   ```
 - **Data Source**: dim_supplier, fact_compliance_assessment
 - **Calculation Level**: Company, region, commodity category

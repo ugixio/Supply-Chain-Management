@@ -6,8 +6,8 @@ FEFO Compliance Tracking, Labour Productivity, Warehouse KPI Dashboard
 **Standard Alignment:** SCOR-DS · ISO 28000:2022 · GS1 Gen. Specs. v23 · ISO 9001:2015 §8.5.2
 **Document Status:** Authorised for Implementation
 **Last Reviewed:** 2026-06-22
-**Audience:** Warehouse Operations Managers, Supply Chain Architects, Power BI Developers, Industrial Engineers
-**Business Context:** SAP EWM + Power BI. Warehouse transactions captured in real time via RF devices,
+**Audience:** Warehouse Operations Managers, Supply Chain Architects, Superset Developers, Industrial Engineers
+**Business Context:** SAP EWM + Apache Superset. Warehouse transactions captured in real time via RF devices,
 voice picking, and dock management system. Multi-site global distribution network, 40 countries.
 
 ---
@@ -43,10 +43,10 @@ voice picking, and dock management system. Multi-site global distribution networ
 
 This document defines the complete analytics implementation for Warehouse Operations management
 within the enterprise Supply Chain Management platform. The solution is built on SAP Extended
-Warehouse Management (SAP EWM) as the operational system of record, with Power BI as the reporting
+Warehouse Management (SAP EWM) as the operational system of record, with Apache Superset as the reporting
 and analytics layer. Warehouse transactions — goods receipts, putaway tasks, pick confirmations,
 pack completions, and shipments — are captured in real time by SAP EWM and delivered to the
-analytics layer via Azure Data Factory pipelines into Azure SQL Data Warehouse.
+analytics layer via Apache Airflow pipelines into PostgreSQL.
 
 Warehouse operations represent a critical cost and service lever in the supply chain. Labour cost
 is typically the largest controllable cost in a distribution centre, accounting for 50–65% of total
@@ -196,7 +196,7 @@ to an outbound pick task, creating a risk of expired stock write-off?
 | Primary Key | TANUM + MANDT + LGNUM |
 | Validations | ENQZ >= ANFZ (end time >= start time); VERSKZ = confirmed status for completed tasks; MATNR exists in material master |
 | Possible Errors | Tasks abandoned without confirmation creating open tasks that inflate active task count; LMNUM null for voice-picked tasks on some EWM configurations |
-| Extraction Evidence | ADF pipeline ZEWM_TO_CDC; reconciled against EWM report /SCWM/TOREP daily |
+| Extraction Evidence | Apache Airflow pipeline ZEWM_TO_CDC; reconciled against EWM report /SCWM/TOREP daily |
 
 ### DS-02: SAP EWM — Goods Receipt and Dock Management
 
@@ -212,7 +212,7 @@ to an outbound pick task, creating a risk of expired stock write-off?
 | Primary Key | VBELN + LGNUM + MATNR |
 | Validations | ANLDATUM <= BUDAT; LENUM matches a valid SSCC-18 format; CHARG not null for lot-tracked materials |
 | Possible Errors | ANLDATUM not captured if gate reader is offline; LENUM missing on supplier pallets with non-GS1-compliant labels |
-| Extraction Evidence | ADF pipeline ZEWM_GR_CDC; reconciled against SAP MB52 daily total |
+| Extraction Evidence | Apache Airflow pipeline ZEWM_GR_CDC; reconciled against SAP MB52 daily total |
 
 ### DS-03: SAP EWM — Outbound Delivery and Shipment
 
@@ -228,7 +228,7 @@ to an outbound pick task, creating a risk of expired stock write-off?
 | Primary Key | VBELN + POSNR |
 | Validations | LFIMG <= VRKME (no over-pick without approval); CHARG not null for lot-tracked items; delivery date <= system date + 5 days |
 | Possible Errors | Partial picks creating incomplete deliveries counted as full in some SAP configurations; WAVE_ID missing for ad-hoc picks outside wave management |
-| Extraction Evidence | ADF pipeline ZEWM_OBD_CDC; reconciled against VL06O report daily |
+| Extraction Evidence | Apache Airflow pipeline ZEWM_OBD_CDC; reconciled against VL06O report daily |
 
 ### DS-04: SAP EWM — Location Master and Quant Occupancy
 
@@ -244,7 +244,7 @@ to an outbound pick task, creating a risk of expired stock write-off?
 | Primary Key | LGNUM + LGTYP + LGPLA (location); LGNUM + LGTYP + LGPLA + MATNR + CHARG (quant) |
 | Validations | MAXVOL > 0; VERME >= 0; VFDAT >= GETDATE() for any lot currently in an active pick location |
 | Possible Errors | MAXVOL = 0 for locations not yet dimensioned in EWM; quant records without VFDAT for lot-tracked items (master data gap) |
-| Extraction Evidence | ADF pipeline ZEWM_LOC_DAILY; location count reconciled against EWM report /SCWM/BINSRCH |
+| Extraction Evidence | Apache Airflow pipeline ZEWM_LOC_DAILY; location count reconciled against EWM report /SCWM/BINSRCH |
 
 ### DS-05: SAP EWM — Labour Resource Management
 
@@ -260,7 +260,7 @@ to an outbound pick task, creating a risk of expired stock write-off?
 | Primary Key | LMNUM + TANUM + LGNUM |
 | Validations | ENQZ > ANFZ; SCHICHT in approved shift codes; LMNUM exists in resource master |
 | Possible Errors | LMNUM null for tasks completed on shared terminals; SCHICHT not populated for split-shift workers |
-| Extraction Evidence | ADF pipeline ZEWM_LABOUR_DAILY; task count reconciled against operator productivity report in EWM |
+| Extraction Evidence | Apache Airflow pipeline ZEWM_LABOUR_DAILY; task count reconciled against operator productivity report in EWM |
 
 ### DS-06: SAP EWM — Lot (Batch) Master and Expiry Dates
 
@@ -276,13 +276,13 @@ to an outbound pick task, creating a risk of expired stock write-off?
 | Primary Key | MATNR + CHARG |
 | Validations | VFDAT not null for lot-tracked materials; VFDAT > GETDATE() for lots in active pick locations (expired lots must be in quarantine) |
 | Possible Errors | VFDAT null for lot-tracked items where supplier did not provide shelf life on ASN; CHARG duplicated across plants if batch management not configured at plant level |
-| Extraction Evidence | ADF pipeline ZBATCH_DAILY; lot count reconciled against MB56 batch where-used list |
+| Extraction Evidence | Apache Airflow pipeline ZBATCH_DAILY; lot count reconciled against MB56 batch where-used list |
 
 ---
 
 ## 6. Data Model
 
-The analytics solution uses a star schema deployed in Azure SQL DW with two central fact tables and
+The analytics solution uses a star schema deployed in PostgreSQL with two central fact tables and
 seven dimension tables. All monetary values stored as integer cents (BIGINT). All timestamps in UTC,
 all dates in ISO 8601 (YYYY-MM-DD).
 
@@ -648,19 +648,6 @@ Dock_to_Stock_minutes = task_end_utc (last PUTAWAY task for ASN)
                         expressed in minutes
 ```
 
-**DAX:**
-```dax
-Dock to Stock (min) =
-AVERAGEX(
-    FILTER(
-        fact_warehouse_tasks,
-        fact_warehouse_tasks[task_type_code] = "PUTAWAY"
-        && NOT ISBLANK(fact_warehouse_tasks[dock_to_stock_minutes])
-    ),
-    fact_warehouse_tasks[dock_to_stock_minutes]
-)
-```
-
 **SQL:**
 ```sql
 SELECT
@@ -694,21 +681,15 @@ Pick_Accuracy_pct = COUNT(PICK tasks WHERE pick_accuracy_flag = 1)
                     / COUNT(all PICK tasks) x 100
 ```
 
-**DAX:**
-```dax
-Pick Accuracy % =
-DIVIDE(
-    CALCULATE(
-        COUNTROWS(fact_warehouse_tasks),
-        fact_warehouse_tasks[task_type_code] = "PICK",
-        fact_warehouse_tasks[pick_accuracy_flag] = 1
-    ),
-    CALCULATE(
-        COUNTROWS(fact_warehouse_tasks),
-        fact_warehouse_tasks[task_type_code] = "PICK"
-    ),
-    0
-) * 100
+**SQL:**
+```sql
+SELECT
+    warehouse_code,
+    100.0 * COUNT(*) FILTER (WHERE pick_accuracy_flag = 1)
+          / NULLIF(COUNT(*), 0) AS pick_accuracy_pct
+FROM fact_warehouse_tasks
+WHERE task_type_code = 'PICK'
+GROUP BY warehouse_code;
 ```
 
 **Target:** >= 99.9%. Alert: < 99.5% for any warehouse or shift triggers investigation.
@@ -725,21 +706,15 @@ Order_Fill_Rate_pct = COUNT(delivery lines WHERE LFIMG >= VRKME)
                       / COUNT(all delivery lines) x 100
 ```
 
-**DAX:**
-```dax
-Order Fill Rate % =
-DIVIDE(
-    CALCULATE(
-        COUNTROWS(fact_warehouse_tasks),
-        fact_warehouse_tasks[task_type_code] = "SHIP",
-        fact_warehouse_tasks[pick_accuracy_flag] = 1
-    ),
-    CALCULATE(
-        COUNTROWS(fact_warehouse_tasks),
-        fact_warehouse_tasks[task_type_code] = "SHIP"
-    ),
-    0
-) * 100
+**SQL:**
+```sql
+SELECT
+    warehouse_code,
+    100.0 * COUNT(*) FILTER (WHERE pick_accuracy_flag = 1)
+          / NULLIF(COUNT(*), 0) AS order_fill_rate_pct
+FROM fact_warehouse_tasks
+WHERE task_type_code = 'SHIP'
+GROUP BY warehouse_code;
 ```
 
 **Target:** >= 97.5% line fill rate. Alert: < 95% triggers same-day escalation to outbound supervisor.
@@ -755,14 +730,14 @@ DIVIDE(
 Space_Utilisation_pct = SUM(occupied_volume_mm3) / SUM(cubic_capacity_mm3) x 100
 ```
 
-**DAX:**
-```dax
-Space Utilisation % =
-DIVIDE(
-    SUM(fact_location_occupancy[occupied_volume_mm3]),
-    SUM(fact_location_occupancy[cubic_capacity_mm3]),
-    0
-) * 100
+**SQL:**
+```sql
+SELECT
+    zone_code,
+    100.0 * SUM(occupied_volume_mm3)
+          / NULLIF(SUM(cubic_capacity_mm3), 0) AS space_utilisation_pct
+FROM fact_location_occupancy
+GROUP BY zone_code;
 ```
 
 **Target by zone:** PRIMARY 75–85%. SECONDARY 65–75%. BULK 55–70%.
@@ -780,21 +755,15 @@ FEFO_Compliance_pct = COUNT(PICK tasks WHERE is_fefo_task = 1 AND fefo_compliant
                       / COUNT(PICK tasks WHERE is_fefo_task = 1) x 100
 ```
 
-**DAX:**
-```dax
-FEFO Compliance % =
-DIVIDE(
-    CALCULATE(
-        COUNTROWS(fact_warehouse_tasks),
-        fact_warehouse_tasks[is_fefo_task] = 1,
-        fact_warehouse_tasks[fefo_compliant] = 1
-    ),
-    CALCULATE(
-        COUNTROWS(fact_warehouse_tasks),
-        fact_warehouse_tasks[is_fefo_task] = 1
-    ),
-    0
-) * 100
+**SQL:**
+```sql
+SELECT
+    warehouse_code,
+    100.0 * COUNT(*) FILTER (WHERE is_fefo_task = 1 AND fefo_compliant = 1)
+          / NULLIF(COUNT(*) FILTER (WHERE is_fefo_task = 1), 0) AS fefo_compliance_pct
+FROM fact_warehouse_tasks
+WHERE task_type_code = 'PICK'
+GROUP BY warehouse_code;
 ```
 
 **Target:** 100%. Any FEFO deviation = non-compliant and must be investigated within 4 hours.
@@ -811,23 +780,16 @@ LPPH = COUNT(confirmed PICK tasks in period)
        / (SUM(task_duration_seconds for PICK tasks in period) / 3600)
 ```
 
-**DAX:**
-```dax
-LPPH =
-VAR TotalLines =
-    CALCULATE(
-        COUNTROWS(fact_warehouse_tasks),
-        fact_warehouse_tasks[task_type_code] = "PICK"
-    )
-VAR TotalHours =
-    DIVIDE(
-        CALCULATE(
-            SUM(fact_warehouse_tasks[task_duration_seconds]),
-            fact_warehouse_tasks[task_type_code] = "PICK"
-        ),
-        3600
-    )
-RETURN DIVIDE(TotalLines, TotalHours, BLANK())
+**SQL:**
+```sql
+SELECT
+    shift_code,
+    picking_method,
+    COUNT(*)
+      / NULLIF(SUM(task_duration_seconds) / 3600.0, 0) AS lpph
+FROM fact_warehouse_tasks
+WHERE task_type_code = 'PICK'
+GROUP BY shift_code, picking_method;
 ```
 
 **Target by method:** RF Batch: >= 160 LPPH. Voice: >= 180 LPPH. Pick-to-Light: >= 280 LPPH.
@@ -846,22 +808,15 @@ Cost_per_line_cents =
     x task_duration_seconds / 3600
 ```
 
-**DAX:**
-```dax
-Cost Per Line (cents) =
-DIVIDE(
-    SUMX(
-        FILTER(fact_warehouse_tasks, fact_warehouse_tasks[task_type_code] = "PICK"),
-        RELATED(dim_operator[hourly_rate_cents])
-            * (1 + RELATED(dim_operator[benefits_rate]))
-            * DIVIDE(fact_warehouse_tasks[task_duration_seconds], 3600)
-    ),
-    CALCULATE(
-        COUNTROWS(fact_warehouse_tasks),
-        fact_warehouse_tasks[task_type_code] = "PICK"
-    ),
-    BLANK()
-)
+**SQL:**
+```sql
+SELECT
+    SUM(o.hourly_rate_cents * (1 + o.benefits_rate)
+        * t.task_duration_seconds / 3600.0)
+      / NULLIF(COUNT(*), 0) AS cost_per_line_cents
+FROM fact_warehouse_tasks t
+JOIN dim_operator o ON o.operator_id = t.operator_id
+WHERE t.task_type_code = 'PICK';
 ```
 
 **Target:** Site-specific standard cost per line established in baseline (Phase 0). Improvement
@@ -879,21 +834,15 @@ Damage_Rate_pct = COUNT(GOODS_RECEIPT tasks WHERE damage_flag = 1)
                   / COUNT(all GOODS_RECEIPT tasks) x 100
 ```
 
-**DAX:**
-```dax
-Damage Rate % =
-DIVIDE(
-    CALCULATE(
-        COUNTROWS(fact_warehouse_tasks),
-        fact_warehouse_tasks[task_type_code] = "GOODS_RECEIPT",
-        fact_warehouse_tasks[damage_flag] = 1
-    ),
-    CALCULATE(
-        COUNTROWS(fact_warehouse_tasks),
-        fact_warehouse_tasks[task_type_code] = "GOODS_RECEIPT"
-    ),
-    0
-) * 100
+**SQL:**
+```sql
+SELECT
+    warehouse_code,
+    100.0 * COUNT(*) FILTER (WHERE damage_flag = 1)
+          / NULLIF(COUNT(*), 0) AS damage_rate_pct
+FROM fact_warehouse_tasks
+WHERE task_type_code = 'GOODS_RECEIPT'
+GROUP BY warehouse_code;
 ```
 
 **Target:** < 0.5%. Alert: > 1% for any supplier or carrier triggers NCR (Non-Conformance Report).
@@ -1011,7 +960,7 @@ FEFO deviations are classified by root cause to support targeted corrective acti
 | Name | Task Timestamp Integrity |
 | Field/Table | fact_warehouse_tasks: task_start_utc, task_end_utc |
 | Rule | task_end_utc > task_start_utc; task_duration_seconds > 0 and < 28800 (8 hours) for any single task |
-| Method | Pre-load ADF validation; post-load SQL check COUNT WHERE task_duration_seconds <= 0 |
+| Method | Pre-load Apache Airflow validation; post-load SQL check COUNT WHERE task_duration_seconds <= 0 |
 | Expected Result | Zero tasks with end before start; < 0.1% of tasks with duration > 8 hours (suspected abandoned tasks) |
 | Action if Fails | Quarantine to dq_error_log; exclude from LPPH and dock-to-stock KPIs; EWM system admin notified |
 | Evidence | TR-01; TR-08 |
@@ -1037,7 +986,7 @@ FEFO deviations are classified by root cause to support targeted corrective acti
 | Rule | SUM(occupied_volume_mm3) across all active locations should reconcile to SAP EWM total quant volume within 1% |
 | Method | Daily post-load reconciliation query vs. SAP /SCWM/BINSRCH total |
 | Expected Result | Discrepancy < 1% daily |
-| Action if Fails | Investigate missing quant records; check if ADF pipeline captured all quant updates during the 15-minute CDC window |
+| Action if Fails | Investigate missing quant records; check if Apache Airflow pipeline captured all quant updates during the 15-minute CDC window |
 | Evidence | TR-05; DS-04 |
 
 ### VC-04: Pick Accuracy Null Check
@@ -1092,10 +1041,10 @@ FEFO deviations are classified by root cause to support targeted corrective acti
 
 ## 13. Required Evidence
 
-The following evidence artefacts must be produced and stored in the project SharePoint repository
+The following evidence artefacts must be produced and stored in the project the Git repository
 before each phase milestone is signed off by the Data Governance Board:
 
-1. **SAP EWM CDC pipeline validation:** Screenshot of all five ADF pipelines (DS-01 through DS-06)
+1. **SAP EWM CDC pipeline validation:** Screenshot of all five Apache Airflow pipelines (DS-01 through DS-06)
    showing successful 15-minute incremental extracts with row counts matching EWM audit totals for
    3 consecutive days.
 
@@ -1115,7 +1064,7 @@ before each phase milestone is signed off by the Data Governance Board:
 6. **LPPH baseline by shift and picking method:** First month's LPPH report by shift, warehouse,
    and picking method, agreed by DC Operations Manager as the baseline for the 15% improvement target.
 
-7. **Power BI UAT sign-off:** User acceptance testing evidence from at least two warehouse managers
+7. **Apache Superset UAT sign-off:** User acceptance testing evidence from at least two warehouse managers
    and one DC operations director confirming KPI accuracy against SAP EWM source reports.
 
 8. **GS1 SSCC label compliance test:** Evidence that 1,000 test labels scanned at simulated ship
@@ -1125,14 +1074,14 @@ before each phase milestone is signed off by the Data Governance Board:
 
 ## 14. Dashboard Design
 
-### Power BI Report Structure
+### Apache Superset Report Structure
 
 **Report File:** Warehouse_Operations_Analytics.pbix
-**Refresh Schedule:** Near-real-time via DirectQuery for operational pages; daily Import for
+**Refresh Schedule:** Near-real-time via live SQL query (SQLAlchemy connection) for operational pages; daily materialized-view refresh for
 historical trend pages (to manage query load)
 **Row-Level Security:** Warehouse-level RLS; DC managers see own warehouse; regional ops sees region;
 global ops sees all
-**Data Source:** Azure SQL DW (DirectQuery for fact tables; Import for dim tables)
+**Data Source:** PostgreSQL (live SQL query (SQLAlchemy connection) for fact tables; materialized views for dim tables)
 
 ---
 
@@ -1148,7 +1097,7 @@ global ops sees all
 - Gauge: Order fill rate % vs. 97.5% target
 
 **Slicers:** Warehouse, Shift Date (defaults to today), Shift Code
-**Refresh:** Near-real-time (DirectQuery); auto-refresh every 5 minutes on command centre page
+**Refresh:** Near-real-time (live SQL query (SQLAlchemy connection)); auto-refresh every 5 minutes on command centre page
 
 ---
 
@@ -1380,7 +1329,7 @@ Verify all five cases.
 ### TC-06: LPPH Calculation
 
 Shift with 150 confirmed PICK tasks; total task_duration_seconds = 3,600 seconds (1 hour).
-Expected LPPH = 150 / (3600/3600) = 150.0. Verify DAX measure returns 150.0.
+Expected LPPH = 150 / (3600/3600) = 150.0. Verify SQL metric returns 150.0.
 
 ### TC-07: Labour Cost Per Line
 
@@ -1390,7 +1339,7 @@ Verify pipeline returns 33 cents. Tolerance: 1 cent (rounding).
 
 ### TC-08: Damage Rate Calculation
 
-10 GOODS_RECEIPT tasks; 2 with damage_flag = 1. Expected damage_rate = 20.0%. Verify DAX measure.
+10 GOODS_RECEIPT tasks; 2 with damage_flag = 1. Expected damage_rate = 20.0%. Verify SQL metric.
 
 ### TC-09: Lot Expiry Alert Tier Assignment
 
@@ -1412,7 +1361,7 @@ rejected by EWM; (b) SHORT_PICK exception created; (c) confirmed quantity capped
 
 | Risk | Probability | Impact | Mitigation |
 |---|---|---|---|
-| SAP EWM CDC pipeline lag (> 15 minutes) during peak volume | Medium | Medium | Monitor CDC lag metric in Azure Monitor; alert at 20-minute lag; Operations Command Centre page shows data freshness timestamp |
+| SAP EWM CDC pipeline lag (> 15 minutes) during peak volume | Medium | Medium | Monitor CDC lag metric in Grafana; alert at 20-minute lag; Operations Command Centre page shows data freshness timestamp |
 | FEFO deviation due to EWM lot selection configuration error | Low | Critical | Monthly EWM FEFO configuration audit; automated FEFO compliance alert fires within 1 hour of any deviation; immediate IT investigation |
 | Missing dock_arrival_utc (ANLDATUM) when gate reader is offline | Medium | Medium | Fallback to dock door open time (T1) with estimated_arrival flag; root cause: gate reader redundancy via 4G backup |
 | YOLOv8 pallet damage model false negative rate > 2% | Medium | High | Manual inspection backstop during first 90 days; monthly model retraining with new damage image samples |
@@ -1427,9 +1376,9 @@ rejected by EWM; (b) SHORT_PICK exception created; (c) confirmed quantity capped
 
 - [ ] **1.** Confirm SAP EWM is the active WM system for all sites in scope; document which sites remain on SAP WM legacy and plan partial data availability handling
 - [ ] **2.** Configure SAP EWM Change Data Capture (CDC) with 15-minute incremental extract windows; validate CDC does not miss tasks created and confirmed within the same 15-minute window
-- [ ] **3.** Deploy ADF pipeline DS-01 (transfer order history); validate row count against EWM report /SCWM/TOREP for 3 consecutive days
-- [ ] **4.** Deploy ADF pipelines DS-02 (goods receipt / dock), DS-03 (outbound delivery), DS-04 (location / quant), DS-05 (labour resource), DS-06 (lot master); validate each pipeline individually
-- [ ] **5.** Create all fact and dimension tables in Azure SQL per Section 6 data model; apply monthly partitioning on fact_warehouse_tasks; apply daily partitioning on fact_location_occupancy
+- [ ] **3.** Deploy Apache Airflow pipeline DS-01 (transfer order history); validate row count against EWM report /SCWM/TOREP for 3 consecutive days
+- [ ] **4.** Deploy Apache Airflow pipelines DS-02 (goods receipt / dock), DS-03 (outbound delivery), DS-04 (location / quant), DS-05 (labour resource), DS-06 (lot master); validate each pipeline individually
+- [ ] **5.** Create all fact and dimension tables in PostgreSQL per Section 6 data model; apply monthly partitioning on fact_warehouse_tasks; apply daily partitioning on fact_location_occupancy
 - [ ] **6.** Implement TR-01 (dock-to-stock) and TR-02 (pick accuracy); unit test with 20 test tasks per TC-01 and TC-03
 - [ ] **7.** Implement TR-03 (FEFO compliance evaluation); unit test with lot-tracked SKU scenarios per TC-02; confirm 0% false-positive rate on non-lot-tracked tasks
 - [ ] **8.** Implement TR-04 (order fill rate), TR-05 (space utilisation), TR-06 (CPOI), TR-07 (slotting compliance); unit test each per test cases TC-04, TC-05
@@ -1437,31 +1386,31 @@ rejected by EWM; (b) SHORT_PICK exception created; (c) confirmed quantity capped
 - [ ] **10.** Load dim_location from SAP EWM location master; validate cubic_capacity_mm3 > 0 for all active pick locations; resolve NOT_DIMENSIONED locations with EWM system admin
 - [ ] **11.** Load dim_lot from SAP batch master (MCH1); validate expiry_date completeness for all lot-tracked SKUs per VC-05
 - [ ] **12.** Implement all seven validation controls (VC-01 through VC-07); run against first 3 days of production data; document results
-- [ ] **13.** Build Power BI report with all six pages per Section 14 specifications; configure DirectQuery for operational pages; configure daily Import for trend pages
+- [ ] **13.** Build Apache Superset report with all six pages per Section 14 specifications; configure live SQL query (SQLAlchemy connection) for operational pages; configure daily materialized-view refresh for trend pages
 - [ ] **14.** Configure row-level security at warehouse level; test with DC manager accounts (own warehouse only visible); test global ops account (all visible)
 - [ ] **15.** Conduct UAT with two warehouse managers and one DC operations director per Section 13 evidence item 7; obtain written sign-off
 - [ ] **16.** Configure Operations Command Centre page (Page 1) for 5-minute auto-refresh; test on representative shift with live EWM data
 - [ ] **17.** Execute GS1 SSCC label compliance test: 1,000 test labels scanned at simulated ship gate; confirm 0 defects (BR-03)
 - [ ] **18.** Execute FEFO negative inventory test (TC-10) in UAT environment; confirm EWM rejects the pick and system records SHORT_PICK exception
 - [ ] **19.** Train warehouse managers, shift supervisors, and QA managers (workshop per role per Section 11 of the broader WMS Implementation Guide)
-- [ ] **20.** Document data lineage from SAP EWM source tables to Power BI visuals in the Data Governance Catalogue; obtain Data Governance Board sign-off
+- [ ] **20.** Document data lineage from SAP EWM source tables to Apache Superset visuals in the Data Governance Catalogue; obtain Data Governance Board sign-off
 
 ---
 
 ## 20. Validation Checklist
 
-- [ ] **1.** ADF pipeline task counts for all six sources reconcile to SAP EWM audit reports within 0.1% for 5 consecutive business days
+- [ ] **1.** Apache Airflow pipeline task counts for all six sources reconcile to SAP EWM audit reports within 0.1% for 5 consecutive business days
 - [ ] **2.** Dock-to-stock time calculations for 10 randomly selected ASNs manually verified against SAP EWM task timestamps; tolerance 0 minutes
 - [ ] **3.** FEFO compliance evaluation tested with 20 lot-tracked picks; fefo_compliant flag matches expected value for all 20 (including 5 intentional deviations)
 - [ ] **4.** Space utilisation fill rates for 10 randomly selected zones reconcile to SAP EWM /SCWM/BINSRCH report within 1%
 - [ ] **5.** Slotting compliance flags verified for 50 randomly selected locations; expected flag matches actual flag for all 50
-- [ ] **6.** LPPH calculated for 3 shifts manually from EWM task logs; result matches Power BI measure within 0.5 lines/hour
+- [ ] **6.** LPPH calculated for 3 shifts manually from EWM task logs; result matches Apache Superset measure within 0.5 lines/hour
 - [ ] **7.** Labour cost per line spot-checked for 5 operators with known hourly rates; result within 1 cent of manual calculation
 - [ ] **8.** Order fill rate for 1 week's outbound deliveries verified against SAP VL06O report within 0.1%
 - [ ] **9.** Row-level security tested: DC manager account for NL01 cannot see DE01 data in any visual or exported file
 - [ ] **10.** Operations Command Centre page (Page 1) confirmed to refresh within 5 minutes of a test PICK task being confirmed in SAP EWM
 - [ ] **11.** Lot expiry alert tiers validated for 10 lots with known expiry dates and storage conditions; tier assignments match TR-11 thresholds for all 10
-- [ ] **12.** Damage rate calculation verified: 5 test GOODS_RECEIPT tasks with damage_flag = 1 out of 20 total; expected damage_rate = 25.0%; Power BI returns 25.0%
+- [ ] **12.** Damage rate calculation verified: 5 test GOODS_RECEIPT tasks with damage_flag = 1 out of 20 total; expected damage_rate = 25.0%; Apache Superset returns 25.0%
 - [ ] **13.** FEFO deviation alert email received by QA Manager within 1 hour of a test FEFO deviation inserted in the test environment
 - [ ] **14.** TDR calculation for warehouse FR01 cross-checked against manual travel distance estimation by Industrial Engineer; result within 5%
 
@@ -1505,25 +1454,25 @@ customer-material combination.
 
 | Week | Phase | Deliverable | Owner | Dependencies |
 |---|---|---|---|---|
-| 1 | Infrastructure | Azure SQL DW provisioned; EWM CDC access configured; network connectivity validated | IT Infrastructure | SAP EWM RFC authorisation granted |
+| 1 | Infrastructure | PostgreSQL provisioned; EWM CDC access configured; network connectivity validated | IT Infrastructure | SAP EWM RFC authorisation granted |
 | 1–2 | Infrastructure | SAP EWM CDC change pointers enabled for all target tables; 15-minute extract schedule tested | SAP Basis + Data Engineering | PI-01 resolved: EWM vs WM site list |
-| 2 | Data Ingestion | ADF pipeline DS-01 (transfer order history) deployed; 3-month backfill complete | Data Engineering | Azure SQL ready |
-| 2–3 | Data Ingestion | ADF pipelines DS-02 (goods receipt), DS-03 (outbound), DS-04 (location/quant) deployed | Data Engineering | PI-02 resolved: gate reader availability |
-| 3 | Data Ingestion | ADF pipelines DS-05 (labour resource) and DS-06 (lot master) deployed | Data Engineering | PI-03 resolved: LMNUM shared terminal policy |
-| 4 | Data Model | All fact and dimension tables created in Azure SQL per Section 6; indexes and partitioning applied | Data Engineering | All pipelines delivering data |
+| 2 | Data Ingestion | Apache Airflow pipeline DS-01 (transfer order history) deployed; 3-month backfill complete | Data Engineering | PostgreSQL ready |
+| 2–3 | Data Ingestion | Apache Airflow pipelines DS-02 (goods receipt), DS-03 (outbound), DS-04 (location/quant) deployed | Data Engineering | PI-02 resolved: gate reader availability |
+| 3 | Data Ingestion | Apache Airflow pipelines DS-05 (labour resource) and DS-06 (lot master) deployed | Data Engineering | PI-03 resolved: LMNUM shared terminal policy |
+| 4 | Data Model | All fact and dimension tables created in PostgreSQL per Section 6; indexes and partitioning applied | Data Engineering | All pipelines delivering data |
 | 4–5 | Transformation | TR-01 to TR-06 implemented and unit tested | Data Engineering | fact_warehouse_tasks populated |
 | 5 | Transformation | TR-07 to TR-12 implemented and unit tested | Data Engineering | dim_location cubic dimensions loaded (PI-04) |
 | 5 | Validation | VC-01 to VC-07 implemented; first validation report produced for Data Governance Board | Data Quality Lead | All transformations complete |
 | 6 | Validation | FEFO compliance evaluation (VC-02) tested with 20 lot-tracked picks including 5 intentional deviations | QA Manager + Data Engineering | TR-03 complete; lot-tracked SKUs in test data |
-| 7 | Dashboard | Power BI Page 1 (Command Centre) and Page 2 (Inbound) built; DirectQuery configured | Power BI Developer | fact_warehouse_tasks with dock_to_stock_minutes |
-| 7–8 | Dashboard | Power BI Pages 3 (Outbound), 4 (Space/Slotting), 5 (FEFO), 6 (Labour) built | Power BI Developer | All fact tables populated |
-| 8 | Dashboard | Row-level security configured; 5-minute auto-refresh enabled on Page 1 | Power BI Developer + IT | |
+| 7 | Dashboard | Apache Superset Page 1 (Command Centre) and Page 2 (Inbound) built; live SQL query (SQLAlchemy connection) configured | Superset Developer | fact_warehouse_tasks with dock_to_stock_minutes |
+| 7–8 | Dashboard | Apache Superset Pages 3 (Outbound), 4 (Space/Slotting), 5 (FEFO), 6 (Labour) built | Superset Developer | All fact tables populated |
+| 8 | Dashboard | Row-level security configured; 5-minute auto-refresh enabled on Page 1 | Superset Developer + IT | |
 | 9 | UAT | UAT executed with 2 warehouse managers and 1 DC operations director | Analytics Lead | All 6 pages complete |
 | 10 | UAT | UAT defects resolved; retest; sign-off obtained | Analytics Lead | |
 | 10 | Testing | GS1 SSCC label compliance test: 1,000 labels; 0 defects required | DC Operations Manager | Label printer config complete |
 | 11 | Testing | FEFO negative test (TC-10), damage rate test (TC-08), TDR cross-check with IE team | QA Manager + IE Team | |
 | 12 | Training | Warehouse manager and QA manager training sessions (dashboard navigation, alert protocols) | Analytics Lead | Dashboard final |
-| 13 | Automation | Daily and near-real-time ADF schedule confirmed; Azure Monitor alerts configured | Data Engineering | UAT sign-off |
+| 13 | Automation | Daily and near-real-time Apache Airflow schedule confirmed; Grafana alerts configured | Data Engineering | UAT sign-off |
 | 14 | Go-Live | Production go-live: all in-scope EWM sites (phased by region) | Programme Manager | All checklists complete |
 | 14 | Go-Live | Post go-live monitoring: daily KPI review and pipeline health check for first 5 business days | Analytics Lead | |
 | 15 | Hypercare | Active support for all warehouse managers; same-day resolution of data issues | Analytics Lead | Go-live stable |

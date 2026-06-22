@@ -4,7 +4,7 @@
 **Analytics Domain**: IQC, PPM/DPMO, NCR Analysis, CAPA Effectiveness, SPC, Supplier Quality Scorecard
 **Standard Alignment**: ISO 9001:2015 (§8.4, §8.5.2, §8.6, §8.7), ISO 2859-1:1999 (AQL),
 IATF 16949:2016, AIAG FMEA 4th Ed., Six Sigma DMAIC, ASQ Body of Knowledge
-**Systems**: SAP S/4HANA QM, SAP Quality Notifications, Power BI, Python (SPC calculations), Azure SQL
+**Systems**: SAP S/4HANA QM, SAP Quality Notifications, Apache Superset, Python (SPC calculations), PostgreSQL
 **Author**: Supply Chain Centre of Excellence
 **Version**: 3.0 — 2026-06-22
 **Status**: Approved for Implementation
@@ -205,7 +205,7 @@ targets defined in our quality strategy?
 | System | SAP S/4HANA 2023, QM module |
 | Table / Report | QMEL (Inspection Lot), QMFE (Defect Item), QMUR (Inspection Characteristic Result), QMZR (Inspection Sample) |
 | Owner | Quality Control Manager / SAP QM System Administrator |
-| Frequency | Real-time via RFC; Power BI refresh every 2 hours |
+| Frequency | Real-time via RFC; Superset refresh every 2 hours |
 | Required Fields | QMEL: PRUEFLOS (lot number), LIEFNR (vendor), MATNR (material), CHARG (batch), MENGE (quantity), EINHEIT (UOM), STAT (status), CREATED_ON. QMUR: PRUEFLOS, MERKMAL (characteristic), SOLLWERT (target), ISTWERT (actual), FEHLERZAHL (defect count). QMFE: PRUEFLOS, FEHLART (defect type), FEHLZAHL (defect count), SCHWERE (severity) |
 | Critical Fields | PRUEFLOS (PK), LIEFNR, MATNR, STAT (status determines if inspection is complete), FEHLZAHL |
 | Primary Key | PRUEFLOS (inspection lot number) |
@@ -266,7 +266,7 @@ targets defined in our quality strategy?
 | Attribute | Detail |
 |-----------|--------|
 | Source Name | Python SPC Engine output — control limits, Cp, Cpk, Pp, Ppk, OOC signals |
-| System | Azure ML compute / Python 3.11 scheduled job writing to Azure SQL |
+| System | Python 3.11 scheduled job writing to PostgreSQL |
 | Table / Report | analytics.SPC_CONTROL_LIMITS, analytics.SPC_OOC_SIGNALS, analytics.PROCESS_CAPABILITY |
 | Owner | Quality Analytics Engineer |
 | Frequency | Triggered on each new inspection lot completion; also nightly batch for bulk recalculation |
@@ -282,7 +282,7 @@ targets defined in our quality strategy?
 | Attribute | Detail |
 |-----------|--------|
 | Source Name | Supplier Quality Master — Inspection Level and AQL Configuration |
-| System | Azure SQL ref.SUPPLIER_QUALITY_CONFIG (maintained by Quality team) |
+| System | PostgreSQL ref.SUPPLIER_QUALITY_CONFIG (maintained by Quality team) |
 | Table / Report | ref.SUPPLIER_QUALITY_CONFIG, ref.AQL_SAMPLING_PLAN |
 | Owner | Supplier Quality Engineer |
 | Frequency | Updated on supplier performance review; minimum quarterly |
@@ -469,7 +469,7 @@ Measurement, Environment).
 ### TR-01: Incoming PPM Calculation per Inspection Lot
 
 ```sql
--- Applied in the Azure SQL analytical layer
+-- Applied in the PostgreSQL analytical layer
 UPDATE FACT_IQC
 SET INCOMING_PPM = CASE
     WHEN SAMPLE_SIZE_N > 0
@@ -1331,7 +1331,7 @@ FI posting EUR 1,250 to GL 500100.
 | R-07 | Supplier quality data — 12-month rolling window crosses SAP go-live date; history unavailable | High | Medium | Load historical inspection results from legacy QMS or paper records for top 20 suppliers |
 | R-08 | AQL switching rule not enforced — suppliers remain on normal inspection despite trigger | Medium | High | Automated switching rule in transformation job; weekly audit of SAMPLING_TYPE vs. lot history |
 | R-09 | CAPA due dates not set consistently — some CAPAs have arbitrary dates reducing KPI value | Medium | Medium | Standard due date policy (BR-04) embedded in SAP QM workflow; mandatory field validation |
-| R-10 | Power BI SPC chart performance — large volume of inspection results causes slow refresh | Medium | Medium | Pre-aggregate control chart data in Python job; store computed limits in Azure SQL |
+| R-10 | Apache Superset SPC chart performance — large volume of inspection results causes slow refresh | Medium | Medium | Pre-aggregate control chart data in Python job; store computed limits in PostgreSQL |
 
 ---
 
@@ -1341,21 +1341,21 @@ FI posting EUR 1,250 to GL 500100.
 
 - [ ] SAP QM inspection lot field mapping completed and validated
 - [ ] SAP QM quality notification field mapping completed
-- [ ] Azure SQL quality analytics schema created (FACT, DIM, stg, ref, analytics, audit tables)
+- [ ] PostgreSQL quality analytics schema created (FACT, DIM, stg, ref, analytics, audit tables)
 - [ ] DIM_SUPPLIER loaded with quality sector classification (automotive/food/general)
 - [ ] DIM_MATERIAL loaded with control plan CTQ flags
 - [ ] DIM_DEFECT_TYPE loaded from SAP QM defect code master
 - [ ] ref.AQL_SAMPLING_PLAN table loaded from ISO 2859-1 (Table II-A for all AQL levels)
 - [ ] ref.SUPPLIER_QUALITY_CONFIG loaded with current inspection level per supplier
 - [ ] ref.COPQ_GL_MAPPING loaded and signed off by Finance Controller
-- [ ] SAP QM → Azure SQL ETL pipeline deployed (FACT_IQC, FACT_NCR, FACT_CAPA, FACT_COPQ)
+- [ ] SAP QM → PostgreSQL ETL pipeline deployed (FACT_IQC, FACT_NCR, FACT_CAPA, FACT_COPQ)
 - [ ] Sector PPM targets loaded and approved by Quality Director
 - [ ] Historical inspection lots loaded (minimum 24 months where available)
 
 ### Phase 2: KPI and SPC Layer (Weeks 9–16)
 
 - [ ] TR-01 through TR-08 transformation rules implemented and unit-tested
-- [ ] Python SPC engine (python/08_quality/spc_engine.py) deployed to Azure ML compute
+- [ ] Python SPC engine (python/08_quality/spc_engine.py) deployed to Python compute
 - [ ] Western Electric rule detection (python/08_quality/western_electric_rules.py) deployed
 - [ ] SPC engine validated against Minitab for 5 test cases (TC-04)
 - [ ] Rolling PPM calculation (TR-05) implemented and back-tested on 12-month history
@@ -1363,7 +1363,7 @@ FI posting EUR 1,250 to GL 500100.
 - [ ] Tightened inspection trigger logic tested (TC-07)
 - [ ] Recurrence detection logic tested (TC-09)
 - [ ] All 10 alert triggers implemented and tested in non-production environment
-- [ ] Power BI data model connected to Azure SQL; all 5 dashboards built
+- [ ] Apache Superset data model connected to PostgreSQL; all 5 dashboards built
 
 ### Phase 3: Scorecard and Workflows (Weeks 17–22)
 
@@ -1415,16 +1415,16 @@ FI posting EUR 1,250 to GL 500100.
 
 **Objective**: Establish all data pipelines, master data, reference tables, and base ETL.
 
-Week 1–2: Azure SQL schema creation; SAP QM field mapping documents; Power BI workspace
+Week 1–2: PostgreSQL schema creation; SAP QM field mapping documents; Apache Superset workspace
 Week 3–4: SAP QM ETL pipeline deployed (inspection lots, quality notifications, CAPA tasks)
 Week 5–6: Reference tables loaded (AQL plan, COPQ mapping, sector targets, supplier config)
 Week 7–8: Historical data load (24 months inspection history); DIM tables populated
 
-**Milestone**: 24 months of inspection history in Azure SQL; zero ETL errors on daily reconciliation.
+**Milestone**: 24 months of inspection history in PostgreSQL; zero ETL errors on daily reconciliation.
 
 ### Phase 2: KPI and Analytics Layer (Months 3–4)
 
-**Objective**: Implement all KPI calculations, SPC engine, and Power BI dashboards.
+**Objective**: Implement all KPI calculations, SPC engine, and Apache Superset dashboards.
 
 Week 9–10: TR-01 through TR-05 implemented; PPM, AQL decision, CAPA flags validated
 Week 11–12: Python SPC engine deployed; Cpk and OOC calculation validated vs. Minitab

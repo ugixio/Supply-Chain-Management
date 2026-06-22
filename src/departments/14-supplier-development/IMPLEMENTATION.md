@@ -4,7 +4,7 @@
 > Scope: Supplier Development Program Tracking, CAPA Tracking, ESG Score Monitoring,
 > Development ROI, Audit Finding Trends.
 > Context: €50B multinational, 40 countries, SAP S/4HANA QM + Ariba SLP +
-> custom ESG database, Power BI, Azure SQL, Python. Quarterly business reviews.
+> custom ESG database, Apache Superset, PostgreSQL, Python. Quarterly business reviews.
 
 ---
 
@@ -16,7 +16,7 @@ defines the data, transformations, KPIs, validations, and dashboards required to
 track scorecard improvement trajectories, manage CAPA closure and recurrence,
 monitor ESG composite scores, quantify development ROI, and trend audit findings.
 
-The deliverable is a governed Power BI solution on Azure SQL, refreshed daily (CAPA,
+The deliverable is a governed Apache Superset solution on PostgreSQL, refreshed daily (CAPA,
 audit) and quarterly (ESG, ROI), used by Supplier Development Engineers (SDE),
 Sustainability, and Procurement leadership. Metrics reconcile to SAP QM, Ariba SLP,
 and the ESG database.
@@ -90,7 +90,7 @@ CAPAs; ESG self-declarations without supporting evidence (flagged, not scored).
 
 ### Source 3 — ESG Assessments
 - **Source Name**: ESG assessment results
-- **Origin System**: Custom ESG database (Azure SQL) / third-party (EcoVadis-style) feed
+- **Origin System**: Custom ESG database (PostgreSQL) / third-party (an open ESG-scoring pipeline) feed
 - **Report/Table/Query**: esg_assessment table
 - **Data Owner**: Sustainability / Procurement
 - **Update Frequency**: Quarterly (or per assessment cycle)
@@ -104,7 +104,7 @@ CAPAs; ESG self-declarations without supporting evidence (flagged, not scored).
 
 ### Source 4 — Development Programme & Investment
 - **Source Name**: Development programme master & cost
-- **Origin System**: Custom programme tracker (SharePoint/Azure SQL) + FI cost postings
+- **Origin System**: Custom programme tracker (the Git document repository/PostgreSQL) + FI cost postings
 - **Report/Table/Query**: dev_program table + FI internal orders
 - **Data Owner**: SDE
 - **Update Frequency**: Monthly
@@ -148,7 +148,7 @@ CAPAs; ESG self-declarations without supporting evidence (flagged, not scored).
 
 ## 6. Data Model
 
-Star schema (Azure SQL → Power BI):
+Star schema (PostgreSQL → Apache Superset):
 
 **Fact tables**
 - `fact_dev_trajectory` — grain: program × supplier × month (score vs target curve).
@@ -312,8 +312,7 @@ Star schema (Azure SQL → Power BI):
 
 ### KPI: Scorecard Improvement Rate
 - **Objective**: progress vs. baseline.
-- **Formula (DAX)**: `Improvement % = DIVIDE([Current Score] − [Score 6m Ago],
-  [Score 6m Ago]) * 100`
+- **Formula (SQL)**: `SELECT (current_score - score_6m_ago) / NULLIF(score_6m_ago, 0) * 100 AS improvement_pct`
 - **Data Source**: fact_dev_trajectory
 - **Calculation Level**: supplier / programme
 - **Frequency**: monthly
@@ -325,16 +324,14 @@ Star schema (Azure SQL → Power BI):
 
 ### KPI: On-Track Rate
 - **Objective**: share of programmes meeting trajectory.
-- **Formula (DAX)**: `On-Track % = DIVIDE(CALCULATE(DISTINCTCOUNT(program_id),
-  on_track_flag=1), DISTINCTCOUNT(program_id)) * 100`
+- **Formula (SQL)**: `SELECT COUNT(DISTINCT program_id) FILTER (WHERE on_track_flag = 1) / NULLIF(COUNT(DISTINCT program_id), 0) * 100 AS on_track_pct FROM fact_dev_trajectory`
 - **Thresholds**: Green ≥80 %, Yellow 60–80 %, Red <60 %
 - **Recommended Action**: Red → portfolio review.
 - **Validation vs Source**: trajectory recompute.
 
 ### KPI: CAPA On-Time Closure Rate
 - **Objective**: timeliness of corrective actions.
-- **Formula (DAX)**: `CAPA OnTime % = DIVIDE(CALCULATE(COUNTROWS(fact_capa),
-  on_time_flag=1, status="CLOSED"), CALCULATE(COUNTROWS(fact_capa), status="CLOSED")) * 100`
+- **Formula (SQL)**: `SELECT COUNT(*) FILTER (WHERE on_time_flag = 1 AND status = 'CLOSED') / NULLIF(COUNT(*) FILTER (WHERE status = 'CLOSED'), 0) * 100 AS capa_ontime_pct FROM fact_capa`
 - **Calculation Level**: supplier / programme
 - **Frequency**: daily/monthly
 - **Owner**: SDE
@@ -345,16 +342,14 @@ Star schema (Azure SQL → Power BI):
 
 ### KPI: CAPA Recurrence Rate
 - **Objective**: detect ineffective corrective actions.
-- **Formula (DAX)**: `Recurrence % = DIVIDE(CALCULATE(COUNTROWS(fact_capa),
-  recurrence_flag=1), COUNTROWS(fact_capa)) * 100`
+- **Formula (SQL)**: `SELECT COUNT(*) FILTER (WHERE recurrence_flag = 1) / NULLIF(COUNT(*), 0) * 100 AS recurrence_pct FROM fact_capa`
 - **Thresholds**: Green <5 %, Yellow 5–15 %, Red >15 %
 - **Recommended Action**: Red → root-cause depth review.
 - **Validation vs Source**: recurrence logic sample.
 
 ### KPI: Audit Finding Closure Rate
 - **Objective**: closure of audit findings.
-- **Formula (DAX)**: `Closure % = DIVIDE(CALCULATE(COUNTROWS(fact_audit_finding),
-  status="CLOSED"), COUNTROWS(fact_audit_finding)) * 100`
+- **Formula (SQL)**: `SELECT COUNT(*) FILTER (WHERE status = 'CLOSED') / NULLIF(COUNT(*), 0) * 100 AS closure_pct FROM fact_audit_finding`
 - **Thresholds**: Green ≥90 %, Yellow 75–90 %, Red <75 %
 - **Recommended Action**: Red → escalate open findings.
 - **Validation vs Source**: finding status vs audit report.
@@ -380,7 +375,7 @@ Star schema (Azure SQL → Power BI):
 
 ### KPI: Supplier Promotion Count
 - **Objective**: programme outcome (band upgrades).
-- **Formula (DAX)**: count of suppliers with rating upgrade in period.
+- **Formula (SQL)**: count of suppliers with rating upgrade in period (`SELECT COUNT(DISTINCT lifnr) ... WHERE rating_band > prior_rating_band`).
 - **Interpretation**: higher = effective development.
 - **Thresholds**: tracked vs target (*Pending to confirm*).
 - **Recommended Action**: celebrate / replicate playbook.
@@ -451,7 +446,7 @@ Star schema (Azure SQL → Power BI):
 
 ---
 
-## 14. Dashboard / Report Design (Power BI)
+## 14. Dashboard / Report Design (Apache Superset)
 
 **Page 1 — Development Portfolio Overview**: on-track rate, promotions, stalled suppliers,
 ESG band distribution.
@@ -557,7 +552,7 @@ suppliers lacking current assessment.
 ## 19. Implementation Checklist
 
 1. Confirm ESG weighting and programme master with Sustainability/SDE.
-2. Build Azure SQL staging for Sources 1–6.
+2. Build PostgreSQL staging for Sources 1–6.
 3. Extract scorecard history, CAPA, ESG, programme, audit, benefit data.
 4. Build fact/dim model per §6.
 5. Implement transformations §8 (target curve, CAPA flags, ESG composite, ROI).
@@ -566,7 +561,7 @@ suppliers lacking current assessment.
 8. Build ESG currency + greenwashing logic.
 9. Build ROI computation with attribution control.
 10. Normalise audit theme taxonomy.
-11. Build Power BI model + relationships.
+11. Build Apache Superset model + relationships.
 12. Author KPI measures.
 13. Build 5 dashboard pages.
 14. Configure RLS (category/region).
@@ -616,7 +611,7 @@ suppliers lacking current assessment.
 | 6–8 | Fact/dim + transforms | Model v1 | Data Eng | Pending |
 | 9–10 | Trajectory + CAPA + ESG | Computed facts | Analytics | Pending |
 | 11–12 | ROI + audit taxonomy | Computed facts | Analytics | Pending |
-| 13–14 | Power BI + KPIs | Dashboard draft | BI Dev | Pending |
+| 13–14 | Apache Superset + KPIs | Dashboard draft | BI Dev | Pending |
 | 15–16 | Validations + reconciliation | Recon pack | Data Quality | Pending |
 | 17 | UAT | Sign-off | SDE / Sustainability | Pending |
 | 18 | Go-live + hypercare | Production report | BI Lead | Pending |

@@ -52,9 +52,9 @@ inherent vs. residual scoring), Supplier Concentration Risk (HHI by procurement 
 Supply Disruption Early Warning (ML-driven, 90-day horizon), Bullwhip Effect measurement per
 supply link, and Business Continuity Coverage tracking.
 
-**Technology stack:** SAP S/4HANA (transactional source), custom risk register on Azure SQL /
-SharePoint (risk owners), Python with Monte Carlo simulation (quantitative risk models),
-Power BI (dashboards).
+**Technology stack:** SAP S/4HANA (transactional source), custom risk register on PostgreSQL /
+the Git document repository (risk owners), Python with Monte Carlo simulation (quantitative risk models),
+Apache Superset (dashboards).
 
 **Business case:**
 - Estimated annual disruption cost (baseline): USD 42M
@@ -102,7 +102,7 @@ The Supply Chain Risk Analytics programme addresses five analytical objectives:
 | Supplier tiers | Tier-1 (all), Tier-2 (strategic categories) |
 | Geography | 40 countries of operation; all critical supply nodes |
 | SKUs | All strategic and bottleneck items (Kraljic: STRATEGIC + BOTTLENECK classification) |
-| Systems | SAP S/4HANA, Azure SQL risk register (SharePoint front-end), Python Monte Carlo, Power BI |
+| Systems | SAP S/4HANA, PostgreSQL risk register (a TypeScript (React) data-entry form front-end), Python Monte Carlo, Apache Superset |
 | BCP scope | All critical business processes with RTO < 72 hours |
 | Reporting | Monthly to CSCO; Quarterly to Board Risk Committee |
 
@@ -177,12 +177,12 @@ The Supply Chain Risk Analytics programme addresses five analytical objectives:
 
 ---
 
-### DS-02: Risk Register (Azure SQL / SharePoint)
+### DS-02: Risk Register (PostgreSQL / the Git document repository)
 
 | Attribute | Value |
 |-----------|-------|
 | Name | Supply Chain Risk Register |
-| System | Azure SQL Database (back-end) with SharePoint Power Apps front-end |
+| System | PostgreSQL Database (back-end) with a TypeScript (React) data-entry form front-end |
 | Table / View | dbo.RiskRegister, dbo.MitigationActions, dbo.RiskOwners, dbo.RiskReviews |
 | Owner | Risk Director |
 | Frequency | Real-time (risk owner updates); daily extract to analytics layer |
@@ -191,7 +191,7 @@ The Supply Chain Risk Analytics programme addresses five analytical objectives:
 | Primary Key | risk_id (UUID) |
 | Validations | likelihood in [1,2,3,4,5]; impact in [1,2,3,4,5]; control_effectiveness in [0,1]; is_deleted = FALSE required for active risks; next_review_due must be populated for all ASSESSED and MITIGATED risks |
 | Known Errors | Some legacy risk entries have control_effectiveness = NULL — treated as 0.0 (no control) for conservative residual scoring |
-| Evidence | SharePoint audit trail; Risk Review meeting minutes attached as DMS links |
+| Evidence | the Git document repository audit trail; Risk Review meeting minutes attached as DMS links |
 
 ---
 
@@ -231,12 +231,12 @@ The Supply Chain Risk Analytics programme addresses five analytical objectives:
 
 ---
 
-### DS-05: Business Continuity Plans (SharePoint Document Library)
+### DS-05: Business Continuity Plans (the Git document repository)
 
 | Attribute | Value |
 |-----------|-------|
 | Name | Business Continuity Plan (BCP) Registry |
-| System | SharePoint Online document library + Azure SQL metadata table |
+| System | the Git document repository + PostgreSQL metadata table |
 | Table / View | dbo.BCPRegistry, dbo.BCPTestResults |
 | Owner | Business Continuity Manager / Risk Director |
 | Frequency | Real-time on BCP upload/update; daily extract to analytics |
@@ -244,8 +244,8 @@ The Supply Chain Risk Analytics programme addresses five analytical objectives:
 | Critical Fields | criticality_level, bcp_status, last_test_date, tts_days, ttr_days |
 | Primary Key | bcp_id |
 | Validations | For criticality = CRITICAL: bcp_status must not be MISSING; last_test_date not older than 365 days; rto_hours must be populated |
-| Known Errors | Some BCP documents are attached as PDF without structured metadata — require manual metadata extraction and entry into Azure SQL registry |
-| Evidence | BCP document version history in SharePoint; test exercise reports (post-exercise minutes); BCP owner sign-off |
+| Known Errors | Some BCP documents are attached as PDF without structured metadata — require manual metadata extraction and entry into PostgreSQL registry |
+| Evidence | BCP document version history in the Git document repository; test exercise reports (post-exercise minutes); BCP owner sign-off |
 
 ---
 
@@ -1145,15 +1145,15 @@ def decompose_bullwhip(
 
 | Evidence Item | Retention Period | Owner | Storage Location |
 |---|---|---|---|
-| Risk Register full version history | 7 years | Risk Director | Azure SQL with version timestamps |
-| Risk Review meeting minutes | 7 years | Risk Analyst | SharePoint document library |
+| Risk Register full version history | 7 years | Risk Director | PostgreSQL with version timestamps |
+| Risk Review meeting minutes | 7 years | Risk Analyst | the Git document repository |
 | Board Risk Committee papers | 10 years | Company Secretary | Board portal (secure) |
-| Mitigation action completion records | 7 years | Risk Owner | Azure SQL MITIGATION_ACTIONS table |
+| Mitigation action completion records | 7 years | Risk Owner | PostgreSQL MITIGATION_ACTIONS table |
 | HHI scoring log (monthly snapshots) | 5 years | Procurement Analytics | Data warehouse (Parquet, Apache Iceberg) |
-| Dual-source programme progress reports | 5 years | Category Manager | SharePoint |
+| Dual-source programme progress reports | 5 years | Category Manager | the Git document repository |
 | Bullwhip analysis log (12-month windows) | 3 years | Demand Planning Analytics | Data warehouse |
 | ML model inference logs (disruption scoring) | 2 years | ML Engineering | MLflow tracking server (OSI-licensed) |
-| BCP documents and test reports | 7 years | Business Continuity Manager | SharePoint document library |
+| BCP documents and test reports | 7 years | Business Continuity Manager | the Git document repository |
 | Disruption signal log (news + macro signals) | 2 years | Risk Data Engineering | Data lake (Parquet) |
 | Monte Carlo simulation results (annual run) | 5 years | Risk Analyst | Data warehouse + PDF archive |
 
@@ -1161,7 +1161,7 @@ def decompose_bullwhip(
 
 ## 14. Dashboard Design
 
-### Dashboard 1: Supply Risk Register (Power BI)
+### Dashboard 1: Supply Risk Register (Apache Superset)
 
 **Audience:** Risk Director, Risk Analysts, CSCO
 **Refresh:** Daily (risk register changes); weekly (KPI trend)
@@ -1176,7 +1176,7 @@ def decompose_bullwhip(
 - Table columns: Title, Category, Likelihood, Impact, Inherent Score, Band, Control Effectiveness,
   Residual Score, EAL (USD), Risk Owner, Next Review Date, Days Until Overdue
 - Conditional formatting: CRITICAL = red background; HIGH = orange; overdue review = bold red date
-- Export to Excel for monthly Board pack preparation
+- Export to spreadsheet (CSV) for monthly Board pack preparation
 
 **Page 3 — EAL Portfolio:**
 - Pareto chart: top-20 risks sorted by EAL (bars) with cumulative EAL% line
@@ -1375,8 +1375,8 @@ def decompose_bullwhip(
    commodity categories with annual spend > EUR 1M. Publish ranked list to CSCO and CPO. Initiate
    dual-source programmes for all categories with HHI > 2500 and spend > EUR 5M.
 
-2. **Risk Register migration to Azure SQL:** Migrate the risk register from Excel or SharePoint
-   lists to Azure SQL with structured schema. This enables automated KPI computation, trend
+2. **Risk Register migration to PostgreSQL:** Migrate the risk register from spreadsheet (CSV) or the Git document repository
+   lists to PostgreSQL with structured schema. This enables automated KPI computation, trend
    analysis, and control effectiveness tracking. Target: all active risks migrated within 8 weeks.
 
 3. **BCP audit:** Identify all CRITICAL business processes and verify that current BCPs exist and
@@ -1397,7 +1397,7 @@ def decompose_bullwhip(
    and present investment request to CSCO with cost-benefit analysis.
 
 7. **Dual-source programme dashboarding:** For all categories with HHI > 2500, create a
-   dual-source programme tracking dashboard in Power BI. Monthly progress at Procurement Risk Review.
+   dual-source programme tracking dashboard in Apache Superset. Monthly progress at Procurement Risk Review.
 
 8. **Monte Carlo portfolio EAL:** Run first annual Monte Carlo simulation for portfolio-level EAL
    distribution. Output: VaR(95%), VaR(99%), CVaR(95%) — feed into insurance captive sizing model.
@@ -1512,11 +1512,11 @@ def decompose_bullwhip(
 | ML model false alarms — high disruption probability with no actual disruption | High | Medium | Model confidence score filter; analyst acknowledgement required before escalation; track false positive rate monthly; retrain model quarterly |
 | Bullwhip measurement noise — small-volume SKUs with naturally high order variance | Medium | Medium | Minimum 52-week observation window; exclude SKUs with < 10 order events per year; flag low-volume SKUs separately in dashboard |
 | BCP documents not updated after organisational changes (new suppliers, new plants, restructuring) | High | High | Annual BCP review obligation built into risk owner performance KPIs; auto-flag BCPs not updated within 12 months; BCM team owns review calendar |
-| Azure SQL risk register performance under concurrent Power BI queries | Low | Medium | Read replica for Power BI; daily snapshot table for analytics; direct query only for real-time KRI monitoring |
+| PostgreSQL risk register performance under concurrent Apache Superset queries | Low | Medium | Read replica for Apache Superset; daily snapshot table for analytics; live SQL query (SQLAlchemy connection) only for real-time KRI monitoring |
 | Risk owner turnover — risks assigned to departed employees become unmonitored | Medium | High | Monthly sweep: identify risks with risk_owner_id not in active HR roster; reassign to Risk Director as interim owner until replacement designated |
 | Monte Carlo parameter uncertainty — AOP and exposure factor are subjective estimates | High | Medium | Sensitivity analysis at plus or minus 50% on AOP and EF; present range not point estimate to Board; document all assumptions explicitly in model notes |
 | Simultaneous multi-region disruption (geopolitical escalation, pandemic) | Low | Critical | Annual multi-node scenario planning using SimPy digital twin; Board-level geopolitical war-game exercise annually |
-| Power BI licensing cost escalation as user base grows across 40 countries | Medium | Low | Evaluate open-source alternative (Apache Superset, Apache-2.0) if per-seat costs exceed budget threshold at 200+ users |
+| Apache Superset operational cost escalation as user base grows across 40 countries | Medium | Low | Apache Superset (Apache-2.0) is already the open-source standard; scale horizontally with additional worker nodes if usage exceeds budget threshold at 200+ users |
 
 ---
 
@@ -1524,9 +1524,9 @@ def decompose_bullwhip(
 
 ### Phase 1: Data Foundation and Risk Register (Weeks 1–8)
 
-- [ ] Migrate risk register from Excel to Azure SQL using defined schema from Section 7
+- [ ] Migrate risk register from spreadsheet (CSV) to PostgreSQL using defined schema from Section 7
 - [ ] Load all historical risks (minimum 3 years) with data quality review by Risk Analyst
-- [ ] Configure SharePoint Power Apps front-end for risk owner data entry (no Excel interface)
+- [ ] Configure a TypeScript (React) data-entry form front-end for risk owner data entry (no spreadsheet (CSV) interface)
 - [ ] Extract 12 months of PO data from SAP S/4HANA for HHI baseline calculation
 - [ ] Map all commodity codes in PO data to current commodity taxonomy via crosswalk table
 - [ ] Identify all CRITICAL business processes (first BCP audit across all BUs)
@@ -1547,12 +1547,12 @@ def decompose_bullwhip(
 
 ### Phase 3: Dashboards (Weeks 17–24)
 
-- [ ] Deploy all 5 Power BI dashboards connected to Azure SQL and SAP data warehouse
+- [ ] Deploy all 5 Apache Superset dashboards connected to PostgreSQL and SAP data warehouse
 - [ ] Configure daily and weekly refresh schedules for each dashboard
 - [ ] Configure automated alert emails: new CRITICAL risk, HHI > 2500, BWE > 2.0, BCP OUTDATED
 - [ ] User acceptance testing with Risk Analyst team, Procurement, CSCO office
 - [ ] Train Risk Analysts and Category Managers on dashboard use (4-hour session)
-- [ ] Train risk owners on risk register data entry in SharePoint (2-hour session)
+- [ ] Train risk owners on risk register data entry in a TypeScript (React) data-entry form (2-hour session)
 
 ### Phase 4: ML and Advanced Analytics (Weeks 25–36)
 
@@ -1580,7 +1580,7 @@ def decompose_bullwhip(
 - [ ] HHI scores validated against manual calculation for 5 randomly selected commodity categories
 - [ ] BWE validated against manual variance calculation for 3 randomly selected SKU-supplier links
 - [ ] BCP Coverage percentage validated against manual count of CURRENT and tested BCPs
-- [ ] Portfolio EAL total validated against manual sum from Risk Register Excel export
+- [ ] Portfolio EAL total validated against manual sum from Risk Register CSV/SQL export
 
 ### Dashboard
 
@@ -1620,7 +1620,7 @@ QUARTER       Q3 2026              Q4 2026              Q1 2027              Q2 
               Jul   Aug   Sep      Oct   Nov   Dec      Jan   Feb   Mar      Apr   May   Jun
 
 PHASE 1       ████████████████████
-Data          Risk register migration to Azure SQL
+Data          Risk register migration to PostgreSQL
 Foundation    HHI baseline (12 months PO data)
               BCP audit (all CRITICAL processes)
               BWE history extraction (52 weeks)
@@ -1634,7 +1634,7 @@ Computation   First BWE ranking published to Demand Planning
               EAL computed for all assessed risks
 
 PHASE 3                                   ████████████████████
-Dashboards                               Dashboards 1-5 deployed in Power BI
+Dashboards                               Dashboards 1-5 deployed in Apache Superset
                                          Automated alert emails configured
                                          UAT completed with Risk and Procurement
                                          Training sessions completed
@@ -1652,16 +1652,16 @@ Improvement                                                        Tier-2 HHI ex
                                                                    Annual geopolitical war-game
 
 MILESTONES
-2026-07-31   Risk Register fully migrated to Azure SQL; all active risks scored
+2026-07-31   Risk Register fully migrated to PostgreSQL; all active risks scored
 2026-08-31   HHI baseline published; dual-source programmes initiated for HHI > 2500 categories
-2026-09-30   All 5 Power BI dashboards live; BCP audit complete with gap plan
+2026-09-30   All 5 Apache Superset dashboards live; BCP audit complete with gap plan
 2026-12-31   LSTM model deployed; disruption signal alerts live; Monte Carlo EAL baseline
 2027-03-31   BWE root-cause automation complete; BCP Coverage >= 90%
 2027-06-30   GNN cascade model in production; Tier-2 HHI analysis available
 ```
 
 **Budget:**
-- Phase 1–4 (Year 1–2): USD 4.0M (Azure SQL, Power BI, Python platform, ML engineering, data)
+- Phase 1–4 (Year 1–2): USD 4.0M (PostgreSQL, Apache Superset, Python platform, ML engineering, data)
 - Phase 5 (Year 3+): USD 1.5M/year (GNN, RL, Tier-2 extension, ongoing platform operations)
 - External data subscriptions: USD 0.4M/year (D&B, Riskmethods or Resilinc, Bloomberg B-PIPE)
 - Estimated annual disruption cost reduction (Year 2 target): USD 24M vs USD 42M baseline

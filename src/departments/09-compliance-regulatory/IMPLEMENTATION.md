@@ -1376,7 +1376,7 @@ Special rule: For UFLPA_CLEARANCE documents linked to HIGH_RISK suppliers, CRITI
 
 ### Phase 3: Dashboards (Weeks 17–22)
 
-- [ ] Deploy all 5 dashboards in SAP Analytics Cloud (or Apache Superset as fallback)
+- [ ] Deploy all 5 dashboards in Apache Superset
 - [ ] Configure daily data refresh pipelines
 - [ ] Configure email alert workflows for CRITICAL document expiry
 - [ ] Configure GRC task creation for new HIGH_RISK UFLPA suppliers

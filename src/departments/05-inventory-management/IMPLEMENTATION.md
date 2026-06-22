@@ -6,8 +6,8 @@ ABC/XYZ Classification, Safety Stock Compliance, Cycle Count Accuracy
 **Standard Alignment:** SCOR-DS · ISO 28000:2022 · GS1 Gen. Specs. v23 · ISO 9001:2015 §8.5.2
 **Document Status:** Authorised for Implementation
 **Last Reviewed:** 2026-06-22
-**Audience:** Senior Supply Chain Architects, ERP Programme Managers, Power BI Developers, Data Science Leads
-**Business Context:** €50B global multinational, 40 countries, SAP S/4HANA MM/WM, Power BI, Azure SQL, Python.
+**Audience:** Senior Supply Chain Architects, ERP Programme Managers, Apache Superset Developers, Data Science Leads
+**Business Context:** €50B global multinational, 40 countries, SAP S/4HANA MM/WM, Apache Superset, PostgreSQL, Python.
 Daily inventory snapshots. Physical inventory and cycle counts monthly/quarterly.
 
 ---
@@ -43,8 +43,8 @@ Daily inventory snapshots. Physical inventory and cycle counts monthly/quarterly
 
 This document defines the complete analytics implementation for Inventory Health and Excess/Obsolete
 (E&O) management across the enterprise Supply Chain Management platform. The organisation operates a
-global inventory footprint across 40 countries with SAP S/4HANA as the ERP backbone, Power BI as the
-reporting layer, Azure SQL as the analytical data warehouse, and Python for statistical modelling.
+global inventory footprint across 40 countries with SAP S/4HANA as the ERP backbone, Apache Superset as the
+reporting layer, PostgreSQL as the analytical data warehouse, and Python for statistical modelling.
 
 Inventory typically represents 20–35% of total assets in manufacturing and distribution organisations
 (Chopra & Meindl, 2016). For a €50B enterprise, even a 1% reduction in excess inventory translates to
@@ -64,7 +64,7 @@ continuous cycle counting programme, anomaly detection on adjustment transaction
 tracking of discrepancies.
 
 The implementation is structured across 22 sections covering data sourcing from SAP S/4HANA, star
-schema design in Azure SQL, Power BI dashboard specifications, KPI formulas, business rules, and a
+schema design in PostgreSQL, Apache Superset dashboard specifications, KPI formulas, business rules, and a
 week-by-week implementation roadmap spanning 16 weeks.
 
 ---
@@ -109,7 +109,7 @@ Specific analytical objectives:
   as non-owned in all reports)
 - All SAP movement types generating stock movements (GR, GI, transfers, adjustments, scrapping)
 - Physical inventory and cycle count results from SAP WM and SAP EWM
-- Daily snapshots stored in Azure SQL for trending and aging analysis
+- Daily snapshots stored in PostgreSQL for trending and aging analysis
 - Safety stock levels maintained in SAP MRP (MRP2 view, fields: safety stock, reorder point)
 
 ### Out of Scope
@@ -185,7 +185,7 @@ coverage days and demand forecast, and what actions are required to hit the DIO 
 | Primary Key | MATNR + WERKS + LGORT + snapshot_date |
 | Validations | LABST >= 0; MATNR exists in material master (MARA); WERKS in active plant list |
 | Possible Errors | Delta extractor gaps if SAP transport applied during extraction window; MBEW valuation missing for new materials; MEINS UOM mismatch vs. GS1 standard |
-| Extraction Evidence | SAP job log (SM37): job ZINV_SNAP_DAILY; Azure Data Factory pipeline run ID logged to audit table |
+| Extraction Evidence | SAP job log (SM37): job ZINV_SNAP_DAILY; Apache Airflow pipeline run ID logged to audit table |
 
 ### DS-02: SAP S/4HANA — Stock Movement History
 
@@ -201,7 +201,7 @@ coverage days and demand forecast, and what actions are required to hit the DIO 
 | Primary Key | MBLNR + MJAHR + ZEILE |
 | Validations | BWART in approved movement type list; BUDAT <= current date; MENGE != 0 |
 | Possible Errors | Backdated postings distorting daily ADU; incorrect reversal movements creating phantom demand; movement type 551 (scrapping) posted without NCR reference |
-| Extraction Evidence | ADF pipeline ZINV_MVMT_DELTA; row count reconciled against SAP transaction MB51 |
+| Extraction Evidence | Apache Airflow pipeline ZINV_MVMT_DELTA; row count reconciled against SAP transaction MB51 |
 
 ### DS-03: SAP S/4HANA — MRP Safety Stock and Reorder Points
 
@@ -217,7 +217,7 @@ coverage days and demand forecast, and what actions are required to hit the DIO 
 | Primary Key | MATNR + WERKS |
 | Validations | EISBE >= 0; MINBE >= EISBE; DISMM in (ND, PD, VB, VM) |
 | Possible Errors | Safety stock set to 0 for items that should have SS (data entry error); MRP type ND (no planning) for active SKUs |
-| Extraction Evidence | ADF pipeline ZMRP_SS_WEEKLY; reconciled against SAP transaction MD04 sample check |
+| Extraction Evidence | Apache Airflow pipeline ZMRP_SS_WEEKLY; reconciled against SAP transaction MD04 sample check |
 
 ### DS-04: SAP WM / EWM — Cycle Count Results
 
@@ -233,15 +233,15 @@ coverage days and demand forecast, and what actions are required to hit the DIO 
 | Primary Key | IVNR + LGPLA + MATNR |
 | Validations | ANZPH >= 0; count date within current fiscal year; ANZLI reconciles to inventory snapshot for same date |
 | Possible Errors | Double-counting if count document posted before snapshot extract; EWM and WM data arriving in different pipelines creating duplication |
-| Extraction Evidence | ADF pipeline ZINV_CYCLE_COUNT; count document numbers logged in audit table |
+| Extraction Evidence | Apache Airflow pipeline ZINV_CYCLE_COUNT; count document numbers logged in audit table |
 
-### DS-05: Azure SQL — Demand History (Cleaned)
+### DS-05: PostgreSQL — Demand History (Cleaned)
 
 | Attribute | Detail |
 |---|---|
-| Source Name | Azure SQL — Demand History Fact Table |
-| Origin System | Downstream from SAP SD (sales orders) and SAP MM (internal consumption) via ADF |
-| Table/Query | fact_demand_daily (Azure SQL DW) |
+| Source Name | PostgreSQL — Demand History Fact Table |
+| Origin System | Downstream from SAP SD (sales orders) and SAP MM (internal consumption) via Apache Airflow |
+| Table/Query | fact_demand_daily (PostgreSQL data warehouse) |
 | Data Owner | Demand Planning Analytics Lead |
 | Frequency | Daily refresh |
 | Required Fields | sku_id, plant_code, demand_date, demand_units, demand_value_cents, demand_source (CUSTOMER_ORDER / INTERNAL_CONSUMPTION / FORECAST) |
@@ -249,7 +249,7 @@ coverage days and demand forecast, and what actions are required to hit the DIO 
 | Primary Key | sku_id + plant_code + demand_date + demand_source |
 | Validations | demand_units >= 0; no future dates; demand_source in approved list |
 | Possible Errors | SAP cancellation reversals creating negative demand rows; promotional spikes inflating ADU |
-| Extraction Evidence | ADF pipeline ZDEM_DAILY; row count and sum reconciled daily against SAP MB52 |
+| Extraction Evidence | Apache Airflow pipeline ZDEM_DAILY; row count and sum reconciled daily against SAP MB52 |
 
 ### DS-06: SAP S/4HANA — Material Master (Classification)
 
@@ -265,13 +265,13 @@ coverage days and demand forecast, and what actions are required to hit the DIO 
 | Primary Key | MATNR |
 | Validations | MATNR not null; MATKL in approved material group list; MEINS is a valid GS1 UOM code |
 | Possible Errors | Material group (MATKL) not maintained; duplicate materials created due to no BISMT cross-reference |
-| Extraction Evidence | ADF pipeline ZMARA_WEEKLY |
+| Extraction Evidence | Apache Airflow pipeline ZMARA_WEEKLY |
 
 ---
 
 ## 6. Data Model
 
-The analytics solution uses a star schema deployed in Azure SQL with one central fact table and six
+The analytics solution uses a star schema deployed in PostgreSQL with one central fact table and six
 dimension tables. All monetary values are stored as integer cents (BIGINT) per the project Money
 convention. All dates are ISO 8601 (YYYY-MM-DD).
 
@@ -279,7 +279,7 @@ convention. All dates are ISO 8601 (YYYY-MM-DD).
 
 **fact_inventory_snapshot** — Grain: one row per SKU + plant + storage location + snapshot date.
 Captures the end-of-day on-hand inventory position, valuation, coverage days, and health classification.
-Partitioned by snapshot_date (monthly partitions in Azure SQL) for query performance.
+Partitioned by snapshot_date (monthly partitions in PostgreSQL) for query performance.
 
 **fact_stock_movements** — Grain: one row per SAP material document line.
 Captures all stock movement events with movement type, quantity, value, and GL accounts.
@@ -558,7 +558,7 @@ storage_location. Includes all movement types. Refreshed daily with each snapsho
 | Expected Result | All historical records preserved; reports filter on is_deleted = FALSE by default |
 | Example | Obsolete material MAT-99999 is discontinued: MARC.MMSTA set to X (blocked); is_deleted = FALSE until physical scrapping is complete |
 | Exception | Test data in non-production environments may be hard-deleted by IT administrators only |
-| Evidence | CLAUDE.md Critical Business Rule #3; Azure SQL row-level security policy |
+| Evidence | CLAUDE.md Critical Business Rule #3; Apache Superset row-level security policy |
 
 ### BR-03: Coverage Target Days by ABC Class
 
@@ -636,8 +636,8 @@ storage_location. Includes all movement types. Refreshed daily with each snapsho
 
 ## 10. KPIs and Formulas
 
-All KPIs are calculated daily unless otherwise noted. DAX formulas are for Power BI Desktop.
-SQL formulas target Azure SQL DW.
+All KPIs are calculated daily unless otherwise noted. SQL metrics are for Apache Superset.
+SQL formulas target the PostgreSQL data warehouse.
 
 ### KPI-01: Inventory Coverage Days
 
@@ -649,19 +649,15 @@ Coverage_Days = On_Hand_Units / ADU_90d
 ADU_90d = SUM(goods_issue_units, trailing 90 days) / 90
 ```
 
-**DAX:**
-```dax
-Coverage Days =
-VAR ADU =
-    DIVIDE(
-        CALCULATE(
-            SUM(fact_stock_movements[quantity_units]),
-            fact_stock_movements[movement_category] IN {"GOODS_ISSUE","SCRAP"},
-            DATESINPERIOD(dim_date[date_id], MAX(dim_date[date_id]), -90, DAY)
-        ),
-        90
-    )
-RETURN DIVIDE([On Hand Units], ADU, BLANK())
+**SQL metric (Apache Superset):**
+```sql
+WITH adu AS (
+    SELECT SUM(quantity_units) / 90.0 AS adu_90d
+    FROM fact_stock_movements
+    WHERE movement_category IN ('GOODS_ISSUE','SCRAP')
+      AND posting_date >= CURRENT_DATE - INTERVAL '90 days'
+)
+SELECT on_hand_units / NULLIF((SELECT adu_90d FROM adu), 0) AS coverage_days;
 ```
 
 **SQL:**
@@ -698,21 +694,24 @@ WHERE s.snapshot_date = CAST(GETDATE() AS DATE);
 Turnover_Ratio = COGS_trailing_12m_cents / Avg_Inventory_Value_12m_cents
 ```
 
-**DAX:**
-```dax
-Inventory Turnover =
-VAR COGS =
-    CALCULATE(
-        SUM(fact_stock_movements[total_value_cents]),
-        fact_stock_movements[movement_category] IN {"GOODS_ISSUE","SCRAP"},
-        DATESINPERIOD(dim_date[date_id], MAX(dim_date[date_id]), -365, DAY)
-    )
-VAR AvgInv =
-    AVERAGEX(
-        VALUES(dim_date[fiscal_month]),
-        CALCULATE(SUM(fact_inventory_snapshot[on_hand_value_cents]))
-    )
-RETURN DIVIDE(COGS, AvgInv, BLANK())
+**SQL metric (Apache Superset):**
+```sql
+WITH cogs AS (
+    SELECT SUM(total_value_cents) AS cogs_cents
+    FROM fact_stock_movements
+    WHERE movement_category IN ('GOODS_ISSUE','SCRAP')
+      AND posting_date >= CURRENT_DATE - INTERVAL '365 days'
+),
+avg_inv AS (
+    SELECT AVG(monthly_value) AS avg_inv_cents
+    FROM (
+        SELECT SUM(on_hand_value_cents) AS monthly_value
+        FROM fact_inventory_snapshot
+        GROUP BY fiscal_month
+    ) m
+)
+SELECT (SELECT cogs_cents FROM cogs)
+       / NULLIF((SELECT avg_inv_cents FROM avg_inv), 0) AS inventory_turnover;
 ```
 
 ---
@@ -724,9 +723,9 @@ RETURN DIVIDE(COGS, AvgInv, BLANK())
 DIO = 365 / Inventory_Turnover_Ratio
 ```
 
-**DAX:**
-```dax
-DIO Days = DIVIDE(365, [Inventory Turnover], BLANK())
+**SQL metric (Apache Superset):**
+```sql
+SELECT 365 / NULLIF(inventory_turnover, 0) AS dio_days;
 ```
 
 **Target:** DIO < 45 days for finished goods. Alert threshold: DIO > 60 days triggers working capital review.
@@ -741,21 +740,15 @@ Excess_Value_cents = MAX(0,
     (Coverage_Days - Coverage_Target_Days) x ADU_90d x Unit_Cost_cents)
 ```
 
-**DAX:**
-```dax
-Excess Inventory Value EUR =
-SUMX(
-    fact_inventory_snapshot,
-    VAR ExcessDays =
-        MAX(0,
-            fact_inventory_snapshot[coverage_days]
-            - RELATED(dim_material[coverage_target_days])
-        )
-    RETURN
-        ExcessDays
-        * fact_inventory_snapshot[adu_90d]
-        * DIVIDE(fact_inventory_snapshot[unit_cost_cents], 100)
-)
+**SQL metric (Apache Superset):**
+```sql
+SELECT SUM(
+    GREATEST(0, s.coverage_days - m.coverage_target_days)
+    * s.adu_90d
+    * (s.unit_cost_cents / 100.0)
+) AS excess_inventory_value_eur
+FROM fact_inventory_snapshot s
+JOIN dim_material m ON s.sku_id = m.sku_id;
 ```
 
 ---
@@ -767,16 +760,11 @@ SUMX(
 Obsolete_Value_cents = SUM(on_hand_value_cents) WHERE is_obsolete = 1
 ```
 
-**DAX:**
-```dax
-Obsolete Inventory EUR =
-CALCULATE(
-    SUMX(
-        fact_inventory_snapshot,
-        DIVIDE(fact_inventory_snapshot[on_hand_value_cents], 100)
-    ),
-    fact_inventory_snapshot[is_obsolete] = 1
-)
+**SQL metric (Apache Superset):**
+```sql
+SELECT SUM(on_hand_value_cents / 100.0) AS obsolete_inventory_eur
+FROM fact_inventory_snapshot
+WHERE is_obsolete = 1;
 ```
 
 ---
@@ -789,20 +777,16 @@ E&O_Ratio_pct = (Excess_Value_cents + Obsolete_Value_cents)
                 / Total_Active_Inventory_Value_cents x 100
 ```
 
-**DAX:**
-```dax
-E&O Ratio % =
-DIVIDE(
-    [Excess Inventory Value EUR] + [Obsolete Inventory EUR],
-    DIVIDE(
-        CALCULATE(
-            SUM(fact_inventory_snapshot[on_hand_value_cents]),
-            dim_material[status] = "ACTIVE"
-        ),
-        100
-    ),
-    0
-) * 100
+**SQL metric (Apache Superset):**
+```sql
+SELECT (excess_inventory_value_eur + obsolete_inventory_eur)
+    / NULLIF(
+        (SELECT SUM(s.on_hand_value_cents) / 100.0
+         FROM fact_inventory_snapshot s
+         JOIN dim_material m ON s.sku_id = m.sku_id
+         WHERE m.status = 'ACTIVE'),
+        0
+    ) * 100 AS eo_ratio_pct;
 ```
 
 **Target:** E&O Ratio < 5%. Alert: > 8% triggers executive review. World-class: < 2%.
@@ -818,21 +802,16 @@ Shortage_Rate_pct =
     / COUNT(DISTINCT sku_id WHERE status = 'ACTIVE') x 100
 ```
 
-**DAX:**
-```dax
-Shortage Rate % =
-VAR ShortageSKUs =
-    CALCULATE(
-        DISTINCTCOUNT(fact_inventory_snapshot[sku_id]),
-        fact_inventory_snapshot[on_hand_units] = 0,
-        fact_inventory_snapshot[has_open_demand] = 1
-    )
-VAR TotalActive =
-    CALCULATE(
-        DISTINCTCOUNT(fact_inventory_snapshot[sku_id]),
-        dim_material[status] = "ACTIVE"
-    )
-RETURN DIVIDE(ShortageSKUs, TotalActive, 0) * 100
+**SQL metric (Apache Superset):**
+```sql
+SELECT
+    COUNT(DISTINCT CASE WHEN s.on_hand_units = 0 AND s.has_open_demand = 1
+                        THEN s.sku_id END)
+    / NULLIF(COUNT(DISTINCT CASE WHEN m.status = 'ACTIVE'
+                                 THEN s.sku_id END), 0)
+    * 100 AS shortage_rate_pct
+FROM fact_inventory_snapshot s
+JOIN dim_material m ON s.sku_id = m.sku_id;
 ```
 
 **Target:** Shortage Rate < 0.5%. Alert: > 2% for A-class items.
@@ -848,14 +827,12 @@ Cycle_Count_Accuracy_pct =
     / COUNT(all counts) x 100
 ```
 
-**DAX:**
-```dax
-Cycle Count Accuracy % =
-DIVIDE(
-    CALCULATE(COUNTROWS(fact_cycle_counts), fact_cycle_counts[accuracy_flag] = 1),
-    COUNTROWS(fact_cycle_counts),
-    0
-) * 100
+**SQL metric (Apache Superset):**
+```sql
+SELECT
+    COUNT(*) FILTER (WHERE accuracy_flag = 1)
+    / NULLIF(COUNT(*), 0) * 100 AS cycle_count_accuracy_pct
+FROM fact_cycle_counts;
 ```
 
 **SQL:**
@@ -885,21 +862,15 @@ SS_Compliance_pct =
     / COUNT(DISTINCT sku_id WHERE safety_stock_units > 0) x 100
 ```
 
-**DAX:**
-```dax
-Safety Stock Compliance % =
-VAR Compliant =
-    CALCULATE(
-        DISTINCTCOUNT(fact_inventory_snapshot[sku_id]),
-        fact_inventory_snapshot[ss_compliant] = 1,
-        fact_inventory_snapshot[safety_stock_units] > 0
-    )
-VAR WithSS =
-    CALCULATE(
-        DISTINCTCOUNT(fact_inventory_snapshot[sku_id]),
-        fact_inventory_snapshot[safety_stock_units] > 0
-    )
-RETURN DIVIDE(Compliant, WithSS, 0) * 100
+**SQL metric (Apache Superset):**
+```sql
+SELECT
+    COUNT(DISTINCT CASE WHEN ss_compliant = 1 AND safety_stock_units > 0
+                        THEN sku_id END)
+    / NULLIF(COUNT(DISTINCT CASE WHEN safety_stock_units > 0
+                                 THEN sku_id END), 0)
+    * 100 AS safety_stock_compliance_pct
+FROM fact_inventory_snapshot;
 ```
 
 **Target:** >= 90% overall. >= 97% for A-class items.
@@ -997,7 +968,7 @@ When a SKU is flagged as excess or obsolete the following disposition workflow i
 | Name | Non-Negative On-Hand Stock |
 | Field/Table | fact_inventory_snapshot.on_hand_units |
 | Rule | on_hand_units >= 0 for all rows |
-| Method | Pre-load SQL CHECK constraint + ADF pipeline data quality activity |
+| Method | Pre-load SQL CHECK constraint + Apache Airflow pipeline data quality activity |
 | Expected Result | Zero rows with on_hand_units < 0 in production load |
 | Action if Fails | Row quarantined to dq_error_log; SAP inventory controller notified; excluded from KPIs |
 | Evidence | BR-01; CLAUDE.md Critical Business Rule #1 |
@@ -1078,16 +1049,16 @@ When a SKU is flagged as excess or obsolete the following disposition workflow i
 
 ## 13. Required Evidence
 
-The following evidence artefacts must be produced and stored in the project SharePoint repository
+The following evidence artefacts must be produced and stored in the project Git document repository
 before each phase milestone is signed off by the Data Governance Board:
 
-1. **Data source connection test results:** Screenshot of successful ADF pipeline runs for all six
+1. **Data source connection test results:** Screenshot of successful Apache Airflow pipeline runs for all six
    data sources with row counts and checksums matching SAP control totals for 3 consecutive days.
 
 2. **Data quality baseline report:** Results of VC-01 through VC-07 validations against the first
    30 days of production data, showing pass/fail rates and open remediation items with owners.
 
-3. **ABC/XYZ classification audit:** Excel export of all active SKUs with ABC and XYZ classifications
+3. **ABC/XYZ classification audit:** spreadsheet (CSV) export of all active SKUs with ABC and XYZ classifications
    for the first monthly run, reviewed and signed off by the Inventory Control Manager.
 
 4. **E&O financial exposure report:** First E&O report showing excess and obsolete values reconciled
@@ -1099,7 +1070,7 @@ before each phase milestone is signed off by the Data Governance Board:
 6. **Cycle count accuracy baseline:** First month's cycle count accuracy report by warehouse and
    ABC class, reconciled against SAP transaction MI23 summary report within 0.5%.
 
-7. **Power BI UAT sign-off:** User acceptance testing evidence from at least three inventory
+7. **Apache Superset UAT sign-off:** User acceptance testing evidence from at least three inventory
    controllers and one regional supply chain manager confirming KPI accuracy against source system.
 
 8. **CSDDD data retention evidence:** Confirmation that E&O and inventory adjustment records are
@@ -1109,12 +1080,12 @@ before each phase milestone is signed off by the Data Governance Board:
 
 ## 14. Dashboard Design
 
-### Power BI Report Structure
+### Apache Superset Report Structure
 
-**Report File:** Inventory_Health_Analytics.pbix
-**Refresh Schedule:** Daily at 06:00 CET (after ADF pipeline completion at 05:30 CET)
-**Row-Level Security:** Plant-level RLS; regional managers see their plants only; Global SCM team sees all
-**Data Source:** Azure SQL DW via DirectQuery (fact tables) + Import (dim tables)
+**Report File:** Inventory_Health_Analytics (Superset)
+**Refresh Schedule:** Daily at 06:00 CET (after Apache Airflow pipeline completion at 05:30 CET)
+**Row-Level Security:** Plant-level RLS (Apache Superset); regional managers see their plants only; Global SCM team sees all
+**Data Source:** PostgreSQL data warehouse via live SQL query (SQLAlchemy connection) (fact tables) + materialized SQL views (dim tables)
 
 ---
 
@@ -1352,17 +1323,17 @@ Verify all three.
 ### TC-06: Cycle Count Accuracy
 
 Load 10 count records: 8 with counted_qty = system_qty (accuracy_flag = 1); 2 with variance.
-Expected accuracy_rate = 80.0%. Verify DAX measure and SQL query both return 80.0%.
+Expected accuracy_rate = 80.0%. Verify SQL metric and SQL query both return 80.0%.
 
 ### TC-07: E&O Ratio
 
 Total inventory value = €1,000,000. Excess value = €60,000. Obsolete value = €30,000.
 Expected E&O Ratio = (60,000 + 30,000) / 1,000,000 x 100 = 9.0%.
-Verify Power BI measure returns 9.0%.
+Verify Apache Superset metric returns 9.0%.
 
 ### TC-08: Negative Inventory Rejection
 
-Attempt to load a snapshot row with on_hand_units = -5. Verify: (a) ADF pipeline validation
+Attempt to load a snapshot row with on_hand_units = -5. Verify: (a) Apache Airflow pipeline validation
 activity rejects the row; (b) row appears in dq_error_log; (c) KPI calculations exclude the row;
 (d) alert is sent to the assigned data owner within 1 hour.
 
@@ -1374,7 +1345,7 @@ represent 15%; bottom 60 represent 5%. Expected: 15 A-class, 25 B-class, 60 C-cl
 ### TC-10: DIO Calculation
 
 COGS over 365 days = €500M. Average monthly inventory value = €100M (12-month average).
-Turnover = 500/100 = 5.0. DIO = 365/5 = 73 days. Verify DAX and SQL both return 73.0 days.
+Turnover = 500/100 = 5.0. DIO = 365/5 = 73 days. Verify SQL metric and SQL both return 73.0 days.
 
 ---
 
@@ -1385,7 +1356,7 @@ Turnover = 500/100 = 5.0. DIO = 365/5 = 73 days. Verify DAX and SQL both return 
 | SAP delta extractor misses movements during maintenance window | Medium | High | Daily full reconciliation count vs. SAP MB52; alert if delta count < 95% of expected; fallback to full extract |
 | ADU distortion from promotional demand spikes | High | Medium | Exclude top-5% ADU days from rolling average; maintain separate promotional_demand flag; planner can override |
 | ABC classification instability (frequent reclassification) | Medium | Medium | Implement 2-month smoothing rule: SKU must qualify for new class for 2 consecutive months before reclassifying |
-| Power BI daily refresh failure | Low | High | Azure Monitor alerting; automatic retry 3x; fallback to prior-day dataset with warning banner in report |
+| Apache Superset daily refresh failure | Low | High | Grafana alerting; automatic retry 3x; fallback to prior-day dataset with warning banner in report |
 | Missing safety stock for new materials (< 30 days in system) | High | Medium | New materials assigned default SS = 7 x ADU for A/B class until formal SS calculation completed within 30 days |
 | Incorrect plant currency conversion causing value discrepancies | Medium | High | All values stored in local currency cents; EUR conversion applied in report layer via dim_exchange_rate (ECB daily rates) |
 | Obsolete inventory financial exposure not accrued in time | Low | High | Automated 30-day provision reminder to Finance Controller; escalation to CFO if not actioned |
@@ -1395,41 +1366,41 @@ Turnover = 500/100 = 5.0. DIO = 365/5 = 73 days. Verify DAX and SQL both return 
 
 ## 19. Implementation Checklist
 
-- [ ] **1.** Confirm Azure SQL DW environment provisioned with sufficient storage (estimated 500 GB for 36 months of movements at the current movement volume) and appropriate vCores for daily batch processing
-- [ ] **2.** Configure SAP RFC connections for all six data source extractors; validate authorisation objects S_RFC and S_TABU_DIS are granted for the ADF service account
-- [ ] **3.** Deploy ADF pipelines for all six data sources; run first full load and validate row counts against SAP control totals (MB52, MB51, MI23)
-- [ ] **4.** Create and validate all fact and dimension tables in Azure SQL per the Section 6 data model; apply monthly partitioning on fact_inventory_snapshot and fact_stock_movements
-- [ ] **5.** Implement all 15 transformation rules (TR-01 through TR-15) as Azure SQL stored procedures or ADF data flows; unit test each rule with test data per Section 17
+- [ ] **1.** Confirm PostgreSQL data warehouse environment provisioned with sufficient storage (estimated 500 GB for 36 months of movements at the current movement volume) and appropriate vCores for daily batch processing
+- [ ] **2.** Configure SAP RFC connections for all six data source extractors; validate authorisation objects S_RFC and S_TABU_DIS are granted for the Apache Airflow service account
+- [ ] **3.** Deploy Apache Airflow pipelines for all six data sources; run first full load and validate row counts against SAP control totals (MB52, MB51, MI23)
+- [ ] **4.** Create and validate all fact and dimension tables in PostgreSQL per the Section 6 data model; apply monthly partitioning on fact_inventory_snapshot and fact_stock_movements
+- [ ] **5.** Implement all 15 transformation rules (TR-01 through TR-15) as PostgreSQL stored procedures or Apache Airflow data flows; unit test each rule with test data per Section 17
 - [ ] **6.** Load dim_movement_type mapping table covering all SAP BWART codes used by the organisation; validate 100% mapping coverage via VC-07
 - [ ] **7.** Execute first ABC classification run (TR-08); review output with Inventory Control Manager; sign off per Section 13 evidence item 3
 - [ ] **8.** Execute first XYZ classification run (TR-09); review output with Demand Planning team; confirm at least 12 weeks of history per SKU
 - [ ] **9.** Load dim_safety_stock from SAP MRP (TR-07); validate completeness for A/B class items per VC-04; generate SS_NOT_MAINTAINED report
 - [ ] **10.** Implement all seven validation controls (VC-01 through VC-07); run against first 7 days of production data; document pass/fail rates
-- [ ] **11.** Build Power BI report with all six pages per Section 14 specifications; apply row-level security at plant level
-- [ ] **12.** Configure row-level security in Power BI: plant controllers see own plants; regional managers see region; global team sees all
+- [ ] **11.** Build Apache Superset report with all six pages per Section 14 specifications; apply row-level security at plant level
+- [ ] **12.** Configure row-level security in Apache Superset: plant controllers see own plants; regional managers see region; global team sees all
 - [ ] **13.** Conduct UAT with three inventory controllers and one regional manager per Section 13 evidence item 7; obtain written sign-off
-- [ ] **14.** Configure daily ADF pipeline schedule (23:00 UTC extract; 05:30 UTC transformation; 06:00 UTC Power BI refresh)
-- [ ] **15.** Set up Azure Monitor alerts for ADF pipeline failures, Power BI refresh failures, and critical data quality breaches (VC-01 failures)
+- [ ] **14.** Configure daily Apache Airflow pipeline schedule (23:00 UTC extract; 05:30 UTC transformation; 06:00 UTC Apache Superset refresh)
+- [ ] **15.** Set up Grafana alerts for Apache Airflow pipeline failures, Apache Superset refresh failures, and critical data quality breaches (VC-01 failures)
 - [ ] **16.** Implement E&O disposition workflow notifications (email alerts per Section 11 alert logic for Day 1, 7, 14, 30, 90)
 - [ ] **17.** Train inventory controllers and demand planners (2-hour session per role covering dashboard navigation, KPI interpretation, and action protocols)
-- [ ] **18.** Document data lineage from SAP source tables to Power BI visuals in the Data Governance Catalogue
+- [ ] **18.** Document data lineage from SAP source tables to Apache Superset visuals in the Data Governance Catalogue
 - [ ] **19.** Obtain Finance Controller sign-off on E&O valuation methodology and financial exposure reporting (Section 13 evidence item 4)
-- [ ] **20.** Schedule monthly ABC/XYZ refresh job; confirm execution on first calendar day of each month; add Azure Monitor monitoring alert
+- [ ] **20.** Schedule monthly ABC/XYZ refresh job; confirm execution on first calendar day of each month; add Grafana monitoring alert
 
 ---
 
 ## 20. Validation Checklist
 
-- [ ] **1.** ADF pipeline row counts for all six sources reconcile to SAP control totals within 0.1% for the first 5 consecutive business days
+- [ ] **1.** Apache Airflow pipeline row counts for all six sources reconcile to SAP control totals within 0.1% for the first 5 consecutive business days
 - [ ] **2.** fact_inventory_snapshot total on_hand_value_cents reconciles to SAP transaction MB52 valuation report within €10,000 (rounding tolerance) daily
 - [ ] **3.** ADU values for 20 randomly selected A-class SKUs manually verified against SAP MB51 movement history for the 90-day period; tolerance 0.001 units
 - [ ] **4.** Coverage day buckets spot-checked for 50 SKUs across all ABC classes; expected bucket matches actual bucket for all 50
 - [ ] **5.** ABC classification output for first monthly run agrees with manual ACV calculation for top 10 and bottom 10 SKUs by value; tolerance 0 misclassifications
-- [ ] **6.** E&O ratio reported in Power BI matches manual calculation from the exported data file within 0.01%
+- [ ] **6.** E&O ratio reported in Apache Superset matches manual calculation from the exported data file within 0.01%
 - [ ] **7.** Safety stock compliance rate matches manual count of SS violations from SAP MD04 for one plant within 1%
 - [ ] **8.** Cycle count accuracy rate for first month matches SAP transaction MI23 summary report within 0.5%
-- [ ] **9.** Row-level security confirmed: test user with Plant DE01 access cannot see Plant FR01 data in any Power BI visual or exported dataset
-- [ ] **10.** Power BI daily refresh completes by 07:00 CET on 5 consecutive business days without failure
+- [ ] **9.** Row-level security confirmed: test user with Plant DE01 access cannot see Plant FR01 data in any Apache Superset visual or exported dataset
+- [ ] **10.** Apache Superset daily refresh completes by 07:00 CET on 5 consecutive business days without failure
 - [ ] **11.** CRITICAL coverage bucket alert emails received by correct recipients within 1 hour of data load completion on test day
 - [ ] **12.** Negative inventory test case (TC-08) executed: rejected records appear in dq_error_log; KPIs exclude them; alert received within 1 hour
 - [ ] **13.** DIO measure verified: turnover ratio and DIO for two business units match Finance Controller's independent calculation within 0.1 day
@@ -1453,7 +1424,7 @@ the standard A=30, B=45, C=60 day policy).
 that qualify for the 50% coverage threshold extension during pre-season buffer build.
 
 **PI-04 — E&O disposition workflow tool:** Confirm the target tool for disposition workflow management
-(SAP QM workflow, ServiceNow, or a bespoke SharePoint list). The Power BI report link-out on Page 3
+(SAP QM workflow, ServiceNow, or a bespoke PostgreSQL list). The Apache Superset report link-out on Page 3
 depends on the chosen tool URL.
 
 **PI-05 — Historical demand history availability:** For XYZ classification, 12 weeks of weekly demand
@@ -1474,26 +1445,26 @@ LQUA for WM).
 
 | Week | Phase | Deliverable | Owner | Dependencies |
 |---|---|---|---|---|
-| 1 | Infrastructure | Azure SQL DW provisioned; resource group and security configured | IT Infrastructure | Cloud subscription confirmed |
+| 1 | Infrastructure | PostgreSQL data warehouse provisioned; resource group and security configured | IT Infrastructure | Cloud subscription confirmed |
 | 1–2 | Infrastructure | SAP RFC connections validated for all 6 data sources | SAP Basis + IT | SAP authorisation objects granted |
-| 2 | Data Ingestion | ADF pipeline DS-01 (daily snapshot) deployed and tested | Data Engineering | Azure SQL ready |
-| 2–3 | Data Ingestion | ADF pipeline DS-02 (movement history) deployed; 36-month backfill complete | Data Engineering | Sufficient Azure SQL storage |
-| 3 | Data Ingestion | ADF pipeline DS-03 (safety stock) deployed | Data Engineering | SAP MARC authorisation |
-| 3 | Data Ingestion | ADF pipeline DS-04 (cycle counts) deployed; EWM and WM handled separately | Data Engineering | PI-07 resolved: EWM vs WM plant list |
-| 4 | Data Ingestion | ADF pipelines DS-05 (demand history) and DS-06 (material master) deployed | Data Engineering | |
-| 4 | Data Model | Star schema tables created in Azure SQL; primary keys and indexes applied | Data Engineering | All pipelines delivering data |
+| 2 | Data Ingestion | Apache Airflow pipeline DS-01 (daily snapshot) deployed and tested | Data Engineering | PostgreSQL ready |
+| 2–3 | Data Ingestion | Apache Airflow pipeline DS-02 (movement history) deployed; 36-month backfill complete | Data Engineering | Sufficient PostgreSQL storage |
+| 3 | Data Ingestion | Apache Airflow pipeline DS-03 (safety stock) deployed | Data Engineering | SAP MARC authorisation |
+| 3 | Data Ingestion | Apache Airflow pipeline DS-04 (cycle counts) deployed; EWM and WM handled separately | Data Engineering | PI-07 resolved: EWM vs WM plant list |
+| 4 | Data Ingestion | Apache Airflow pipelines DS-05 (demand history) and DS-06 (material master) deployed | Data Engineering | |
+| 4 | Data Model | Star schema tables created in PostgreSQL; primary keys and indexes applied | Data Engineering | All pipelines delivering data |
 | 5 | Transformation | TR-01 to TR-05 implemented and unit tested | Data Engineering | fact_stock_movements populated |
 | 5–6 | Transformation | TR-06 to TR-10 implemented and unit tested; TR-11 to TR-15 implemented | Data Engineering | fact_inventory_snapshot populated |
 | 6 | Classification | First ABC classification run (TR-08); first XYZ classification run (TR-09) | Analytics Lead | 12+ weeks demand history confirmed |
 | 6 | Validation | VC-01 to VC-07 implemented; first validation report produced | Data Quality Lead | All transformations complete |
-| 7 | Dashboard | Power BI Pages 1 and 2 (Executive Overview, Shortage Analysis) built and tested | Power BI Developer | fact_inventory_snapshot with all fields |
-| 8 | Dashboard | Power BI Pages 3 and 4 (E&O, ABC/XYZ) built and tested | Power BI Developer | |
-| 8 | Dashboard | Power BI Pages 5 and 6 (Safety Stock, Cycle Count) built and tested | Power BI Developer | fact_cycle_counts populated |
-| 9 | Dashboard | Row-level security configured and tested; UAT user accounts provisioned | Power BI Developer + IT | |
+| 7 | Dashboard | Apache Superset Pages 1 and 2 (Executive Overview, Shortage Analysis) built and tested | Superset Developer | fact_inventory_snapshot with all fields |
+| 8 | Dashboard | Apache Superset Pages 3 and 4 (E&O, ABC/XYZ) built and tested | Superset Developer | |
+| 8 | Dashboard | Apache Superset Pages 5 and 6 (Safety Stock, Cycle Count) built and tested | Superset Developer | fact_cycle_counts populated |
+| 9 | Dashboard | Row-level security configured and tested; UAT user accounts provisioned | Superset Developer + IT | |
 | 10 | UAT | UAT executed with 3 inventory controllers and 1 regional manager | Analytics Lead | All 6 dashboard pages complete |
 | 11 | UAT | UAT defects resolved; retest completed; sign-off obtained | Analytics Lead | UAT findings documented |
 | 12 | Finance Review | E&O financial exposure report reconciled to Finance Controller (Section 13 item 4) | Finance Controller | Page 3 validated |
-| 13 | Automation | Daily ADF schedule confirmed; Power BI refresh configured; Azure Monitor alerts active | Data Engineering | UAT sign-off |
+| 13 | Automation | Daily Apache Airflow schedule confirmed; Apache Superset refresh configured; Grafana alerts active | Data Engineering | UAT sign-off |
 | 14 | Training | Inventory controller training (2-hour session, all regions); demand planner training | Analytics Lead | Dashboard final |
 | 15 | Go-Live | Production go-live: all 40 countries (phased by region per Section 3) | Programme Manager | All checklists complete |
 | 15 | Go-Live | Post go-live monitoring: daily pipeline and KPI review for first 5 business days | Analytics Lead | |

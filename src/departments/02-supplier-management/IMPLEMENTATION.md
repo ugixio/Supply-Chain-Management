@@ -4,7 +4,7 @@
 > Scope: Supplier Scorecard (OTD, OTIF, PPM, NCR), Supplier Concentration Risk
 > (HHI), Delivery Tracking, and Early Warning System.
 > Context: €50B multinational, 40 countries, SAP S/4HANA + SAP Ariba,
-> Power BI, Azure SQL, Python, Power Automate. 10,000+ active suppliers.
+> Apache Superset, PostgreSQL, Python, Apache Airflow. 10,000+ active suppliers.
 
 ---
 
@@ -16,7 +16,7 @@ data model, transformation logic, business rules, KPI formulas, validations, and
 dashboard design required to produce a trustworthy, auditable supplier scorecard
 and risk early-warning capability.
 
-The deliverable is a Power BI solution backed by an Azure SQL analytical model,
+The deliverable is an Apache Superset solution backed by a PostgreSQL analytical model,
 refreshed daily, that allows Supplier Quality Engineers (SQE), Category Managers,
 and Procurement leadership to (a) rank supplier performance objectively,
 (b) detect deterioration before it impacts production, and (c) quantify
@@ -174,7 +174,7 @@ excluded from external scorecard).
 
 ## 6. Data Model
 
-Star schema (Azure SQL → Power BI import model):
+Star schema (PostgreSQL → Apache Superset materialized SQL views):
 
 **Fact tables**
 - `fact_delivery` — grain: one GR line matched to its PO schedule line.
@@ -346,9 +346,9 @@ Star schema (Azure SQL → Power BI import model):
 
 ### KPI: On-Time Delivery (OTD)
 - **Objective**: measure supplier delivery reliability against promise.
-- **Formula (DAX)**:
-  `OTD % = DIVIDE( CALCULATE(COUNTROWS(fact_delivery), fact_delivery[on_time_flag]=1),
-  COUNTROWS(fact_delivery) ) * 100`
+- **Formula (SQL)**:
+  `OTD % = COUNT(*) FILTER (WHERE on_time_flag = 1) / NULLIF(COUNT(*), 0) * 100`
+  (`FROM fact_delivery`)
 - **Data Source**: fact_delivery
 - **Calculation Level**: supplier / plant / material group / month
 - **Frequency**: daily refresh, monthly reporting
@@ -361,9 +361,10 @@ Star schema (Azure SQL → Power BI import model):
 
 ### KPI: On-Time In-Full (OTIF)
 - **Objective**: measure complete and on-time order fulfilment.
-- **Formula (DAX)**:
-  `OTIF % = DIVIDE( CALCULATE(DISTINCTCOUNT(fact_delivery[po_key]),
-  fact_delivery[otif_order_flag]=1), DISTINCTCOUNT(fact_delivery[po_key]) ) * 100`
+- **Formula (SQL)**:
+  `OTIF % = COUNT(DISTINCT po_key) FILTER (WHERE otif_order_flag = 1)
+  / NULLIF(COUNT(DISTINCT po_key), 0) * 100`
+  (`FROM fact_delivery`)
 - **Data Source**: fact_delivery (order-level aggregation)
 - **Calculation Level**: supplier / month
 - **Frequency**: monthly
@@ -388,8 +389,9 @@ Star schema (Azure SQL → Power BI import model):
 
 ### KPI: NCR Rate
 - **Objective**: frequency of non-conformances per receipt.
-- **Formula (DAX)**:
-  `NCR Rate % = DIVIDE(COUNTROWS(fact_quality_ncr), COUNTROWS(fact_delivery)) * 100`
+- **Formula (SQL)**:
+  `NCR Rate % = (SELECT COUNT(*) FROM fact_quality_ncr)
+  / NULLIF((SELECT COUNT(*) FROM fact_delivery), 0) * 100`
 - **Data Source**: fact_quality_ncr, fact_delivery
 - **Calculation Level**: supplier / month
 - **Frequency**: monthly
@@ -499,12 +501,12 @@ Star schema (Azure SQL → Power BI import model):
 - ETL audit log (row counts, sums, orphan counts) per daily load.
 - Monthly reconciliation pack: OTD/PPM/NCR/spend vs SAP standard reports.
 - Manual recompute of one supplier scorecard signed off by SQE lead.
-- Power BI dataset refresh history screenshot.
+- Apache Superset dataset refresh history screenshot.
 - Watch-list change log with trigger reasons.
 
 ---
 
-## 14. Dashboard / Report Design (Power BI)
+## 14. Dashboard / Report Design (Apache Superset)
 
 **Page 1 — Executive Summary**: rating distribution donut, % suppliers ≥APPROVED,
 top 10 declining suppliers, category HHI heat map.
@@ -615,17 +617,17 @@ late-delivery line-level table with drill-through.
 ## 19. Implementation Checklist
 
 1. Confirm in-scope supplier definition with Procurement.
-2. Build Azure SQL staging for Sources 1–7.
+2. Build PostgreSQL staging for Sources 1–7.
 3. Implement incremental extraction (CDC by posting/creation date).
 4. Build fact/dim tables per §6.
 5. Implement transformation rules §8 (flags, PPM, NCR age, FX).
 6. Implement scoring pipeline §10; store fact_scorecard_monthly.
 7. Configure plant grace-period table.
 8. Build HHI computation by category.
-9. Build Power BI model with relationships §6.
-10. Author all KPI measures (DAX) §10.
+9. Build Apache Superset model with relationships §6.
+10. Author all KPI metrics (SQL) §10.
 11. Build 5 dashboard pages §14.
-12. Configure RLS (region/category).
+12. Configure row-level security (RLS) in Apache Superset (region/category).
 13. Set daily refresh + monthly snapshot.
 14. Implement validations §12 as ETL gates.
 15. Build reconciliation pack to SAP reports.
@@ -672,7 +674,7 @@ late-delivery line-level table with drill-through.
 | 3–5 | Staging + extraction | Loaded staging | Data Eng | Pending |
 | 6–8 | Fact/dim + transformations | Model v1 | Data Eng | Pending |
 | 9–10 | Scoring pipeline + HHI | fact_scorecard_monthly | Analytics | Pending |
-| 11–13 | Power BI model + KPIs | Dashboard draft | BI Dev | Pending |
+| 11–13 | Apache Superset model + KPIs | Dashboard draft | BI Dev | Pending |
 | 14–15 | Validations + reconciliation | Recon pack | Data Quality | Pending |
 | 16–17 | UAT | Sign-off | SQE / Category | Pending |
 | 18 | Go-live + hypercare | Production report | BI Lead | Pending |

@@ -1,495 +1,678 @@
-# Supplier Management — Enterprise Implementation Playbook
+# Supplier Performance Analytics — Implementation Specification
 
-## Executive Summary
-
-Supplier management transforms transactional vendor relationships into a
-structured, data-driven partnership model. For a €50 B multinational with
-10,000+ active suppliers across 40 countries, a rigorous supplier management
-function is the primary lever for quality, continuity, and cost performance.
-World-class programmes deliver 15-25 % reduction in supplier-related quality
-costs, 20-40 % improvement in OTD, and full CSDDD/UFLPA regulatory coverage.
-
-This playbook covers every mathematical model, ML/AI pipeline, and operational
-process in the `02-supplier-management` module — from initial scorecard design
-through GraphSAGE network risk scoring in production.
-
-Expected ROI: 12-18 month payback through quality cost reduction, avoided
-supply disruptions (typically €2-15 M per avoided critical event), and
-regulatory fine avoidance.
+> Analytical implementation document for a data / BI / automation team.
+> Scope: Supplier Scorecard (OTD, OTIF, PPM, NCR), Supplier Concentration Risk
+> (HHI), Delivery Tracking, and Early Warning System.
+> Context: €50B multinational, 40 countries, SAP S/4HANA + SAP Ariba,
+> Power BI, Azure SQL, Python, Power Automate. 10,000+ active suppliers.
 
 ---
 
-## Prerequisites & Dependencies
+## 1. Executive Summary
 
-| Dependency | Detail |
-|---|---|
-| SAP S/4HANA / Ariba SLP | Vendor master, PO/GR/invoice history |
-| Quality system data | NCR records, incoming inspection results |
-| Logistics data | Delivery confirmations with actual vs. requested dates |
-| Python ≥ 3.11 | GNN (PyTorch + torch-geometric), NLP (transformers) |
-| Supplier master (MDM) | Cleaned, DUNS/GLN enriched, Tier-1 mapping complete |
-| External data feeds | News API, sanctions lists, UFLPA entity list |
-| Network topology | Tier-1 to Tier-2 mapping (at minimum strategic categories) |
-| Historical scorecard data | ≥24 months for trend analysis and ML training |
+This document specifies the end-to-end analytical implementation for monitoring
+supplier performance across the global supply base. It defines the data sources,
+data model, transformation logic, business rules, KPI formulas, validations, and
+dashboard design required to produce a trustworthy, auditable supplier scorecard
+and risk early-warning capability.
 
----
-
-## Phase 0: AS-IS Assessment (Weeks 1-8)
-
-### 0.1 Supplier Portfolio Analysis
-1. Extract full active supplier list from ERP; tag by category, spend tier, country.
-2. Compute current OTD, OTIF, PPM per supplier using 12-month trailing data.
-3. Identify suppliers with no performance data (data gap = high unmanaged risk).
-4. Map Tier-1 suppliers to their critical sub-suppliers (Tier-2) for top 20 % spend.
-5. Screen all suppliers against OFAC, EU, UN, UFLPA entity lists.
-
-### 0.2 Scorecard Baseline
-- Calculate current weighted scorecard for all active strategic/preferred suppliers.
-- Identify suppliers in PROBATION or DISQUALIFIED territory (score <60).
-- Document top 10 suppliers by risk exposure (spend × inverse scorecard).
-
-### 0.3 KPI Baseline
-
-| KPI | Typical Baseline | World-Class Target |
-|---|---|---|
-| Supplier OTD | 78 % | ≥95 % |
-| OTIF | 71 % | ≥92 % |
-| Incoming PPM | 3,200 | <500 (automotive) / <1,000 (general) |
-| Scorecard coverage (% of spend) | 45 % | ≥90 % |
-| Dual-source coverage (strategic) | 30 % | ≥80 % |
-| Supplier-induced line stoppages | 8/year | 0 |
-| Average scorecard rating | 68 | ≥80 |
+The deliverable is a Power BI solution backed by an Azure SQL analytical model,
+refreshed daily, that allows Supplier Quality Engineers (SQE), Category Managers,
+and Procurement leadership to (a) rank supplier performance objectively,
+(b) detect deterioration before it impacts production, and (c) quantify
+concentration risk per category. All KPIs reconcile to SAP source tables.
 
 ---
 
-## Phase 1: Foundation & Master Data (Weeks 9-20)
+## 2. Analysis Objective
 
-### 1.1 Supplier Segmentation
-1. Apply Kraljic Matrix segmentation to all suppliers:
-   - X-axis: supply risk (HHI + single-source + country risk + sub availability).
-   - Y-axis: profit impact (% of COGS + margin criticality + substitutability).
-   - Segment: STRATEGIC / LEVERAGE / BOTTLENECK / NON_CRITICAL.
-2. Assign relationship manager per STRATEGIC and BOTTLENECK supplier.
-3. Automate segmentation refresh quarterly using `assessKraljicSegment()` in
-   `Supplier.ts`.
-
-### 1.2 Scorecard Framework Design
-Define the scoring formula per `src/departments/02-supplier-management/`:
-
-```
-Composite Score = 40 % × Delivery + 30 % × Quality + 20 % × Commercial + 10 % × Soft
-
-Delivery sub-score  = 35 % × OTD_score + 45 % × OTIF_score + 20 % × RFT_score
-Quality sub-score   = 60 % × PPM_score + 40 % × NCR_rate_score
-Commercial sub-score = 70 % × Invoice_accuracy + 30 % × PO_variance_score
-Soft sub-score      = manual assessment (responsiveness, innovation, sustainability)
-```
-
-Rating thresholds:
-- PREFERRED:     ≥ 90
-- APPROVED:      ≥ 75
-- CONDITIONAL:   ≥ 60
-- PROBATION:     ≥ 45
-- DISQUALIFIED:  < 45
-
-### 1.3 Data Collection Automation
-1. Connect GR (goods receipt) timestamps to PO confirmed delivery date for OTD.
-2. Pull NCR data from quality module (department 08).
-3. Pull incoming inspection defect counts for PPM.
-4. Pull invoice discrepancy data from AP module.
-5. Automate monthly scorecard computation via Airflow DAG.
+Provide a single, governed source of truth for supplier performance and risk that:
+- Computes the weighted supplier scorecard (Delivery 40 %, Quality 30 %,
+  Commercial 20 %, Soft 10 %) consistently for every active supplier.
+- Tracks delivery reliability (OTD, OTIF) and quality (PPM, NCR rate) by supplier,
+  plant, material group, and period.
+- Quantifies supplier concentration risk (HHI) per purchasing category.
+- Flags suppliers at risk of falling below the APPROVED threshold (<75) within
+  90 days.
+- Is fully reconcilable to SAP S/4HANA (MM, QM, FI) source data.
 
 ---
 
-## Phase 2: Process Standardisation (Weeks 21-36)
+## 3. Scope
 
-### 2.1 Quarterly Business Reviews (QBR)
-- Cadence: quarterly for STRATEGIC/BOTTLENECK; semi-annual for APPROVED.
-- Agenda: scorecard review, issue log, development plan progress, forward outlook.
-- Output: signed performance improvement plan (PIP) if score <75.
+**In scope**: all active direct-material suppliers in SAP vendor master; goods
+receipts, quality notifications, incoming inspection results, invoice matching,
+and spend data for the trailing 24 months.
 
-### 2.2 Supplier Onboarding Process
-```
-Registration (Ariba SLP) → Document collection (certs, bank, insurance) →
-Sanctions screening → UFLPA risk assessment → Qualification audit (if strategic) →
-Approved → Initial scorecard baseline set
-```
-
-### 2.3 Disqualification Process
-1. Three consecutive months below PROBATION threshold (score <45) → escalation.
-2. Supply continuity plan activated (dual source or safety stock build).
-3. Formal disqualification letter + 90-day wind-down plan.
-4. New supplier qualified in parallel before first supplier removed.
+**Out of scope**: indirect/MRO tail suppliers below €10,000 annual spend
+(reported separately); one-time vendors; intercompany suppliers (flagged and
+excluded from external scorecard).
 
 ---
 
-## Phase 3: Mathematical Models
+## 4. Business Questions
 
-### 3.1 Supplier Scorecard (Weighted Composite)
-
-**Business problem**: objectively rank supplier performance on a consistent,
-auditable scale for supplier development prioritisation and award decisions.
-
-**Formulation**:
-```
-OTD_score  = (deliveries_on_time / total_deliveries) × 100
-OTIF_score = (orders_on_time_and_in_full / total_orders) × 100
-RFT_score  = (shipments_right_first_time / total_shipments) × 100
-
-PPM        = (defective_units / total_units_received) × 1,000,000
-PPM_score  = max(0, 100 - PPM / target_PPM × 100)
-  e.g. target_PPM = 500 → PPM_score = max(0, 100 - actual_PPM/5)
-
-NCR_rate   = NCR_count / total_receipts × 100
-NCR_score  = max(0, 100 - NCR_rate × 10)
-
-Invoice_accuracy = (invoices_matched_auto / total_invoices) × 100
-PO_variance_score = max(0, 100 - avg_price_deviation_pct × 5)
-
-Delivery  = 0.35 × OTD_score + 0.45 × OTIF_score + 0.20 × RFT_score
-Quality   = 0.60 × PPM_score + 0.40 × NCR_score
-Commercial = 0.70 × Invoice_accuracy + 0.30 × PO_variance_score
-Soft      = manual_score (0-100)
-
-Composite = 0.40 × Delivery + 0.30 × Quality + 0.20 × Commercial + 0.10 × Soft
-```
-
-**Implementation steps**:
-1. Pull data from SAP S/4HANA: MM/LE for OTD/OTIF; QM for PPM/NCR; FI for invoices.
-2. Compute sub-metrics for each supplier per calendar month.
-3. Apply scoring formulas above; store results in scorecard table.
-4. Compute trailing-12-month composite and trailing-3-month composite (trend).
-5. Classify supplier rating per threshold table.
-6. Trigger automated alerts: score drop >10 points month-on-month → email to SQE.
-7. Generate PDF scorecard per supplier (quarterly distribution to supplier).
-8. Store all scorecard versions immutably (soft-delete only).
-9. Feed scorecard into Kraljic re-segmentation quarterly.
-10. Use in ML early warning system (Phase 4).
-
-**Worked example**:
-```
-Supplier ABC — Month of April:
-  OTD = 48/50 = 96.0 %, OTIF = 45/50 = 90.0 %, RFT = 49/50 = 98.0 %
-  Delivery = 0.35×96 + 0.45×90 + 0.20×98 = 33.6 + 40.5 + 19.6 = 93.7
-
-  PPM = (3/2400)×1e6 = 1,250 → PPM_score = max(0, 100-1250/5) = max(0,-150) = 0
-  NCR_rate = 2/50 = 4.0 % → NCR_score = max(0, 100-40) = 60
-  Quality = 0.60×0 + 0.40×60 = 24.0
-
-  Invoice_accuracy = 48/50 = 96.0 %, PO_variance = 1.2 % → PO_score = 94
-  Commercial = 0.70×96 + 0.30×94 = 67.2 + 28.2 = 95.4
-
-  Soft = 75 (analyst assessment)
-
-  Composite = 0.40×93.7 + 0.30×24.0 + 0.20×95.4 + 0.10×75
-             = 37.48 + 7.20 + 19.08 + 7.50 = 71.26 → APPROVED
-  Action: quality development plan required (PPM far above target)
-```
+- Which suppliers are below the APPROVED scorecard threshold (<75) this month?
+- What is the OTD and OTIF trend per supplier over the last 12 months?
+- Which suppliers contribute the most defective PPM by material group?
+- Which purchasing categories have dangerous supplier concentration (HHI ≥ 5,000)?
+- Which suppliers show a deteriorating 3-month trend versus their 12-month average?
+- How many suppliers moved rating band (e.g., APPROVED → CONDITIONAL) this month?
+- What is the on-time delivery performance by plant and by Incoterm?
+- Which single-source materials carry the highest supply continuity risk?
+- What is the data completeness of scorecard inputs per supplier?
+- Which suppliers have open NCRs aging beyond their CAPA due date?
 
 ---
 
-### 3.2 Herfindahl-Hirschman Index (HHI) for Concentration Risk
+## 5. Data Sources
 
-**Business problem**: measure supplier concentration risk per category to identify
-single-source vulnerabilities.
+### Source 1 — Goods Receipts (Delivery performance)
+- **Source Name**: Goods Receipt history
+- **Origin System**: SAP S/4HANA (MM)
+- **Report/Table/Query**: MKPF (header) + MSEG (items); movement types 101/102
+- **Data Owner**: Logistics / Inbound Operations
+- **Update Frequency**: Daily (incremental load by posting date)
+- **Required Fields**: `MBLNR, MJAHR, ZEILE, MATNR, LIFNR, WERKS, MENGE, BUDAT,
+  EBELN, EBELP`
+- **Critical Fields**: `LIFNR` (supplier), `BUDAT` (GR posting date), `EBELN/EBELP`
+  (PO reference), `MENGE` (received qty)
+- **Primary/Logical Key**: `MBLNR + MJAHR + ZEILE`
+- **Required Validations**: every GR line must join to a valid PO line; `MENGE > 0`
+  for 101; non-null `LIFNR`
+- **Possible Errors**: GR posted without PO reference (free-text); reversal (102)
+  not netted; back-dated postings shifting OTD period
+- **Extraction Evidence**: row count + sum(MENGE) per posting day logged to
+  `etl_audit_log`; reconcile to SAP MB51 report
 
-**Formulation**:
-```
-For each supply category c:
-  share_i = spend_i / total_category_spend    (for each supplier i in category c)
-  HHI_c   = Σ (share_i × 100)²
+### Source 2 — Purchase Order Schedule Lines (Confirmed delivery dates)
+- **Source Name**: PO confirmed delivery dates
+- **Origin System**: SAP S/4HANA (MM)
+- **Report/Table/Query**: EKKO (header) + EKPO (item) + EKET (schedule lines) +
+  EKES (confirmations)
+- **Data Owner**: Procurement Operations
+- **Update Frequency**: Daily
+- **Required Fields**: `EBELN, EBELP, ETENR, EINDT, MENGE, LIFNR, MATNR, WERKS`
+- **Critical Fields**: `EINDT` (confirmed delivery date — used as OTD baseline),
+  `MENGE` (ordered qty)
+- **Primary/Logical Key**: `EBELN + EBELP + ETENR`
+- **Required Validations**: `EINDT` not null and not in distant past for open lines;
+  confirmed qty ≤ ordered qty
+- **Possible Errors**: missing supplier confirmation (use requested date as
+  fallback — flag); multiple reschedules overwriting original promise
+- **Extraction Evidence**: count of PO lines per supplier reconciled to SAP ME2L
 
-Interpretation:
-  HHI < 1,500     : competitive (low concentration risk)
-  1,500 ≤ HHI < 2,500 : moderately concentrated
-  HHI ≥ 2,500     : highly concentrated (dual-source strategy required)
-  HHI = 10,000    : single source (critical risk — safety stock + backup qualification)
-```
+### Source 3 — Quality Notifications (NCR)
+- **Source Name**: Quality Notifications / NCR
+- **Origin System**: SAP S/4HANA (QM)
+- **Report/Table/Query**: QMEL (header) + QMFE (items); notification types Q1/Q2
+- **Data Owner**: Quality / SQE
+- **Update Frequency**: Daily
+- **Required Fields**: `QMNUM, QMART, LIFNUM, MATNR, ERDAT, QMDAT, AUSWIRK,
+  RKMNG (defect qty)`
+- **Critical Fields**: `LIFNUM` (supplier), `ERDAT` (creation date), defect severity
+- **Primary/Logical Key**: `QMNUM`
+- **Required Validations**: supplier-attributable NCRs only; defect qty ≥ 0
+- **Possible Errors**: internal-cause NCRs mis-coded to supplier; missing CAPA link
+- **Extraction Evidence**: NCR count per supplier reconciled to SAP QM12
 
-**Implementation steps**:
-1. Aggregate spend by (category, supplier) for trailing 12 months.
-2. Compute share and HHI per category.
-3. Rank categories by HHI descending.
-4. For all HHI ≥ 5,000: trigger dual-source action plan.
-5. Track HHI trend quarterly; alert if any category crosses 5,000.
-6. Link to supply planning module for safety stock uplift recommendations.
-7. Report to CPO and CFO as supply risk KPI.
+### Source 4 — Incoming Inspection Results (PPM)
+- **Source Name**: Incoming inspection lot results
+- **Origin System**: SAP S/4HANA (QM)
+- **Report/Table/Query**: QALS (inspection lot) + QAMR (results)
+- **Data Owner**: Quality
+- **Update Frequency**: Daily
+- **Required Fields**: `PRUEFLOS, MATNR, LIFNR, LOSMENGE, FEHLER (defects), BUDAT`
+- **Critical Fields**: `LOSMENGE` (inspected qty), defect count
+- **Primary/Logical Key**: `PRUEFLOS`
+- **Required Validations**: `LOSMENGE > 0`; defects ≤ inspected qty
+- **Possible Errors**: skip-lot inspections with zero recorded qty distorting PPM
+- **Extraction Evidence**: sum(defects), sum(inspected) per supplier per month
 
----
+### Source 5 — Invoice Matching (Commercial sub-score)
+- **Source Name**: Invoice verification / 3-way match
+- **Origin System**: SAP S/4HANA (FI/MM)
+- **Report/Table/Query**: RBKP (invoice header) + RSEG (items)
+- **Data Owner**: Accounts Payable
+- **Update Frequency**: Daily
+- **Required Fields**: `BELNR, GJAHR, LIFNR, EBELN, EBELP, WRBTR, MENGE,
+  match_status`
+- **Critical Fields**: price/quantity variance, auto-match flag
+- **Primary/Logical Key**: `BELNR + GJAHR + buzei`
+- **Required Validations**: invoice references valid PO; variance computed vs PO price
+- **Possible Errors**: manual-posted invoices without PO link
+- **Extraction Evidence**: invoice count and match-rate per supplier
 
-### 3.3 OTD / OTIF Calculation
+### Source 6 — Vendor Master & Category
+- **Source Name**: Supplier master
+- **Origin System**: SAP S/4HANA (MM) + SAP Ariba SLP
+- **Report/Table/Query**: LFA1 + LFB1 + LFM1; Ariba SLP supplier profile
+- **Data Owner**: Master Data Management (MDM-S)
+- **Update Frequency**: Daily
+- **Required Fields**: `LIFNR, NAME1, LAND1, purchasing_category, kraljic_segment,
+  status (active/blocked), DUNS, GLN`
+- **Critical Fields**: `purchasing_category`, `status`, country
+- **Primary/Logical Key**: `LIFNR`
+- **Required Validations**: no duplicate active records per DUNS; category populated
+- **Possible Errors**: blocked suppliers still receiving GRs; missing category
+- **Extraction Evidence**: active supplier count reconciled to SAP XK03 list
 
-**OTD (On-Time Delivery)**:
-```
-OTD = (shipments_delivered_on_or_before_confirmed_date / total_shipments) × 100
-
-Confirmed date = supplier-acknowledged PO delivery date
-Grace period   = ±0 days (automotive) or ±1 day (general industry)
-```
-
-**OTIF (On-Time In-Full)**:
-```
-OTIF = (orders_where_OTD=1 AND qty_received ≥ 0.98 × qty_ordered) / total_orders × 100
-
-Note: Walmart/retail standard = 98 %; general industry = 92 %
-```
-
-**PPM**:
-```
-PPM = (total_defective_units_received / total_units_received) × 1,000,000
-
-Automotive target: < 500 PPM
-Food/pharma target: < 100 PPM
-General manufacturing: < 3,000 PPM
-```
-
----
-
-### 3.4 Lead Time Coefficient of Variation
-
-**Business problem**: quantify supplier delivery unpredictability to set safety
-stock levels and flag unreliable suppliers.
-
-**Formulation**:
-```
-μ_LT = mean(lead_time_observations)
-σ_LT = std(lead_time_observations)
-CV_LT = σ_LT / μ_LT
-
-Classification:
-  CV_LT < 0.10  : X — very reliable
-  CV_LT 0.10-0.25: Y — moderate variability
-  CV_LT > 0.25  : Z — high variability (flag for supplier development)
-```
-
-Feed CV_LT into Safety Stock Method 4 in the Inventory module.
-
----
-
-## Phase 4: ML/AI Pipeline
-
-### 4.1 GraphSAGE Supplier Network Risk (GNN)
-
-**File**: `python/02_supplier_management/gnn_risk.py`
-**Business problem**: propagate risk signals through the multi-tier supply network
-so that a Tier-1 supplier's risk score reflects its own KPIs AND its upstream
-Tier-2/3 fragility.
-
-**Architecture**: 2-layer GraphSAGE (Hamilton et al. 2017); inductive — scores
-new suppliers without full retraining.
-
-**Node features** (8 dimensions per supplier):
-```
-[OTD, PPM_score, lead_time_CV, single_source_flag,
- country_risk_index, UFLPA_exposure_score, audit_score, revenue_share]
-```
-
-**Edge features** (3 dimensions per flow):
-```
-[spend_fraction, volume_CV, substitutability_score]
-```
-
-**Training data requirements**:
-- Minimum 200 labelled nodes (1 = high-risk, 0 = normal).
-- Labels from audit findings, supply incidents, financial distress events.
-- Graph topology: Tier-1 → OEM edges at minimum; Tier-2 → Tier-1 preferred.
-
-**Training steps** (using `train_gnn()` in gnn_risk.py):
-1. Build `SupplierGraph` dataclass from supplier master + network topology table.
-2. Normalise all 8 node features to [0,1] using train-set statistics.
-3. Create `train_mask` (labelled nodes, 80 %) and `val_mask` (20 %).
-4. Instantiate `SupplierRiskGNN(n_node_features=8, hidden_size=64, dropout=0.2)`.
-5. Call `train_gnn(model, graph, labels, train_mask, val_mask, epochs=200, lr=5e-3)`.
-6. Early stopping patience=20 epochs; restore best val-loss checkpoint.
-7. Evaluate val AUC-ROC — target ≥ 0.80.
-8. Save model weights to `models/gnn_supplier_risk_vYYYYMM.pt`.
-9. Run `score_supplier_network()` monthly; output `combined_risk` score per node.
-10. Flag suppliers with `combined_risk ≥ 0.6` as HIGH risk → SQE investigation.
-
-**Deployment**:
-- Monthly batch job (Airflow); results written to supplier master table.
-- Dashboard: top-20 highest combined_risk suppliers with upstream_exposure detail.
-- Alert: any Tier-1 supplier risk score increases >0.15 in one month → email CPO.
-
-**Monitoring**:
-- Monthly: compare model HIGH/LOW classifications to known incidents (precision).
-- Quarterly: retrain if AUC drops below 0.75 or supplier network changes >20 %.
+### Source 7 — Spend (for HHI)
+- **Source Name**: Supplier spend (12-month trailing)
+- **Origin System**: SAP S/4HANA (FI/MM) or BW
+- **Report/Table/Query**: aggregated invoice spend by supplier × category
+- **Data Owner**: Procurement Analytics
+- **Update Frequency**: Monthly
+- **Required Fields**: `LIFNR, purchasing_category, spend_amount, currency, period`
+- **Critical Fields**: `spend_amount` (in group currency), category
+- **Primary/Logical Key**: `LIFNR + category + period`
+- **Required Validations**: spend converted to group currency at month-end rate
+- **Possible Errors**: FX conversion gaps; credit memos not netted
+- **Extraction Evidence**: total spend reconciled to AP ledger control total
 
 ---
 
-### 4.2 NLP Supplier Risk from News (DistilBERT)
+## 6. Data Model
 
-**File**: `python/02_supplier_management/nlp_risk.py`
-**Business problem**: detect early warning signals from supplier news (financial
-distress, regulatory violations, geopolitical exposure) before they appear in
-scorecard data.
+Star schema (Azure SQL → Power BI import model):
 
-**Architecture**: `distilbert-base-uncased` fine-tuned for multi-label risk
-classification. Labels: `{financial_distress, labour_violation, environmental,
-geopolitical, operational_disruption}`.
+**Fact tables**
+- `fact_delivery` — grain: one GR line matched to its PO schedule line.
+- `fact_quality_ncr` — grain: one NCR item.
+- `fact_inspection` — grain: one inspection lot.
+- `fact_invoice_match` — grain: one invoice line.
+- `fact_scorecard_monthly` — grain: one supplier × month (computed output).
+- `fact_spend` — grain: one supplier × category × month.
 
-**Training data**:
-- 8,000+ news articles and press releases about suppliers, labelled by analysts.
-- Balance classes; augment minority classes with paraphrase.
+**Dimension tables**
+- `dim_supplier` (LIFNR, name, country, category, kraljic_segment, status)
+- `dim_material` (MATNR, description, material_group)
+- `dim_plant` (WERKS, name, region, country)
+- `dim_date` (date, month, quarter, year, fiscal_period)
+- `dim_category` (category code, category name, category manager)
 
-**Training steps**:
-1. Tokenise with `DistilBertTokenizerFast(max_length=256, truncation=True)`.
-2. Fine-tune for 5 epochs: `lr=2e-5, batch_size=16, weight_decay=0.01`.
-3. Multi-label sigmoid output; threshold=0.45 per label.
-4. Evaluate: target AUC-ROC ≥ 0.82 per label on held-out test set.
-5. Save model to `models/nlp_risk_distilbert_vYYYYMM/`.
-
-**Deployment**:
-1. Nightly job: fetch news via NewsAPI/RSS for all STRATEGIC + BOTTLENECK suppliers.
-2. Score each article; aggregate max risk label per supplier per day.
-3. Update `SupplierNewsRiskScore` in supplier master.
-4. Risk score >0.7 on any label → alert relationship manager within 2 hours.
-5. Feed news risk score as additional node feature into GNN (Phase 4.1).
+**Relationships**
+- All facts → `dim_supplier` via `LIFNR` (many-to-one, single direction).
+- `fact_delivery`, `fact_quality_ncr`, `fact_inspection` → `dim_material` via MATNR.
+- All facts → `dim_date` via posting/creation date.
+- `fact_delivery` → `dim_plant` via WERKS.
+- `fact_spend`, `fact_scorecard_monthly` → `dim_category` via category.
 
 ---
 
-### 4.3 Supplier Early Warning System (XGBoost)
+## 7. Data Dictionary
 
-**Business problem**: predict which suppliers will fall below APPROVED threshold
-(score <75) within the next 3 months, enabling proactive development.
+### Table: fact_delivery
+- **Description**: Each goods receipt line matched to its confirmed PO schedule line,
+  with on-time and in-full flags.
+- **Granularity**: one row per GR line (`MBLNR+MJAHR+ZEILE`).
+- **Required Fields**:
+  | Field | Type | Description |
+  |---|---|---|
+  | gr_doc_key | varchar | MBLNR+MJAHR+ZEILE |
+  | lifnr | varchar | Supplier number |
+  | matnr | varchar | Material |
+  | werks | varchar | Plant |
+  | po_key | varchar | EBELN+EBELP+ETENR |
+  | confirmed_date | date | EINDT (promise) |
+  | gr_date | date | BUDAT (actual receipt) |
+  | ordered_qty | decimal(18,3) | Schedule line qty |
+  | received_qty | decimal(18,3) | GR qty (101 minus 102) |
+  | on_time_flag | bit | 1 if gr_date ≤ confirmed_date + grace |
+  | in_full_flag | bit | 1 if received_qty ≥ 0.98 × ordered_qty |
+- **Primary Key**: `gr_doc_key`
+- **Relationships**: → dim_supplier, dim_material, dim_plant, dim_date
+- **Required Transformations**: net 102 reversals; compute flags (see §8)
+- **Cleaning Rules**: drop GR lines with no PO link to a separate exception table
+- **Validations**: received_qty ≥ 0; confirmed_date not null
+- **Use in Analysis**: OTD, OTIF KPIs; delivery tracking
 
-**Features** (per supplier, 3-month window):
-- Scorecard trend (slope of last 6 months)
-- OTD trend, PPM trend, NCR trend
-- Country risk index (World Bank)
-- Supplier financial health proxy (Dun & Bradstreet PAYDEX or similar)
-- News risk score (from 4.2)
-- Number of open corrective actions (CAPA)
-- Days since last audit
+### Table: fact_quality_ncr
+- **Description**: Supplier-attributable non-conformance records.
+- **Granularity**: one row per NCR item (`QMNUM`+item).
+- **Required Fields**: ncr_key, lifnr, matnr, created_date, severity (Critical/Major/Minor),
+  defect_qty, capa_due_date, capa_closed_date, status
+- **Primary Key**: ncr_key
+- **Relationships**: → dim_supplier, dim_material, dim_date
+- **Required Transformations**: map QM codes → severity; compute NCR age
+- **Cleaning Rules**: exclude internal-cause NCRs (cause code filter)
+- **Validations**: defect_qty ≥ 0; severity in allowed list
+- **Use in Analysis**: NCR rate, quality sub-score, CAPA aging
 
-**Training**:
-1. Historical dataset: all suppliers with ≥12 months scorecard history.
-2. Label: `deteriorated = 1` if score dropped below 75 within 3 months.
-3. Split 70/15/15 train/val/test; stratify by supplier segment.
-4. Train XGBoost binary classifier: `n_estimators=300, max_depth=6,
-   learning_rate=0.05, scale_pos_weight=ratio_neg/ratio_pos`.
-5. Tune via Optuna; target AUC-ROC ≥ 0.78.
-6. Monthly inference: rank all active suppliers by P(deteriorate in 90 days).
-7. Top 10 % → proactive development plan initiated by SQE team.
+### Table: fact_inspection
+- **Description**: Incoming inspection lots with defect counts for PPM.
+- **Granularity**: one row per inspection lot (`PRUEFLOS`).
+- **Required Fields**: lot_key, lifnr, matnr, inspected_qty, defect_qty, inspection_date
+- **Primary Key**: lot_key
+- **Relationships**: → dim_supplier, dim_material, dim_date
+- **Required Transformations**: exclude skip-lot zero-qty rows
+- **Validations**: inspected_qty > 0; defect_qty ≤ inspected_qty
+- **Use in Analysis**: PPM calculation
 
----
+### Table: fact_scorecard_monthly
+- **Description**: Computed monthly supplier scorecard with sub-scores and rating.
+- **Granularity**: one row per supplier × month.
+- **Required Fields**: lifnr, period, otd_pct, otif_pct, rft_pct, ppm, ncr_rate,
+  invoice_accuracy_pct, po_variance_pct, soft_score, delivery_sub, quality_sub,
+  commercial_sub, soft_sub, composite_score, rating, data_completeness_pct
+- **Primary Key**: lifnr + period
+- **Relationships**: → dim_supplier, dim_date
+- **Required Transformations**: full scoring pipeline (see §10)
+- **Validations**: composite_score in [0,100]; rating matches threshold table
+- **Use in Analysis**: scorecard dashboard, rating-band movement, early warning input
 
-### 4.4 UFLPA Exposure Classifier (BERT)
-
-**Business problem**: classify suppliers by Xinjiang forced labour exposure risk
-to ensure UFLPA compliance and avoid US Customs holds.
-
-**Architecture**: `bert-base-uncased` fine-tuned for 3-class classification:
-`{LOW, MEDIUM, HIGH}` exposure.
-
-**Features**: supplier description, product categories, country of manufacture,
-sub-supplier countries, certifications (or lack thereof).
-
-**Training**: ~3,000 labelled supplier profiles (labelled by trade compliance team
-using UFLPA entity list and known exposure indicators).
-
-**Deployment**:
-- Run on every new supplier during onboarding.
-- Quarterly re-screen existing supplier base.
-- HIGH classification → mandatory `clearanceDocumentRef` before any PO can be
-  raised (enforced in `Supplier.ts` business rule).
-- MEDIUM → enhanced monitoring; request third-party audit within 6 months.
-
----
-
-## Phase 5: Integration & Automation (Weeks 37-52)
-
-### 5.1 SAP S/4HANA Integration
-- Pull PO/GR data from MM module via BAPI/OData API daily.
-- Push scorecard results back to vendor master (custom InfoRecord extension).
-- NCR data from SAP QM QN (Quality Notification) via RFC.
-
-### 5.2 Ariba Supplier Lifecycle & Performance (SLP)
-- Supplier self-service: update certifications, banking, contacts.
-- Automated qualification workflow: document collection → approval → activation.
-- Performance scorecards published to supplier portal quarterly.
-
-### 5.3 EDI Integration
-- UN/EDIFACT DESADV (Despatch Advice) for real-time shipment notifications.
-- ASN (Advanced Shipment Notice) mapped to GR to compute actual OTD.
-
----
-
-## Phase 6: Continuous Improvement & CoE
-
-- **Monthly**: automated scorecard refresh; early warning alerts actioned.
-- **Quarterly**: QBR with STRATEGIC/BOTTLENECK suppliers; GNN model inference.
-- **Annually**: Kraljic re-segmentation; full supplier base UFLPA re-screen.
-- **CoE roles**: Supplier Quality Engineers (SQE), Supplier Development Engineers,
-  Data Analyst (scorecard & ML), Category Manager liaison.
-- **GNN retrain**: semi-annually or when network topology changes >20 %.
-- **NLP models**: retrain quarterly with new labelled news articles.
+### Table: fact_spend
+- **Description**: Supplier spend by category for concentration (HHI).
+- **Granularity**: supplier × category × month.
+- **Required Fields**: lifnr, category, period, spend_group_ccy
+- **Primary Key**: lifnr + category + period
+- **Relationships**: → dim_supplier, dim_category, dim_date
+- **Validations**: spend ≥ 0; FX rate applied
+- **Use in Analysis**: HHI per category
 
 ---
 
-## Technology Stack
+## 8. Transformation Rules
 
-| Layer | Technology |
-|---|---|
-| ERP | SAP S/4HANA (MM, QM, FI) |
-| Supplier portal | SAP Ariba SLP |
-| GNN | PyTorch 2.x + torch-geometric |
-| NLP | HuggingFace transformers (DistilBERT, BERT) |
-| ML | XGBoost, scikit-learn |
-| Graph analytics | networkx (HHI, cascade analysis) |
-| Data warehouse | Snowflake |
-| Orchestration | Apache Airflow |
-| Monitoring | MLflow + Grafana |
+1. **Net GR reversals**: for each PO line, `received_qty = SUM(101 qty) − SUM(102 qty)`.
+2. **OTD flag**: `on_time_flag = 1 IF gr_date <= DATEADD(day, grace_days, confirmed_date)`,
+   where `grace_days = 0` (automotive plants) or `1` (general). Parameterised per plant.
+3. **In-full flag**: `in_full_flag = 1 IF received_qty >= 0.98 * ordered_qty`.
+4. **OTIF flag** (order level): aggregate to PO; `otif = 1 IF MIN(on_time_flag)=1 AND
+   MIN(in_full_flag)=1 across all lines of the PO`.
+5. **Confirmed-date fallback**: if `EINDT` (confirmation) is null, use requested
+   delivery date and set `date_source = 'REQUESTED'` (flag for transparency).
+6. **PPM aggregation**: monthly per supplier `PPM = SUM(defect_qty)/SUM(inspected_qty)
+   * 1,000,000`.
+7. **NCR severity mapping**: QM catalog code → {Critical, Major, Minor} via lookup table.
+8. **NCR age**: `NCR_age_days = DATEDIFF(day, created_date, COALESCE(capa_closed_date, TODAY()))`.
+9. **Invoice accuracy**: monthly per supplier `= COUNT(auto_matched)/COUNT(invoices)*100`.
+10. **PO price variance**: `avg_price_deviation_pct = AVG(ABS(invoice_price - po_price)/po_price)*100`.
+11. **Spend FX conversion**: convert to group currency using month-end ECB rate from
+    `dim_fx_rate`.
+12. **Data completeness**: per supplier-month, `completeness = COUNT(non-null KPI inputs)/
+    COUNT(expected inputs)*100`; flag scorecards with <80 % as provisional.
 
 ---
 
-## KPIs & Success Metrics
+## 9. Business Rules
 
-| KPI | Baseline | 18-Month Target | Measurement |
+### Rule: Supplier in scope for scorecard
+- **Description**: Only active external direct suppliers with minimum activity.
+- **Logic Condition**: `dim_supplier.status = 'ACTIVE' AND is_intercompany = 0 AND
+  trailing_12m_GR_lines >= 6`
+- **Expected Result**: supplier appears in `fact_scorecard_monthly`.
+- **Example**: supplier with 3 GRs in 12 months is excluded (insufficient data).
+- **Exception**: strategic new suppliers with NPI agreements included from month 1.
+- **Required Evidence**: in-scope supplier list with inclusion reason logged.
+
+### Rule: OTD grace period by plant
+- **Description**: On-time tolerance varies by plant criticality.
+- **Logic Condition**: `grace_days = lookup(plant_grace_table, werks)`
+- **Expected Result**: consistent OTD flag computation per plant.
+- **Example**: Plant DE10 grace=0; Plant BR40 grace=1.
+- **Exception**: customer-directed drop-ship uses customer-required date.
+- **Required Evidence**: plant grace configuration table version-controlled.
+
+### Rule: Rating band assignment
+- **Description**: Map composite score to rating band.
+- **Logic Condition**: PREFERRED ≥90; APPROVED ≥75; CONDITIONAL ≥60; PROBATION ≥45;
+  DISQUALIFIED <45.
+- **Expected Result**: `rating` column populated per band.
+- **Example**: composite 71.3 → APPROVED.
+- **Exception**: manual quality hold overrides to PROBATION regardless of score.
+- **Required Evidence**: rating distribution reconciled to threshold logic.
+
+### Rule: Concentration risk flag
+- **Description**: Flag categories with dangerous supplier concentration.
+- **Logic Condition**: `HHI_category >= 5000` → flag = HIGH; `>=2500` → MEDIUM.
+- **Expected Result**: category risk flag for dual-source action.
+- **Example**: category with one supplier at 80 % share → HHI ≈ 6,800 → HIGH.
+- **Exception**: strategic single-source by design (board-approved) → annotate.
+- **Required Evidence**: HHI per category recomputed and stored monthly.
+
+### Rule: Early-warning trigger
+- **Description**: Flag suppliers likely to drop below APPROVED.
+- **Logic Condition**: `composite_3m_avg < composite_12m_avg - 8 OR
+  ml_deterioration_prob >= 0.6`
+- **Expected Result**: supplier added to watch list; SQE notified.
+- **Example**: 12m avg 82, 3m avg 73 → −9 → triggered.
+- **Exception**: one-off event with documented containment.
+- **Required Evidence**: watch-list entry with trigger reason + timestamp.
+
+---
+
+## 10. KPIs and Formulas
+
+### KPI: On-Time Delivery (OTD)
+- **Objective**: measure supplier delivery reliability against promise.
+- **Formula (DAX)**:
+  `OTD % = DIVIDE( CALCULATE(COUNTROWS(fact_delivery), fact_delivery[on_time_flag]=1),
+  COUNTROWS(fact_delivery) ) * 100`
+- **Data Source**: fact_delivery
+- **Calculation Level**: supplier / plant / material group / month
+- **Frequency**: daily refresh, monthly reporting
+- **Owner**: SQE
+- **Interpretation**: % of GR lines received on or before confirmed date.
+- **Thresholds**: Green ≥95 %, Yellow 90–95 %, Red <90 %
+- **Traffic Light**: per thresholds
+- **Recommended Action**: Red → delivery improvement plan; expedite review.
+- **Validation vs Source**: reconcile flagged-on-time count to SAP MB51 sample.
+
+### KPI: On-Time In-Full (OTIF)
+- **Objective**: measure complete and on-time order fulfilment.
+- **Formula (DAX)**:
+  `OTIF % = DIVIDE( CALCULATE(DISTINCTCOUNT(fact_delivery[po_key]),
+  fact_delivery[otif_order_flag]=1), DISTINCTCOUNT(fact_delivery[po_key]) ) * 100`
+- **Data Source**: fact_delivery (order-level aggregation)
+- **Calculation Level**: supplier / month
+- **Frequency**: monthly
+- **Owner**: SQE
+- **Interpretation**: % of orders delivered on time AND in full.
+- **Thresholds**: Green ≥92 %, Yellow 85–92 %, Red <85 %
+- **Recommended Action**: Red → root-cause split vs. quantity shortfall.
+- **Validation vs Source**: order-level recompute vs SAP ME2L sample.
+
+### KPI: Defective PPM
+- **Objective**: quality of incoming material per million units.
+- **Formula (SQL)**:
+  `PPM = SUM(defect_qty) * 1000000.0 / NULLIF(SUM(inspected_qty),0)`
+- **Data Source**: fact_inspection
+- **Calculation Level**: supplier / material group / month
+- **Frequency**: monthly
+- **Owner**: Quality
+- **Interpretation**: defect concentration; lower is better.
+- **Thresholds**: Green <500, Yellow 500–1,000, Red >1,000 (general industry)
+- **Recommended Action**: Red → containment + 8D + supplier audit.
+- **Validation vs Source**: sum(defects)/sum(inspected) vs SAP QGA3.
+
+### KPI: NCR Rate
+- **Objective**: frequency of non-conformances per receipt.
+- **Formula (DAX)**:
+  `NCR Rate % = DIVIDE(COUNTROWS(fact_quality_ncr), COUNTROWS(fact_delivery)) * 100`
+- **Data Source**: fact_quality_ncr, fact_delivery
+- **Calculation Level**: supplier / month
+- **Frequency**: monthly
+- **Owner**: SQE
+- **Interpretation**: lower is better; spikes indicate process loss of control.
+- **Thresholds**: Green <2 %, Yellow 2–5 %, Red >5 %
+- **Recommended Action**: Red → CAPA review; scorecard quality sub-score impact.
+- **Validation vs Source**: NCR count vs SAP QM12.
+
+### KPI: Composite Scorecard
+- **Objective**: single weighted performance index per supplier.
+- **Formula**:
+  ```
+  Delivery   = 0.35*OTD_score + 0.45*OTIF_score + 0.20*RFT_score
+  Quality    = 0.60*PPM_score + 0.40*NCR_score
+  Commercial = 0.70*Invoice_accuracy + 0.30*PO_variance_score
+  Composite  = 0.40*Delivery + 0.30*Quality + 0.20*Commercial + 0.10*Soft
+  where PPM_score = MAX(0, 100 - PPM/target_PPM*100)
+        NCR_score = MAX(0, 100 - NCR_rate*10)
+  ```
+- **Data Source**: fact_scorecard_monthly
+- **Calculation Level**: supplier / month
+- **Frequency**: monthly
+- **Owner**: SQE
+- **Interpretation**: ≥90 PREFERRED … <45 DISQUALIFIED.
+- **Thresholds**: Green ≥75, Yellow 60–75, Red <60
+- **Recommended Action**: <60 → escalation + development plan.
+- **Validation vs Source**: recompute one supplier by hand vs source tables.
+
+### KPI: HHI (Concentration)
+- **Objective**: supplier concentration risk per category.
+- **Formula (SQL)**:
+  `HHI = SUM( POWER(spend_share*100, 2) )` grouped by category, where
+  `spend_share = supplier_spend / category_total_spend`.
+- **Data Source**: fact_spend
+- **Calculation Level**: category / quarter
+- **Frequency**: monthly (trailing 12m spend)
+- **Owner**: Category Manager
+- **Interpretation**: higher = more concentrated.
+- **Thresholds**: Green <1,500, Yellow 1,500–5,000, Red ≥5,000
+- **Recommended Action**: Red → dual-source qualification programme.
+- **Validation vs Source**: category total spend vs AP ledger.
+
+### KPI: Data Completeness
+- **Objective**: trust indicator for each scorecard.
+- **Formula**: `completeness % = non_null_inputs / expected_inputs * 100`
+- **Thresholds**: Green ≥95 %, Yellow 80–95 %, Red <80 %
+- **Recommended Action**: Red → mark scorecard provisional; fix data gap.
+- **Validation vs Source**: input availability check per supplier.
+
+---
+
+## 11. Analytical Logic
+
+- **Segmentations**: by Kraljic segment (Strategic/Leverage/Bottleneck/Non-critical),
+  by region, by material group, by category.
+- **Classifications**: rating band (5 levels); LT variability class X/Y/Z from
+  `CV_LT = stddev(LT)/mean(LT)` (X<0.10, Y 0.10–0.25, Z>0.25).
+- **Priority logic**: watch-list priority = `spend_weight * (100 - composite_score)`;
+  highest spend × worst score first.
+- **Alert logic**:
+  - Composite drop >10 points month-on-month → email SQE.
+  - Any category HHI crossing 5,000 → alert Category Manager.
+  - NCR aging beyond CAPA due date → daily escalation.
+  - PPM Red two consecutive months → mandatory supplier audit trigger.
+
+---
+
+## 12. Validations and Controls
+
+### Validation: GR-to-PO referential integrity
+- **Field/Table**: fact_delivery.po_key
+- **Validation Rule**: every GR line must match a PO schedule line.
+- **Validation Method**: anti-join GR vs EKET; count orphans.
+- **Expected Result**: orphan rate <1 %.
+- **Action if Fails**: route orphans to exception table; notify ETL owner.
+- **Verifiable Evidence**: daily orphan count in `etl_audit_log`.
+
+### Validation: Scorecard score bounds
+- **Field/Table**: fact_scorecard_monthly.composite_score
+- **Validation Rule**: 0 ≤ composite_score ≤ 100.
+- **Validation Method**: range check post-compute.
+- **Expected Result**: zero out-of-bounds rows.
+- **Action if Fails**: halt publish; investigate scoring pipeline.
+- **Verifiable Evidence**: validation query result = 0 rows.
+
+### Validation: Spend reconciliation
+- **Field/Table**: fact_spend.spend_group_ccy
+- **Validation Rule**: total spend = AP ledger control total ±0.5 %.
+- **Validation Method**: compare sum to FI control total.
+- **Expected Result**: within tolerance.
+- **Action if Fails**: investigate FX / credit-memo gaps.
+- **Verifiable Evidence**: reconciliation report stored per month.
+
+### Validation: Rating band logic
+- **Field/Table**: fact_scorecard_monthly.rating
+- **Validation Rule**: rating matches composite per threshold table.
+- **Validation Method**: recompute band from score, compare.
+- **Expected Result**: 100 % match (except manual overrides flagged).
+- **Action if Fails**: correct mapping; re-publish.
+- **Verifiable Evidence**: mismatch count = 0.
+
+---
+
+## 13. Required Evidence
+
+- ETL audit log (row counts, sums, orphan counts) per daily load.
+- Monthly reconciliation pack: OTD/PPM/NCR/spend vs SAP standard reports.
+- Manual recompute of one supplier scorecard signed off by SQE lead.
+- Power BI dataset refresh history screenshot.
+- Watch-list change log with trigger reasons.
+
+---
+
+## 14. Dashboard / Report Design (Power BI)
+
+**Page 1 — Executive Summary**: rating distribution donut, % suppliers ≥APPROVED,
+top 10 declining suppliers, category HHI heat map.
+**Page 2 — Supplier Scorecard Detail**: supplier selector; sub-score breakdown;
+12-month composite trend; OTD/OTIF/PPM/NCR sparklines; data completeness gauge.
+**Page 3 — Delivery Tracking**: OTD/OTIF by plant, Incoterm, material group;
+late-delivery line-level table with drill-through.
+**Page 4 — Quality**: PPM Pareto by supplier/material; NCR aging; CAPA status.
+**Page 5 — Concentration Risk**: HHI per category; single-source materials table.
+**Slicers**: period, region, category, Kraljic segment, rating band.
+**Drill-through**: supplier → line-level GR/NCR detail; category → supplier spend split.
+
+---
+
+## 15. Use Cases
+
+1. **Monthly scorecard review**: SQE filters to declining suppliers, opens detail
+   page, identifies PPM as the driver, launches 8D.
+2. **Dual-source decision**: Category Manager sees category HHI=6,800, reviews
+   single-source material list, initiates qualification of second supplier.
+3. **QBR preparation**: relationship manager exports supplier scorecard PDF for
+   quarterly business review.
+4. **Early warning**: watch-list flags supplier with −9 trend; SQE engages before
+   APPROVED breach.
+5. **Plant delivery escalation**: plant manager filters OTD by plant, finds carrier
+   pattern, escalates to logistics.
+
+---
+
+## 16. Recommended Actions
+
+| Result / Condition | Recommended Action | Owner | Timeline |
 |---|---|---|---|
-| Supplier OTD | 78 % | ≥95 % | Monthly scorecard |
-| OTIF | 71 % | ≥92 % | Monthly scorecard |
-| Incoming PPM | 3,200 | <800 | QM inspection data |
-| Scorecard coverage (% spend) | 45 % | ≥90 % | Scorecard report |
-| Early warning detection rate | 0 % | ≥70 % of deteriorations flagged 90d early | Model tracking |
-| GNN AUC-ROC | N/A | ≥0.80 | MLflow |
-| HHI >5,000 categories | 12 | ≤3 | Quarterly review |
-| Supplier-induced stoppages | 8/yr | 0 | Incident log |
+| Composite <60 | Formal development plan + escalation | SQE | 2 weeks |
+| PPM Red 2 months | Supplier audit + containment | Quality | 30 days |
+| HHI ≥5,000 | Dual-source qualification | Category Mgr | Quarter |
+| OTD <90 % | Delivery improvement plan | SQE | 2 weeks |
+| Early-warning trigger | Proactive QBR + watch-list | SQE | 1 week |
+| Data completeness <80 % | Fix data gap; provisional scorecard | Data team | 1 week |
 
 ---
 
-## Risk & Mitigation
+## 17. Test Cases
 
-| Risk | Probability | Impact | Mitigation |
-|---|---|---|---|
-| Incomplete Tier-2 mapping | High | High | Start with top 50 strategic; expand iteratively |
-| GNN training data scarce | Medium | High | Active labelling programme; transfer learning |
-| Supplier resistance to transparency | Medium | Medium | Frame as partnership; share scorecard draft before publish |
-| Model drift (GNN) | Low | Medium | Quarterly validation vs. known incidents |
-| UFLPA false positives | Low | High | Human review for all HIGH classifications |
+### TC-01 — OTD flag boundary
+- **Scenario**: GR posted exactly on confirmed date, grace=0.
+- **Input Data**: confirmed_date=2026-06-10, gr_date=2026-06-10.
+- **Expected Result**: on_time_flag=1.
+- **Result to Avoid**: flag=0 (off-by-one date error).
+- **Required Validation**: boundary unit test on flag logic.
+- **Evidence**: test query output.
+
+### TC-02 — GR reversal netting
+- **Scenario**: 101 of 100 units then 102 of 100 units.
+- **Input Data**: two MSEG rows.
+- **Expected Result**: received_qty=0; line excluded from in-full numerator.
+- **Result to Avoid**: received_qty=100 (reversal ignored).
+- **Required Validation**: net-qty test.
+- **Evidence**: computed received_qty.
+
+### TC-03 — PPM with skip-lot
+- **Scenario**: inspection lot with inspected_qty=0.
+- **Input Data**: one QALS row qty=0.
+- **Expected Result**: excluded from PPM denominator (no divide-by-zero).
+- **Result to Avoid**: PPM = error / infinity.
+- **Required Validation**: NULLIF denominator test.
+- **Evidence**: PPM query result.
+
+### TC-04 — Rating band assignment
+- **Scenario**: composite=74.9.
+- **Input Data**: scorecard row.
+- **Expected Result**: rating=CONDITIONAL.
+- **Result to Avoid**: rating=APPROVED (≥75 boundary wrong).
+- **Required Validation**: band boundary test.
+- **Evidence**: rating output.
+
+### TC-05 — HHI single source
+- **Scenario**: one supplier = 100 % of category.
+- **Input Data**: single spend row.
+- **Expected Result**: HHI=10,000; flag=HIGH.
+- **Result to Avoid**: HHI≠10,000.
+- **Required Validation**: HHI formula test.
+- **Evidence**: HHI value.
+
+### TC-06 — Spend reconciliation
+- **Scenario**: monthly spend load.
+- **Input Data**: fact_spend total vs AP control total.
+- **Expected Result**: within ±0.5 %.
+- **Result to Avoid**: >0.5 % gap unflagged.
+- **Required Validation**: reconciliation query.
+- **Evidence**: reconciliation report.
 
 ---
 
-## Implementation Timeline
+## 18. Risks and Mitigations
 
-| Phase | Weeks | Key Deliverables | Owner |
-|---|---|---|---|
-| 0: Assessment | 1-8 | Portfolio analysis, KPI baseline, Tier-2 mapping start | SQE Lead |
-| 1: Foundation | 9-20 | Scorecard framework live, segmentation, data feeds | IT + SQE |
-| 2: Standardisation | 21-36 | QBR cadence, SOPs, Ariba SLP live | Supplier Mgmt |
-| 3: Math models | 21-36 | Automated scorecard, HHI, OTD/OTIF/PPM live | Analytics |
-| 4: ML pipeline | 37-52 | GNN, NLP, early warning, UFLPA classifier | Data Science |
-| 5: Integration | 37-52 | SAP/Ariba/EDI integration | IT |
-| 6: CoE | 53+ | CoE operational, continuous improvement | CoE Lead |
+| Risk | Probability | Impact | Preventive Control | Corrective Control |
+|---|---|---|---|---|
+| Missing PO confirmation dates | High | High | Fallback to requested date + flag | Chase supplier confirmations |
+| Internal NCRs mis-attributed | Medium | High | Cause-code filter | Monthly NCR audit |
+| FX gaps in spend | Medium | Medium | Month-end rate table | Reconciliation control |
+| Skip-lot distorting PPM | Medium | Medium | Exclude zero-qty lots | Inspection policy review |
+| Back-dated GR shifting OTD | Low | Medium | Posting-date cutoff control | Restate affected period |
+| Duplicate supplier records | Low | High | MDM dedup on DUNS | Merge + restate |
 
 ---
 
-## References
+## 19. Implementation Checklist
 
-- Hamilton et al., "Inductive Representation Learning on Large Graphs" (NeurIPS 2017)
-- Kim & Rhee, "Proactive Supply Chain Risk Assessment with GNN" (EJOR 2023)
-- Chopra & Meindl, *Supply Chain Management* 6th Ed., Ch. 13 (Pearson, 2016)
-- CIPS, *Supplier Relationship Management* Guide (2022)
-- US Pub.L. 117-78 (UFLPA); EU Directive 2024/1760 (CSDDD)
-- Monczka et al., *Purchasing and Supply Chain Management* 7th Ed. (Cengage, 2020)
-- ISO 28000:2022 — Supply chain security management systems
+1. Confirm in-scope supplier definition with Procurement.
+2. Build Azure SQL staging for Sources 1–7.
+3. Implement incremental extraction (CDC by posting/creation date).
+4. Build fact/dim tables per §6.
+5. Implement transformation rules §8 (flags, PPM, NCR age, FX).
+6. Implement scoring pipeline §10; store fact_scorecard_monthly.
+7. Configure plant grace-period table.
+8. Build HHI computation by category.
+9. Build Power BI model with relationships §6.
+10. Author all KPI measures (DAX) §10.
+11. Build 5 dashboard pages §14.
+12. Configure RLS (region/category).
+13. Set daily refresh + monthly snapshot.
+14. Implement validations §12 as ETL gates.
+15. Build reconciliation pack to SAP reports.
+16. UAT with SQE and Category Managers.
+17. Document data lineage.
+18. Go-live + hypercare 2 weeks.
+
+---
+
+## 20. Validation Checklist
+
+1. Orphan GR rate <1 % verified.
+2. OTD/OTIF reconciled to SAP MB51/ME2L sample.
+3. PPM reconciled to SAP QGA3 sample.
+4. NCR count reconciled to SAP QM12.
+5. Spend reconciled to AP control total ±0.5 %.
+6. Composite scores within [0,100].
+7. Rating bands match threshold logic.
+8. HHI verified on single-source test case.
+9. Data completeness flag working.
+10. RLS verified per persona.
+11. Refresh schedule confirmed.
+12. Manual scorecard recompute signed off.
+
+---
+
+## 21. Pending Information to Confirm
+
+- Plant-level OTD grace-period values (per-plant table). — *Pending to confirm*
+- Target PPM per material group (automotive vs general). — *Pending to confirm*
+- Soft-score input source and methodology. — *Pending to confirm*
+- Intercompany supplier exclusion list. — *Pending to confirm*
+- ML deterioration model availability for early warning (Phase 2). — *Pending to confirm*
+- Group currency and FX rate source table. — *Pending to confirm*
+- RLS security groups per region/category. — *Pending to confirm*
+
+---
+
+## 22. Implementation Roadmap
+
+| Week | Activity | Deliverable | Owner | Status |
+|---|---|---|---|---|
+| 1–2 | Requirements + source confirmation | Signed scope | BI Lead | Pending |
+| 3–5 | Staging + extraction | Loaded staging | Data Eng | Pending |
+| 6–8 | Fact/dim + transformations | Model v1 | Data Eng | Pending |
+| 9–10 | Scoring pipeline + HHI | fact_scorecard_monthly | Analytics | Pending |
+| 11–13 | Power BI model + KPIs | Dashboard draft | BI Dev | Pending |
+| 14–15 | Validations + reconciliation | Recon pack | Data Quality | Pending |
+| 16–17 | UAT | Sign-off | SQE / Category | Pending |
+| 18 | Go-live + hypercare | Production report | BI Lead | Pending |

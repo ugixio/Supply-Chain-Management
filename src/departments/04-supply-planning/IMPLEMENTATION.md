@@ -1,467 +1,615 @@
-# Supply Planning — Enterprise Implementation Playbook
+# Supply Planning & MRP Analytics — Implementation Specification
 
-## Executive Summary
-
-Supply planning converts the consensus demand forecast into executable
-production schedules, procurement signals, and inventory build plans across
-a multi-echelon network. For a €50 B multinational with 40 countries, 80+
-plants, and thousands of SKUs, supply planning is the central nervous system
-that balances customer service levels against working capital and capacity
-constraints.
-
-A world-class supply planning capability — combining classical MRP with
-DDMRP buffer management, constrained optimisation, and ML-enhanced lead time
-prediction — delivers 15-25 % inventory reduction, 5-10 % improvement in
-schedule adherence, and 20-30 % reduction in expediting costs.
-
-This playbook covers every mathematical model, ML/AI pipeline, and operational
-process in the `04-supply-planning` module, designed for deployment on
-SAP S/4HANA + SAP IBP.
+> Analytical implementation document for a data / BI / automation team.
+> Scope: MRP Exceptions, Production Plan Attainment, Capacity Utilisation,
+> DDMRP Buffer Status, Bullwhip Effect.
+> Context: €50B multinational, 40 countries, SAP S/4HANA PP/MM + SAP IBP for Supply,
+> Power BI, Azure SQL, Python.
 
 ---
 
-## Prerequisites & Dependencies
+## 1. Executive Summary
 
-| Dependency | Detail |
-|---|---|
-| SAP S/4HANA (PP/MM) | Bills of material, routings, work centres, MRP areas |
-| SAP IBP for Supply | Constrained supply planning, IBP integration |
-| Demand plan | Consensus forecast from department 03 (daily/weekly buckets) |
-| Supplier master | Lead times, MOQ, capacity confirmations per supplier |
-| Plant/DC network | Transportation lanes, transit times, transfer costs |
-| Capacity data | Rated capacity, efficiency per work centre / production line |
-| Python ≥ 3.11 | OR-Tools, SimPy, XGBoost, scipy |
-| Historical MRP data | ≥24 months of planned vs. actual for ML training |
+This document specifies the analytical implementation to make the supply planning
+process observable, measurable, and continuously improvable. It defines the data,
+transformations, KPIs, validations, and dashboards required to triage MRP exception
+messages, measure production plan attainment and capacity utilisation, monitor DDMRP
+buffer health, and quantify the bullwhip effect across supply links.
 
----
-
-## Phase 0: AS-IS Assessment (Weeks 1-8)
-
-### 0.1 Supply Network Mapping
-1. Document all plants, DCs, and their relationships (make / buy / transfer).
-2. Map key materials to their bills of material (BOM depth, phantom items).
-3. Identify capacity bottlenecks (utilisation >90 % at any work centre).
-4. Measure current schedule adherence (planned vs. actual production).
-5. Quantify expediting frequency and cost.
-
-### 0.2 MRP Configuration Audit
-- Review MRP types per material (MRP, KANBAN, reorder point, no-planning).
-- Identify planning time fences; assess if they reflect true frozen horizons.
-- Measure forecast error propagation (bullwhip) through the supply chain.
-
-### 0.3 KPI Baseline
-
-| KPI | Typical Baseline | World-Class Target |
-|---|---|---|
-| Schedule adherence | 72 % | ≥92 % |
-| Bullwhip ratio | 2.8 | ≤1.3 |
-| Expediting cost (% of logistics spend) | 8 % | ≤2 % |
-| Supplier OTIF | 71 % | ≥92 % |
-| Inventory turns (WIP + FG) | 6.2 | ≥10 |
-| Planning cycle time | 3 days | ≤4 hours (automated) |
-| Forecast bias | ±18 % | ±5 % |
+The deliverable is a governed Power BI solution on Azure SQL, refreshed daily after
+the MRP run, used by Supply Planners, Production Schedulers, and Plant Managers.
+Every metric reconciles to SAP PP/MM and IBP source data.
 
 ---
 
-## Phase 1: Foundation & Master Data (Weeks 9-20)
+## 2. Analysis Objective
 
-### 1.1 Planning Master Data
-1. Cleanse and validate BOMs: no phantom loops, accurate component quantities.
-2. Set planned delivery times (PDT) per material + supplier combination.
-3. Define MRP areas per plant (separate planning for critical vs. standard).
-4. Configure safety stock levels per method (Phase 3 will optimise these).
-5. Set planning horizons: frozen (2 weeks), slushy (3-8 weeks), liquid (8+ weeks).
-
-### 1.2 Network Model
-1. Define supply network in SAP IBP: plants, DCs, lanes, transit times.
-2. Map demand nodes (DCs) to supply nodes (plants/suppliers).
-3. Set transportation costs and minimum shipment quantities per lane.
-
-### 1.3 Capacity Master Data
-1. Enter rated capacity per work centre (shifts × hours × efficiency).
-2. Define capacity categories (machine, labour, tool).
-3. Set up resource networks for bottleneck work centres.
+- Prioritise and trend MRP exception messages so planners focus on the highest-impact ones.
+- Measure production plan attainment (planned vs. actual) by plant, line, and period.
+- Quantify capacity utilisation and identify bottleneck work centres.
+- Monitor DDMRP buffer status (red/yellow/green penetration) at decoupling points.
+- Measure the bullwhip ratio per SKU-supplier link to target demand amplification.
+- Provide an auditable basis for planning performance and continuous improvement.
 
 ---
 
-## Phase 2: Process Standardisation (Weeks 21-36)
+## 3. Scope
 
-### 2.1 Weekly Planning Cycle
-```
-Monday: Demand signal refresh (POS/orders/EDI 830)
-Tuesday: MRP/IBP run — generate planned orders and purchase requisitions
-Wednesday: Capacity leveling — resolve overloads; exception management
-Thursday: Supplier scheduling — send releases; confirm capacities
-Friday: Publish plan; update S&OP system
-```
+**In scope**: all MRP-planned materials (make + buy) at plant × material × period
+granularity; production orders; work-centre capacity; DDMRP-buffered items; orders
+vs. demand for bullwhip; trailing 24 months.
 
-### 2.2 Exception Management
-- MRP exception messages reviewed daily by planner.
-- Auto-resolve: reschedule messages within ±3 days (system action).
-- Manual resolve: capacity overloads, new orders outside horizon.
-- KPI: exception message volume; target <5 % of planned orders.
+**Out of scope**: KANBAN/reorder-point materials without MRP exceptions (separate view);
+phantom assemblies (analysed through parent).
 
 ---
 
-## Phase 3: Mathematical Models
+## 4. Business Questions
 
-### 3.1 MRP Net Requirements Calculation
-
-**Business problem**: determine what needs to be produced or procured, and when,
-to satisfy demand without excess inventory.
-
-**Formulation**:
-```
-For each period t, each material m:
-
-  GrossRequirements_t   = dependent demand (from parent BOM) + independent demand
-  ScheduledReceipts_t   = confirmed POs / production orders due in t
-  ProjectedOnHand_{t-1} = inventory carried from prior period
-  NetRequirements_t     = max(0, GrossRequirements_t - ScheduledReceipts_t - ProjectedOnHand_{t-1})
-  PlannedOrderReceipts_t = NetRequirements_t (or rounded to lot size)
-  PlannedOrderRelease_{t-LT} = PlannedOrderReceipts_t (offset by lead time)
-```
-
-**Implementation steps**:
-1. Run MRP in SAP S/4HANA (transaction MD01N / MD02) or IBP.
-2. Validate GrossRequirements match demand plan from department 03.
-3. Confirm ScheduledReceipts include all open POs and production orders.
-4. Review ProjectedOnHand matches physical inventory (cycle count aligned).
-5. Check lot-sizing rules: EX (exact), FX (fixed), WB (weekly), PK (pack size).
-6. Validate lead times for critical materials (compare planned vs. actual LT).
-7. Review low-level codes — ensure MRP runs bottom-up through BOM levels.
-8. Generate exception messages; address reschedule-in/out per period.
-9. Convert planned orders: production orders (make) or purchase requisitions (buy).
-10. Communicate confirmed production schedule to shop floor.
+- Which MRP exception messages are open, and which carry the highest value/urgency?
+- What is production plan attainment by plant, line, and week?
+- Which work centres are bottlenecks (utilisation >90 %) over the planning horizon?
+- Which DDMRP buffers are penetrating the red zone, and how often?
+- Which SKU-supplier links have the highest bullwhip ratio?
+- What is the trend of reschedule-in / reschedule-out messages?
+- How much planned production was missed and why (capacity, material, quality)?
+- Which materials have lead times consistently breached vs. plan?
+- Which buffers are oversized (no red penetration for N weeks)?
+- What is the exception message volume per planner (workload balancing)?
 
 ---
 
-### 3.2 Capacity Requirements Planning (CRP)
+## 5. Data Sources
 
-**Business problem**: validate that available capacity can absorb the planned
-production schedule; identify and resolve bottlenecks.
+### Source 1 — MRP Exception Messages
+- **Source Name**: MRP exception messages
+- **Origin System**: SAP S/4HANA (PP/MM)
+- **Report/Table/Query**: MDKP/MDTB (MRP list) or MD06 export; exception codes
+- **Data Owner**: Supply Planning
+- **Update Frequency**: Daily (after MRP run)
+- **Required Fields**: `MATNR, WERKS, exception_code, exception_text, mrp_element,
+  element_date, reschedule_date, quantity, planner_code, run_date`
+- **Critical Fields**: `exception_code`, `quantity`, `element_date`, `planner_code`
+- **Primary/Logical Key**: MATNR + WERKS + mrp_element + run_date
+- **Required Validations**: exception_code in known catalog; quantity numeric
+- **Possible Errors**: stale list from failed MRP run; duplicate elements
+- **Extraction Evidence**: exception count per plant vs SAP MD06 sample
 
-**Formulation**:
-```
-For work centre w in period t:
-  Required_load_{w,t} = Σ_m (planned_qty_{m,t} × std_run_time_{m,w} / efficiency_w)
+### Source 2 — Production Orders (Plan vs Actual)
+- **Source Name**: Production orders
+- **Origin System**: SAP S/4HANA (PP)
+- **Report/Table/Query**: AFKO (order header) + AFPO (item) + AFRU (confirmations)
+- **Data Owner**: Production Control
+- **Update Frequency**: Daily
+- **Required Fields**: `AUFNR, MATNR, WERKS, planned_qty, confirmed_qty, planned_start,
+  planned_finish, actual_finish, work_center, status`
+- **Critical Fields**: `planned_qty`, `confirmed_qty`, `planned_finish`, `actual_finish`
+- **Primary/Logical Key**: AUFNR (+ item)
+- **Required Validations**: confirmed_qty ≤ planned_qty + tolerance; dates consistent
+- **Possible Errors**: open orders counted as missed; backflush timing lag
+- **Extraction Evidence**: order count and qty per plant vs SAP COOIS
 
-  Available_cap_{w,t} = shifts × hours_per_shift × (1 - downtime_rate) × efficiency_w
+### Source 3 — Work Centre Capacity
+- **Source Name**: Work centre capacity & load
+- **Origin System**: SAP S/4HANA (PP) / IBP
+- **Report/Table/Query**: CRHD (work centre) + capacity (KAKO) + load from CM01
+- **Data Owner**: Capacity Planning
+- **Update Frequency**: Weekly
+- **Required Fields**: `work_center, WERKS, available_capacity_hrs, required_load_hrs,
+  efficiency, period, shifts`
+- **Critical Fields**: `available_capacity_hrs`, `required_load_hrs`
+- **Primary/Logical Key**: work_center + WERKS + period
+- **Required Validations**: capacity > 0; load ≥ 0
+- **Possible Errors**: missing shift calendar; efficiency not applied
+- **Extraction Evidence**: capacity vs SAP CR03; load vs CM01
 
-  Utilisation_{w,t}   = Required_load_{w,t} / Available_cap_{w,t} × 100
+### Source 4 — DDMRP Buffer Status
+- **Source Name**: DDMRP buffer levels & on-hand
+- **Origin System**: SAP IBP (or custom DDMRP extension) + S/4HANA stock
+- **Report/Table/Query**: buffer parameters (TOR/TOY/TOP) + daily on-hand + net flow position
+- **Data Owner**: Supply Planning (DDMRP)
+- **Update Frequency**: Daily
+- **Required Fields**: `MATNR, WERKS, top_of_red, top_of_yellow, top_of_green, on_hand,
+  net_flow_position, ADU, date`
+- **Critical Fields**: `net_flow_position`, buffer zone tops, ADU
+- **Primary/Logical Key**: MATNR + WERKS + date
+- **Required Validations**: TOR ≤ TOY ≤ TOP; ADU ≥ 0
+- **Possible Errors**: stale ADU; buffer not recalculated
+- **Extraction Evidence**: buffer count vs DDMRP config
 
-  Overload if Utilisation > 100 % → resolve by:
-    a) Overtime (capacity increase)
-    b) Outsourcing (subcontracting order)
-    c) Demand deferral (negotiate with sales)
-    d) Alternative work centre routing
-```
-
-**Implementation steps**:
-1. Run CRP in SAP PP (transaction CM01/CM21) after MRP.
-2. Identify all work centres with utilisation >90 % in any week.
-3. For bottlenecks: display load profile; identify root material/order.
-4. Finite scheduling: move orders earlier/later within planning fence.
-5. Evaluate overtime: cost < expediting cost? → approve.
-6. For chronic overloads (>3 consecutive weeks): escalate to capital investment.
-7. Publish capacity-confirmed plan to production supervisors.
-
----
-
-### 3.3 DDMRP Buffer Sizing
-
-**Business problem**: protect throughput at decoupling points in the supply chain
-by maintaining dynamic, self-adjusting buffers.
-
-**Formulation**:
-```
-For each decoupled item i:
-
-ADU_i  = Average Daily Usage (units/day, 30-day rolling)
-DLT_i  = Decoupled Lead Time (days)
-LTF_i  = Lead Time Factor (0.5 for purchased items; varies by variability)
-MOQ_i  = Minimum Order Quantity
-
-TOP_i (Top of Green)  = max(ADU_i × DLT_i × LTF_i, MOQ_i)
-TOY_i (Top of Yellow) = ADU_i × DLT_i
-TOR_i (Top of Red)    = ADU_i × DLT_i × LTF_i × Variability_Factor_i
-
-Buffer zones:
-  Green  = TOY_i to TOP_i   (supply generation zone)
-  Yellow = TOR_i to TOY_i   (consumption coverage zone)
-  Red    = 0 to TOR_i       (safety zone — order immediately if penetrated)
-
-Dynamic adjustment:
-  ADU recalculated weekly.
-  If 3 consecutive weeks: buffer too large (no red penetration) → reduce LTF by 20%.
-  If 3 consecutive weeks: buffer too small (red penetrated) → increase LTF by 20%.
-```
-
-**Implementation steps**:
-1. Identify decoupling points: where demand variability should be absorbed.
-2. Compute ADU per item from last 30 days' actual consumption.
-3. Set DLT = supplier confirmed lead time (not planned lead time).
-4. Set LTF by item category: purchased long-lead = 0.8; standard = 0.5.
-5. Compute all three buffer zones.
-6. Configure DDMRP in SAP IBP (or custom extension) with buffer parameters.
-7. Daily: check on-hand against buffer zones; generate supply orders when in green.
-8. Weekly: review ADU trend; adjust buffers via dynamic adjustment rules.
-9. Monitor red zone penetrations as KPI (target: <10 % of planning days).
-10. Review buffer parameters quarterly for structural demand changes.
+### Source 5 — Orders & Demand (Bullwhip)
+- **Source Name**: PO order quantities vs end demand
+- **Origin System**: SAP S/4HANA (MM purchase orders) + actual demand (from Dept 03)
+- **Report/Table/Query**: EKPO/EKET (orders placed) + fact_actuals (demand)
+- **Data Owner**: Supply Planning / Procurement
+- **Update Frequency**: Monthly
+- **Required Fields**: `MATNR, LIFNR, period, order_qty, demand_qty`
+- **Critical Fields**: `order_qty`, `demand_qty`
+- **Primary/Logical Key**: MATNR + LIFNR + period
+- **Required Validations**: both series same UOM; aligned periods
+- **Possible Errors**: order qty includes safety build masking demand signal
+- **Extraction Evidence**: order/demand series length per link
 
 ---
 
-### 3.4 Bullwhip Effect Quantification
+## 6. Data Model
 
-**Business problem**: measure and reduce demand amplification as orders move
-upstream through the supply chain.
+Star schema (Azure SQL → Power BI):
 
-**Formulation**:
-```
-Bullwhip_Ratio = Var(Orders_t) / Var(Demand_t)
+**Fact tables**
+- `fact_mrp_exception` — grain: material × plant × mrp_element × run_date.
+- `fact_production` — grain: production order (+item).
+- `fact_capacity` — grain: work_center × plant × period.
+- `fact_ddmrp` — grain: material × plant × date.
+- `fact_bullwhip` — grain: material × supplier × period.
 
-Where:
-  Orders_t  = purchase orders placed to supplier in period t
-  Demand_t  = actual end-customer demand in period t
+**Dimension tables**
+- `dim_material` (MATNR, family, type make/buy, planner)
+- `dim_plant` (WERKS, name, region)
+- `dim_workcenter` (work_center, description, capacity category)
+- `dim_date` (date, week, month, period)
+- `dim_planner` (planner_code, name)
+- `dim_exception` (exception_code, description, severity, action_type)
 
-BWE > 1.0  : amplification exists (orders more variable than demand)
-BWE > 2.0  : significant bullwhip — review ordering policy
-BWE > 5.0  : severe — likely due to fear-ordering or batch ordering
-
-Dampening actions:
-  1. Reduce order batch sizes (move toward EOQ or DDMRP flow)
-  2. Share POS data with suppliers (vendor-managed inventory)
-  3. Reduce supply lead times (closer suppliers, safety stock)
-  4. Stabilise order frequency (weekly cadence vs. monthly lumps)
-```
-
-**Implementation steps**:
-1. Pull 24 months of orders vs. demand by SKU and supply tier.
-2. Compute variance ratio per SKU-supplier link.
-3. Rank links by BWE descending; focus on top 20 %.
-4. Root-cause high BWE links: batch ordering? promotional lumps? fear-ordering?
-5. Implement remediation (DDMRP, VMI, order smoothing rules).
-6. Re-measure BWE monthly; target reduction to <1.5 within 12 months.
+**Relationships**
+- fact_mrp_exception → dim_material, dim_plant, dim_date, dim_planner, dim_exception.
+- fact_production → dim_material, dim_plant, dim_workcenter, dim_date.
+- fact_capacity → dim_workcenter, dim_plant, dim_date.
+- fact_ddmrp → dim_material, dim_plant, dim_date.
+- fact_bullwhip → dim_material, dim_date.
 
 ---
 
-### 3.5 Multi-Echelon Safety Stock (Clark-Scarf)
+## 7. Data Dictionary
 
-**Business problem**: optimise safety stock placement across supplier → plant →
-DC → store tiers to minimise total inventory investment for a given service level.
+### Table: fact_mrp_exception
+- **Description**: Open MRP exception messages with value and priority.
+- **Granularity**: material × plant × mrp_element × run_date.
+- **Required Fields**:
+  | Field | Type | Description |
+  |---|---|---|
+  | matnr | varchar | Material |
+  | werks | varchar | Plant |
+  | exception_code | varchar | SAP exception code |
+  | mrp_element | varchar | Order/PR/planned order id |
+  | element_date | date | Element due date |
+  | reschedule_date | date | Proposed new date |
+  | quantity | decimal(18,3) | Element qty |
+  | unit_cost | decimal(18,2) | Std cost |
+  | exposure_value | decimal(18,2) | quantity × unit_cost |
+  | planner_code | varchar | Owning planner |
+  | run_date | date | MRP run date |
+- **Primary Key**: matnr+werks+mrp_element+run_date
+- **Relationships**: → dim_material, dim_plant, dim_date, dim_planner, dim_exception
+- **Required Transformations**: join exception catalog → severity; compute exposure_value
+- **Cleaning Rules**: dedupe elements; drop closed exceptions
+- **Validations**: exception_code valid; quantity numeric
+- **Use in Analysis**: exception rate, prioritisation, planner workload
 
-**Formulation**:
-```
-For a 2-echelon system (plant feeds DC):
-  SS_DC    = z × σ_D_DC × √(LT_plant_to_DC)
-  SS_plant = z × σ_D_plant × √(LT_supplier_to_plant)
+### Table: fact_production
+- **Description**: Production orders with plan vs actual.
+- **Granularity**: production order item.
+- **Required Fields**: aufnr, matnr, werks, work_center, planned_qty, confirmed_qty,
+  planned_finish, actual_finish, on_time_flag, attainment_qty, status
+- **Primary Key**: aufnr + item
+- **Relationships**: → dim_material, dim_plant, dim_workcenter, dim_date
+- **Required Transformations**: on_time_flag = actual_finish ≤ planned_finish;
+  attainment_qty = MIN(confirmed_qty, planned_qty)
+- **Validations**: confirmed_qty ≥ 0; dates consistent
+- **Use in Analysis**: plan attainment, schedule adherence
 
-Where σ_D is demand std dev at that node.
+### Table: fact_capacity
+- **Description**: Capacity vs load per work centre/period.
+- **Granularity**: work_center × plant × period.
+- **Required Fields**: work_center, werks, period, available_hrs, required_hrs,
+  utilisation_pct, overload_flag
+- **Primary Key**: work_center+werks+period
+- **Relationships**: → dim_workcenter, dim_plant, dim_date
+- **Required Transformations**: utilisation = required/available*100; overload if >100
+- **Validations**: available_hrs > 0
+- **Use in Analysis**: capacity utilisation, bottleneck detection
 
-Multi-echelon: Clark-Scarf theorem — optimise from downstream to upstream:
-  For each stage n (from demand end):
-    SS_n = z_n × √(LT_n × σ²_D + demand̄² × σ²_LT_n)
-    where z_n is chosen to achieve target fill rate at stage n
-```
+### Table: fact_ddmrp
+- **Description**: Daily DDMRP buffer position and zone.
+- **Granularity**: material × plant × date.
+- **Required Fields**: matnr, werks, date, top_of_red, top_of_yellow, top_of_green,
+  on_hand, net_flow_position, zone (RED/YELLOW/GREEN/OVER), adu
+- **Primary Key**: matnr+werks+date
+- **Relationships**: → dim_material, dim_plant, dim_date
+- **Required Transformations**: classify zone from net_flow_position vs tops (see §8)
+- **Validations**: TOR ≤ TOY ≤ TOP
+- **Use in Analysis**: red-zone penetration, buffer sizing
 
-**Implementation steps**:
-1. Map supply network: nodes (plant, DC, store) and arcs (LT, variability).
-2. Calculate demand mean and std dev at each node from 12 months data.
-3. Run Clark-Scarf optimisation (scipy.optimize or OR-Tools) to allocate SS.
-4. Compare total SS investment vs. current actual (quantify excess/deficit).
-5. Upload optimised SS to SAP MM material master (safety stock field).
-6. Review quarterly as demand variability and lead times change.
-
----
-
-## Phase 4: ML/AI Pipeline
-
-### 4.1 Supplier Lead Time Prediction (XGBoost)
-
-**Business problem**: improve MRP accuracy by predicting actual supplier delivery
-time rather than relying on static planned lead times.
-
-**Features**:
-- Historical LT for (supplier, material, order_quantity) from 24 months of GR data
-- Order quantity (log-transformed)
-- Supplier current load (# open POs to supplier)
-- Days of year / week (seasonality — holidays, year-end rush)
-- Commodity category
-- Country of origin
-- Port congestion index (if available)
-- Supplier scorecard OTD trailing 3 months
-
-**Training steps**:
-1. Prepare dataset: one row per PO line; target = actual_LT_days.
-2. Split 70/15/15 train/val/test.
-3. Train XGBoost regressor: `n_estimators=400, max_depth=6, learning_rate=0.05,
-   subsample=0.8, colsample_bytree=0.8`.
-4. Evaluate: target MAPE ≤ 15 %, RMSE ≤ 3 days.
-5. Feature importance analysis: confirm top features are reasonable.
-6. Predict LT at PO creation time; feed to MRP as dynamic lead time.
-7. Alert if predicted LT > planned LT by >3 days: buyer action required.
-
-**Retraining**: monthly with 30 new days of actual GR data.
-
----
-
-### 4.2 Constrained Supply Optimisation (OR-Tools / PuLP)
-
-**Business problem**: given multiple demand nodes, multiple supply sources, and
-capacity constraints, find the optimal allocation that maximises service level
-at minimum cost.
-
-**Formulation (LP)**:
-```
-Variables: x_{s,d,t} = units shipped from supply node s to demand node d in period t
-
-Minimise: Σ_{s,d,t} (unit_cost_{s,d} + transport_cost_{s,d}) × x_{s,d,t}
-          + Σ_{d,t} shortage_penalty × max(0, demand_{d,t} - Σ_s x_{s,d,t})
-
-Subject to:
-  Σ_d x_{s,d,t} ≤ capacity_{s,t}        (supply capacity)
-  Σ_s x_{s,d,t} ≤ demand_{d,t}          (demand constraint)
-  x_{s,d,t} ≥ 0
-```
-
-**Implementation steps**:
-1. Build supply network model: nodes, capacities, costs, demand.
-2. Formulate LP using `pulp` or `ortools.linear_solver`.
-3. Add constraint: minimum sourcing share per strategic supplier (SLA).
-4. Solve: typically <30 seconds for 50 nodes × 26 weeks horizon.
-5. Extract allocation plan: x_{s,d,t} matrix.
-6. Convert to SAP planned orders / purchase requisitions.
-7. Run weekly after MRP; constrained plan overrides unconstrained MRP output.
+### Table: fact_bullwhip
+- **Description**: Order vs demand variance per supply link.
+- **Granularity**: material × supplier × period.
+- **Required Fields**: matnr, lifnr, period, order_qty, demand_qty
+- **Primary Key**: matnr+lifnr+period
+- **Relationships**: → dim_material, dim_date
+- **Required Transformations**: compute rolling variance ratio (see §10)
+- **Validations**: same UOM; aligned periods
+- **Use in Analysis**: bullwhip ratio
 
 ---
 
-### 4.3 Supply Disruption Simulation (SimPy)
+## 8. Transformation Rules
 
-**Business problem**: quantify the impact of supply disruptions (port closure,
-supplier fire, tariff shock) before they happen — enabling contingency planning.
-
-**Architecture**: discrete-event simulation of the supply network using SimPy.
-
-**Steps**:
-1. Model each supply node as a SimPy resource with capacity and lead time.
-2. Implement disruption scenarios: node unavailability for X days.
-3. Run 1,000 Monte Carlo replications per scenario.
-4. Measure: P(stockout), expected lost sales, days to recovery.
-5. Compare scenarios: single-source vs. dual-source; DDMRP vs. standard SS.
-6. Output: risk-adjusted inventory strategy recommendation.
-7. Run quarterly or before major contract renewals.
-
----
-
-### 4.4 CPFR Bias Correction (XGBoost)
-
-**Business problem**: supplier planning releases (EDI 830) often have systematic
-bias vs. actual firm orders; correct the bias to improve production planning.
-
-**Model**: XGBoost regressor predicting `actual_order / planning_release` ratio
-per (customer, SKU, horizon_week).
-
-**Steps**:
-1. Collect 24 months of EDI 830 planning releases vs. actual firm orders.
-2. Compute bias ratio per customer × SKU × horizon week.
-3. Features: customer segment, SKU category, horizon week (1-26), season,
-   recent demand trend.
-4. Train XGBoost; target MAPE ≤ 12 % on bias ratio.
-5. Apply correction factor to customer planning releases before feeding MRP.
-6. Retrain quarterly.
+1. **Exposure value**: `exposure_value = quantity * unit_cost` (std cost from MBEW).
+2. **Exception severity**: join `exception_code` → dim_exception.severity
+   (Critical / High / Medium / Low) and action_type (reschedule-in/out/open/cancel).
+3. **On-time production flag**: `on_time_flag = 1 IF actual_finish <= planned_finish`.
+4. **Attainment qty**: `attainment_qty = MIN(confirmed_qty, planned_qty)` (no over-credit).
+5. **Capacity utilisation**: `utilisation_pct = required_hrs / available_hrs * 100`,
+   where `available_hrs = shifts * hrs_per_shift * (1-downtime) * efficiency`.
+6. **DDMRP zone classification**:
+   ```
+   IF net_flow_position <= top_of_red THEN 'RED'
+   ELIF net_flow_position <= top_of_yellow THEN 'YELLOW'
+   ELIF net_flow_position <= top_of_green THEN 'GREEN'
+   ELSE 'OVER'
+   ```
+7. **Bullwhip variance**: per link compute `VAR(order_qty)` and `VAR(demand_qty)` over a
+   rolling 12-period window.
+8. **Reschedule horizon bucket**: classify reschedule delta into buckets (≤3d auto, 4–14d,
+   >14d) for triage.
+9. **Planner workload**: count open exceptions per planner_code per run_date.
+10. **ADU refresh check**: flag DDMRP rows where ADU older than 7 days.
 
 ---
 
-## Phase 5: Integration & Automation (Weeks 37-52)
+## 9. Business Rules
 
-### 5.1 SAP IBP Integration
-- IBP for Demand feeds consensus forecast to IBP for Supply.
-- IBP for Supply generates constrained plan; pushes planned orders to S/4HANA.
-- Real-time ATP check: IBP Response & Supply for order promising.
+### Rule: Exception in scope
+- **Description**: Only open, MRP-relevant exceptions are reported.
+- **Logic Condition**: `status='OPEN' AND exception_code IN dim_exception AND
+  material.mrp_type='PD'`.
+- **Expected Result**: exception included in triage.
+- **Example**: KANBAN material exception excluded.
+- **Exception**: critical safety-stock breach always included.
+- **Required Evidence**: in-scope exception count.
 
-### 5.2 EDI Integration
-- EDI 830 (Planning Release) from customers → demand signal.
-- EDI 862 (Shipping Schedule) to suppliers → supplier scheduling.
-- SAP Integration Suite as middleware.
+### Rule: Plan attainment counting
+- **Description**: Attainment credited only for confirmed-on-time output.
+- **Logic Condition**: `attainment = SUM(MIN(confirmed_qty, planned_qty) WHERE
+  actual_finish <= period_end) / SUM(planned_qty)`.
+- **Expected Result**: attainment % per plant/period.
+- **Example**: planned 100, confirmed 90 on time → 90 % for that order.
+- **Exception**: rework orders excluded from denominator.
+- **Required Evidence**: order-level attainment table.
 
-### 5.3 Supplier Scheduling Automation
-- Automated release of blanket PO call-offs based on MRP output.
-- Supplier capacity confirmation via Ariba or EDI 855.
-- Exception: confirm delivery promises within 24 hours or auto-escalate.
+### Rule: Bottleneck flag
+- **Description**: Flag chronic capacity overloads.
+- **Logic Condition**: `utilisation_pct > 90 for >= 3 consecutive periods`.
+- **Expected Result**: work centre flagged bottleneck.
+- **Example**: WC 4711 at 96/93/91 % three weeks → bottleneck.
+- **Exception**: planned ramp-up periods annotated.
+- **Required Evidence**: utilisation trend per WC.
+
+### Rule: Red-zone penetration alert
+- **Description**: Buffer breaching red signals supply urgency.
+- **Logic Condition**: `zone='RED'` on any day → generate supply order alert.
+- **Expected Result**: alert + penetration count increment.
+- **Example**: net flow below TOR → RED.
+- **Exception**: planned phase-out buffers ignored.
+- **Required Evidence**: daily zone log.
+
+### Rule: Buffer oversizing
+- **Description**: Detect oversized buffers.
+- **Logic Condition**: `no RED penetration for >= 8 weeks AND min(zone)='GREEN/OVER'`.
+- **Expected Result**: candidate for buffer reduction (reduce LTF 20 %).
+- **Example**: buffer always in green 10 weeks → reduce.
+- **Exception**: seasonal pre-build periods.
+- **Required Evidence**: 8-week zone history.
 
 ---
 
-## Phase 6: Continuous Improvement & CoE
+## 10. KPIs and Formulas
 
-- **Weekly**: MRP run + exception review; capacity leveling; supplier releases.
-- **Monthly**: DDMRP buffer review; bullwhip measurement; ML model scoring.
-- **Quarterly**: multi-echelon SS optimisation; LP allocation model re-run.
-- **Annually**: supply network design review; LT prediction model retrain.
-- **CoE**: Supply Planning Analysts (MRP/IBP), Data Scientist, Network Designer.
+### KPI: MRP Exception Rate
+- **Objective**: share of planned items with open exceptions.
+- **Formula (DAX)**: `Exception Rate % = DIVIDE(DISTINCTCOUNT(fact_mrp_exception[matnr]),
+  [Total MRP Materials]) * 100`
+- **Data Source**: fact_mrp_exception
+- **Calculation Level**: plant / planner / period
+- **Frequency**: daily
+- **Owner**: Supply Planner
+- **Interpretation**: lower is better; spikes = planning instability.
+- **Thresholds**: Green <5 %, Yellow 5–10 %, Red >10 %
+- **Recommended Action**: Red → root-cause top exception codes.
+- **Validation vs Source**: distinct material count vs SAP MD06.
+
+### KPI: Exception Exposure Value
+- **Objective**: prioritise exceptions by financial impact.
+- **Formula (DAX)**: `Exposure = SUM(fact_mrp_exception[exposure_value])`
+- **Calculation Level**: exception / planner / plant
+- **Interpretation**: focus highest value first.
+- **Thresholds**: ranked (top decile = priority).
+- **Recommended Action**: action top-value exceptions same day.
+- **Validation vs Source**: qty×cost sample recompute.
+
+### KPI: Production Plan Attainment
+- **Objective**: how much of the plan was actually produced on time.
+- **Formula (DAX)**: `Attainment % = DIVIDE(SUM(fact_production[attainment_qty]),
+  SUM(fact_production[planned_qty])) * 100`
+- **Calculation Level**: plant / line / week
+- **Frequency**: daily/weekly
+- **Owner**: Production Control
+- **Interpretation**: higher is better.
+- **Thresholds**: Green ≥92 %, Yellow 85–92 %, Red <85 %
+- **Recommended Action**: Red → loss-reason analysis.
+- **Validation vs Source**: confirmed qty vs SAP COOIS.
+
+### KPI: Schedule Adherence
+- **Objective**: orders finished on time.
+- **Formula (DAX)**: `Schedule Adherence % = DIVIDE(CALCULATE(COUNTROWS(fact_production),
+  fact_production[on_time_flag]=1), COUNTROWS(fact_production)) * 100`
+- **Thresholds**: Green ≥92 %, Yellow 85–92 %, Red <85 %
+- **Recommended Action**: Red → scheduling/capacity review.
+- **Validation vs Source**: date comparison sample.
+
+### KPI: Capacity Utilisation
+- **Objective**: load vs available capacity.
+- **Formula (DAX)**: `Utilisation % = DIVIDE(SUM(fact_capacity[required_hrs]),
+  SUM(fact_capacity[available_hrs])) * 100`
+- **Calculation Level**: work centre / plant / period
+- **Interpretation**: >100 % = overload; <60 % = underutilised.
+- **Thresholds**: Green 70–90 %, Yellow 90–100 %, Red >100 % (or <60 %)
+- **Recommended Action**: Red overload → overtime/outsource; underload → consolidate.
+- **Validation vs Source**: load vs SAP CM01.
+
+### KPI: DDMRP Red-Zone Penetration Rate
+- **Objective**: buffer health at decoupling points.
+- **Formula (DAX)**: `Red Penetration % = DIVIDE(CALCULATE(COUNTROWS(fact_ddmrp),
+  fact_ddmrp[zone]="RED"), COUNTROWS(fact_ddmrp)) * 100`
+- **Calculation Level**: material / plant / month
+- **Thresholds**: Green <10 %, Yellow 10–20 %, Red >20 %
+- **Recommended Action**: Red → increase buffer / expedite; investigate ADU.
+- **Validation vs Source**: zone classification sample vs net flow.
+
+### KPI: Bullwhip Ratio
+- **Objective**: demand amplification per supply link.
+- **Formula**: `Bullwhip = VAR(order_qty) / VAR(demand_qty)` over rolling 12 periods.
+  (Python/DAX `VARX.P`.)
+- **Calculation Level**: material × supplier
+- **Interpretation**: ≈1 ideal; >1 amplification.
+- **Thresholds**: Green ≤1.3, Yellow 1.3–2.0, Red >2.0
+- **Recommended Action**: Red → order smoothing / VMI / DDMRP.
+- **Validation vs Source**: variance recompute on sample link.
+
+### KPI: Production Variance
+- **Objective**: actual vs planned production gap.
+- **Formula**: `Variance % = (SUM(confirmed_qty) − SUM(planned_qty)) / SUM(planned_qty) * 100`
+- **Thresholds**: Green |var|<5 %, Yellow 5–10 %, Red >10 %
+- **Recommended Action**: Red → capacity/material root cause.
+- **Validation vs Source**: qty sums vs SAP.
 
 ---
 
-## Technology Stack
+## 11. Analytical Logic
 
-| Layer | Technology |
-|---|---|
-| MRP / Supply planning | SAP S/4HANA PP/MM + SAP IBP for Supply |
-| Constrained optimisation | OR-Tools (Google), PuLP |
-| Simulation | SimPy (discrete event) |
-| ML | XGBoost, scikit-learn |
-| Data warehouse | Snowflake / Azure Synapse |
-| Orchestration | Apache Airflow |
-| Monitoring | MLflow + Grafana |
-| Integration | SAP Integration Suite |
+- **Segmentations**: plant, work centre, planner, material family, make/buy, exception code.
+- **Exception triage classification**: by severity × exposure value (4-box priority).
+- **DDMRP zone classification**: RED/YELLOW/GREEN/OVER.
+- **Priority logic**: exception priority = `severity_weight * exposure_value`.
+- **Alert logic**:
+  - Exception rate Red per plant → planning review.
+  - Any RED buffer → supply order alert (daily).
+  - Bottleneck (3-week >90 %) → capacity escalation.
+  - Bullwhip Red → ordering-policy review ticket.
+  - Buffer oversize (8-week green) → reduction candidate.
 
 ---
 
-## KPIs & Success Metrics
+## 12. Validations and Controls
 
-| KPI | Baseline | 18-Month Target | Measurement |
+### Validation: MRP run freshness
+- **Field/Table**: fact_mrp_exception.run_date
+- **Validation Rule**: run_date = latest scheduled MRP date.
+- **Validation Method**: compare max(run_date) to MRP calendar.
+- **Expected Result**: current.
+- **Action if Fails**: block report; alert that MRP did not run.
+- **Verifiable Evidence**: run_date vs calendar.
+
+### Validation: Buffer zone ordering
+- **Field/Table**: fact_ddmrp (TOR/TOY/TOP)
+- **Validation Rule**: TOR ≤ TOY ≤ TOP.
+- **Validation Method**: range check.
+- **Expected Result**: zero violations.
+- **Action if Fails**: exclude row; fix buffer config.
+- **Verifiable Evidence**: violation count = 0.
+
+### Validation: Attainment bounds
+- **Field/Table**: fact_production.attainment_qty
+- **Validation Rule**: 0 ≤ attainment_qty ≤ planned_qty.
+- **Validation Method**: range check.
+- **Expected Result**: no over-credit.
+- **Action if Fails**: fix MIN logic.
+- **Verifiable Evidence**: query result.
+
+### Validation: Capacity reconciliation
+- **Field/Table**: fact_capacity.required_hrs
+- **Validation Rule**: load = SAP CM01 within ±2 %.
+- **Validation Method**: compare to SAP.
+- **Expected Result**: within tolerance.
+- **Action if Fails**: investigate routing/efficiency.
+- **Verifiable Evidence**: reconciliation report.
+
+---
+
+## 13. Required Evidence
+
+- MRP run log (run_date, exception count) per day.
+- Production attainment reconciliation to SAP COOIS.
+- Capacity load reconciliation to SAP CM01.
+- DDMRP zone classification sample verification.
+- Bullwhip variance recompute for a sample link.
+
+---
+
+## 14. Dashboard / Report Design (Power BI)
+
+**Page 1 — Planning Health Overview**: exception rate, attainment, top bottlenecks,
+red-buffer count.
+**Page 2 — MRP Exception Triage**: 4-box (severity × exposure); exception table with
+drill-through to element detail; planner workload.
+**Page 3 — Production Attainment**: attainment & adherence by plant/line/week; loss reasons.
+**Page 4 — Capacity**: utilisation heat map by work centre/period; bottleneck trend.
+**Page 5 — DDMRP & Bullwhip**: buffer status board; red-penetration trend; bullwhip ranking.
+**Slicers**: period, plant, planner, work centre, material family, exception code.
+**Drill-through**: exception → MRP element; work centre → order load; buffer → daily history.
+
+---
+
+## 15. Use Cases
+
+1. **Daily exception triage**: planner opens 4-box, actions top-value/critical exceptions,
+   reschedules within fence.
+2. **Attainment review**: plant manager finds Red attainment, drills to loss reasons,
+   sees material shortage root cause.
+3. **Bottleneck resolution**: scheduler sees WC at 96 % three weeks, approves overtime.
+4. **Buffer tuning**: planner sees red penetration >20 %, increases buffer LTF.
+5. **Bullwhip remediation**: link with ratio 3.1 → moves to weekly smoothing / VMI.
+
+---
+
+## 16. Recommended Actions
+
+| Result / Condition | Recommended Action | Owner | Timeline |
 |---|---|---|---|
-| Schedule adherence | 72 % | ≥92 % | PP production order report |
-| Bullwhip ratio | 2.8 | ≤1.3 | Weekly variance analysis |
-| Inventory turns (FG+WIP) | 6.2 | ≥10 | FI-CO / MM report |
-| DDMRP red-zone penetration | N/A | <10 % of days | DDMRP dashboard |
-| LT prediction MAPE | N/A | ≤15 % | MLflow |
-| Expediting cost | 8 % | ≤2 % | Cost centre report |
-| Planning cycle time | 3 days | ≤4 hours | Process timing log |
+| Exception rate >10 % | Root-cause top codes | Supply Planner | 1 week |
+| Attainment <85 % | Loss-reason analysis | Production Control | 1 week |
+| WC utilisation >100 % | Overtime / outsource | Capacity Planner | Same cycle |
+| Red penetration >20 % | Increase buffer / expedite | DDMRP Planner | 2 weeks |
+| Bullwhip >2.0 | Order smoothing / VMI | Supply Planner | 1 month |
+| Buffer oversize 8 wks | Reduce buffer LTF | DDMRP Planner | Next review |
 
 ---
 
-## Risk & Mitigation
+## 17. Test Cases
 
-| Risk | Probability | Impact | Mitigation |
-|---|---|---|---|
-| BOM data quality issues | High | High | BOM audit sprint before MRP cutover |
-| IBP integration complexity | Medium | High | SAP certified integration partner |
-| Capacity data inaccurate | Medium | High | Work centre audit; time-study update |
-| LP solver infeasibility | Low | Medium | Add slack variables; review capacity constraints |
-| DDMRP adoption resistance | Medium | Medium | Pilot on 20 SKUs; prove results; then scale |
+### TC-01 — Exception exposure ranking
+- **Scenario**: two exceptions, qty 10×€500 vs 100×€10.
+- **Input Data**: two rows.
+- **Expected Result**: first exposure=€5,000 ranks above €1,000.
+- **Result to Avoid**: ranking by qty (100 first).
+- **Required Validation**: exposure compute test.
+- **Evidence**: exposure values.
+
+### TC-02 — Attainment no over-credit
+- **Scenario**: planned 100, confirmed 120.
+- **Input Data**: order row.
+- **Expected Result**: attainment_qty=100 (capped).
+- **Result to Avoid**: 120 (>100 %).
+- **Required Validation**: MIN test.
+- **Evidence**: attainment_qty.
+
+### TC-03 — DDMRP zone boundary
+- **Scenario**: net_flow=top_of_red exactly.
+- **Input Data**: ddmrp row.
+- **Expected Result**: zone=RED (≤ rule).
+- **Result to Avoid**: YELLOW.
+- **Required Validation**: boundary test.
+- **Evidence**: zone value.
+
+### TC-04 — Capacity overload flag
+- **Scenario**: required 110 hrs, available 100 hrs.
+- **Input Data**: capacity row.
+- **Expected Result**: utilisation=110 %; overload_flag=1.
+- **Result to Avoid**: flag=0.
+- **Required Validation**: utilisation test.
+- **Evidence**: utilisation, flag.
+
+### TC-05 — Bullwhip ratio
+- **Scenario**: VAR(orders)=400, VAR(demand)=100.
+- **Input Data**: two series.
+- **Expected Result**: ratio=4.0; Red.
+- **Result to Avoid**: ratio inverted (0.25).
+- **Required Validation**: variance ratio test.
+- **Evidence**: ratio value.
+
+### TC-06 — MRP run freshness
+- **Scenario**: MRP failed, list from yesterday.
+- **Input Data**: max(run_date)=yesterday.
+- **Expected Result**: report blocked + alert.
+- **Result to Avoid**: stale data shown as current.
+- **Required Validation**: freshness check.
+- **Evidence**: alert log.
 
 ---
 
-## Implementation Timeline
+## 18. Risks and Mitigations
 
-| Phase | Weeks | Key Deliverables | Owner |
-|---|---|---|---|
-| 0: Assessment | 1-8 | Network map, capacity audit, KPI baseline | Supply Planning Lead |
-| 1: Foundation | 9-20 | Planning master data, IBP config, horizons | IT + Planning |
-| 2: Standardisation | 21-36 | Weekly planning cadence, exception process | Planners |
-| 3: Math models | 21-36 | MRP, CRP, DDMRP, Bullwhip live | Analytics |
-| 4: ML pipeline | 37-52 | LT prediction, LP optimisation, SimPy | Data Science |
-| 5: Integration | 37-52 | IBP-S/4HANA, EDI, supplier scheduling | IT |
-| 6: CoE | 53+ | CoE operational, continuous improvement | CoE Lead |
+| Risk | Probability | Impact | Preventive Control | Corrective Control |
+|---|---|---|---|---|
+| Stale MRP run | Medium | High | Run-date freshness gate | Block report + alert |
+| Open orders counted as missed | Medium | Medium | Status filter | Restate attainment |
+| Capacity routing inaccurate | Medium | High | Routing audit | Reconcile to CM01 |
+| Stale ADU in DDMRP | Medium | Medium | ADU age flag | Recalculate buffers |
+| Order qty masks demand (bullwhip) | Medium | Medium | Use net demand series | Adjust series |
+| Duplicate exception elements | Low | Medium | Dedupe key | Re-extract |
 
 ---
 
-## References
+## 19. Implementation Checklist
 
-- Chopra & Meindl, *Supply Chain Management* 6th Ed., Ch. 9-11 (Pearson, 2016)
-- Clark & Scarf, "Optimal Policies for a Multi-Echelon Inventory Problem" (1960)
-- Ptak & Smith, *Demand Driven Material Requirements Planning (DDMRP)* (2016)
-- Lee, Padmanabhan & Whang, "The Bullwhip Effect in Supply Chains" (HBR, 1997)
-- SAP IBP for Supply — Configuration Guide (SAP Help Portal)
-- Google OR-Tools Documentation — Vehicle Routing and LP Solver
-- Hamilton et al., "Inductive Representation Learning on Large Graphs" (NeurIPS 2017)
+1. Confirm exception code catalog + severity mapping with Planning.
+2. Build Azure SQL staging for Sources 1–5.
+3. Extract MRP list, production orders, capacity, DDMRP, orders/demand.
+4. Build fact/dim model per §6.
+5. Implement transformations §8 (exposure, zone, utilisation, variance).
+6. Build exception triage + production attainment computes.
+7. Build capacity utilisation + bottleneck logic.
+8. Build DDMRP zone + penetration logic.
+9. Build bullwhip variance computation.
+10. Build Power BI model + relationships.
+11. Author KPI measures.
+12. Build 5 dashboard pages.
+13. Configure RLS (plant/planner).
+14. Set daily refresh after MRP run; add freshness gate.
+15. Implement validations §12.
+16. Build reconciliation pack to SAP.
+17. UAT with planners & plant managers.
+18. Go-live + hypercare.
+
+---
+
+## 20. Validation Checklist
+
+1. MRP run freshness gate verified.
+2. Exception count vs SAP MD06 sample.
+3. Attainment vs SAP COOIS sample.
+4. Capacity load vs SAP CM01 ±2 %.
+5. DDMRP zone boundaries correct.
+6. Attainment bounded 0..planned.
+7. Bullwhip ratio recomputed on sample.
+8. Buffer ordering TOR≤TOY≤TOP enforced.
+9. RLS verified.
+10. Refresh schedule confirmed.
+
+---
+
+## 21. Pending Information to Confirm
+
+- Exception code → severity/action mapping table. — *Pending to confirm*
+- Standard cost source for exposure value. — *Pending to confirm*
+- Plant shift calendars and efficiency factors. — *Pending to confirm*
+- DDMRP buffer parameter source (IBP vs custom). — *Pending to confirm*
+- Net-demand series definition for bullwhip. — *Pending to confirm*
+- MRP run schedule/calendar. — *Pending to confirm*
+- RLS security groups (plant/planner). — *Pending to confirm*
+
+---
+
+## 22. Implementation Roadmap
+
+| Week | Activity | Deliverable | Owner | Status |
+|---|---|---|---|---|
+| 1–2 | Requirements + code catalog | Signed scope | BI Lead | Pending |
+| 3–5 | Staging + extraction | Loaded staging | Data Eng | Pending |
+| 6–8 | Fact/dim + transforms | Model v1 | Data Eng | Pending |
+| 9–10 | Exception/attainment/capacity | Computed facts | Analytics | Pending |
+| 11–12 | DDMRP + bullwhip | Computed facts | Analytics | Pending |
+| 13–14 | Power BI + KPIs | Dashboard draft | BI Dev | Pending |
+| 15–16 | Validations + reconciliation | Recon pack | Data Quality | Pending |
+| 17 | UAT | Sign-off | Planning | Pending |
+| 18 | Go-live + hypercare | Production report | BI Lead | Pending |

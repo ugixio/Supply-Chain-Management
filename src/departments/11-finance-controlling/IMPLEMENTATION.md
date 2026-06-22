@@ -1,2255 +1,1317 @@
-# Finance & Supply Chain Controlling — Implementation Guide
+# Supply Chain Finance Analytics — Implementation Guide
 
 **Department:** 11 — Finance & Supply Chain Controlling
-**Standard:** SCOR-DS | ISO 28000:2022 | IFRS | US GAAP
-**Version:** 1.0.0
-**Date:** 2026-06-20
-**Classification:** Internal — Restricted
+**Analytics Domain:** Supply Chain Finance Analytics
+**Standard:** SCOR-DS | ISO 28000:2022 | IFRS (IAS 2, IAS 7, IAS 36) | US GAAP (ASC 330)
+**Version:** 2.0.0
+**Date:** 2026-06-22
+**Classification:** Internal — Restricted (Finance Controllers + Supply Chain Leadership)
+**Systems:** SAP S/4HANA FI/CO/MM | Power BI | Azure SQL | SAP Analytics Cloud
 
 ---
 
 ## Table of Contents
 
 1. [Executive Summary](#1-executive-summary)
-2. [Prerequisites and Dependencies](#2-prerequisites-and-dependencies)
-3. [Phase 0: Assessment and AS-IS Analysis](#3-phase-0-assessment-and-as-is-analysis)
-4. [Phase 1: Foundation and Master Data](#4-phase-1-foundation-and-master-data)
-5. [Phase 2: Process Standardisation and Core Analytics](#5-phase-2-process-standardisation-and-core-analytics)
-6. [Phase 3: Mathematical Models](#6-phase-3-mathematical-models)
-7. [Phase 4: ML/AI Pipeline](#7-phase-4-mlai-pipeline)
-8. [Phase 5: Integration and Automation](#8-phase-5-integration-and-automation)
-9. [Phase 6: Continuous Improvement](#9-phase-6-continuous-improvement)
-10. [Technology Stack and Architecture](#10-technology-stack-and-architecture)
-11. [Change Management and Training](#11-change-management-and-training)
-12. [Implementation KPIs](#12-implementation-kpis)
-13. [Risk and Mitigation](#13-risk-and-mitigation)
-14. [Timeline Summary](#14-timeline-summary)
-15. [References](#15-references)
+2. [Analysis Objective](#2-analysis-objective)
+3. [Scope](#3-scope)
+4. [Business Questions](#4-business-questions)
+5. [Data Sources](#5-data-sources)
+6. [Data Model](#6-data-model)
+7. [Data Dictionary](#7-data-dictionary)
+8. [Transformation Rules](#8-transformation-rules)
+9. [Business Rules](#9-business-rules)
+10. [KPIs and Formulas](#10-kpis-and-formulas)
+11. [Analytical Logic](#11-analytical-logic)
+12. [Validations and Controls](#12-validations-and-controls)
+13. [Required Evidence](#13-required-evidence)
+14. [Dashboard Design](#14-dashboard-design)
+15. [Use Cases](#15-use-cases)
+16. [Recommended Actions](#16-recommended-actions)
+17. [Test Cases](#17-test-cases)
+18. [Risks and Mitigations](#18-risks-and-mitigations)
+19. [Implementation Checklist](#19-implementation-checklist)
+20. [Validation Checklist](#20-validation-checklist)
+21. [Pending Information](#21-pending-information)
+22. [Implementation Roadmap](#22-implementation-roadmap)
 
 ---
 
 ## 1. Executive Summary
 
-The Finance and Supply Chain Controlling department serves as the financial intelligence hub of the enterprise supply chain, translating physical goods flows into financial signals, enforcing fiscal governance across all procurement-to-payment (P2P) and order-to-cash (O2C) cycles, and delivering the decision-grade analytics required by the C-suite and Board.
+Supply chain finance analytics is the discipline of translating physical goods flows — purchase orders, receipts, shipments, stock movements — into financial signals that drive working capital optimisation, cost control, and procurement governance. This implementation guide defines the complete analytical framework for the Finance & Supply Chain Controlling department, covering six core analytical domains: Purchase Price Variance (PPV), Working Capital (CCC/DIO/DSO/DPO), Inventory Valuation (FIFO vs. Moving Average), Landed Cost, 3-Way Match Exception Tracking, and Freight Cost Allocation.
 
-This implementation guide is designed for a global multinational corporation (MNC) operating across multiple jurisdictions with complex intercompany structures, multi-currency reporting under IFRS and US GAAP, and a supply chain spanning hundreds of tier-1 and tier-2 suppliers. It targets full SCOR-DS alignment across the Enable and Plan process categories, with particular emphasis on the Asset Management (AM) and Financial Flows (FF) performance attributes.
+The framework is built on SAP S/4HANA FI/CO/MM as the system of record, with Azure SQL as the analytical data warehouse layer and Power BI as the front-end reporting and alerting platform. The monthly close cycle drives the primary reporting cadence, with near-real-time alerting for exception conditions (invoice mismatches, PPV spikes, freight cost anomalies).
 
-### Strategic Objectives
+### Strategic Value
 
-- Achieve a 3-way invoice match automation rate of greater than 90 percent, reducing manual exception handling by 70 percent within 12 months.
-- Compress the Cash-to-Cash (C2C) cycle by 8 to 12 days through dynamic discounting, supply chain finance, and payables optimisation.
-- Deliver real-time working capital visibility across all legal entities within a single controlling layer.
-- Implement IFRS-compliant inventory valuation (IAS 2) with automated LCNRV write-down detection.
-- Establish a transfer pricing framework compliant with OECD BEPS Actions 8-10 for all intercompany supply chain transactions.
-- Deploy ML-driven invoice fraud detection achieving a precision of greater than 95 percent at a recall threshold of 0.7.
+| Outcome | Baseline | Target | Financial Impact |
+|---------|----------|--------|-----------------|
+| PPV Unfavorable Rate | Unknown / manual | <2% of total spend | Procurement savings visibility |
+| 3-Way Match Auto-Rate | 60-70% | >90% | -70% manual processing cost |
+| CCC (days) | 65-80 days | <50 days | Working capital release $15-25M |
+| Landed Cost Accuracy | +/-8% variance | +/-2% variance | Margin protection |
+| Freight Cost % of COGS | 6-8% | <5% | 1-2% COGS reduction |
+| Monthly Close Time | 8-10 days | <5 days | Faster decision cycle |
 
-### Scope
+### Key Stakeholders
 
-| Dimension | Scope |
-|-----------|-------|
-| Legal entities | All subsidiary entities under the MNC group consolidation |
-| Currencies | Functional currency per entity + USD/EUR group reporting |
-| Accounting standards | IFRS (primary) + US GAAP (dual-reporting for US entities) |
-| ERP systems | SAP S/4HANA FI/CO, Oracle Financials Cloud |
-| Supply chain finance | Coupa Pay, Taulia SCF |
-| Reconciliation | BlackLine |
-| Payments | SWIFT MT940 / SEPA CAMT.053 |
-
----
-
-## 2. Prerequisites and Dependencies
-
-### 2.1 Organisational Prerequisites
-
-- Chief Financial Officer sponsorship and Supply Chain Finance Director ownership.
-- Completed SCOR-DS maturity assessment (minimum Level 2 in Plan and Enable processes).
-- Active Chart of Accounts (CoA) rationalisation project closed or in final phase.
-- Legal entity master data governance model in place (GLN codes per GS1 assigned).
-- Transfer pricing policy reviewed by tax counsel within the last 24 months.
-
-### 2.2 Technical Prerequisites
-
-| Requirement | Minimum Version | Status Check |
-|-------------|----------------|--------------|
-| Node.js | 20 LTS | `node --version` |
-| TypeScript | 5.4 | `tsc --version` |
-| Python | 3.11 | `python --version` |
-| PostgreSQL | 15 | `psql --version` |
-| Redis | 7.2 | `redis-cli --version` |
-| Apache Kafka | 3.6 | broker metadata check |
-| SAP S/4HANA | 2023 FPS02 | BASIS team verification |
-
-### 2.3 Python Dependencies (OSI-Licensed)
-
-```bash
-pip install numpy scipy pandas statsmodels scikit-learn xgboost lightgbm \
-            torch tensorflow transformers pytesseract pdfplumber \
-            networkx pulp shap imbalanced-learn
-```
-
-### 2.4 TypeScript/Node.js Dependencies
-
-```json
-{
-  "dependencies": {
-    "decimal.js": "^10.4.3",
-    "date-fns": "^3.6.0",
-    "zod": "^3.23.0",
-    "uuid": "^9.0.0",
-    "ioredis": "^5.3.2",
-    "kafkajs": "^2.2.4",
-    "pg": "^8.12.0",
-    "axios": "^1.7.2"
-  }
-}
-```
-
-### 2.5 Upstream Module Dependencies
-
-This department consumes events from:
-
-- `01-procurement` — PurchaseOrder APPROVED, GoodsReceiptPosted events
-- `03-demand-planning` — ForecastRevised events (for cash flow forecasting)
-- `05-inventory-management` — StockMovement events (for inventory valuation)
-- `06-warehouse-management` — GoodsIssued events (for COGS recognition)
-- `07-logistics-transportation` — ShipmentDelivered events (for landed cost capture)
-- `09-compliance-regulatory` — ComplianceClearance events (for duty cost booking)
+| Role | Primary Use | Frequency |
+|------|-------------|-----------|
+| CFO / VP Finance | CCC trend, working capital position, PPV summary | Monthly |
+| Finance Controllers | 3-way match exceptions, month-end close pack | Weekly / Monthly |
+| Chief Procurement Officer | PPV by supplier/category, landed cost variances | Monthly |
+| Supply Chain Director | Inventory valuation, freight cost allocation | Monthly |
+| AP / AR Managers | Exception queue, aging analysis | Daily |
+| Treasury | DSO/DPO for cash flow forecasting | Weekly |
 
 ---
 
-## 3. Phase 0: Assessment and AS-IS Analysis
+## 2. Analysis Objective
 
-**Duration:** 4 weeks
-**Deliverables:** AS-IS process maps, gap analysis report, business case, programme charter
+The primary objective of this analytics implementation is to provide Finance Controllers, Procurement leadership, and Supply Chain executives with a fully integrated, data-driven view of supply chain financial performance across six analytical domains.
 
-### 3.1 Financial Process Inventory
+### Specific Objectives
 
-Conduct a structured inventory of all existing financial processes using the SCOR-DS process reference model. For each process, document: current state, pain points, technology, cycle time, and FTE effort.
+**Purchase Price Variance (PPV)**
+- Quantify the financial gap between standard (budgeted) prices and actual invoiced prices at line-item level.
+- Decompose PPV into three effects: price effect (pure rate change), volume effect (quantity driven), and mix effect (category/supplier shift).
+- Enable root-cause routing: commodity price movement vs. supplier negotiation outcome vs. specification change.
 
-| Process Area | SCOR Reference | AS-IS State | Target State |
-|-------------|---------------|-------------|--------------|
-| Invoice matching | EP.07 | Manual 3-way match, 40% auto | 90%+ automated |
-| Working capital reporting | EP.08 | Monthly, T+5 days | Daily, T+0 |
-| Inventory valuation | EP.06 | AVCO batch monthly | Real-time FIFO/AVCO |
-| Transfer pricing | EP.10 | Spreadsheet-based | Rule engine + audit trail |
-| Variance analysis | EP.09 | Manual ERP extract | Automated with root cause |
-| Landed cost | sD2.3 | Partial allocation | Full multi-leg allocation |
+**Working Capital Analysis**
+- Track Cash Conversion Cycle (CCC) at entity, business unit, and consolidated group level with daily granularity during close and monthly trend reporting.
+- Identify DIO, DSO, and DPO drivers and establish sensitivity analysis showing the impact of a 1-day improvement in each component.
 
-### 3.2 Data Quality Assessment
+**Inventory Valuation**
+- Maintain dual-method valuation (FIFO and Moving Average) for parallel reporting under IFRS/US GAAP and for management reporting.
+- Automate Lower of Cost or Net Realisable Value (LCNRV) write-down detection per IAS 2.
 
-Run the following Python diagnostic to profile source data quality before any transformation:
+**Landed Cost Analysis**
+- Compute true unit cost inclusive of all supply chain cost components: purchase price, ocean/air freight, customs duties, insurance, and last-mile handling.
+- Identify hidden cost leakage in the procurement-to-receipt cycle.
 
-```python
-# python/11_finance_controlling/data_quality/assess_source_data.py
+**3-Way Match Exception Tracking**
+- Automate matching of Purchase Order (PO), Goods Receipt (GR), and Supplier Invoice (IR) to a configurable tolerance.
+- Route unmatched documents to the correct exception queue with aging and financial exposure tracking.
 
-import pandas as pd
-import numpy as np
-from typing import Dict, Any
-
-
-def assess_invoice_data_quality(df_invoices: pd.DataFrame) -> Dict[str, Any]:
-    """
-    Assess data quality of source invoice data prior to 3-way match implementation.
-
-    Args:
-        df_invoices: Raw invoice DataFrame from ERP extract.
-
-    Returns:
-        Dictionary of quality metrics with pass/fail thresholds.
-    """
-    total = len(df_invoices)
-    report = {}
-
-    # Completeness checks
-    mandatory_fields = [
-        "invoice_number", "vendor_id", "invoice_date",
-        "gross_amount_cents", "currency_code", "po_number"
-    ]
-    for field in mandatory_fields:
-        null_pct = df_invoices[field].isna().sum() / total * 100
-        report[f"{field}_null_pct"] = round(null_pct, 2)
-
-    # Duplicate detection
-    dup_count = df_invoices.duplicated(
-        subset=["vendor_id", "invoice_number", "gross_amount_cents"]
-    ).sum()
-    report["duplicate_invoice_count"] = int(dup_count)
-    report["duplicate_rate_pct"] = round(dup_count / total * 100, 3)
-
-    # Currency code validation (ISO 4217)
-    valid_currencies = {"USD", "EUR", "GBP", "JPY", "CHF", "CAD", "AUD", "CNY"}
-    invalid_ccy = (~df_invoices["currency_code"].isin(valid_currencies)).sum()
-    report["invalid_currency_count"] = int(invalid_ccy)
-
-    # Amount range sanity
-    report["negative_amount_count"] = int(
-        (df_invoices["gross_amount_cents"] < 0).sum()
-    )
-    report["zero_amount_count"] = int(
-        (df_invoices["gross_amount_cents"] == 0).sum()
-    )
-
-    # PO linkage rate
-    po_linked = df_invoices["po_number"].notna().sum()
-    report["po_linkage_rate_pct"] = round(po_linked / total * 100, 2)
-
-    return report
-```
-
-### 3.3 Gap Analysis Matrix
-
-| Capability | Current Maturity (1-5) | Target Maturity | Gap | Priority |
-|------------|----------------------|-----------------|-----|----------|
-| 3-way invoice matching | 2 | 5 | 3 | Critical |
-| C2C cycle measurement | 1 | 4 | 3 | High |
-| Landed cost allocation | 2 | 4 | 2 | High |
-| Transfer pricing automation | 1 | 4 | 3 | Critical |
-| ABC costing | 2 | 4 | 2 | Medium |
-| Working capital forecasting (ML) | 1 | 5 | 4 | High |
-| Invoice fraud detection (ML) | 1 | 5 | 4 | Critical |
-| IFRS inventory valuation | 3 | 5 | 2 | High |
+**Freight Cost Allocation**
+- Allocate total freight spend to cost objects (product, lane, supplier, business unit) using rule-based and ML-assisted allocation logic.
+- Track freight cost as a percentage of COGS and compare against budget and market benchmarks.
 
 ---
 
-## 4. Phase 1: Foundation and Master Data
+## 3. Scope
 
-**Duration:** 6 weeks
-**Deliverables:** GL master, cost centre hierarchy, vendor master, currency tables, event store schema
+### In Scope
 
-### 4.1 Chart of Accounts Design
+| Dimension | Detail |
+|-----------|--------|
+| Legal entities | All entities under group consolidation reporting to Group Finance |
+| Geographies | All operating regions: Americas, EMEA, APAC |
+| Procurement types | Direct materials, indirect spend, capital expenditure (CapEx POs) |
+| Inventory methods | FIFO (IFRS/US GAAP), Moving Average (management) |
+| Incoterms coverage | All 11 Incoterms 2020 rules; landed cost scope defined per Incoterm |
+| Match types | 2-way (PO-Invoice), 3-way (PO-GR-Invoice), 4-way (PO-GR-QI-Invoice) |
+| Freight modes | Ocean FCL/LCL, Air freight, Road FTL/LTL, Rail, Parcel/courier |
+| Reporting currency | Functional currency + group consolidation currency (USD/EUR) |
+| Time horizon | Rolling 24 months historical; current month in-progress |
+| Close cycle | Monthly, with interim weekly flash for PPV and exceptions |
 
-Define a SCOR-aligned CoA that maps financial accounts to supply chain cost categories. All amounts stored as integer cents (no floating-point arithmetic).
+### Out of Scope
 
-```typescript
-// src/departments/11-finance-controlling/domain/ChartOfAccounts.ts
+- Intercompany eliminations (handled by Group Consolidation team)
+- Transfer pricing adjustments (separate TP workstream)
+- Revenue recognition (Order-to-Cash module)
+- Fixed asset depreciation (separate FA module)
+- Tax provisioning (Tax department)
 
-export const SC_GL_ACCOUNTS = {
-  // Assets
-  INVENTORY_RAW_MATERIAL:        { code: "13100", type: "ASSET",   scor: "sS" },
-  INVENTORY_WIP:                 { code: "13200", type: "ASSET",   scor: "sM" },
-  INVENTORY_FINISHED_GOODS:      { code: "13300", type: "ASSET",   scor: "sD" },
-  ACCOUNTS_RECEIVABLE:           { code: "12000", type: "ASSET",   scor: "sD" },
-  PREPAID_CUSTOMS_DUTIES:        { code: "13500", type: "ASSET",   scor: "sD" },
+### System Boundaries
 
-  // Liabilities
-  ACCOUNTS_PAYABLE:              { code: "21000", type: "LIABILITY", scor: "sS" },
-  ACCRUED_FREIGHT:               { code: "21100", type: "LIABILITY", scor: "sD" },
-  GOODS_RECEIPT_CLEARING:        { code: "21200", type: "LIABILITY", scor: "sS" },
+```
+SAP S/4HANA (MM/FI/CO)
+    |-- Purchase Orders (ME21N/ME22N)  →  Azure SQL [stg_mm_ekko, stg_mm_ekpo]
+    |-- Goods Receipts (MIGO)          →  Azure SQL [stg_mm_mseg, stg_mm_mkpf]
+    |-- Invoice Receipts (MIRO/FB60)   →  Azure SQL [stg_fi_rbkp, stg_fi_rseg]
+    |-- Material Ledger (CKMLCR)       →  Azure SQL [stg_co_ckmlcr]
+    |-- Cost Centers (KSB1)            →  Azure SQL [stg_co_cost_centers]
+    |-- Freight/Conditions (EKKO/EKPO) →  Azure SQL [stg_mm_konv]
 
-  // COGS and SC Costs
-  COGS_MATERIAL:                 { code: "50100", type: "EXPENSE",  scor: "sS" },
-  COGS_FREIGHT_INBOUND:          { code: "50200", type: "EXPENSE",  scor: "sS" },
-  COGS_CUSTOMS_DUTY:             { code: "50300", type: "EXPENSE",  scor: "sS" },
-  WAREHOUSE_OPERATING_COST:      { code: "51100", type: "EXPENSE",  scor: "sD" },
-  QUALITY_INSPECTION_COST:       { code: "51200", type: "EXPENSE",  scor: "sS" },
-  INTERCOMPANY_CLEARING:         { code: "19000", type: "ASSET",   scor: "Enable" },
-} as const;
+Azure SQL (Data Warehouse)
+    |-- Staging tables (stg_*)
+    |-- Conformed dimension tables (dim_*)
+    |-- Fact tables (fact_*)
+    |-- Aggregated reporting tables (rpt_*)
 
-export type GLAccountCode = keyof typeof SC_GL_ACCOUNTS;
+Power BI (Reporting Layer)
+    |-- Semantic model (DirectQuery on Azure SQL)
+    |-- Dashboard: Finance Supply Chain Analytics Hub
+    |-- Scheduled refresh: 4x daily (06:00, 12:00, 18:00, 23:00 UTC)
+    |-- Alert engine: PPV threshold, match exception aging
 ```
 
-### 4.2 Cost Centre Hierarchy
+---
 
-```typescript
-// src/departments/11-finance-controlling/domain/CostCentre.ts
+## 4. Business Questions
 
-export interface CostCentre {
-  readonly id: string;
-  readonly code: string;               // e.g., "CC-WH-EU-001"
-  readonly name: string;
-  readonly parentId: string | null;
-  readonly legalEntityId: string;      // maps to GLN
-  readonly scorProcess: string;        // sS, sM, sD, sP, Enable
-  readonly budgetOwnerEmail: string;
-  readonly currency: string;           // ISO 4217 functional currency
-  readonly isActive: boolean;
-}
+The following business questions drive the analytical requirements and dashboard design for this implementation.
 
-export function buildCostCentreHierarchy(centres: CostCentre[]): Map<string, CostCentre[]> {
-  const hierarchy = new Map<string, CostCentre[]>();
-  for (const cc of centres) {
-    const parentKey = cc.parentId ?? "ROOT";
-    if (!hierarchy.has(parentKey)) hierarchy.set(parentKey, []);
-    hierarchy.get(parentKey)!.push(cc);
-  }
-  return hierarchy;
-}
+**BQ-01 — PPV Root Cause**
+What is the total unfavorable Purchase Price Variance this month by commodity category and supplier, and what percentage is attributable to market price movement versus negotiation outcomes versus specification changes?
+
+**BQ-02 — Working Capital Position**
+What is the current Cash Conversion Cycle in days, broken down by DIO, DSO, and DPO, and how does it compare to the same period last year and the industry benchmark of 45 days?
+
+**BQ-03 — Inventory Valuation Gap**
+What is the difference between FIFO and Moving Average inventory valuation at period end, and which SKUs have a LCNRV write-down exposure greater than $10,000?
+
+**BQ-04 — True Landed Cost**
+What is the fully loaded landed cost per unit for the top 50 purchased SKUs, and which cost component (freight, duty, insurance, handling) shows the largest adverse variance versus budget this period?
+
+**BQ-05 — 3-Way Match Health**
+What percentage of invoices this month were auto-matched within tolerance, and what is the total financial exposure ($) in the unmatched exception queue aged greater than 30 days?
+
+**BQ-06 — Freight Cost Trend**
+What is freight cost as a percentage of COGS by transportation mode (ocean, air, road) for the last 12 months, and which lanes show the highest cost-per-kg versus the contracted rate?
+
+**BQ-07 — Supplier Payment Performance**
+Which suppliers have DPO below the contracted payment terms, indicating early payment leakage, and what is the annualised value of that early payment?
+
+**BQ-08 — PPV Forecast vs. Actual**
+How does this month's PPV compare to the forecast PPV communicated during the monthly S&OP cycle, and what are the top 3 commodity categories driving the variance?
+
+**BQ-09 — Exception Aging**
+What is the average age of open 3-way match exceptions, and which AP processors / purchasing groups have the highest exception backlog measured in days and dollar value?
+
+**BQ-10 — Inventory Days vs. Industry**
+How does Days Inventory Outstanding (DIO) by product category compare to industry peers, and which categories represent the top working capital improvement opportunity?
+
+**BQ-11 — Freight Carrier Performance**
+Which freight carriers have the highest cost-per-shipment variance versus contracted rates, and what is the cumulative overcharge exposure in the current quarter?
+
+**BQ-12 — Month-End Close Pack**
+Are all financial sub-ledger reconciliations complete (AP, AR, Inventory), and what is the outstanding accruals value requiring manual posting to close the period on time?
+
+---
+
+## 5. Data Sources
+
+### DS-01: SAP MM Purchase Orders
+
+| Attribute | Detail |
+|-----------|--------|
+| Name | SAP MM Purchase Order Header and Line Items |
+| System | SAP S/4HANA MM module |
+| Tables | EKKO (header), EKPO (line items), EKET (schedule lines) |
+| Azure SQL Staging | stg_mm_ekko, stg_mm_ekpo, stg_mm_eket |
+| Owner | Procurement Master Data team |
+| Extraction Frequency | Near-real-time via SAP CDC (Change Data Capture); full reload nightly |
+| Critical Fields | EBELN (PO number), EBELP (line), MATNR (material), LIFNR (vendor), NETPR (net price), MENGE (quantity), MEINS (UOM), WERKS (plant), EKGRP (purchasing group), BSART (PO type), LOEKZ (deletion flag) |
+| Primary Key | EBELN + EBELP |
+| Validations | LOEKZ = '' (not deleted); BSTYP = 'F' (standard PO); NETPR > 0; MENGE > 0 |
+| Known Data Errors | Legacy POs with NETPR = 0 (free-of-charge items — exclude from PPV); duplicate EBELN from system migrations — deduplicate by MAX(AEDAT) |
+| Evidence Required | PO extract count reconciles to SAP ME2N report total for the period |
+
+### DS-02: SAP MM Goods Receipts
+
+| Attribute | Detail |
+|-----------|--------|
+| Name | SAP MM Material Document (Goods Receipts) |
+| System | SAP S/4HANA MM module |
+| Tables | MKPF (material document header), MSEG (material document line items) |
+| Azure SQL Staging | stg_mm_mkpf, stg_mm_mseg |
+| Owner | Warehouse / Inventory Management team |
+| Extraction Frequency | Near-real-time CDC; full reload nightly |
+| Critical Fields | MBLNR (material document), MJAHR (year), ZEILE (item), MATNR (material), EBELN (PO reference), EBELP (PO line reference), MENGE (GR quantity), MEINS (UOM), WERKS (plant), BWART (movement type), BUDAT (posting date), DMBTR (amount local currency) |
+| Primary Key | MBLNR + MJAHR + ZEILE |
+| Validations | BWART IN ('101', '102', '161', '162') for PO-based movements; BUDAT within open posting periods; MENGE > 0 for receipts |
+| Known Data Errors | Backdated GRs from prior fiscal period — flag with BUDAT < period open date; reversal documents (BWART = '102') must net against original |
+| Evidence Required | GR quantity sum per PO line must not exceed PO quantity (MENGE in EKPO); reconcile DMBTR to FI document BSEG |
+
+### DS-03: SAP FI Supplier Invoices
+
+| Attribute | Detail |
+|-----------|--------|
+| Name | SAP FI Invoice Receipts (Logistics Invoice Verification) |
+| System | SAP S/4HANA FI/MM module |
+| Tables | RBKP (invoice header), RSEG (invoice line items), BKPF (FI document header), BSEG (FI document line items) |
+| Azure SQL Staging | stg_fi_rbkp, stg_fi_rseg, stg_fi_bkpf, stg_fi_bseg |
+| Owner | Accounts Payable team |
+| Extraction Frequency | Near-real-time CDC; full reload nightly |
+| Critical Fields | BELNR (invoice document), GJAHR (fiscal year), BUZEI (line), LIFNR (vendor), MATNR (material), EBELN (PO), EBELP (PO line), MENGE (invoiced quantity), MEINS (UOM), WRBTR (gross amount), WAERS (currency), ZFBDT (baseline date), ZBD1T (payment terms days), RBSTAT (invoice status) |
+| Primary Key | BELNR + GJAHR + BUZEI |
+| Validations | RBSTAT NOT IN ('A', 'S') to exclude cancelled/storno; currency conversion applied for non-functional currency invoices; duplicate invoice check on LIFNR + XBLNR (vendor invoice number) + WRBTR |
+| Known Data Errors | Credit memos with negative WRBTR — handle separately in match logic; invoices without PO reference (non-PO invoices) — route to separate non-PO spend report |
+| Evidence Required | Sum of WRBTR by posting period must reconcile to AP sub-ledger trial balance in FAGLFLEXT |
+
+### DS-04: SAP CO Material Ledger
+
+| Attribute | Detail |
+|-----------|--------|
+| Name | SAP CO-PC Material Ledger (Actual Costing) |
+| System | SAP S/4HANA CO-PC module |
+| Tables | CKMLCR (material ledger header), CKMVFM (material ledger movements), MBEWH (material valuation history) |
+| Azure SQL Staging | stg_co_ckmlcr, stg_co_ckmvfm, stg_co_mbewh |
+| Owner | Controlling / Cost Accounting team |
+| Extraction Frequency | Monthly (period close trigger) + interim snapshot on demand |
+| Critical Fields | MATNR (material), BWKEY (valuation area), PEINH (price unit), STPRS (standard price), VERPR (moving average price), LBKUM (total valuated stock), SALK3 (total stock value), VPRSV (price control indicator: S=standard, V=moving average), LFGJA (fiscal year), LFMON (period) |
+| Primary Key | MATNR + BWKEY + LFGJA + LFMON |
+| Validations | LBKUM >= 0 (no negative valuation stock); SALK3 / LBKUM = VERPR (unit price consistency check); VPRSV must be consistent with material type configuration |
+| Known Data Errors | Materials with split valuation (batch-level) require aggregation across BWTAR; price control changes mid-period require restatement logic |
+| Evidence Required | SALK3 sum by plant must reconcile to FI inventory balance sheet account (GL account 300000-399999 range) |
+
+### DS-05: SAP MM Condition Records (Freight / Pricing Conditions)
+
+| Attribute | Detail |
+|-----------|--------|
+| Name | SAP MM Pricing Conditions (Freight and Surcharges) |
+| System | SAP S/4HANA MM module |
+| Tables | KONV (conditions per document), KONP (condition item), T685T (condition types) |
+| Azure SQL Staging | stg_mm_konv, stg_mm_konp |
+| Owner | Procurement / Logistics Controlling team |
+| Extraction Frequency | Daily delta extraction |
+| Critical Fields | KNUMV (condition document number), KPOSN (condition item), KAPPL (application: M=purchasing), KSCHL (condition type: FRB1=freight, ZFR1=custom freight), KWERT (condition value in document currency), WAERS (currency), KBETR (condition rate), KMEIN (condition UOM), EBELN (PO reference via EKKO.KNUMV) |
+| Primary Key | KNUMV + KPOSN + KSCHL |
+| Validations | KAPPL = 'M' (purchasing application only); KWERT != 0; condition type in approved freight condition type list (FRB1, FRB2, ZFR1, ZFR2, ZIN1, ZHD1) |
+| Known Data Errors | Freight conditions sometimes booked as header conditions (KPOSN = 0) — allocate to lines by quantity weight; missing freight conditions for legacy POs created before condition type activation |
+| Evidence Required | Total KWERT for freight conditions reconciles to freight cost GL accounts (e.g., GL 520000-529999) in KSB1 cost center report |
+
+### DS-06: Logistics / Freight Invoices (External TMS or Forwarder Portal)
+
+| Attribute | Detail |
+|-----------|--------|
+| Name | Freight Carrier and Forwarder Invoice Data |
+| System | External TMS (e.g., SAP TM, Blue Yonder, Transplace) or manual upload |
+| Tables | Azure SQL: stg_freight_invoices, stg_freight_shipment_lines |
+| Owner | Logistics Controlling / Transport Management team |
+| Extraction Frequency | Daily file-based upload (EDI 210 / EDIFACT INVOIC) or API pull |
+| Critical Fields | freight_invoice_id, carrier_id, shipment_id, origin_port, destination_port, transport_mode, weight_kg, volume_cbm, contracted_rate_usd, actual_rate_usd, surcharge_type, surcharge_amount_usd, invoice_date, payment_due_date, po_reference |
+| Primary Key | freight_invoice_id |
+| Validations | actual_rate_usd > 0; weight_kg > 0; transport_mode IN ('OCEAN_FCL', 'OCEAN_LCL', 'AIR', 'ROAD_FTL', 'ROAD_LTL', 'RAIL', 'PARCEL'); carrier_id exists in carrier master; po_reference linkable to SAP PO |
+| Known Data Errors | Surcharge codes not standardised across carriers — requires carrier-specific mapping table; shipment split across multiple invoices requiring consolidation by shipment_id |
+| Evidence Required | Total freight spend per carrier per month reconciles to AP invoice postings for freight vendor accounts |
+
+---
+
+## 6. Data Model
+
+### Conceptual Entity Relationship
+
+```
+dim_material ─────────────────────────────────────────────────┐
+dim_vendor ───────────────────────────────────────────────────┤
+dim_plant ────────────────────────────────────────────────────┤
+dim_purchasing_group ─────────────────────────────────────────┤
+dim_date ─────────────────────────────────────────────────────┤
+                                                               │
+fact_po_line ──────────────────────────────────────────────►  │
+    (EBELN, EBELP, MATNR, LIFNR, WERKS, EKGRP,               │
+     standard_price, po_price, po_quantity,                    │
+     ordered_value, posting_date)                              │
+        │                                                      │
+        ▼                                                      │
+fact_goods_receipt ──────────────────────────────────────────►│
+    (MBLNR, MJAHR, ZEILE, EBELN, EBELP, MATNR,               │
+     gr_quantity, gr_value, posting_date, movement_type)       │
+        │                                                      │
+        ▼                                                      │
+fact_invoice_receipt ────────────────────────────────────────►│
+    (BELNR, GJAHR, BUZEI, EBELN, EBELP, LIFNR, MATNR,        │
+     invoiced_quantity, invoiced_value, currency,              │
+     baseline_date, payment_terms_days, status)                │
+        │                                                      │
+        ▼                                                      │
+fact_three_way_match ─────────────────────────────────────────┘
+    (match_id, EBELN, EBELP, MATNR, LIFNR,
+     po_quantity, gr_quantity, ir_quantity,
+     po_value, gr_value, ir_value,
+     qty_variance, price_variance,
+     match_status, exception_type, aging_days)
+
+fact_ppv ──── (po_line FK, material FK, vendor FK, period FK,
+               standard_price, actual_price, quantity,
+               ppv_amount, ppv_pct, price_effect,
+               volume_effect, mix_effect, ppv_category)
+
+fact_inventory_valuation ──── (material FK, plant FK, period FK,
+                                fifo_value, moving_avg_value,
+                                standard_value, lcnrv_nrv,
+                                write_down_required, write_down_amount)
+
+fact_landed_cost ──── (po_line FK, material FK, vendor FK, period FK,
+                        unit_purchase_price, freight_unit,
+                        customs_duty_unit, insurance_unit,
+                        handling_unit, total_landed_cost,
+                        budget_landed_cost, variance_amount)
+
+fact_freight_cost ──── (freight_invoice FK, shipment FK, carrier FK,
+                         material FK, lane FK, period FK,
+                         contracted_rate, actual_rate, surcharge_total,
+                         weight_kg, cost_per_kg, freight_pct_cogs)
+
+fact_working_capital ──── (entity FK, period FK,
+                            avg_inventory, avg_ar, avg_ap,
+                            cogs, revenue,
+                            dio, dso, dpo, ccc,
+                            working_capital_value)
 ```
 
-### 4.3 Event Store Schema for Financial Events
+### Star Schema Design (Azure SQL)
+
+The data model follows a Kimball-style star schema with conformed dimensions shared across all fact tables. Each fact table is partitioned by fiscal_year_period (YYYYMM) for query performance.
 
 ```sql
--- Financial journal entries stored as immutable events
-CREATE TABLE finance_journal_events (
-    id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    event_type      VARCHAR(64) NOT NULL,
-    aggregate_id    VARCHAR(128) NOT NULL,
-    aggregate_type  VARCHAR(64) NOT NULL,
-    sequence_number BIGINT NOT NULL,
-    occurred_at     TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    payload         JSONB NOT NULL,
-    idempotency_key VARCHAR(256) UNIQUE NOT NULL,
-    created_by      VARCHAR(128) NOT NULL,
-    CONSTRAINT uq_aggregate_seq UNIQUE (aggregate_id, sequence_number)
-);
-
-CREATE INDEX idx_fin_events_aggregate ON finance_journal_events(aggregate_id, sequence_number);
-CREATE INDEX idx_fin_events_type ON finance_journal_events(event_type);
-CREATE INDEX idx_fin_events_occurred ON finance_journal_events(occurred_at);
+-- Conformed Dimensions
+dim_date           -- Calendar + fiscal calendar (SAP fiscal year variant K4)
+dim_material       -- Material master (MARA + MARC + MAKT)
+dim_vendor         -- Vendor master (LFA1 + LFB1 + LFM1)
+dim_plant          -- Plant + storage location (T001W + T001L)
+dim_purchasing_group -- Purchasing group master (T024)
+dim_cost_center    -- CO cost centers (CSKS)
+dim_gl_account     -- GL account master (SKA1 + SKAT)
+dim_carrier        -- Freight carrier master (from TMS)
+dim_incoterm       -- Incoterms 2020 (11 rules + risk transfer point)
 ```
 
 ---
 
-## 5. Phase 2: Process Standardisation and Core Analytics
+## 7. Data Dictionary
 
-**Duration:** 8 weeks
-**Deliverables:** Standard operating procedures, reconciliation workflows, KPI dashboards
+### DD-01: fact_ppv
 
-### 5.1 P2P (Procure-to-Pay) Cycle Standardisation
+| Attribute | Detail |
+|-----------|--------|
+| Name | fact_ppv |
+| Granularity | One row per PO line item per fiscal period |
+| Primary Key | ppv_id (surrogate), natural key: EBELN + EBELP + fiscal_period |
+| Relationships | FK to dim_material (MATNR), dim_vendor (LIFNR), dim_plant (WERKS), dim_date (fiscal_period), dim_purchasing_group (EKGRP) |
 
-The P2P cycle must be fully instrumented with event-driven state transitions. Every state change emits an immutable event.
+**Fields:**
 
-```typescript
-// src/departments/11-finance-controlling/domain/PaymentDocument.ts
+| Field Name | Type | Description |
+|------------|------|-------------|
+| ppv_id | BIGINT | Surrogate primary key |
+| ebeln | NVARCHAR(10) | SAP Purchase Order number |
+| ebelp | NVARCHAR(5) | PO line item number |
+| fiscal_period | CHAR(6) | Fiscal year + period (YYYYMM) |
+| matnr | NVARCHAR(18) | Material number |
+| lifnr | NVARCHAR(10) | Vendor account number |
+| werks | NVARCHAR(4) | Plant code |
+| ekgrp | NVARCHAR(3) | Purchasing group |
+| standard_price | DECIMAL(18,4) | Standard cost price per UOM from material ledger (STPRS) |
+| actual_price | DECIMAL(18,4) | Actual invoiced price per UOM from LIV (IR unit price) |
+| po_price | DECIMAL(18,4) | Contracted PO price per UOM (NETPR/PEINH from EKPO) |
+| quantity_purchased | DECIMAL(18,3) | Quantity received and invoiced in the period |
+| uom | NVARCHAR(3) | Unit of measure (GS1 UOM code) |
+| ppv_amount_lc | DECIMAL(18,2) | PPV in local currency: (standard_price - actual_price) x quantity |
+| ppv_amount_gc | DECIMAL(18,2) | PPV in group consolidation currency (USD) |
+| ppv_pct | DECIMAL(10,4) | PPV as % of standard price |
+| price_effect | DECIMAL(18,2) | Pure price change effect vs. prior period |
+| volume_effect | DECIMAL(18,2) | Volume-driven PPV change vs. prior period |
+| mix_effect | DECIMAL(18,2) | Category/supplier mix shift effect |
+| ppv_category | NVARCHAR(50) | Classification: COMMODITY_PRICE / NEGOTIATION / SPEC_CHANGE / FX / OTHER |
+| is_favorable | BIT | 1 = favorable (paid less than standard), 0 = unfavorable |
+| etl_load_datetime | DATETIME2 | ETL load timestamp (UTC) |
 
-export type PaymentStatus =
-  | "PENDING_MATCH"
-  | "MATCHED"
-  | "EXCEPTION"
-  | "APPROVED_FOR_PAYMENT"
-  | "PAYMENT_INITIATED"
-  | "PAYMENT_CONFIRMED"
-  | "CANCELLED";
+**Transformations:** standard_price sourced from dim_material.standard_price at period start snapshot; actual_price = RSEG.WRBTR / RSEG.MENGE (invoice value / invoiced quantity); FX conversion applied using ECB rate at invoice posting date.
 
-export interface PaymentDocument {
-  readonly id: string;
-  readonly invoiceId: string;
-  readonly purchaseOrderId: string;
-  readonly goodsReceiptId: string;
-  readonly vendorId: string;
-  readonly grossAmountCents: number;
-  readonly currency: string;
-  readonly paymentDueDate: string;         // ISO 8601
-  readonly paymentTermCode: string;        // e.g., "NET30", "2/10NET30"
-  readonly status: PaymentStatus;
-  readonly matchResult?: ThreeWayMatchResult;
-  readonly approvedBy?: string;
-  readonly approvedAt?: string;
-}
+**Cleaning:** Exclude POs with NETPR = 0 (free-of-charge); exclude internal STO (stock transport orders) where BSART IN ('UB', 'NB' with internal supplying plant).
+
+**Validations:** ppv_amount_lc + price_effect + volume_effect + mix_effect = 0 (decomposition must sum to zero); ABS(ppv_pct) < 50% — flag records > 50% for data quality review.
+
+---
+
+### DD-02: fact_three_way_match
+
+| Attribute | Detail |
+|-----------|--------|
+| Name | fact_three_way_match |
+| Granularity | One row per PO line item with match status per invoice |
+| Primary Key | match_id (surrogate) |
+| Relationships | FK to dim_material, dim_vendor, dim_plant, dim_date, fact_po_line, fact_goods_receipt, fact_invoice_receipt |
+
+**Fields:**
+
+| Field Name | Type | Description |
+|------------|------|-------------|
+| match_id | BIGINT | Surrogate primary key |
+| ebeln | NVARCHAR(10) | Purchase Order number |
+| ebelp | NVARCHAR(5) | PO line item |
+| belnr_ir | NVARCHAR(10) | Invoice document number |
+| gjahr_ir | NVARCHAR(4) | Invoice fiscal year |
+| match_type | NVARCHAR(10) | '2WAY', '3WAY', '4WAY' |
+| po_quantity | DECIMAL(18,3) | Quantity on PO line |
+| gr_quantity | DECIMAL(18,3) | Total GR quantity posted |
+| ir_quantity | DECIMAL(18,3) | Total invoiced quantity |
+| po_value_lc | DECIMAL(18,2) | PO line value (local currency) |
+| gr_value_lc | DECIMAL(18,2) | GR posted value (local currency) |
+| ir_value_lc | DECIMAL(18,2) | Invoice value (local currency) |
+| qty_variance_pct | DECIMAL(10,4) | (ir_quantity - gr_quantity) / gr_quantity x 100 |
+| price_variance_pct | DECIMAL(10,4) | (ir_value/ir_quantity - po_value/po_quantity) / (po_value/po_quantity) x 100 |
+| match_status | NVARCHAR(20) | MATCHED / PRICE_EXCEPTION / QTY_EXCEPTION / MISSING_GR / DUPLICATE / BLOCKED |
+| exception_type | NVARCHAR(50) | Specific exception code for routing |
+| exception_owner | NVARCHAR(50) | AP processor or purchasing group responsible |
+| created_date | DATE | Date exception was first identified |
+| aging_days | INT | Calendar days since created_date |
+| financial_exposure_lc | DECIMAL(18,2) | Unresolved financial exposure |
+| is_resolved | BIT | 1 = resolved, 0 = open |
+| resolution_date | DATE | Date exception was resolved |
+| etl_load_datetime | DATETIME2 | ETL load timestamp (UTC) |
+
+---
+
+### DD-03: fact_landed_cost
+
+| Attribute | Detail |
+|-----------|--------|
+| Name | fact_landed_cost |
+| Granularity | One row per PO line item per shipment |
+| Primary Key | landed_cost_id (surrogate) |
+| Relationships | FK to dim_material, dim_vendor, dim_plant, dim_incoterm, dim_date |
+
+**Fields:**
+
+| Field Name | Type | Description |
+|------------|------|-------------|
+| landed_cost_id | BIGINT | Surrogate primary key |
+| ebeln | NVARCHAR(10) | Purchase Order number |
+| ebelp | NVARCHAR(5) | PO line item |
+| shipment_id | NVARCHAR(20) | Logistics shipment reference |
+| incoterm_code | NVARCHAR(3) | Incoterms 2020 rule (EXW, FCA, CPT, CIP, DAP, DPU, DDP, FAS, FOB, CFR, CIF) |
+| unit_purchase_price | DECIMAL(18,4) | Net purchase price per unit (from EKPO.NETPR) |
+| freight_unit | DECIMAL(18,4) | Allocated freight cost per unit |
+| customs_duty_unit | DECIMAL(18,4) | Customs duty per unit (ad valorem or specific) |
+| insurance_unit | DECIMAL(18,4) | Marine/cargo insurance per unit |
+| handling_unit | DECIMAL(18,4) | Port handling + last-mile cost per unit |
+| other_costs_unit | DECIMAL(18,4) | Demurrage, inspection fees, other supply chain costs |
+| total_landed_cost | DECIMAL(18,4) | Sum of all components per unit |
+| budget_landed_cost | DECIMAL(18,4) | Budgeted landed cost from annual plan |
+| variance_amount | DECIMAL(18,4) | total_landed_cost - budget_landed_cost |
+| variance_pct | DECIMAL(10,4) | variance_amount / budget_landed_cost x 100 |
+| quantity | DECIMAL(18,3) | Quantity received |
+| total_landed_value | DECIMAL(18,2) | total_landed_cost x quantity |
+| currency | NVARCHAR(3) | ISO 4217 currency code |
+| etl_load_datetime | DATETIME2 | ETL load timestamp (UTC) |
+
+---
+
+### DD-04: fact_working_capital
+
+| Attribute | Detail |
+|-----------|--------|
+| Name | fact_working_capital |
+| Granularity | One row per legal entity per fiscal period |
+| Primary Key | wc_id (surrogate), natural key: entity_id + fiscal_period |
+
+**Fields:**
+
+| Field Name | Type | Description |
+|------------|------|-------------|
+| wc_id | BIGINT | Surrogate primary key |
+| entity_id | NVARCHAR(4) | SAP company code |
+| fiscal_period | CHAR(6) | YYYYMM |
+| avg_inventory_lc | DECIMAL(18,2) | Average of opening + closing inventory value (local currency) |
+| avg_ar_lc | DECIMAL(18,2) | Average accounts receivable balance |
+| avg_ap_lc | DECIMAL(18,2) | Average accounts payable balance |
+| cogs_period_lc | DECIMAL(18,2) | Cost of goods sold for the period |
+| revenue_period_lc | DECIMAL(18,2) | Net revenue for the period |
+| dio | DECIMAL(10,2) | Days Inventory Outstanding |
+| dso | DECIMAL(10,2) | Days Sales Outstanding |
+| dpo | DECIMAL(10,2) | Days Payables Outstanding |
+| ccc | DECIMAL(10,2) | Cash Conversion Cycle = DIO + DSO - DPO |
+| working_capital_lc | DECIMAL(18,2) | Inventory + AR - AP |
+| working_capital_gc | DECIMAL(18,2) | Working capital in group currency (USD) |
+| etl_load_datetime | DATETIME2 | ETL load timestamp (UTC) |
+
+---
+
+## 8. Transformation Rules
+
+### TR-01: Standard Price Determination
+
+The standard price for PPV calculation is sourced from the SAP Material Ledger period opening standard price (CKMLCR.STPRS), NOT the current material master price. This ensures the variance is calculated against the price in effect at the start of the reporting period.
+
+```sql
+-- Rule: Standard price at period start
+SELECT
+    matnr,
+    bwkey,
+    lfgja,
+    lfmon,
+    stprs / peinh AS standard_price_per_uom
+FROM stg_co_ckmlcr
+WHERE lfgja = :fiscal_year
+  AND lfmon = :fiscal_period_start
+  AND vprsv = 'S'  -- Standard price indicator
 ```
 
-### 5.2 O2C (Order-to-Cash) Cycle Standardisation
+### TR-02: PPV Calculation
 
-Define DSO tracking at invoice line level to support real-time C2C calculation:
+```sql
+-- PPV Amount (positive = favorable, negative = unfavorable)
+ppv_amount = (standard_price - actual_price) * quantity_received
 
-```typescript
-// src/departments/11-finance-controlling/domain/ReceivableDocument.ts
+-- Actual price derived from invoice
+actual_price = ir.wrbtr / NULLIF(ir.menge, 0)  -- Invoice value / invoiced quantity
 
-export interface ReceivableDocument {
-  readonly id: string;
-  readonly customerId: string;
-  readonly salesOrderId: string;
-  readonly invoiceNumber: string;
-  readonly invoiceDate: string;
-  readonly dueDate: string;
-  readonly grossAmountCents: number;
-  readonly outstandingAmountCents: number;
-  readonly currency: string;
-  readonly agingBucket: "CURRENT" | "1_30" | "31_60" | "61_90" | "OVER_90";
-  readonly isDeleted: boolean;
-}
+-- PPV % relative to standard
+ppv_pct = (standard_price - actual_price) / NULLIF(standard_price, 0) * 100
+```
+
+### TR-03: Three-Way Match Tolerance Logic
+
+```sql
+-- Price tolerance: default +/- 2% or $50 absolute (whichever is greater)
+price_variance_pct = ABS((ir_unit_price - po_unit_price) / NULLIF(po_unit_price, 0) * 100)
+price_tolerance_met = CASE
+    WHEN price_variance_pct <= 2.0 THEN 1
+    WHEN ABS(ir_unit_price - po_unit_price) * ir_quantity <= 50.0 THEN 1
+    ELSE 0
+END
+
+-- Quantity tolerance: default +/- 5%
+qty_variance_pct = ABS((ir_quantity - gr_quantity) / NULLIF(gr_quantity, 0) * 100)
+qty_tolerance_met = CASE WHEN qty_variance_pct <= 5.0 THEN 1 ELSE 0 END
+
+-- Match status determination
+match_status = CASE
+    WHEN gr_quantity IS NULL OR gr_quantity = 0 THEN 'MISSING_GR'
+    WHEN price_tolerance_met = 1 AND qty_tolerance_met = 1 THEN 'MATCHED'
+    WHEN price_tolerance_met = 0 AND qty_tolerance_met = 1 THEN 'PRICE_EXCEPTION'
+    WHEN price_tolerance_met = 1 AND qty_tolerance_met = 0 THEN 'QTY_EXCEPTION'
+    ELSE 'PRICE_QTY_EXCEPTION'
+END
+```
+
+### TR-04: Landed Cost Allocation Rules
+
+Freight and ancillary costs are allocated to PO line items using the following hierarchy:
+
+1. **Direct assignment**: If the freight invoice references a specific PO line (po_reference + line), assign 100% to that line.
+2. **Weight-based allocation**: If freight covers multiple lines in a shipment, allocate proportionally by net weight (EKPO.NTGEW x EKPO.MENGE).
+3. **Value-based allocation (fallback)**: If weight is unavailable, allocate proportionally by PO line value (NETPR x MENGE).
+
+```sql
+-- Weight-based freight allocation
+freight_per_line = total_freight_cost * (line_weight / shipment_total_weight)
+
+-- Per-unit freight
+freight_unit = freight_per_line / NULLIF(gr_quantity, 0)
+```
+
+### TR-05: Customs Duty Calculation
+
+```sql
+-- Ad valorem duty
+customs_duty_unit = unit_purchase_price * tariff_rate_pct / 100
+
+-- Add customs value uplift (CIF basis for EU/UK imports):
+-- Customs value = Invoice value + freight to port of entry + insurance
+customs_value_unit = unit_purchase_price + freight_to_port_unit + insurance_unit
+customs_duty_unit_cif = customs_value_unit * tariff_rate_pct / 100
+```
+
+### TR-06: Working Capital Calculation
+
+```sql
+-- DIO: Average inventory / COGS * 365
+dio = (avg_inventory_lc / NULLIF(cogs_period_lc * 12, 0)) * 365
+-- Note: cogs_period_lc is monthly; annualise by multiplying by 12
+
+-- DSO: Average AR / Revenue * 365
+dso = (avg_ar_lc / NULLIF(revenue_period_lc * 12, 0)) * 365
+
+-- DPO: Average AP / COGS * 365
+dpo = (avg_ap_lc / NULLIF(cogs_period_lc * 12, 0)) * 365
+
+-- CCC
+ccc = dio + dso - dpo
+```
+
+### TR-07: FIFO vs. Moving Average Valuation Gap
+
+```sql
+-- Moving average (from material ledger)
+moving_avg_value = ckmlcr.verpr * ckmlcr.lbkum
+
+-- FIFO value (computed via lot-level FIFO layer — requires stock aging)
+-- Layer logic: consume oldest lots first at their receipt price
+fifo_value = SUM(lot_quantity * lot_receipt_price)  -- from stg_inventory_lots
+
+-- Valuation gap
+valuation_gap = fifo_value - moving_avg_value
+
+-- LCNRV write-down check (IAS 2.9)
+lcnrv_adjustment = CASE
+    WHEN MIN(nrv_per_unit) < COALESCE(standard_price, moving_avg_price) * quantity
+    THEN (standard_price - MIN(nrv_per_unit)) * quantity
+    ELSE 0
+END
 ```
 
 ---
 
-## 6. Phase 3: Mathematical Models
-
-**Duration:** 10 weeks
-**Deliverables:** Validated Python implementations, TypeScript business rule layer, unit test suite
-
-### 6.1 Three-Way Invoice Match
-
-The 3-way match is the foundational control in the P2P cycle. It compares purchase order quantity and price against the goods receipt note (GRN) quantity and the supplier invoice, applying configurable tolerances.
-
-**Business Rules:**
-- Price tolerance: +/- 2 percent of PO unit price.
-- Quantity tolerance: +/- 0.5 percent of GRN quantity.
-- Auto-approve when both variances are within tolerance.
-- Route to exception queue when either variance exceeds tolerance.
-- All amounts in integer cents; no floating-point division before multiplication.
-
-```typescript
-// src/departments/11-finance-controlling/domain/ThreeWayMatch.ts
-
-export interface MatchInput {
-  poUnitPriceCents: number;       // agreed price per unit
-  poQuantity: number;             // ordered quantity
-  grnQuantity: number;            // received quantity (GRN)
-  invoiceUnitPriceCents: number;  // billed price per unit
-  invoiceQuantity: number;        // billed quantity
-}
-
-export interface ThreeWayMatchResult {
-  priceVariancePct: number;
-  quantityVariancePct: number;
-  priceVarianceCents: number;
-  quantityVarianceCents: number;
-  totalVarianceCents: number;
-  decision: "AUTO_APPROVE" | "EXCEPTION";
-  exceptionReasons: string[];
-}
-
-const PRICE_TOLERANCE_PCT = 2.0;
-const QTY_TOLERANCE_PCT = 0.5;
-
-export function runThreeWayMatch(input: MatchInput): ThreeWayMatchResult {
-  const {
-    poUnitPriceCents, poQuantity, grnQuantity,
-    invoiceUnitPriceCents, invoiceQuantity
-  } = input;
-
-  const reasons: string[] = [];
-
-  // Price variance: (invoice price - PO price) / PO price * 100
-  const priceVarianceCents = (invoiceUnitPriceCents - poUnitPriceCents) * invoiceQuantity;
-  const priceVariancePct = poUnitPriceCents === 0
-    ? 0
-    : ((invoiceUnitPriceCents - poUnitPriceCents) / poUnitPriceCents) * 100;
-
-  // Quantity variance: (invoice qty - GRN qty) / GRN qty * 100
-  const quantityVarianceCents = (invoiceQuantity - grnQuantity) * poUnitPriceCents;
-  const quantityVariancePct = grnQuantity === 0
-    ? 0
-    : ((invoiceQuantity - grnQuantity) / grnQuantity) * 100;
-
-  if (Math.abs(priceVariancePct) > PRICE_TOLERANCE_PCT) {
-    reasons.push(
-      `Price variance ${priceVariancePct.toFixed(2)}% exceeds ±${PRICE_TOLERANCE_PCT}% tolerance`
-    );
-  }
-
-  if (Math.abs(quantityVariancePct) > QTY_TOLERANCE_PCT) {
-    reasons.push(
-      `Quantity variance ${quantityVariancePct.toFixed(2)}% exceeds ±${QTY_TOLERANCE_PCT}% tolerance`
-    );
-  }
-
-  return {
-    priceVariancePct,
-    quantityVariancePct,
-    priceVarianceCents,
-    quantityVarianceCents,
-    totalVarianceCents: priceVarianceCents + quantityVarianceCents,
-    decision: reasons.length === 0 ? "AUTO_APPROVE" : "EXCEPTION",
-    exceptionReasons: reasons,
-  };
-}
-```
-
-**Step-by-Step Implementation:**
-
-1. Subscribe to `InvoiceReceived`, `GoodsReceiptPosted`, and `PurchaseOrderApproved` Kafka topics.
-2. Build an in-memory correlation store (Redis) keyed on `po_number` to join all three documents.
-3. When all three documents are present, invoke `runThreeWayMatch()`.
-4. Persist the `ThreeWayMatchResult` to the event store with idempotency key = `invoice_id + grn_id + po_id`.
-5. Emit `InvoiceAutoApproved` or `InvoiceMatchException` event downstream.
-6. Exception events trigger a BlackLine task creation via the BlackLine API.
-
-### 6.2 Cash-to-Cash (C2C) Cycle
-
-The C2C cycle measures the number of days between paying for raw materials and collecting cash from customers. It is the primary working capital efficiency metric.
-
-```
-C2C = DIO + DSO - DPO
-
-DIO = (Average Inventory / COGS) x 365
-DSO = (Average Accounts Receivable / Revenue) x 365
-DPO = (Average Accounts Payable / COGS) x 365
-```
-
-```python
-# python/11_finance_controlling/working_capital/c2c_cycle.py
-
-import numpy as np
-import pandas as pd
-from dataclasses import dataclass
-from typing import Optional
-
-
-@dataclass
-class C2CComponents:
-    """Cash-to-Cash cycle decomposition."""
-    dio_days: float          # Days Inventory Outstanding
-    dso_days: float          # Days Sales Outstanding
-    dpo_days: float          # Days Payable Outstanding
-    c2c_days: float          # Net C2C cycle
-    period_label: str        # e.g., "2026-Q1"
-
-
-def compute_c2c(
-    avg_inventory_cents: int,
-    avg_accounts_receivable_cents: int,
-    avg_accounts_payable_cents: int,
-    cogs_cents: int,
-    revenue_cents: int,
-    days_in_period: int = 365,
-    period_label: str = "",
-) -> C2CComponents:
-    """
-    Compute the Cash-to-Cash cycle and its components.
-
-    All monetary inputs are in integer cents to avoid floating-point errors.
-    Division is performed only at the final step.
-
-    Args:
-        avg_inventory_cents: Average inventory value over the period (cents).
-        avg_accounts_receivable_cents: Average AR balance (cents).
-        avg_accounts_payable_cents: Average AP balance (cents).
-        cogs_cents: Cost of goods sold for the period (cents).
-        revenue_cents: Net revenue for the period (cents).
-        days_in_period: 365 for annual, 91 for quarterly, 30 for monthly.
-        period_label: Human-readable period identifier.
-
-    Returns:
-        C2CComponents with DIO, DSO, DPO, and net C2C days.
-
-    Raises:
-        ValueError: If COGS or revenue is zero (division guard).
-    """
-    if cogs_cents <= 0:
-        raise ValueError("COGS must be positive to compute DIO and DPO.")
-    if revenue_cents <= 0:
-        raise ValueError("Revenue must be positive to compute DSO.")
-
-    dio = (avg_inventory_cents / cogs_cents) * days_in_period
-    dso = (avg_accounts_receivable_cents / revenue_cents) * days_in_period
-    dpo = (avg_accounts_payable_cents / cogs_cents) * days_in_period
-    c2c = dio + dso - dpo
-
-    return C2CComponents(
-        dio_days=round(dio, 1),
-        dso_days=round(dso, 1),
-        dpo_days=round(dpo, 1),
-        c2c_days=round(c2c, 1),
-        period_label=period_label,
-    )
-
-
-def benchmark_c2c(c2c: float, industry: str) -> str:
-    """
-    Benchmark a C2C value against industry world-class targets.
-
-    Args:
-        c2c: Computed C2C cycle days.
-        industry: One of 'retail', 'manufacturing', 'food'.
-
-    Returns:
-        Performance tier: 'WORLD_CLASS' | 'GOOD' | 'AVERAGE' | 'LAGGARD'.
-    """
-    benchmarks = {
-        "retail":        {"world_class": 20, "good": 35, "average": 55},
-        "manufacturing": {"world_class": 30, "good": 50, "average": 75},
-        "food":          {"world_class": 15, "good": 30, "average": 50},
-    }
-    thresholds = benchmarks.get(industry, benchmarks["manufacturing"])
-    if c2c <= thresholds["world_class"]:
-        return "WORLD_CLASS"
-    elif c2c <= thresholds["good"]:
-        return "GOOD"
-    elif c2c <= thresholds["average"]:
-        return "AVERAGE"
-    return "LAGGARD"
-```
-
-**Step-by-Step Implementation:**
-
-1. Build a daily financial snapshot table populated from ERP GL extracts via the SAP BAPI `BAPI_GL_GETGLACCBALANCE`.
-2. Compute rolling 90-day averages for inventory, AR, and AP using `pandas.DataFrame.rolling(90).mean()`.
-3. Schedule the `compute_c2c()` function nightly and publish results to the KPI dashboard event stream.
-4. Configure alert rules: if C2C deteriorates by more than 3 days week-over-week, trigger a CFO notification.
-5. Store historical C2C series for trend analysis and LSTM forecasting input (Phase 4).
-
-### 6.3 Working Capital Optimisation
-
-#### Dynamic Discounting Formula
-
-Early payment discounts enable buyers to earn annualised returns on surplus cash. The discount rate must exceed the buyer's cost of capital for the transaction to be value-accretive.
-
-```
-discount_rate_pct = APR_pct x (days_early / 365)
-
-Where days_early = payment_due_date - early_payment_date
-```
-
-```python
-# python/11_finance_controlling/working_capital/dynamic_discounting.py
-
-from dataclasses import dataclass
-from datetime import date
-
-
-@dataclass
-class DynamicDiscountOffer:
-    invoice_id: str
-    gross_amount_cents: int
-    payment_due_date: date
-    early_payment_date: date
-    apr_pct: float               # Annualised Percentage Rate offered
-    discount_amount_cents: int
-    net_payment_cents: int
-    effective_yield_pct: float   # Annualised return for the buyer
-    is_value_accretive: bool     # True if yield > WACC
-
-
-def compute_dynamic_discount(
-    invoice_id: str,
-    gross_amount_cents: int,
-    payment_due_date: date,
-    early_payment_date: date,
-    apr_pct: float,
-    wacc_pct: float,
-) -> DynamicDiscountOffer:
-    """
-    Compute the discount amount and effective yield for an early payment offer.
-
-    The discount rate is prorated from APR based on the number of days early.
-    All monetary amounts remain in integer cents; rounding applied only at output.
-
-    Args:
-        invoice_id: Unique invoice identifier.
-        gross_amount_cents: Full invoice face value in cents.
-        payment_due_date: Contractual due date (ISO 8601).
-        early_payment_date: Proposed early settlement date.
-        apr_pct: Annualised discount rate offered by the platform (e.g., 8.0 for 8%).
-        wacc_pct: Buyer's weighted average cost of capital (e.g., 6.5 for 6.5%).
-
-    Returns:
-        DynamicDiscountOffer with discount amount and value-accretive flag.
-    """
-    days_early = (payment_due_date - early_payment_date).days
-    if days_early <= 0:
-        raise ValueError("early_payment_date must be before payment_due_date.")
-
-    # Prorated discount rate for this specific period
-    period_discount_rate = apr_pct * (days_early / 365) / 100
-
-    discount_cents = round(gross_amount_cents * period_discount_rate)
-    net_payment_cents = gross_amount_cents - discount_cents
-
-    # Effective annualised yield: discount / net_payment * (365 / days_early)
-    effective_yield_pct = (discount_cents / net_payment_cents) * (365 / days_early) * 100
-
-    return DynamicDiscountOffer(
-        invoice_id=invoice_id,
-        gross_amount_cents=gross_amount_cents,
-        payment_due_date=payment_due_date,
-        early_payment_date=early_payment_date,
-        apr_pct=apr_pct,
-        discount_amount_cents=discount_cents,
-        net_payment_cents=net_payment_cents,
-        effective_yield_pct=round(effective_yield_pct, 4),
-        is_value_accretive=effective_yield_pct > wacc_pct,
-    )
-```
-
-#### Supply Chain Finance (SCF) Yield Calculation
-
-For reverse factoring programmes (Taulia), the SCF yield represents the annualised return earned by the financing bank or institutional investor:
-
-```
-SCF_yield = (face_value - purchase_price) / purchase_price x (365 / days_to_maturity)
-```
-
-**Optimal Payment Timing Algorithm:**
-
-1. Rank all outstanding invoices by `(effective_yield_pct - wacc_pct)` descending.
-2. Allocate available cash to highest-yield invoices first until cash balance threshold is reached.
-3. Route remaining invoices to the Taulia SCF marketplace for supplier-initiated financing.
-4. Re-run ranking daily as new invoices arrive and cash position changes.
-
-### 6.4 Inventory Valuation (IAS 2)
-
-IAS 2 (Inventories) requires measurement at the lower of cost and net realisable value (LCNRV). The cost formula must be either FIFO or AVCO (LIFO is prohibited under IFRS).
-
-```python
-# python/11_finance_controlling/inventory_valuation/ias2_valuation.py
-
-from dataclasses import dataclass, field
-from typing import List, Tuple
-
-
-@dataclass
-class CostLayer:
-    """A single inventory cost layer (FIFO bucket)."""
-    receipt_date: str       # ISO 8601
-    quantity: float
-    unit_cost_cents: int    # per unit, integer cents
-    remaining_quantity: float = field(init=False)
-
-    def __post_init__(self) -> None:
-        self.remaining_quantity = self.quantity
-
-
-def fifo_cost_of_goods_sold(
-    cost_layers: List[CostLayer],
-    units_to_issue: float,
-) -> Tuple[int, List[CostLayer]]:
-    """
-    Consume inventory using FIFO (First In, First Out) cost layer depletion.
-
-    Args:
-        cost_layers: Ordered list of cost layers (oldest first).
-        units_to_issue: Number of units to consume.
-
-    Returns:
-        Tuple of (total COGS in cents, updated cost_layers with depleted quantities).
-
-    Raises:
-        ValueError: If insufficient inventory exists across all layers.
-    """
-    available = sum(layer.remaining_quantity for layer in cost_layers)
-    if units_to_issue > available:
-        raise ValueError(
-            f"Insufficient inventory: requested {units_to_issue}, available {available}"
-        )
-
-    total_cogs_cents = 0
-    remaining_to_issue = units_to_issue
-
-    for layer in cost_layers:
-        if remaining_to_issue <= 0:
-            break
-        consumed = min(layer.remaining_quantity, remaining_to_issue)
-        total_cogs_cents += round(consumed * layer.unit_cost_cents)
-        layer.remaining_quantity -= consumed
-        remaining_to_issue -= consumed
-
-    return total_cogs_cents, cost_layers
-
-
-def compute_avco(cost_layers: List[CostLayer]) -> int:
-    """
-    Compute Average Cost (AVCO) per unit across all layers.
-
-    Returns:
-        AVCO unit cost in integer cents.
-    """
-    total_cost = sum(
-        round(layer.remaining_quantity * layer.unit_cost_cents)
-        for layer in cost_layers
-    )
-    total_qty = sum(layer.remaining_quantity for layer in cost_layers)
-    if total_qty == 0:
-        return 0
-    return round(total_cost / total_qty)
-
-
-def apply_lcnrv(
-    cost_per_unit_cents: int,
-    net_realisable_value_cents: int,
-    quantity: float,
-) -> Tuple[int, int]:
-    """
-    Apply the Lower of Cost or Net Realisable Value rule per IAS 2.34.
-
-    NRV = estimated selling price less estimated costs of completion and selling.
-
-    Args:
-        cost_per_unit_cents: Historical cost per unit.
-        net_realisable_value_cents: Estimated NRV per unit.
-        quantity: Number of units on hand.
-
-    Returns:
-        Tuple of (carrying_value_cents, write_down_cents).
-        write_down_cents is positive when NRV < cost (impairment required).
-    """
-    lower_per_unit = min(cost_per_unit_cents, net_realisable_value_cents)
-    carrying_value_cents = round(lower_per_unit * quantity)
-    cost_value_cents = round(cost_per_unit_cents * quantity)
-    write_down_cents = max(0, cost_value_cents - carrying_value_cents)
-    return carrying_value_cents, write_down_cents
-```
-
-**Step-by-Step Implementation:**
-
-1. On each `StockMovement` event with type `GOODS_ISSUE`, call `fifo_cost_of_goods_sold()` to deplete the oldest layers first.
-2. Persist updated cost layers to the `inventory_cost_layers` table with sequence number for event sourcing.
-3. Run `apply_lcnrv()` at each month-end for all SKUs with market data available.
-4. Where NRV < cost, post a journal entry: Debit `Inventory Write-Down Expense`, Credit `Inventory Reserve`.
-5. Reverse write-downs in subsequent periods if NRV recovers (IAS 2.33).
-
-### 6.5 Landed Cost Model
-
-The total landed cost (TLC) captures all costs from the supplier's factory gate to the buyer's warehouse, providing true cost visibility for make-vs-buy and sourcing decisions.
-
-```
-TLC = EXW price
-    + Freight (ocean/air/road)
-    + Insurance (CIF = 0.5% x CIF value)
-    + Customs Duty (HS tariff rate x CIF value)
-    + Port handling charges
-    + Inland freight (last mile)
-    + Compliance costs (REACH, UFLPA clearance)
-```
-
-```typescript
-// src/departments/11-finance-controlling/domain/LandedCostModel.ts
-
-export interface LandedCostInput {
-  exwPriceCents: number;           // EXW factory price
-  freightCents: number;            // Ocean/air/road freight
-  hsTariffRatePct: number;         // Customs duty rate from HS code lookup
-  portHandlingCents: number;       // Terminal handling charges
-  inlandFreightCents: number;      // Last-mile delivery cost
-  complianceCostCents: number;     // REACH, UFLPA, AEO compliance
-  insuranceBasisOverride?: number; // Optional: override CIF basis if known
-}
-
-export interface LandedCostResult {
-  exwPriceCents: number;
-  freightCents: number;
-  cifValueCents: number;           // EXW + freight (CIF basis)
-  insuranceCents: number;          // 0.5% of CIF
-  customsDutyCents: number;        // HS rate x CIF
-  portHandlingCents: number;
-  inlandFreightCents: number;
-  complianceCostCents: number;
-  totalLandedCostCents: number;
-  landedCostMultiplier: number;    // TLC / EXW — useful for supplier comparisons
-}
-
-const INSURANCE_RATE = 0.005; // 0.5% of CIF value
-
-export function computeLandedCost(input: LandedCostInput): LandedCostResult {
-  const cifValueCents = input.exwPriceCents + input.freightCents;
-  const insuranceCents = Math.round(cifValueCents * INSURANCE_RATE);
-  const customsDutyCents = Math.round(cifValueCents * (input.hsTariffRatePct / 100));
-
-  const totalLandedCostCents =
-    input.exwPriceCents +
-    input.freightCents +
-    insuranceCents +
-    customsDutyCents +
-    input.portHandlingCents +
-    input.inlandFreightCents +
-    input.complianceCostCents;
-
-  const landedCostMultiplier =
-    input.exwPriceCents > 0
-      ? totalLandedCostCents / input.exwPriceCents
-      : 0;
-
-  return {
-    exwPriceCents: input.exwPriceCents,
-    freightCents: input.freightCents,
-    cifValueCents,
-    insuranceCents,
-    customsDutyCents,
-    portHandlingCents: input.portHandlingCents,
-    inlandFreightCents: input.inlandFreightCents,
-    complianceCostCents: input.complianceCostCents,
-    totalLandedCostCents,
-    landedCostMultiplier: Math.round(landedCostMultiplier * 10000) / 10000,
-  };
-}
-```
-
-### 6.6 Supply Chain Cost Benchmarking
-
-SC cost as a percentage of revenue is a primary Gartner Supply Chain Top 25 benchmark metric.
-
-```python
-# python/11_finance_controlling/benchmarking/sc_cost_benchmarking.py
-
-from dataclasses import dataclass
-from typing import Dict, Tuple
-
-INDUSTRY_BENCHMARKS: Dict[str, Dict[str, Tuple[float, float]]] = {
-    "retail": {
-        "sc_cost_pct_revenue": (4.0, 8.0),    # (world_class, laggard)
-        "inventory_turns":     (12.0, 4.0),
-        "otif_pct":            (98.0, 88.0),
-    },
-    "manufacturing": {
-        "sc_cost_pct_revenue": (6.0, 12.0),
-        "inventory_turns":     (8.0, 3.0),
-        "otif_pct":            (97.0, 85.0),
-    },
-    "food": {
-        "sc_cost_pct_revenue": (8.0, 15.0),
-        "inventory_turns":     (20.0, 8.0),
-        "otif_pct":            (98.5, 90.0),
-    },
-}
-
-
-@dataclass
-class BenchmarkResult:
-    metric: str
-    actual_value: float
-    world_class: float
-    laggard: float
-    percentile_estimate: float    # 0-100, higher is better
-    gap_to_world_class: float
-
-
-def benchmark_sc_cost(
-    total_sc_cost_cents: int,
-    revenue_cents: int,
-    industry: str,
-) -> BenchmarkResult:
-    """
-    Benchmark SC cost as a percentage of revenue against industry peers.
-
-    Args:
-        total_sc_cost_cents: Fully loaded SC cost (procurement + logistics + WH + quality).
-        revenue_cents: Net revenue for the same period.
-        industry: 'retail' | 'manufacturing' | 'food'.
-
-    Returns:
-        BenchmarkResult with peer comparison and gap to world class.
-    """
-    if revenue_cents <= 0:
-        raise ValueError("Revenue must be positive.")
-
-    actual_pct = (total_sc_cost_cents / revenue_cents) * 100
-    benchmarks = INDUSTRY_BENCHMARKS.get(industry, INDUSTRY_BENCHMARKS["manufacturing"])
-    wc, laggard = benchmarks["sc_cost_pct_revenue"]
-
-    # Lower cost % is better; invert scale for percentile
-    if laggard == wc:
-        percentile = 50.0
-    else:
-        raw = (laggard - actual_pct) / (laggard - wc)
-        percentile = max(0.0, min(100.0, raw * 100))
-
-    return BenchmarkResult(
-        metric="sc_cost_pct_revenue",
-        actual_value=round(actual_pct, 2),
-        world_class=wc,
-        laggard=laggard,
-        percentile_estimate=round(percentile, 1),
-        gap_to_world_class=round(actual_pct - wc, 2),
-    )
-```
-
-### 6.7 ROPA and ROWC (SCOR Asset Management Metrics)
-
-Per SCOR-DS performance attribute AM (Asset Management):
-
-```
-ROPA (AM.1.2) = EBIT / Gross PP&E
-ROWC (AM.1.3) = EBIT / Working Capital
-Working Capital = Current Assets - Current Liabilities
-```
-
-```python
-# python/11_finance_controlling/asset_management/scor_am_metrics.py
-
-from dataclasses import dataclass
-
-
-@dataclass
-class SCORAssetMetrics:
-    ropa_pct: float       # Return on Physical Assets (AM.1.2)
-    rowc_pct: float       # Return on Working Capital (AM.1.3)
-    working_capital_cents: int
-    ebit_cents: int
-
-
-def compute_scor_am_metrics(
-    ebit_cents: int,
-    gross_ppe_cents: int,
-    current_assets_cents: int,
-    current_liabilities_cents: int,
-) -> SCORAssetMetrics:
-    """
-    Compute SCOR-DS Asset Management metrics ROPA (AM.1.2) and ROWC (AM.1.3).
-
-    Args:
-        ebit_cents: Earnings Before Interest and Tax for the period.
-        gross_ppe_cents: Gross Property, Plant and Equipment (before depreciation).
-        current_assets_cents: Total current assets.
-        current_liabilities_cents: Total current liabilities.
-
-    Returns:
-        SCORAssetMetrics with ROPA and ROWC expressed as percentages.
-    """
-    working_capital = current_assets_cents - current_liabilities_cents
-
-    ropa = (ebit_cents / gross_ppe_cents * 100) if gross_ppe_cents > 0 else 0.0
-    rowc = (ebit_cents / working_capital * 100) if working_capital != 0 else 0.0
-
-    return SCORAssetMetrics(
-        ropa_pct=round(ropa, 2),
-        rowc_pct=round(rowc, 2),
-        working_capital_cents=working_capital,
-        ebit_cents=ebit_cents,
-    )
-```
-
-**Industry Targets:**
-
-| Metric | World Class | Good | Average |
-|--------|------------|------|---------|
-| ROPA | > 25% | 15-25% | 5-15% |
-| ROWC | > 40% | 25-40% | 10-25% |
-| C2C days | < 20 | 20-45 | 45-75 |
-
-### 6.8 Transfer Pricing
-
-Transfer pricing governs intercompany transactions (e.g., a procurement hub entity purchasing from suppliers and selling to operating entities at an intercompany price). OECD BEPS Actions 8-10 require that transfer prices reflect the arm's length principle.
-
-**Supported Methods:**
-
-| Method | Code | Best Used For |
-|--------|------|--------------|
-| Comparable Uncontrolled Price (CUP) | CUP | Commodities, standard products |
-| Cost Plus | CP | Manufacturing entities, toll manufacturers |
-| Transactional Net Margin Method (TNMM) | TNMM | Distribution entities, routine services |
-
-```typescript
-// src/departments/11-finance-controlling/domain/TransferPricing.ts
-
-export type TPMethod = "CUP" | "COST_PLUS" | "TNMM";
-
-export interface TPTransaction {
-  readonly id: string;
-  readonly sellingEntityId: string;      // GLN of selling legal entity
-  readonly buyingEntityId: string;       // GLN of buying legal entity
-  readonly productCode: string;          // GS1 GTIN
-  readonly method: TPMethod;
-  readonly transactionDateISO: string;
-  readonly quantityUnits: number;
-  readonly unitCostCents: number;        // Seller's cost basis
-  readonly markupPct: number;            // Arm's length markup
-  readonly intercompanyPriceCents: number;
-  readonly bepsDocumentationRef: string; // Country-file / master-file reference
-  readonly fiscalYearBenchmarkRef: string; // Benchmarking study reference
-}
-
-export function computeCostPlusPrice(
-  unitCostCents: number,
-  armLengthMarkupPct: number,
-): number {
-  // Cost Plus: intercompany price = cost x (1 + markup%)
-  // Store as integer cents; round half-up
-  return Math.round(unitCostCents * (1 + armLengthMarkupPct / 100));
-}
-
-export function validateTPArmLengthRange(
-  intercompanyPriceCents: number,
-  comparablePrices: number[],   // Array of arm's length comparables in cents
-  confidenceInterquartileRange: [number, number],  // [25th, 75th] percentile
-): { withinRange: boolean; variance: string } {
-  const [p25, p75] = confidenceInterquartileRange;
-  const withinRange = intercompanyPriceCents >= p25 && intercompanyPriceCents <= p75;
-  const midpoint = (p25 + p75) / 2;
-  const variancePct = ((intercompanyPriceCents - midpoint) / midpoint) * 100;
-  return {
-    withinRange,
-    variance: `${variancePct > 0 ? "+" : ""}${variancePct.toFixed(1)}% from IQR midpoint`,
-  };
-}
-```
-
-**BEPS Documentation Requirements (OECD 3-Tier Approach):**
-
-1. **Master File** — group-wide TP policy, value chain analysis, intangible assets register.
-2. **Local File** — entity-level intercompany transactions, functional analysis, benchmarking study.
-3. **Country-by-Country Report (CbCR)** — revenue, profit, tax, and employees by jurisdiction (required for groups with consolidated revenue > EUR 750 million).
-
-### 6.9 Variance Analysis
-
-Variance analysis decomposes the difference between standard and actual COGS into actionable components.
-
-```python
-# python/11_finance_controlling/variance_analysis/cogs_variance.py
-
-from dataclasses import dataclass
-
-
-@dataclass
-class COGSVariance:
-    """Full COGS variance decomposition."""
-    price_variance_cents: int      # (Std Price - Act Price) x Actual Qty
-    quantity_variance_cents: int   # (Std Qty - Act Qty) x Std Price
-    mix_variance_cents: int        # Product mix shift vs. standard
-    total_variance_cents: int      # Sum of all components
-    is_favourable: bool            # Negative total = favourable (cost < standard)
-
-
-def compute_purchase_price_variance(
-    standard_price_cents: int,
-    actual_price_cents: int,
-    actual_quantity: float,
-) -> int:
-    """
-    Price Variance = (Standard Price - Actual Price) x Actual Quantity.
-
-    A positive result is favourable (paid less than standard).
-
-    Args:
-        standard_price_cents: Budgeted/standard unit price in cents.
-        actual_price_cents: Actual invoiced unit price in cents.
-        actual_quantity: Actual units purchased.
-
-    Returns:
-        Price variance in cents (positive = favourable).
-    """
-    return round((standard_price_cents - actual_price_cents) * actual_quantity)
-
-
-def compute_quantity_variance(
-    standard_quantity: float,
-    actual_quantity: float,
-    standard_price_cents: int,
-) -> int:
-    """
-    Quantity Variance = (Standard Qty - Actual Qty) x Standard Price.
-
-    A positive result is favourable (used less than standard).
-
-    Args:
-        standard_quantity: Expected/budgeted quantity.
-        actual_quantity: Actual quantity consumed.
-        standard_price_cents: Budgeted/standard unit price in cents.
-
-    Returns:
-        Quantity variance in cents (positive = favourable).
-    """
-    return round((standard_quantity - actual_quantity) * standard_price_cents)
-
-
-def decompose_cogs_variance(
-    std_price_cents: int,
-    act_price_cents: int,
-    std_qty: float,
-    act_qty: float,
-) -> COGSVariance:
-    """Full COGS variance decomposition."""
-    pv = compute_purchase_price_variance(std_price_cents, act_price_cents, act_qty)
-    qv = compute_quantity_variance(std_qty, act_qty, std_price_cents)
-    total = pv + qv
-    return COGSVariance(
-        price_variance_cents=pv,
-        quantity_variance_cents=qv,
-        mix_variance_cents=0,   # Extended in multi-SKU version
-        total_variance_cents=total,
-        is_favourable=total >= 0,
-    )
-```
-
-### 6.10 Activity-Based Costing (ABC)
-
-ABC allocates overhead costs to products based on the activities that consume resources, replacing the distortions of volume-based absorption costing.
-
-```python
-# python/11_finance_controlling/abc_costing/activity_based_costing.py
-
-from dataclasses import dataclass
-from typing import Dict, List
-
-
-@dataclass
-class CostPool:
-    name: str
-    total_cost_cents: int
-    cost_driver: str        # e.g., "pick_lines", "po_lines", "inspection_hours"
-    total_driver_units: float
-
-
-@dataclass
-class ABCAllocation:
-    product_id: str
-    cost_pool_name: str
-    driver_units_consumed: float
-    allocated_cost_cents: int
-    abc_rate_cents_per_unit: float
-
-
-def compute_abc_rate(pool: CostPool) -> float:
-    """
-    Compute the ABC overhead rate for a cost pool.
-
-    ABC Rate = Total Cost Pool / Total Cost Driver Units
-
-    Args:
-        pool: CostPool with total cost and driver volumes.
-
-    Returns:
-        Rate in cents per driver unit.
-    """
-    if pool.total_driver_units <= 0:
-        raise ValueError(f"Cost pool '{pool.name}' has zero driver units.")
-    return pool.total_cost_cents / pool.total_driver_units
-
-
-def allocate_abc_costs(
-    cost_pools: List[CostPool],
-    product_driver_consumption: Dict[str, Dict[str, float]],
-) -> List[ABCAllocation]:
-    """
-    Allocate cost pools to products based on driver consumption.
-
-    Args:
-        cost_pools: List of cost pools with rates.
-        product_driver_consumption: {product_id: {cost_driver: units_consumed}}.
-
-    Returns:
-        List of ABCAllocation records with allocated costs per product per pool.
-    """
-    allocations = []
-    for pool in cost_pools:
-        rate = compute_abc_rate(pool)
-        for product_id, drivers in product_driver_consumption.items():
-            consumed = drivers.get(pool.cost_driver, 0.0)
-            allocated = round(consumed * rate)
-            allocations.append(ABCAllocation(
-                product_id=product_id,
-                cost_pool_name=pool.name,
-                driver_units_consumed=consumed,
-                allocated_cost_cents=allocated,
-                abc_rate_cents_per_unit=round(rate, 4),
-            ))
-    return allocations
-```
-
-**Standard SC Cost Drivers:**
-
-| Cost Pool | Driver | Typical Rate |
-|-----------|--------|-------------|
-| Procurement overhead | PO lines processed | $12-25 per PO line |
-| Inbound quality inspection | Inspection hours | $45-80 per hour |
-| Warehouse pick-and-pack | Pick lines | $1.50-3.50 per line |
-| Outbound logistics | Shipments dispatched | $15-40 per shipment |
-| Supplier management | Supplier scorecards | $200-500 per scorecard |
+## 9. Business Rules
+
+### BR-01: PPV Classification
+PPV must be classified into one of five categories for root-cause analysis. Classification logic uses the following hierarchy:
+- If ABS(commodity_index_change_pct) > ABS(ppv_pct) * 0.5: COMMODITY_PRICE
+- Else if vendor_negotiation_event_flag = 1 in the period: NEGOTIATION
+- Else if spec_change_flag = 1 (engineering change order linked): SPEC_CHANGE
+- Else if ABS(fx_impact_pct) > 1.0% and po_currency != functional_currency: FX
+- Else: OTHER
+
+### BR-02: 3-Way Match Tolerance Configuration
+Tolerances are configurable by vendor category and material type. Default tolerances:
+- Standard materials: Price +/-2%, Quantity +/-5%
+- Precious metals / commodities: Price +/-5% (high market volatility)
+- Services: Quantity tolerance not applicable (not GR-based)
+- Minimum absolute tolerance: $50 per invoice line (prevents micro-exception noise)
+
+### BR-03: Exception Escalation
+Open 3-way match exceptions are escalated based on age and financial exposure:
+- Age > 15 days AND exposure > $1,000: Alert to AP Supervisor
+- Age > 30 days AND exposure > $5,000: Escalate to Finance Controller
+- Age > 45 days AND exposure > $10,000: Escalate to CFO / Controller Director
+- Age > 60 days (any amount): Flag for period-end accrual consideration
+
+### BR-04: LCNRV Write-Down Trigger
+A Lower of Cost or Net Realisable Value (LCNRV) write-down must be recorded when:
+- NRV (latest selling price - estimated cost to complete and sell) < Carrying cost
+- Threshold for mandatory write-down: NRV < Cost * 0.95 (5% buffer per company policy)
+- Materials with REACH SVHC flag and no confirmed sales orders: NRV = 0 if disposal required
+
+### BR-05: Freight Cost Allocation Mandatory Fields
+Freight invoices must have a valid shipment reference (shipment_id) before allocation. Freight invoices without shipment reference (orphan freight) are accrued to a freight-in-transit suspense account and reviewed weekly.
+
+### BR-06: Currency Conversion
+All financial amounts are converted to the group reporting currency (USD) using the ECB/FRB exchange rate on the invoice posting date. Month-end balance sheet items (inventory, AR, AP) use the period closing rate. P&L items (PPV, freight) use the average rate for the period.
+
+### BR-07: Soft-Delete and Audit
+All cancelled or reversed documents retain their records in the data warehouse with a is_cancelled flag. PPV and working capital calculations net out reversals. Exception records are never hard-deleted — resolved exceptions retain resolution_date and resolution_reason.
 
 ---
 
-## 7. Phase 4: ML/AI Pipeline
+## 10. KPIs and Formulas
 
-**Duration:** 12 weeks
-**Deliverables:** Trained models, inference API, explainability reports, monitoring dashboards
+### KPI-01: Purchase Price Variance (PPV)
 
-### 7.1 XGBoost Invoice Fraud Detection
+```
+PPV_Amount = (Standard_Price - Actual_Price) × Quantity_Purchased
+```
+- Positive = FAVORABLE (company paid less than standard)
+- Negative = UNFAVORABLE (company paid more than standard)
+- Standard: Annual budgeted standard cost (from SAP CK11N standard cost estimate)
+- Actual: Effective price per unit from supplier invoice (LIV posting)
 
-Invoice fraud costs global enterprises approximately 1 percent of annual revenues. The XGBoost classifier enables real-time scoring of incoming invoices before payment approval.
+```
+PPV_Pct = (Standard_Price - Actual_Price) / Standard_Price × 100
+```
+- Target: PPV% within +/- 2% for managed spend categories
+- Alert threshold: PPV% < -5% (unfavorable) for any category > $100K spend
 
-**Feature Engineering:**
+**PPV Decomposition:**
+```
+Total PPV Change vs. Prior Period =
+    Price Effect  +  Volume Effect  +  Mix Effect
 
-| Feature | Type | Description |
-|---------|------|-------------|
-| `duplicate_hash_flag` | Binary | SHA-256 hash match against past 180 days |
-| `amount_vs_vendor_zscore` | Float | Z-score of amount vs. vendor 12-month baseline |
-| `days_since_last_invoice` | Integer | Invoice frequency anomaly detection |
-| `is_new_vendor` | Binary | First invoice within 90 days of vendor creation |
-| `new_vendor_high_amount` | Binary | New vendor AND amount > 95th percentile |
-| `payment_term_mismatch` | Binary | Invoice terms differ from PO master terms |
-| `weekend_submission` | Binary | Invoice received Saturday or Sunday |
-| `bank_account_changed` | Binary | Vendor bank details changed within 30 days |
-| `round_number_amount` | Binary | Amount is exact round number (fraud signal) |
-
-```python
-# python/11_finance_controlling/ml/invoice_fraud_detection.py
-
-import hashlib
-import numpy as np
-import pandas as pd
-import xgboost as xgb
-import shap
-from sklearn.model_selection import StratifiedKFold
-from sklearn.metrics import classification_report, roc_auc_score
-from sklearn.preprocessing import StandardScaler
-from typing import Tuple, Dict, Any
-
-
-FRAUD_THRESHOLD = 0.7   # Classification threshold per business rule
-
-
-def create_invoice_hash(
-    vendor_id: str,
-    invoice_number: str,
-    amount_cents: int,
-    currency: str,
-) -> str:
-    """Create a deterministic hash for duplicate invoice detection."""
-    raw = f"{vendor_id}|{invoice_number}|{amount_cents}|{currency}"
-    return hashlib.sha256(raw.encode()).hexdigest()
-
-
-def engineer_fraud_features(
-    df: pd.DataFrame,
-    vendor_baselines: pd.DataFrame,
-    past_hashes: set,
-) -> pd.DataFrame:
-    """
-    Engineer fraud detection features from raw invoice data.
-
-    Args:
-        df: Raw invoice DataFrame with columns: vendor_id, invoice_number,
-            gross_amount_cents, currency_code, invoice_date, payment_term_code,
-            po_payment_term_code, vendor_created_date, bank_account_changed_date.
-        vendor_baselines: Historical vendor-level stats (mean, std of amounts).
-        past_hashes: Set of known invoice SHA-256 hashes.
-
-    Returns:
-        Feature DataFrame ready for XGBoost inference.
-    """
-    features = pd.DataFrame()
-
-    # Duplicate hash detection
-    features["duplicate_hash_flag"] = df.apply(
-        lambda r: int(create_invoice_hash(
-            r["vendor_id"], r["invoice_number"],
-            r["gross_amount_cents"], r["currency_code"]
-        ) in past_hashes),
-        axis=1,
-    )
-
-    # Amount vs vendor baseline z-score
-    merged = df.merge(vendor_baselines, on="vendor_id", how="left")
-    std_safe = merged["amount_std_cents"].replace(0, np.nan)
-    features["amount_vs_vendor_zscore"] = (
-        (merged["gross_amount_cents"] - merged["amount_mean_cents"]) / std_safe
-    ).fillna(0)
-
-    # New vendor flag (vendor created within 90 days of invoice date)
-    df["invoice_date"] = pd.to_datetime(df["invoice_date"])
-    df["vendor_created_date"] = pd.to_datetime(df["vendor_created_date"])
-    features["is_new_vendor"] = (
-        (df["invoice_date"] - df["vendor_created_date"]).dt.days < 90
-    ).astype(int)
-
-    # New vendor + high amount
-    p95 = df["gross_amount_cents"].quantile(0.95)
-    features["new_vendor_high_amount"] = (
-        (features["is_new_vendor"] == 1) & (df["gross_amount_cents"] > p95)
-    ).astype(int)
-
-    # Payment term mismatch
-    features["payment_term_mismatch"] = (
-        df["payment_term_code"] != df["po_payment_term_code"]
-    ).astype(int)
-
-    # Weekend submission
-    features["weekend_submission"] = (
-        df["invoice_date"].dt.dayofweek >= 5
-    ).astype(int)
-
-    # Bank account recently changed
-    df["bank_account_changed_date"] = pd.to_datetime(
-        df["bank_account_changed_date"], errors="coerce"
-    )
-    features["bank_account_changed"] = (
-        (df["invoice_date"] - df["bank_account_changed_date"]).dt.days < 30
-    ).fillna(False).astype(int)
-
-    # Round number amount (multiple of 10,000 cents = $100)
-    features["round_number_amount"] = (
-        df["gross_amount_cents"] % 10000 == 0
-    ).astype(int)
-
-    return features
-
-
-def train_fraud_detector(
-    X: pd.DataFrame,
-    y: pd.Series,
-) -> Tuple[xgb.XGBClassifier, shap.Explainer]:
-    """
-    Train XGBoost fraud classifier with 5-fold cross-validation and SHAP explainability.
-
-    Args:
-        X: Feature matrix from engineer_fraud_features().
-        y: Binary label (1 = fraud, 0 = legitimate).
-
-    Returns:
-        Tuple of (trained classifier, SHAP TreeExplainer).
-    """
-    model = xgb.XGBClassifier(
-        n_estimators=300,
-        max_depth=6,
-        learning_rate=0.05,
-        subsample=0.8,
-        colsample_bytree=0.8,
-        scale_pos_weight=(y == 0).sum() / (y == 1).sum(),  # handle class imbalance
-        use_label_encoder=False,
-        eval_metric="auc",
-        random_state=42,
-    )
-
-    skf = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
-    auc_scores = []
-    for fold, (train_idx, val_idx) in enumerate(skf.split(X, y)):
-        X_tr, X_val = X.iloc[train_idx], X.iloc[val_idx]
-        y_tr, y_val = y.iloc[train_idx], y.iloc[val_idx]
-        model.fit(X_tr, y_tr, eval_set=[(X_val, y_val)], verbose=False)
-        preds = model.predict_proba(X_val)[:, 1]
-        auc = roc_auc_score(y_val, preds)
-        auc_scores.append(auc)
-
-    print(f"CV AUC: {np.mean(auc_scores):.4f} ± {np.std(auc_scores):.4f}")
-
-    # Retrain on full dataset
-    model.fit(X, y)
-    explainer = shap.TreeExplainer(model)
-    return model, explainer
-
-
-def score_invoice(
-    model: xgb.XGBClassifier,
-    explainer: shap.Explainer,
-    features: pd.DataFrame,
-) -> Dict[str, Any]:
-    """
-    Score a single invoice and return fraud probability with SHAP explanation.
-
-    Args:
-        model: Trained XGBoost classifier.
-        explainer: SHAP TreeExplainer for the model.
-        features: Single-row feature DataFrame.
-
-    Returns:
-        Dict with fraud_score, decision, and top SHAP contributors.
-    """
-    fraud_prob = float(model.predict_proba(features)[0, 1])
-    decision = "HOLD_FOR_REVIEW" if fraud_prob >= FRAUD_THRESHOLD else "CLEAR"
-
-    shap_values = explainer.shap_values(features)
-    feature_names = features.columns.tolist()
-    contributions = sorted(
-        zip(feature_names, shap_values[0]),
-        key=lambda x: abs(x[1]),
-        reverse=True,
-    )
-
-    return {
-        "fraud_score": round(fraud_prob, 4),
-        "decision": decision,
-        "threshold": FRAUD_THRESHOLD,
-        "top_contributors": [
-            {"feature": f, "shap_value": round(v, 4)}
-            for f, v in contributions[:5]
-        ],
-    }
+Price Effect = (Current_Price - Prior_Price) × Current_Quantity
+Volume Effect = (Current_Quantity - Prior_Quantity) × Prior_Price
+Mix Effect = Total_PPV - Price_Effect - Volume_Effect
 ```
 
-**Step-by-Step Deployment:**
+### KPI-02: Cash Conversion Cycle (CCC)
 
-1. Extract 24 months of confirmed fraud labels from accounts payable audit records.
-2. Run `engineer_fraud_features()` to build the training dataset.
-3. Train with `train_fraud_detector()` — target CV AUC > 0.92.
-4. Wrap the model in a FastAPI inference endpoint, containerised with Docker.
-5. Subscribe the inference service to the Kafka topic `invoice.received`.
-6. For each invoice: if `fraud_score >= 0.7`, emit `InvoiceFraudAlert` and create a BlackLine task.
-7. Retrain monthly on labelled feedback from the AP exception queue.
+```
+CCC = DIO + DSO - DPO
 
-### 7.2 LSTM for Working Capital Forecasting
+DIO = (Average_Inventory_Value / COGS) × 365
+DSO = (Average_Accounts_Receivable / Revenue) × 365
+DPO = (Average_Accounts_Payable / COGS) × 365
+```
+- Average = (Opening Balance + Closing Balance) / 2
+- COGS and Revenue annualised from monthly figures
+- World-class CCC target: < 35 days (retail), < 50 days (manufacturing), < 60 days (complex industrial)
+- 1-day CCC improvement = Working Capital Release = Annual_COGS / 365
 
-A Long Short-Term Memory (LSTM) network captures the temporal dependencies in AR, AP, and inventory balances to generate a 90-day rolling cash requirement forecast.
+### KPI-03: Working Capital Value
 
-```python
-# python/11_finance_controlling/ml/working_capital_lstm.py
+```
+Working_Capital = Inventory_Value + Accounts_Receivable - Accounts_Payable
+Working_Capital_as_Pct_Revenue = Working_Capital / Annual_Revenue × 100
+```
+- Target: Working Capital % Revenue < 15% for efficient operations
 
-import numpy as np
-import pandas as pd
-import torch
-import torch.nn as nn
-from torch.utils.data import DataLoader, TensorDataset
-from typing import Tuple
+### KPI-04: Landed Cost per Unit
 
+```
+Landed_Cost_Unit = Unit_Purchase_Price
+                 + Freight_per_Unit
+                 + Customs_Duty_per_Unit
+                 + Insurance_per_Unit
+                 + Handling_per_Unit
+                 + Other_Supply_Chain_Costs_per_Unit
 
-class WorkingCapitalLSTM(nn.Module):
-    """
-    LSTM model for 90-day working capital forecasting.
+Landed_Cost_vs_Budget_Pct = (Landed_Cost - Budget_Landed_Cost) / Budget_Landed_Cost × 100
+```
+- Freight share of landed cost target: < 8% for ocean, < 15% for air
+- Customs duty as % of landed cost varies by HS code and trade lane
 
-    Input: 24-month rolling window of [AR, AP, Inventory, Revenue, COGS] daily values.
-    Output: 90-day forward cash requirement in cents.
-    """
+### KPI-05: 3-Way Match Metrics
 
-    def __init__(
-        self,
-        input_size: int = 5,
-        hidden_size: int = 128,
-        num_layers: int = 2,
-        dropout: float = 0.2,
-        forecast_horizon: int = 90,
-    ) -> None:
-        super().__init__()
-        self.lstm = nn.LSTM(
-            input_size=input_size,
-            hidden_size=hidden_size,
-            num_layers=num_layers,
-            dropout=dropout,
-            batch_first=True,
-        )
-        self.fc = nn.Linear(hidden_size, forecast_horizon)
+```
+Auto_Match_Rate = Auto_Matched_Invoices / Total_Invoices × 100
+Exception_Rate = Exception_Invoices / Total_Invoices × 100
+Exception_Exposure = SUM(ABS(ir_value - po_value)) for all open exceptions
 
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
-        lstm_out, _ = self.lstm(x)
-        # Take the last time step hidden state for forecasting
-        return self.fc(lstm_out[:, -1, :])
-
-
-def prepare_sequences(
-    df: pd.DataFrame,
-    sequence_length: int = 720,  # 24 months x 30 days
-    forecast_horizon: int = 90,
-) -> Tuple[np.ndarray, np.ndarray]:
-    """
-    Prepare sliding-window sequences for LSTM training.
-
-    Args:
-        df: Daily DataFrame with columns [ar_cents, ap_cents, inventory_cents,
-            revenue_cents, cogs_cents].
-        sequence_length: Look-back window in days (720 = 24 months).
-        forecast_horizon: Forecast horizon in days (90).
-
-    Returns:
-        Tuple of (X sequences, y targets) as numpy arrays.
-    """
-    feature_cols = ["ar_cents", "ap_cents", "inventory_cents", "revenue_cents", "cogs_cents"]
-    data = df[feature_cols].values
-
-    # Normalise to [0, 1] per column (store scaler parameters for inverse transform)
-    col_maxes = data.max(axis=0)
-    col_maxes[col_maxes == 0] = 1   # avoid division by zero
-    data_norm = data / col_maxes
-
-    X, y = [], []
-    for i in range(len(data_norm) - sequence_length - forecast_horizon + 1):
-        X.append(data_norm[i : i + sequence_length])
-        # Target: cash requirement = AR - AP - Inventory (working capital need)
-        future_ar = data[i + sequence_length : i + sequence_length + forecast_horizon, 0]
-        future_ap = data[i + sequence_length : i + sequence_length + forecast_horizon, 1]
-        future_inv = data[i + sequence_length : i + sequence_length + forecast_horizon, 2]
-        cash_req = (future_ar - future_ap - future_inv) / col_maxes[0]
-        y.append(cash_req)
-
-    return np.array(X, dtype=np.float32), np.array(y, dtype=np.float32)
+Target: Auto_Match_Rate > 90%
+Alert: Exception_Rate > 10% or Exposure > $500,000
 ```
 
-**Step-by-Step Implementation:**
+### KPI-06: Freight Cost Metrics
 
-1. Load 36 months of daily GL balance extracts (AR, AP, Inventory, Revenue, COGS).
-2. Impute missing days using forward-fill; flag weekends and public holidays as features.
-3. Train the LSTM with AdamW optimiser, learning rate 1e-3, early stopping on validation MAE.
-4. Deploy the model as a scheduled inference job running nightly.
-5. Each morning, publish a `WorkingCapitalForecast90D` event to the finance event stream.
-6. The CFO dashboard displays the P10/P50/P90 confidence intervals for the 90-day forecast.
-7. Retrain quarterly with the latest actuals to prevent concept drift.
+```
+Freight_Cost_Pct_COGS = Total_Freight_Cost / COGS × 100
+Target: < 5% of COGS
 
-### 7.3 NLP for Invoice Data Extraction
-
-Automated invoice data extraction eliminates manual keying errors and accelerates the 3-way match cycle.
-
-```python
-# python/11_finance_controlling/ml/invoice_nlp_extraction.py
-
-import re
-import pdfplumber
-import pytesseract
-from PIL import Image
-from pathlib import Path
-from dataclasses import dataclass, field
-from typing import Optional, List
-from transformers import pipeline, AutoTokenizer, AutoModelForTokenClassification
-
-
-@dataclass
-class ExtractedInvoice:
-    """Structured invoice data extracted from an unstructured PDF."""
-    invoice_number: Optional[str] = None
-    invoice_date: Optional[str] = None        # ISO 8601
-    vendor_name: Optional[str] = None
-    vendor_vat_number: Optional[str] = None
-    gross_amount_str: Optional[str] = None    # String before currency parsing
-    currency_code: Optional[str] = None
-    po_number: Optional[str] = None
-    line_items: List[dict] = field(default_factory=list)
-    extraction_confidence: float = 0.0
-    validation_errors: List[str] = field(default_factory=list)
-
-
-def extract_text_from_pdf(pdf_path: str) -> str:
-    """
-    Extract text from a PDF invoice using pdfplumber (native) with
-    pytesseract OCR fallback for scanned documents.
-
-    Args:
-        pdf_path: Absolute path to the PDF file.
-
-    Returns:
-        Extracted plain text from all pages.
-    """
-    text_parts = []
-    with pdfplumber.open(pdf_path) as pdf:
-        for page in pdf.pages:
-            page_text = page.extract_text()
-            if page_text and len(page_text.strip()) > 50:
-                text_parts.append(page_text)
-            else:
-                # Fallback to OCR for scanned pages
-                img = page.to_image(resolution=300).original
-                ocr_text = pytesseract.image_to_string(img, config="--psm 6")
-                text_parts.append(ocr_text)
-    return "\n".join(text_parts)
-
-
-def validate_extraction(invoice: ExtractedInvoice, po_master: dict) -> ExtractedInvoice:
-    """
-    Validate extracted invoice fields against the PO master record.
-
-    Args:
-        invoice: Extracted invoice data.
-        po_master: PO master data dict with keys: po_number, vendor_id, amount_cents.
-
-    Returns:
-        ExtractedInvoice with validation_errors populated.
-    """
-    errors = []
-
-    if not invoice.invoice_number:
-        errors.append("Invoice number not extracted.")
-
-    if not invoice.invoice_date:
-        errors.append("Invoice date not extracted.")
-    else:
-        if not re.match(r"\d{4}-\d{2}-\d{2}", invoice.invoice_date):
-            errors.append(f"Invoice date format invalid: {invoice.invoice_date}")
-
-    if invoice.po_number and invoice.po_number != po_master.get("po_number"):
-        errors.append(
-            f"PO number mismatch: extracted '{invoice.po_number}', "
-            f"master '{po_master.get('po_number')}'."
-        )
-
-    invoice.validation_errors = errors
-    invoice.extraction_confidence = max(0.0, 1.0 - len(errors) * 0.2)
-    return invoice
+Freight_Cost_per_Kg = Total_Freight_Cost / Total_Weight_Kg (by mode/lane)
+Carrier_Rate_Variance = (Actual_Rate - Contracted_Rate) / Contracted_Rate × 100
 ```
 
-**Step-by-Step Implementation:**
+### KPI-07: Inventory Valuation Metrics
 
-1. Configure an S3-compatible object store (MinIO) to receive uploaded invoice PDFs.
-2. On upload, trigger the `extract_text_from_pdf()` pipeline via a Kafka consumer.
-3. Apply a fine-tuned LayoutLM model (Hugging Face `microsoft/layoutlmv3-base`) for structured field extraction.
-4. Run `validate_extraction()` against the PO master database.
-5. Confidence >= 0.85: route to 3-way match pipeline automatically.
-6. Confidence < 0.85: route to manual review queue with pre-filled fields.
-7. Capture human corrections as labelled training data for quarterly model fine-tuning.
+```
+FIFO_vs_MovAvg_Gap = FIFO_Inventory_Value - Moving_Avg_Inventory_Value
+FIFO_vs_MovAvg_Gap_Pct = Gap / Moving_Avg_Inventory_Value × 100
 
-### 7.4 Anomaly Detection for GL Posting Errors
-
-Isolation Forest detects statistically anomalous journal entries that may indicate control failures, posting errors, or fraud.
-
-```python
-# python/11_finance_controlling/ml/gl_anomaly_detection.py
-
-import numpy as np
-import pandas as pd
-from sklearn.ensemble import IsolationForest
-from sklearn.preprocessing import LabelEncoder, StandardScaler
-from dataclasses import dataclass
-from typing import List, Dict
-
-
-@dataclass
-class GLAnomalyResult:
-    journal_entry_id: str
-    anomaly_score: float        # Negative: more anomalous; positive: normal
-    is_anomaly: bool            # True if score < contamination threshold
-    anomalous_features: List[str]
-
-
-def engineer_gl_features(df: pd.DataFrame) -> pd.DataFrame:
-    """
-    Engineer features for GL journal entry anomaly detection.
-
-    Expected input columns: journal_entry_id, amount_cents, gl_account_code,
-        user_id, posted_at (timestamp), posting_frequency_30d.
-
-    Args:
-        df: Raw journal entry DataFrame.
-
-    Returns:
-        Numeric feature matrix for Isolation Forest.
-    """
-    features = pd.DataFrame()
-
-    # Amount features
-    features["log_abs_amount"] = np.log1p(df["amount_cents"].abs())
-    features["is_negative"] = (df["amount_cents"] < 0).astype(int)
-    features["is_round_amount"] = (df["amount_cents"] % 100000 == 0).astype(int)
-
-    # Temporal features
-    df["posted_at"] = pd.to_datetime(df["posted_at"])
-    features["hour_of_day"] = df["posted_at"].dt.hour
-    features["day_of_week"] = df["posted_at"].dt.dayofweek
-    features["is_weekend"] = (df["posted_at"].dt.dayofweek >= 5).astype(int)
-    features["is_month_end"] = (df["posted_at"].dt.day >= 28).astype(int)
-
-    # User behaviour
-    user_enc = LabelEncoder()
-    features["user_encoded"] = user_enc.fit_transform(df["user_id"].astype(str))
-    features["posting_frequency_30d"] = df["posting_frequency_30d"].fillna(0)
-
-    # GL account encoding
-    acct_enc = LabelEncoder()
-    features["account_encoded"] = acct_enc.fit_transform(
-        df["gl_account_code"].astype(str)
-    )
-
-    return features
-
-
-def train_gl_anomaly_detector(
-    features: pd.DataFrame,
-    contamination: float = 0.02,   # Expected 2% error rate in GL postings
-) -> IsolationForest:
-    """
-    Train Isolation Forest for GL anomaly detection.
-
-    Args:
-        features: Numeric feature matrix from engineer_gl_features().
-        contamination: Expected proportion of anomalies in the training data.
-
-    Returns:
-        Fitted IsolationForest model.
-    """
-    scaler = StandardScaler()
-    X_scaled = scaler.fit_transform(features)
-
-    model = IsolationForest(
-        n_estimators=200,
-        contamination=contamination,
-        max_samples="auto",
-        random_state=42,
-        n_jobs=-1,
-    )
-    model.fit(X_scaled)
-    return model
-
-
-def score_journal_entries(
-    model: IsolationForest,
-    features: pd.DataFrame,
-    journal_entry_ids: List[str],
-) -> List[GLAnomalyResult]:
-    """Score journal entries and flag anomalies for controller review."""
-    scaler = StandardScaler()
-    X_scaled = scaler.fit_transform(features)
-
-    scores = model.decision_function(X_scaled)
-    predictions = model.predict(X_scaled)   # -1 = anomaly, 1 = normal
-
-    results = []
-    for i, jeid in enumerate(journal_entry_ids):
-        is_anomaly = predictions[i] == -1
-        # Identify which features are most anomalous
-        anomalous = []
-        if is_anomaly:
-            feature_values = features.iloc[i]
-            for col in features.columns:
-                col_mean = features[col].mean()
-                col_std = features[col].std()
-                if col_std > 0 and abs((feature_values[col] - col_mean) / col_std) > 2.5:
-                    anomalous.append(col)
-        results.append(GLAnomalyResult(
-            journal_entry_id=jeid,
-            anomaly_score=round(float(scores[i]), 4),
-            is_anomaly=is_anomaly,
-            anomalous_features=anomalous,
-        ))
-    return results
+LCNRV_Exposure = SUM(MAX(0, Carrying_Cost - NRV)) for all materials
+Write_Down_Rate = LCNRV_Write_Downs / Total_Inventory_Value × 100
 ```
 
 ---
 
-## 8. Phase 5: Integration and Automation
+## 11. Analytical Logic
 
-**Duration:** 10 weeks
-**Deliverables:** Certified integration adapters, reconciliation automation, payment execution
+### PPV Decomposition Analysis
 
-### 8.1 SAP FI/CO Integration
+PPV analysis follows a three-level decomposition to move from "what happened" to "why it happened":
 
-SAP S/4HANA is the system of record for all statutory financial data. Integration uses SAP OData APIs and RFC BAPIs.
+**Level 1 — Aggregate PPV**
+Total PPV for the period vs. prior period and vs. budget. Split by favorable/unfavorable.
 
-```typescript
-// src/departments/11-finance-controlling/integrations/SAPFIAdapter.ts
+**Level 2 — Category and Supplier Drill-Down**
+PPV decomposed by: Commodity category (L1/L2/L3 from material group hierarchy), Supplier (top 20 by spend), Purchasing group, Plant/region.
 
-import axios, { AxiosInstance } from "axios";
+**Level 3 — Effect Decomposition**
+For each category or supplier, the change in PPV vs. prior period is split into:
+- **Price Effect**: How much of the change is due to the actual price changing? `Price_Effect = (P_current - P_prior) × Q_current`
+- **Volume Effect**: How much is due to buying more or less? `Volume_Effect = (Q_current - Q_prior) × P_prior`
+- **Mix Effect**: How much is due to shifting between materials or suppliers within the category? `Mix_Effect = Total_PPV_Change - Price_Effect - Volume_Effect`
 
-export interface SAPJournalEntry {
-  companyCode: string;
-  postingDate: string;          // YYYYMMDD (SAP format)
-  documentType: string;         // "SA" = GL posting, "KR" = vendor invoice
-  reference: string;
-  headerText: string;
-  lineItems: SAPLineItem[];
-}
+This decomposition enables the Procurement team to isolate whether an unfavorable PPV is driven by commodity market moves (external, limited control) versus negotiation outcomes (internal, controllable).
 
-export interface SAPLineItem {
-  glAccount: string;
-  debitCreditIndicator: "S" | "H";   // S = debit (Soll), H = credit (Haben)
-  amountInDocCurrency: number;        // SAP uses decimal; we convert from cents
-  currency: string;
-  costCenter: string;
-  profitCenter: string;
-  assignment: string;                 // PO number / cost reference
-  itemText: string;
-}
+### Cash Conversion Cycle Trend Analysis
 
-export class SAPFIAdapter {
-  private readonly client: AxiosInstance;
-  private readonly baseUrl: string;
-
-  constructor(baseUrl: string, username: string, password: string) {
-    this.baseUrl = baseUrl;
-    this.client = axios.create({
-      baseURL: baseUrl,
-      auth: { username, password },
-      headers: { "Content-Type": "application/json", "sap-client": "100" },
-      timeout: 30_000,
-    });
-  }
-
-  async postJournalEntry(entry: SAPJournalEntry): Promise<string> {
-    // Convert cent amounts to SAP decimal format
-    const payload = {
-      ...entry,
-      lineItems: entry.lineItems.map(li => ({
-        ...li,
-        amountInDocCurrency: li.amountInDocCurrency / 100,
-      })),
-    };
-    const response = await this.client.post(
-      "/sap/opu/odata/sap/API_JOURNALENTRYCREATEREQUEST_BATCH_SRV/",
-      payload,
-    );
-    return response.data.documentNumber;
-  }
-
-  async getCostCenterActuals(
-    costCenter: string,
-    fiscalYear: string,
-    period: string,
-  ): Promise<{ totalActualCents: number }> {
-    const response = await this.client.get(
-      `/sap/opu/odata/sap/API_COSTCENTER_SRV/CostCenterActuals`,
-      { params: { costCenter, fiscalYear, period } },
-    );
-    const amountDecimal = response.data.d.results[0]?.totalActual ?? 0;
-    return { totalActualCents: Math.round(amountDecimal * 100) };
-  }
-}
+CCC is tracked with 24-month rolling trend. Sensitivity analysis quantifies the working capital cash impact of improving each component by 1 day:
+```
+1-Day DIO Improvement = COGS / 365 (inventory cash release)
+1-Day DSO Improvement = Revenue / 365 (AR cash collection)
+1-Day DPO Improvement = COGS / 365 (AP cash outflow — negative impact)
 ```
 
-### 8.2 Oracle Financials Integration
+Waterfall chart shows CCC bridge: Prior Month → DIO change → DSO change → DPO change → Current Month CCC.
 
-Oracle Financials Cloud is used for AP/AR subledger management in specific regional entities.
+### Landed Cost Waterfall
 
-**Integration points:**
-- AP Invoice Import: REST API `POST /fscmRestApi/resources/11.13.18.05/payablesInvoices`
-- AR Invoice Query: REST API `GET /fscmRestApi/resources/11.13.18.05/receivablesInvoices`
-- Asset Accounting: Fixed asset addition via Oracle Assets REST API.
-
-### 8.3 Coupa Pay Dynamic Discounting
-
-Coupa Pay provides a marketplace for buyer-funded dynamic discounting. Suppliers opt in to early payment in exchange for a discount calculated using the formula in Section 6.3.
-
-**Integration flow:**
-1. 3-way match clears with `AUTO_APPROVE` decision.
-2. Compute `DynamicDiscountOffer` via `compute_dynamic_discount()`.
-3. If `is_value_accretive`, push offer to Coupa Pay via REST API: `POST /api/dynamic_discounts`.
-4. Supplier accepts or declines in Coupa Pay supplier portal.
-5. On acceptance, trigger payment instruction to the bank with reduced net amount.
-6. Post discount to GL: Debit `AP`, Credit `Cash`, Credit `Discount Income`.
-
-### 8.4 Taulia Supply Chain Finance
-
-Taulia enables supplier-initiated early payment by connecting institutional funders. Unlike dynamic discounting (buyer-funded), SCF is funder-funded, releasing the buyer's cash.
-
-**SCF yield calculation:**
-
-```python
-def compute_scf_yield(
-    face_value_cents: int,
-    purchase_price_cents: int,
-    days_to_maturity: int,
-) -> float:
-    """
-    Compute the annualised SCF yield for an investor on the Taulia marketplace.
-
-    SCF Yield = (face_value - purchase_price) / purchase_price x (365 / days_to_maturity)
-    """
-    if purchase_price_cents <= 0 or days_to_maturity <= 0:
-        raise ValueError("Purchase price and days to maturity must be positive.")
-    discount = face_value_cents - purchase_price_cents
-    yield_pct = (discount / purchase_price_cents) * (365 / days_to_maturity) * 100
-    return round(yield_pct, 4)
+For each SKU or supplier, a waterfall chart breaks down the total landed cost per unit:
 ```
-
-### 8.5 BlackLine Account Reconciliation
-
-BlackLine automates GL account reconciliation and intercompany matching, replacing spreadsheet-driven month-end closes.
-
-**Automated reconciliation rules:**
-- Bank reconciliation: Match SWIFT MT940/CAMT.053 bank statements against GL cash accounts daily.
-- Intercompany matching: Auto-match intercompany transactions via `INTERCOMPANY_CLEARING` account (GL 19000).
-- Variance threshold: Auto-certify reconciliations with unexplained variance < $500 and < 0.01%.
-
-### 8.6 SWIFT/SEPA Payment Execution
-
-All high-value payments use SWIFT; EU domestic payments use SEPA Credit Transfer.
-
-**MT940 Bank Statement Reconciliation:**
-
-```typescript
-// src/departments/11-finance-controlling/integrations/SWIFTAdapter.ts
-
-export interface MT940Statement {
-  accountNumber: string;
-  statementDate: string;     // ISO 8601
-  openingBalanceCents: number;
-  closingBalanceCents: number;
-  transactions: MT940Transaction[];
-}
-
-export interface MT940Transaction {
-  valueDate: string;
-  entryDate: string;
-  debitCredit: "D" | "C";
-  amountCents: number;
-  swiftCode: string;         // e.g., "NCHGD" for charges
-  reference: string;
-  counterpartyName: string;
-}
-
-export function parseMT940(rawMT940: string): MT940Statement {
-  // Parse SWIFT MT940 format into structured TypeScript object.
-  // Full parsing implementation omitted for brevity — use swift-parser library.
-  throw new Error("Implement MT940 parser or use swift-parser npm package.");
-}
-
-export function reconcileBankStatement(
-  statement: MT940Statement,
-  glTransactions: { amountCents: number; reference: string; date: string }[],
-): { matched: number; unmatched: MT940Transaction[] } {
-  const matched = new Set<string>();
-  const unmatched: MT940Transaction[] = [];
-
-  for (const bankTxn of statement.transactions) {
-    const glMatch = glTransactions.find(
-      gl =>
-        gl.amountCents === (bankTxn.debitCredit === "C" ? bankTxn.amountCents : -bankTxn.amountCents) &&
-        gl.reference === bankTxn.reference
-    );
-    if (glMatch) {
-      matched.add(bankTxn.reference);
-    } else {
-      unmatched.push(bankTxn);
-    }
-  }
-
-  return { matched: matched.size, unmatched };
-}
+Base Price (EXW/FOB)
+  + Origin Handling (loading, inland freight to port of export)
+  + Ocean/Air Freight
+  + Port Charges (destination)
+  + Customs Duty
+  + Insurance
+  + Last-Mile Delivery
+  = Total Landed Cost
 ```
+Variance vs. budget waterfall shows which component drove the landed cost overrun. Components sourced from: EKPO (base price), KONV (freight/insurance conditions), customs declaration data (duty), logistics actual costs.
 
-### 8.7 IFRS/GAAP Reporting
-
-| Standard | Requirement | Implementation |
-|----------|-------------|---------------|
-| IAS 2 | Inventory at LCNRV, FIFO or AVCO | `ias2_valuation.py` (Section 6.4) |
-| IAS 7 | Cash flow statement, operating/investing/financing | GL classification tags on all accounts |
-| IFRS 15 | Revenue recognised when performance obligation satisfied | SOB (Statement of Balance) trigger on delivery event |
-| ASC 330 | US GAAP LIFO reserve disclosure (US entities only) | Separate LIFO layer tracking in US sub-ledger |
-| IAS 21 | Foreign currency translation at closing rate | Nightly FX rate feed from ECB/Bloomberg |
-| IAS 36 | Impairment of non-financial assets | Annual PP&E impairment test pipeline |
-
----
-
-## 9. Phase 6: Continuous Improvement
-
-**Duration:** Ongoing (post-implementation)
-**Deliverables:** Monthly Kaizen reviews, model drift reports, KPI trend dashboards
-
-### 9.1 Financial Close Acceleration Roadmap
-
-| Milestone | Current State | 6-Month Target | 12-Month Target |
-|-----------|-------------|----------------|-----------------|
-| Month-end close duration | 8 days | 5 days | 3 days |
-| 3-way match automation rate | 40% | 75% | 92% |
-| Reconciliation items auto-certified | 30% | 65% | 85% |
-| Intercompany eliminations manual effort | 40 hours | 15 hours | 4 hours |
-
-### 9.2 Model Monitoring and Retraining
-
-```python
-# python/11_finance_controlling/monitoring/model_drift.py
-
-import pandas as pd
-import numpy as np
-from scipy import stats
-
-
-def detect_feature_drift(
-    reference_df: pd.DataFrame,
-    production_df: pd.DataFrame,
-    psi_threshold: float = 0.2,
-) -> dict:
-    """
-    Detect feature drift using Population Stability Index (PSI).
-
-    PSI < 0.1: No significant drift.
-    PSI 0.1-0.2: Moderate drift — monitor.
-    PSI > 0.2: Significant drift — retrain required.
-    """
-    psi_results = {}
-    for col in reference_df.columns:
-        ref_vals = reference_df[col].dropna()
-        prod_vals = production_df[col].dropna()
-        bins = np.percentile(ref_vals, np.linspace(0, 100, 11))
-        bins = np.unique(bins)
-        ref_pct, _ = np.histogram(ref_vals, bins=bins)
-        prod_pct, _ = np.histogram(prod_vals, bins=bins)
-        ref_pct = ref_pct / ref_pct.sum() + 1e-8
-        prod_pct = prod_pct / prod_pct.sum() + 1e-8
-        psi = np.sum((prod_pct - ref_pct) * np.log(prod_pct / ref_pct))
-        psi_results[col] = {
-            "psi": round(float(psi), 4),
-            "action": "RETRAIN" if psi > psi_threshold else "MONITOR" if psi > 0.1 else "OK",
-        }
-    return psi_results
-```
-
----
-
-## 10. Technology Stack and Architecture
-
-### 10.1 Architecture Overview
+### 3-Way Match Exception Routing
 
 ```
-                        Event Bus (Apache Kafka)
-                               |
-          +--------------------+---------------------+
-          |                    |                     |
-   Procurement Events    Inventory Events     Logistics Events
-   (PO, GRN, Invoice)   (Movements, Lots)   (Shipments, Duty)
-          |                    |                     |
-          +--------------------+---------------------+
-                               |
-                  Finance Controlling Domain
-                               |
-          +--------------------+---------------------+
-          |                    |                     |
-   3-Way Match Engine    Working Capital       Landed Cost
-   (TypeScript)          (Python LSTM)         (TypeScript)
-          |                    |                     |
-          +--------------------+---------------------+
-                               |
-               Financial Event Store (PostgreSQL)
-                               |
-          +--------------------+---------------------+
-          |                    |                     |
-     SAP FI/CO           Oracle Financials      BlackLine
-     (ERP system)        (Subledger)            (Reconciliation)
-          |                    |                     |
-          +--------------------+---------------------+
-                               |
-               IFRS/GAAP Reporting Layer
+Exception received
+    │
+    ├─ MISSING_GR → Route to Warehouse team (GR confirmation required)
+    ├─ PRICE_EXCEPTION → Route to Purchasing (PO amendment or invoice dispute)
+    ├─ QTY_EXCEPTION → Route to AP + Warehouse (quantity reconciliation)
+    ├─ DUPLICATE → Route to AP (hold payment, investigate duplicate)
+    └─ BLOCKED → Route to QM team (goods blocked for quality inspection)
 ```
 
-### 10.2 Data Flow Architecture
+Each exception displays: PO number, supplier, material, dollar exposure, age in days, assigned owner, last action taken, SLA status (Green < 15 days, Amber 15-30 days, Red > 30 days).
 
-All financial events are immutable. The event store supports full audit trail replay, which is mandatory for IFRS and SOX compliance.
+### Freight Cost Allocation Logic
 
-| Layer | Technology | Purpose |
-|-------|-----------|---------|
-| Event ingestion | Apache Kafka 3.6 | Real-time financial event streaming |
-| Domain logic | TypeScript 5.4 | Business rules, validation, aggregates |
-| Mathematical models | Python 3.11 | C2C, LCNRV, variance, ABC |
-| ML inference | PyTorch + XGBoost | Fraud detection, WC forecasting |
-| Event store | PostgreSQL 15 JSONB | Immutable financial audit log |
-| Cache / state | Redis 7.2 | 3-way match correlation store |
-| ERP integration | SAP OData / Oracle REST | Bi-directional GL posting |
-| Reconciliation | BlackLine API | Automated account certification |
-| Payments | SWIFT / SEPA | Payment execution and reconciliation |
-| Reporting | Grafana + dbt | KPI dashboards and financial reports |
+1. **Direct match**: Freight invoice line directly references PO → 1:1 allocation.
+2. **Shipment consolidation**: Multiple POs on one shipment → allocate by net weight (primary), then by value (fallback).
+3. **Period accrual**: Freight invoices received after period close but relating to goods receipted in the period → accrue based on contracted rate × weight.
+4. **Mode comparison**: For each lane, compare actual vs. contracted rate by carrier. Flag overcharges > 2% for dispute resolution.
 
 ---
 
-## 11. Change Management and Training
+## 12. Validations and Controls
 
-### 11.1 Stakeholder Matrix
+### VC-01: PPV Control Checks
 
-| Stakeholder Group | Impact | Engagement Strategy | Training Format |
-|------------------|--------|--------------------|--------------------|
-| AP/AR Clerks | High | Process redesign workshops | Hands-on system training (8h) |
-| Financial Controllers | High | Co-design sessions | Advanced analytics training (16h) |
-| Procurement Managers | Medium | Integration briefings | PO-to-payment process training (4h) |
-| CFO / Treasury | High | Executive steering committee | KPI dashboard walkthrough (2h) |
-| IT / Basis Team | High | Technical design reviews | System administration training (24h) |
-| Internal Audit | Medium | Control framework review | Audit trail and evidence packs (4h) |
-| External Auditors | Low | Observation sessions | Model documentation review |
+| Check | Rule | Action |
+|-------|------|--------|
+| Price reasonableness | ABS(ppv_pct) < 50% | Flag for manual review; exclude from automated reports |
+| Standard price exists | standard_price > 0 for all active materials | Block PPV calculation; alert master data team |
+| No double-counting | One PPV record per IR document line per period | Deduplication query in ETL |
+| FX rate availability | Exchange rate exists for all invoice currencies | Fallback to prior day rate; alert FX data feed team |
+| Period alignment | PPV posting period = IR posting period | Reject records with cross-period posting |
 
-### 11.2 Training Curriculum
+### VC-02: 3-Way Match Control Checks
 
-| Module | Duration | Audience | Delivery |
-|--------|----------|----------|----------|
-| P2P Process Redesign | 4 hours | AP Team | Instructor-led |
-| 3-Way Match Exception Handling | 2 hours | AP Team | E-learning |
-| Working Capital Dashboard | 3 hours | Finance Controllers | Workshop |
-| Transfer Pricing Documentation | 4 hours | Tax & Finance | Instructor-led |
-| ML Model Interpretation (SHAP) | 2 hours | Finance Analytics | Workshop |
-| BlackLine Reconciliation | 4 hours | Close Team | Hands-on lab |
-| IFRS Reporting Module | 6 hours | Reporting Team | Instructor-led |
+| Check | Rule | Action |
+|-------|------|--------|
+| No unmatched blocking | Invoices in BLOCKED status < 5% of total | Alert AP Manager; escalate if > 7 days |
+| Duplicate invoice prevention | LIFNR + XBLNR + WRBTR unique per period | Reject duplicate; send to AP for investigation |
+| GR date before IR date | MKPF.BUDAT <= RBKP.BLDAT | Flag IR posted before GR (3-way match violation) |
+| Quantity over-invoicing | ir_quantity <= po_quantity + GR_tolerance | Block payment; escalate to AP Supervisor |
+| Currency match | IR currency = PO currency | Reject; require currency amendment |
 
-### 11.3 Resistance Management
+### VC-03: Working Capital Checks
 
-Common resistance patterns and mitigations:
+| Check | Rule | Action |
+|-------|------|--------|
+| Balance sheet reconciliation | avg_inventory = (GL inventory balance opening + closing) / 2 | Reject if variance > $1,000 |
+| AR/AP sub-ledger tie | avg_ar matches AR aging report; avg_ap matches AP aging report | Alert if variance > $5,000 |
+| DIO/DSO/DPO reasonableness | DIO < 365; DSO < 180; DPO < 180 | Flag outliers; investigate balance sheet anomalies |
+| Negative working capital alert | working_capital < 0 | Immediate alert to CFO; treasury notification |
 
-1. **"The system doesn't understand our exceptions."** — Mitigation: exception queue with human override capability; every auto-decision is explainable and reversible.
-2. **"Transfer pricing rules are too rigid."** — Mitigation: parameterisable markup tables per method and country; TP policy engine separate from enforcement engine.
-3. **"We don't trust the ML fraud score."** — Mitigation: SHAP explainability for every score; 90-day parallel-run period with human override tracking.
+### VC-04: Period Close Readiness Gates
 
----
-
-## 12. Implementation KPIs
-
-### 12.1 Financial Process KPIs
-
-| KPI | Baseline | 6-Month Target | 12-Month Target | SCOR Reference |
-|-----|---------|----------------|-----------------|----------------|
-| 3-way match automation rate | 40% | 75% | 92% | EP.07 |
-| Invoice processing cost per invoice | $12.50 | $8.00 | $4.50 | EP.07 |
-| Cash-to-Cash cycle (days) | 52 days | 44 days | 38 days | AM.1.1 |
-| Days Payable Outstanding | 32 days | 42 days | 50 days | AM.1.3 |
-| Days Sales Outstanding | 48 days | 40 days | 35 days | AM.1.3 |
-| Days Inventory Outstanding | 36 days | 32 days | 28 days | AM.1.2 |
-| Invoice fraud detection precision | N/A | 88% | 95% | EP.07 |
-| Month-end close duration | 8 days | 5 days | 3 days | EP.08 |
-| Working capital forecast MAPE | N/A | 15% | 8% | EP.08 |
-| Intercompany elimination errors | 45/month | 15/month | < 3/month | EP.10 |
-| Transfer pricing documentation coverage | 60% | 85% | 100% | EP.10 |
-| SC cost as % of revenue | 9.8% | 8.5% | 7.2% | AM.1.1 |
-| ROPA (Return on Physical Assets) | 12% | 16% | 20% | AM.1.2 |
-| ROWC (Return on Working Capital) | 18% | 26% | 34% | AM.1.3 |
-| GL anomaly false positive rate | N/A | < 15% | < 8% | EP.09 |
-
-### 12.2 Technical KPIs
-
-| KPI | Target |
-|-----|--------|
-| Invoice fraud model CV AUC | > 0.92 |
-| Working capital LSTM MAPE | < 10% at 30 days, < 18% at 90 days |
-| NLP invoice extraction accuracy | > 95% for mandatory fields |
-| GL anomaly Isolation Forest AUC | > 0.85 |
-| 3-way match engine latency | < 200ms p99 |
-| SAP integration uptime | > 99.5% |
-| Event store replay capability | Full replay in < 4 hours |
+Before the monthly period close report is published:
+1. All 3-way match exceptions aged > 45 days must have a resolution note or accrual posted.
+2. FIFO vs. Moving Average gap reconciliation must be signed off by Cost Accounting.
+3. LCNRV review completed and write-downs approved by Finance Director.
+4. Freight accruals posted for all GRs without freight invoice as of period close.
+5. PPV report reviewed and signed off by CPO and Finance Controller.
 
 ---
 
-## 13. Risk and Mitigation
+## 13. Required Evidence
 
-### 13.1 Risk Register
+### EV-01: For PPV Reporting
+- SAP Material Ledger standard cost estimate (CK13N) showing approved standard prices for the period.
+- Commodity index source (e.g., LME copper price, oil price index) used for COMMODITY_PRICE classification.
+- Signed-off PPV report from Finance Controller and CPO for each monthly close.
 
-| Risk ID | Risk Description | Probability | Impact | Score | Mitigation | Owner |
-|---------|----------------|-------------|--------|-------|-----------|-------|
-| R-01 | SAP integration delays due to BASIS resource constraints | High | High | 16 | Engage SAP partner for dedicated BASIS support; pre-book installation windows | IT Director |
-| R-02 | Data quality issues prevent 3-way match automation | High | High | 16 | Phase 0 data quality assessment; mandatory data cleansing sprint before go-live | Data Governance Lead |
-| R-03 | Transfer pricing model challenged by tax authority | Medium | Critical | 15 | Engage Big-4 TP specialist; contemporaneous documentation from Day 1 | CFO / Tax Director |
-| R-04 | ML fraud model generates high false positive rate | Medium | High | 12 | Parallel-run period; SHAP explainability; manual override tracking | Finance Analytics Lead |
-| R-05 | IFRS 15 revenue recognition timing errors | Low | Critical | 12 | Automated performance obligation checklist tied to delivery events | Financial Controller |
-| R-06 | SWIFT connectivity disruption | Low | High | 8 | Redundant SWIFT Service Bureau; SEPA fallback for EUR payments | Treasury Manager |
-| R-07 | Taulia SCF programme take-up lower than forecast | Medium | Medium | 9 | Supplier onboarding campaign; dedicated supplier success manager | Procurement Director |
-| R-08 | LSTM model concept drift in economic downturn | Low | Medium | 6 | Quarterly retraining; PSI drift monitoring; manual override capability | Finance Analytics Lead |
+### EV-02: For 3-Way Match
+- SAP tolerance configuration screenshot (OMR6 — invoice verification tolerances) for audit purposes.
+- Exception aging report snapshot at period close showing total open exposure.
+- Evidence that escalations were performed per BR-03 for exceptions > 30 days.
 
-### 13.2 Control Framework
+### EV-03: For Inventory Valuation
+- FIFO layer calculation workbook or database query confirming lot-level cost assignment.
+- LCNRV assessment workbook signed by Finance Controller per IAS 2.9 requirements.
+- Prior period restatement approval if LCNRV write-downs were reversed.
 
-All financial controls must be documented in the Internal Control Matrix (ICM) per SOX 302/404 and COSO 2013 Framework:
+### EV-04: For Landed Cost
+- Freight invoice copies for top 10 lanes by spend (audit sample).
+- Customs declaration (SAD/Entry Summary) confirming duty rate applied.
+- Insurance certificate confirming premium rate.
 
-| Control ID | Control Description | Control Type | Frequency | Evidence |
-|-----------|--------------------|-----------|-----------| ---------|
-| FC-01 | 3-way match auto-approve threshold review | Preventive | Monthly | Exception report |
-| FC-02 | GL anomaly flagging and review | Detective | Daily | Anomaly review log |
-| FC-03 | Transfer pricing arm's length validation | Preventive | Per transaction | TP documentation |
-| FC-04 | LCNRV write-down computation and approval | Preventive | Monthly | Write-down register |
-| FC-05 | Intercompany balance reconciliation | Detective | Daily | BlackLine certification |
-| FC-06 | Segregation of duties: posting vs. approval | Preventive | Continuous | SAP authorisation log |
-| FC-07 | Vendor bank detail change control | Preventive | Per change | Dual-approval log |
+### EV-05: For Working Capital
+- GL trial balance extract reconciling inventory, AR, and AP balances.
+- Treasury sign-off on CCC calculation for group cash flow reporting.
 
 ---
 
-## 14. Timeline Summary
+## 14. Dashboard Design
 
-| Phase | Description | Duration | Start | End | Key Deliverables |
-|-------|-------------|----------|-------|-----|-----------------|
-| Phase 0 | Assessment and AS-IS Analysis | 4 weeks | Week 1 | Week 4 | Gap analysis, business case, programme charter |
-| Phase 1 | Foundation and Master Data | 6 weeks | Week 5 | Week 10 | CoA, cost centres, event store schema |
-| Phase 2 | Process Standardisation | 8 weeks | Week 11 | Week 18 | Standard P2P/O2C workflows, KPI framework |
-| Phase 3 | Mathematical Models | 10 weeks | Week 13 | Week 22 | 3-way match, C2C, LCNRV, landed cost, ABC, TP |
-| Phase 4 | ML/AI Pipeline | 12 weeks | Week 15 | Week 26 | Fraud detection, LSTM, NLP, GL anomaly |
-| Phase 5 | Integration and Automation | 10 weeks | Week 19 | Week 28 | SAP, Oracle, Coupa, Taulia, BlackLine, SWIFT |
-| Phase 6 | Continuous Improvement | Ongoing | Week 29 | Ongoing | Monthly Kaizen, model retraining, close acceleration |
+### Power BI Report Structure
 
-**Total elapsed time to steady-state:** 28 weeks (7 months)
+**Page 1: Finance Supply Chain Executive Summary**
+- KPI cards: CCC (current vs. prior month vs. benchmark), PPV total ($, favorable vs. unfavorable), 3-Way Match Auto Rate, Freight % COGS
+- CCC waterfall: DIO + DSO - DPO with prior month comparison
+- PPV trend: 12-month line chart by category (favorable/unfavorable stacked bar)
+- Working capital bridge: Opening → Inventory change → AR change → AP change → Closing
 
-**Note:** Phases 3, 4, and 5 run in parallel from Week 13-22 to compress the critical path. The Programme Management Office (PMO) must maintain a daily dependency log to prevent blocking between tracks.
+**Page 2: Purchase Price Variance Detail**
+- Top 10 unfavorable PPV by supplier (bar chart, $)
+- Top 10 unfavorable PPV by commodity category (bar chart, $)
+- PPV decomposition: Price / Volume / Mix effects (waterfall)
+- PPV % distribution: Histogram of PPV% across all PO lines
+- Drillthrough: Supplier → All PO lines with PPV detail
 
-### Milestone Gates
+**Page 3: Working Capital Analysis**
+- DIO / DSO / DPO trend: 24-month line chart per entity
+- CCC by entity: Bar chart comparison across legal entities
+- Working capital sensitivity: Table showing $impact of +/- 1 day in each metric
+- Inventory days by product category: Heatmap (Category × Month)
 
-| Gate | Week | Go/No-Go Criteria |
-|------|------|-------------------|
-| G1: Foundation ready | Week 10 | CoA approved, event store deployed, SAP access granted |
-| G2: Model validation | Week 22 | All Phase 3 models unit-tested; CV AUC > 0.90 for ML models |
-| G3: Integration UAT | Week 26 | All integrations pass end-to-end UAT; zero P1 defects |
-| G4: Parallel run | Week 27 | 2-week parallel run with legacy system; variances < 0.1% |
-| G5: Go-live | Week 28 | All gates cleared; rollback plan approved by CFO |
+**Page 4: Inventory Valuation**
+- FIFO vs. Moving Average gap: Bar chart by plant
+- LCNRV write-down exposure: List of materials at risk with exposure ($)
+- Inventory aging: Bucket analysis (0-30, 31-60, 61-90, 91-180, 180+ days)
+- Slow-moving inventory flag: Materials with DIO > 2× category average
 
----
+**Page 5: Landed Cost Analysis**
+- Landed cost waterfall: By top 10 SKUs (base price + each cost component)
+- Landed cost variance: Budget vs. actual by component (100% stacked bar)
+- Duty rate heatmap: HS code × country of origin
+- Freight cost per kg by mode: Trend chart (12 months)
 
-## 15. References
+**Page 6: 3-Way Match Exception Dashboard**
+- Exception funnel: Total invoices → Auto-matched → Exceptions by type
+- Exception aging buckets: 0-15 / 15-30 / 30-45 / 45+ days with exposure ($)
+- Open exception table: Sortable by age, exposure, owner, exception type
+- SLA compliance: % of exceptions resolved within 15 days (target > 80%)
 
-### Academic and Professional Standards
+**Page 7: Freight Cost Analysis**
+- Freight % COGS: 12-month trend by transport mode
+- Carrier rate variance: Actual vs. contracted by carrier (bar chart)
+- Top 10 lanes by freight spend (map + table)
+- Surcharge analysis: BAF, PSS, peak season surcharge trend
 
-1. Kaplan, R.S. and Anderson, S.R. (2007). *Time-Driven Activity-Based Costing*. Harvard Business Press.
-2. ASCM (2019). *SCOR Digital Standard v12.0*. Association for Supply Chain Management.
-3. IASB (2023). *IAS 2 Inventories*. International Financial Reporting Standards Foundation.
-4. IASB (2016). *IAS 7 Statement of Cash Flows*. International Financial Reporting Standards Foundation.
-5. IASB (2014). *IFRS 15 Revenue from Contracts with Customers*. IASB.
-6. OECD (2022). *Transfer Pricing Guidelines for Multinational Enterprises and Tax Administrations*. OECD Publishing.
-7. OECD (2015). *BEPS Actions 8-10: Aligning Transfer Pricing Outcomes with Value Creation*. OECD/G20.
-8. COSO (2013). *Internal Control — Integrated Framework*. Committee of Sponsoring Organisations.
-9. Chopra, S. and Meindl, P. (2016). *Supply Chain Management: Strategy, Planning, and Operation*. 6th ed. Pearson.
-10. Fabozzi, F.J. and Drake, P.P. (2009). *Finance: Capital Markets, Financial Management, and Investment Management*. Wiley.
-
-### Regulatory References
-
-11. EU Directive 2024/1760 (CSDDD) — Supply Chain Due Diligence.
-12. US Pub.L. 117-78 (UFLPA) — Uyghur Forced Labor Prevention Act.
-13. ISO 28000:2022 — Security and resilience: Supply chain security management systems.
-14. ISO 9001:2015 — Quality management systems.
-15. GS1 General Specifications v23.0 — GLN, GTIN, UOM codes.
-16. Incoterms 2020 — International Chamber of Commerce.
-17. SWIFT Standards Release Guide — MT940, CAMT.053.
-18. FASB ASC 330 — Inventory (US GAAP counterpart to IAS 2).
-19. PCAOB AS 2201 — An Audit of Internal Control Over Financial Reporting (SOX 404).
-
-### Technology References
-
-20. Chen, T. and Guestrin, C. (2016). XGBoost: A Scalable Tree Boosting System. *KDD 2016*.
-21. Hochreiter, S. and Schmidhuber, J. (1997). Long Short-Term Memory. *Neural Computation*, 9(8).
-22. Liu, F.T., Ting, K.M. and Zhou, Z.H. (2008). Isolation Forest. *ICDM 2008*.
-23. Lundberg, S.M. and Lee, S.I. (2017). A Unified Approach to Interpreting Model Predictions. *NeurIPS 2017* (SHAP).
-24. Xu, Y. et al. (2020). LayoutLM: Pre-training of Text and Layout for Document Image Understanding. *KDD 2020*.
+**Filters Available Across All Pages**
+- Fiscal Year / Period (single or range)
+- Legal Entity / Company Code
+- Plant / Region
+- Commodity Category / Material Group
+- Vendor / Supplier
+- Purchasing Group
 
 ---
 
-*End of Implementation Guide — Finance and Supply Chain Controlling*
+## 15. Use Cases
 
-*Document Owner: Supply Chain Finance Director*
-*Review Cycle: Annually or upon material regulatory change*
-*Next Review Date: 2027-06-20*
+### UC-01: Month-End Close Pack Preparation
+**Actor:** Finance Controller
+**Trigger:** Last working day of fiscal period
+**Process:**
+1. Controller opens Page 1 Executive Summary — validates all KPI cards show current period data.
+2. Reviews PPV report (Page 2) — exports top 10 unfavorable items for CPO commentary.
+3. Reviews 3-way match exception queue (Page 6) — confirms all exceptions > 45 days have accruals.
+4. Signs off working capital position (Page 3) and sends to Treasury.
+5. Exports LCNRV write-down list (Page 4) for Finance Director approval.
+6. Close pack PDF auto-generated and distributed to CFO/CPO by D+1 of month close.
+
+### UC-02: Procurement Negotiation Preparation
+**Actor:** Category Manager / CPO
+**Trigger:** Quarterly supplier review preparation
+**Process:**
+1. Filter Page 2 by supplier and 12-month period.
+2. Review PPV trend — identify suppliers with consistently unfavorable PPV (paid more than standard).
+3. Export PPV decomposition — separate commodity price exposure from negotiation outcomes.
+4. Use landed cost analysis (Page 5) to understand total cost of ownership vs. cheaper apparent suppliers.
+5. Prepare supplier negotiation brief with 12-month PPV data as supporting evidence.
+
+### UC-03: Exception Queue Management
+**Actor:** AP Processor / AP Supervisor
+**Trigger:** Daily exception queue review
+**Process:**
+1. AP Processor opens Page 6 — filters to own exception queue by owner field.
+2. Sorts by aging days descending — addresses oldest exceptions first.
+3. For MISSING_GR exceptions: contacts warehouse team to confirm receipt.
+4. For PRICE_EXCEPTION: raises dispute with supplier or requests PO amendment.
+5. Supervisor monitors SLA compliance — escalates Red exceptions (> 30 days) per BR-03.
+
+### UC-04: Working Capital Improvement Program
+**Actor:** Supply Chain Director + Treasury + Finance Controller
+**Trigger:** Quarterly working capital review
+**Process:**
+1. Review CCC trend (Page 3) — identify which component (DIO/DSO/DPO) is deteriorating.
+2. Run sensitivity analysis — calculate $ impact of 5-day DIO reduction.
+3. Drill into inventory aging (Page 4) — identify slow-moving stock categories.
+4. For DPO improvement: identify suppliers where actual payment < contracted terms (early payment leakage).
+5. Design targeted improvement initiatives with measurable CCC impact.
+
+---
+
+## 16. Recommended Actions
+
+### RA-01: PPV Management
+- Establish a PPV owner in each commodity category (category manager) with monthly accountability.
+- Set PPV budget targets by category at the start of each fiscal year aligned with the annual operating plan.
+- For COMMODITY_PRICE classified PPV > 3% unfavorable: consider hedging instruments (forward contracts, fixed-price agreements).
+- For NEGOTIATION classified unfavorable PPV: initiate supplier negotiation within 60 days; escalate to CPO if unresolved.
+
+### RA-02: 3-Way Match Automation
+- Target 95% auto-match rate within 12 months by: (a) cleaning up PO price accuracy at creation, (b) implementing EDI-based invoice receipt (eliminating paper/manual entry), (c) training suppliers on e-invoicing via supplier portal.
+- Implement SAP Invoice Management (OpenText or SAP Fiori) for exception workflow automation.
+- Set up daily exception SLA monitoring with automated email alerts to exception owners.
+
+### RA-03: Working Capital Optimisation
+- For DIO reduction: implement ABC analysis-driven reorder points; excess stock > DIO threshold triggers markdown or return-to-vendor.
+- For DPO optimisation: review all supplier payment terms; negotiate 60-day terms for strategic suppliers (Kraljic STRATEGIC quadrant) while maintaining 30-day for BOTTLENECK suppliers.
+- For DSO reduction: implement dynamic discounting for early customer payment.
+
+### RA-04: Landed Cost Transparency
+- Mandate that all new POs for imported materials include estimated landed cost breakdown in SAP (via condition types).
+- Implement customs classification (HS code) governance: quarterly review to ensure correct duty rates applied.
+- Negotiate all-inclusive (DDU/DDP) pricing with suppliers for high-volume lanes to simplify landed cost tracking.
+
+### RA-05: Freight Cost Control
+- Implement carrier rate audit: automated comparison of invoiced rate vs. contracted rate for every freight invoice.
+- Dispute process: Any carrier invoice > 2% above contracted rate automatically triggers dispute; payment withheld until resolved.
+- Quarterly lane optimisation review: consolidate LTL to FTL where volume justifies; shift air to ocean for non-urgent shipments.
+
+---
+
+## 17. Test Cases
+
+### TC-01: PPV Calculation Correctness
+
+**Scenario:** PO line for 1,000 units of SKU-A with PO price $10.00/unit. Standard price $10.50/unit. Invoice received for 950 units at $10.20/unit.
+
+**Expected PPV:**
+- Actual price = $10.20
+- Standard price = $10.50
+- Quantity invoiced = 950 units
+- PPV = ($10.50 - $10.20) × 950 = $285.00 FAVORABLE
+- PPV% = ($10.50 - $10.20) / $10.50 × 100 = 2.86%
+
+**Test steps:**
+1. Insert test PO, GR, and IR records with above values into staging tables.
+2. Run ETL transformation pipeline.
+3. Query fact_ppv for the test EBELN.
+4. Assert: ppv_amount = 285.00 (tolerance ±$0.01), ppv_pct = 2.857% (tolerance ±0.01%), is_favorable = 1.
+
+### TC-02: 3-Way Match — Price Exception
+
+**Scenario:** PO price = $100.00/unit, GR = 100 units, Invoice = 100 units at $103.50/unit. Price variance = 3.5% > 2% tolerance.
+
+**Expected match_status:** PRICE_EXCEPTION
+**Expected financial_exposure:** ABS(($103.50 - $100.00) × 100) = $350.00
+
+**Test steps:**
+1. Create test PO, GR, IR with above values.
+2. Run match ETL.
+3. Assert: match_status = 'PRICE_EXCEPTION', financial_exposure_lc = 350.00, aging_days = 0 on day of creation.
+
+### TC-03: CCC Calculation
+
+**Scenario:** Entity ABC, Period 2026-03.
+- Average Inventory: $5,000,000
+- Average AR: $3,000,000
+- Average AP: $2,500,000
+- Monthly COGS: $4,000,000 → Annual: $48,000,000
+- Monthly Revenue: $6,000,000 → Annual: $72,000,000
+
+**Expected:**
+- DIO = ($5,000,000 / $48,000,000) × 365 = 38.02 days
+- DSO = ($3,000,000 / $72,000,000) × 365 = 15.21 days
+- DPO = ($2,500,000 / $48,000,000) × 365 = 19.01 days
+- CCC = 38.02 + 15.21 - 19.01 = 34.22 days
+
+**Test steps:**
+1. Insert test working capital records.
+2. Run working capital ETL.
+3. Assert all four calculated fields within ±0.1 days of expected.
+
+### TC-04: LCNRV Write-Down Detection
+
+**Scenario:** Material X has moving average cost $50.00/unit, stock 200 units. Current NRV (estimated selling price $55 - estimated selling costs $8) = $47.00/unit.
+
+**Expected:** Write-down required because NRV ($47) < Cost ($50).
+**Write-down amount** = ($50 - $47) × 200 = $600.
+
+**Test steps:**
+1. Insert material valuation and NRV data.
+2. Run LCNRV check procedure.
+3. Assert: write_down_required = 1, write_down_amount = 600.00.
+
+### TC-05: Freight Allocation — Weight-Based
+
+**Scenario:** Shipment with two PO lines: Line 1 = 100 kg, Line 2 = 400 kg. Total freight = $2,500.
+
+**Expected:**
+- Line 1 freight = $2,500 × (100/500) = $500
+- Line 2 freight = $2,500 × (400/500) = $2,000
+
+**Test steps:**
+1. Insert shipment and PO line weight data.
+2. Run freight allocation ETL.
+3. Assert allocation amounts match expected values within $0.01.
+
+---
+
+## 18. Risks and Mitigations
+
+| Risk ID | Risk Description | Probability | Impact | Mitigation |
+|---------|-----------------|-------------|--------|------------|
+| R-01 | SAP standard prices not maintained timely → PPV calculations incorrect | Medium | High | Automate standard price freeze notification at period start; block PPV report publication if > 5% materials missing standard price |
+| R-02 | Freight invoices received after period close → Landed cost understated | High | Medium | Implement accrual model using contracted rates × GR quantities for all uninvoiced freight; review and reverse next period |
+| R-03 | FX rate feed failure → Incorrect currency conversion for PPV/Working Capital | Low | High | Fallback to prior business day rate; alert monitoring; daily data quality check |
+| R-04 | SAP material ledger not activated → FIFO valuation not available | Medium | Medium | Confirm ML activation scope with SAP team pre-implementation; define manual FIFO calculation procedure as interim |
+| R-05 | Poor supplier data quality → High orphan invoice rate degrading 3-way match | Medium | High | Supplier portal onboarding with data quality validation; reject invoices without PO reference after 90-day grace period |
+| R-06 | Multiple ERP instances across entities → Data inconsistency in consolidated reports | Medium | High | Establish golden record hierarchy; master data governance council; SAP MDG implementation roadmap |
+| R-07 | LCNRV assessment depends on NRV estimates which may be subjective | High | Medium | Define NRV methodology in accounting policy; require Finance Controller sign-off; external audit sampling |
+| R-08 | Power BI DirectQuery performance degradation on large exception table | Medium | Low | Implement aggregation tables in Azure SQL; partition fact tables by YYYYMM; limit default date range to 3 months |
+
+---
+
+## 19. Implementation Checklist
+
+### Data Foundation
+- [ ] SAP S/4HANA EKKO, EKPO, MKPF, MSEG, RBKP, RSEG, CKMLCR tables extracted to Azure SQL staging
+- [ ] SAP CDC (Change Data Capture) configured for near-real-time delta loads
+- [ ] Material Ledger activated and standard cost estimates created for all active materials
+- [ ] FX rate data feed configured (ECB/FRB daily rates loaded to Azure SQL dim_exchange_rate)
+- [ ] Freight invoice data source connected (TMS API or EDI 210 file ingestion)
+- [ ] Carrier master table populated with contracted rate data
+- [ ] Customs duty/tariff rate table loaded with HS code classifications
+
+### Data Model and ETL
+- [ ] All staging tables (stg_*) created with correct schema and indexes
+- [ ] All conformed dimension tables (dim_*) created and populated
+- [ ] All fact tables (fact_ppv, fact_three_way_match, fact_landed_cost, fact_working_capital, fact_freight_cost, fact_inventory_valuation) created
+- [ ] ETL pipelines built and tested for each fact table
+- [ ] PPV decomposition logic (price/volume/mix effects) implemented and tested
+- [ ] Three-way match tolerance configuration table created (configurable by vendor/material type)
+- [ ] Freight allocation logic implemented (direct/weight/value hierarchy)
+- [ ] LCNRV check procedure implemented
+- [ ] FIFO layer calculation implemented (or confirmed from SAP Material Ledger)
+- [ ] Working capital calculation procedure implemented
+
+### Reporting and Dashboards
+- [ ] Power BI semantic model created with all fact and dimension tables
+- [ ] All 7 dashboard pages designed and implemented
+- [ ] Scheduled refresh configured (4x daily)
+- [ ] Row-level security (RLS) configured by entity/region
+- [ ] Alert rules configured for PPV thresholds and exception aging
+- [ ] Exception routing logic implemented (by exception type to owner)
+- [ ] Month-end close pack auto-export configured
+
+### Governance and Controls
+- [ ] Business rules documented and signed off by Finance Controller and CPO
+- [ ] Tolerance configuration approved by AP Manager and Finance Director
+- [ ] LCNRV accounting policy documented and approved
+- [ ] Data quality checks implemented in ETL (per VC-01 to VC-04)
+- [ ] Period close readiness gate checklist automated in Power BI
+- [ ] Audit trail configured for exception resolution actions
+
+---
+
+## 20. Validation Checklist
+
+### Pre-Go-Live Validation
+
+- [ ] PPV calculation spot-checked for 10 PO lines against manual SAP ME2M report — all match within $0.01
+- [ ] 3-way match status for 20 invoices validated against SAP MIRO display — all statuses match
+- [ ] CCC for 3 legal entities validated against manually calculated working capital from trial balance — within 0.5 days
+- [ ] Landed cost for top 5 SKUs validated against manual cost build-up — within $0.05/unit
+- [ ] FIFO vs. Moving Average gap validated against SAP MBGR report — within $100 per plant
+- [ ] Freight allocation validated for 3 consolidated shipments — allocated amounts sum to total invoice
+- [ ] LCNRV write-down list validated against Finance Controller manual assessment — all high-risk items included
+- [ ] All ETL pipelines complete without error for one full fiscal period (parallel run)
+- [ ] Power BI data matches Azure SQL queries for all 7 dashboard pages
+- [ ] Exception escalation alerts tested (inserted aging test records — confirmed alert emails received)
+
+### Monthly Ongoing Validation (First 3 Months)
+
+- [ ] PPV total reconciles to CO settlement report (month-end actual vs. standard cost variance)
+- [ ] Working capital values reconcile to CFO monthly reporting pack
+- [ ] 3-way match exception count reconciles to AP open items report
+- [ ] Freight cost total reconciles to GL freight account (520000-529999 range)
+- [ ] Inventory valuation total reconciles to balance sheet inventory line
+- [ ] Period close pack signed off by Finance Controller by D+2 of month close
+
+---
+
+## 21. Pending Information
+
+| Item | Owner | Required By | Impact if Missing |
+|------|-------|-------------|------------------|
+| Confirmed list of SAP company codes in scope | SAP Basis / Finance | 2026-07-15 | Cannot configure entity dimension |
+| Freight carrier contracted rate schedule | Logistics Director | 2026-07-15 | Cannot compute carrier rate variance |
+| Invoice tolerance configuration values by vendor category | AP Manager + Finance Controller | 2026-07-22 | Cannot implement match tolerance logic |
+| NRV estimation methodology and responsible team | Finance Controller | 2026-07-22 | Cannot automate LCNRV check |
+| HS code classification for top 200 purchased materials | Trade Compliance / Procurement | 2026-08-01 | Cannot compute customs duty in landed cost |
+| SAP Material Ledger activation status per plant | SAP CO Team | 2026-07-15 | Determines FIFO calculation approach (ML-based vs. manual FIFO) |
+| Commodity index data feeds (LME, oil, etc.) for PPV classification | Finance / Treasury | 2026-08-01 | Cannot classify COMMODITY_PRICE PPV automatically |
+| Power BI workspace and Azure SQL connection approval | IT Security | 2026-07-10 | Blocks all dashboard development |
+| Confirmed fiscal year variant (K4 or custom) for all entities | SAP Finance | 2026-07-15 | Affects period alignment in all ETL logic |
+
+---
+
+## 22. Implementation Roadmap
+
+### Phase 1: Foundation (Weeks 1-4)
+
+**Objective:** Establish data infrastructure and validate source system connectivity.
+
+| Week | Activities |
+|------|-----------|
+| 1 | SAP extraction configuration: CDC setup for EKKO, EKPO, MKPF, MSEG, RBKP, RSEG, CKMLCR; Azure SQL environment provisioning |
+| 2 | Staging table creation; initial full-load data extraction; data quality assessment (record counts, null rates, key violations) |
+| 3 | Conformed dimension tables created (dim_material, dim_vendor, dim_plant, dim_date, dim_gl_account); master data quality remediation |
+| 4 | Freight invoice ingestion configured; carrier master loaded; FX rate feed operational; first data quality report shared with Finance Controller |
+
+**Gate:** All source systems extracted, staging tables populated, data quality baseline established.
+
+### Phase 2: Core Analytics (Weeks 5-10)
+
+**Objective:** Build and validate all six core analytical models.
+
+| Week | Activities |
+|------|-----------|
+| 5 | fact_ppv ETL built and tested; PPV decomposition (price/volume/mix) implemented; PPV classification logic implemented |
+| 6 | fact_three_way_match ETL built; tolerance configuration loaded; match status logic implemented; exception routing table created |
+| 7 | fact_landed_cost ETL built; freight allocation (direct/weight/value) implemented; customs duty logic implemented |
+| 8 | fact_working_capital ETL built; DIO/DSO/DPO/CCC procedures implemented; entity-level aggregation validated |
+| 9 | fact_inventory_valuation ETL built; FIFO layer calculation implemented; LCNRV check procedure built and tested |
+| 10 | fact_freight_cost ETL built; carrier rate variance logic implemented; freight allocation to cost objects complete |
+
+**Gate:** All six fact tables populated and validated against manual calculations (per TC-01 to TC-05).
+
+### Phase 3: Dashboard and Reporting (Weeks 11-14)
+
+**Objective:** Deliver Power BI dashboards and reporting layer.
+
+| Week | Activities |
+|------|-----------|
+| 11 | Power BI semantic model built; Page 1 (Executive Summary) and Page 2 (PPV Detail) developed; stakeholder review |
+| 12 | Pages 3-4 (Working Capital, Inventory Valuation) developed; RLS security model implemented |
+| 13 | Pages 5-7 (Landed Cost, 3-Way Match, Freight) developed; alert rules configured; scheduled refresh operational |
+| 14 | User acceptance testing (UAT) with Finance Controllers and AP team; defect resolution; dashboard sign-off |
+
+**Gate:** UAT sign-off from Finance Controller, CPO representative, and AP Manager.
+
+### Phase 4: Parallel Run and Go-Live (Weeks 15-18)
+
+**Objective:** Validate analytics against existing reports for one full fiscal period.
+
+| Week | Activities |
+|------|-----------|
+| 15-16 | Parallel run: new analytics run alongside existing manual processes for Month 1; discrepancies investigated and resolved |
+| 17 | Month-end close pack generated from new dashboard for first time; Finance Controller comparison vs. manual pack |
+| 18 | Go-live decision gate; training delivered to all users; hypercare support plan activated |
+
+**Gate:** Finance Controller confirms month-end close pack from dashboard is equivalent to or better than manual pack. CFO sign-off for go-live.
+
+### Phase 5: Continuous Improvement (Month 5 onwards)
+
+- Monthly: PPV root-cause report reviewed by CPO; exception SLA compliance reviewed by AP Manager.
+- Quarterly: CCC improvement initiatives tracked; freight lane optimisation reviewed; tolerance thresholds recalibrated.
+- Annually: Standard prices updated; LCNRV policy reviewed; dashboard design updated for new business requirements.
+- Ongoing: Supplier portal onboarding to increase e-invoice rate and improve auto-match performance.
+
+---
+
+**Document Control**
+
+| Version | Date | Author | Changes |
+|---------|------|--------|---------|
+| 1.0.0 | 2026-06-20 | Finance Analytics Team | Initial document |
+| 2.0.0 | 2026-06-22 | Senior Supply Chain Analytics Consultant | Full rewrite with 22-section analytics framework |
+
+**References**
+- SAP S/4HANA Finance Documentation — FI/CO/MM Integration (SAP Help Portal)
+- IAS 2 Inventories (IFRS Foundation, 2003, amended 2023)
+- ASC 330 Inventory (FASB, US GAAP)
+- Chopra & Meindl, Supply Chain Management, 6th Ed., Chapter 14 (Working Capital)
+- SCOR Digital Standard — Asset Management and Financial Flows performance attributes
+- Incoterms 2020 (ICC, 2019)

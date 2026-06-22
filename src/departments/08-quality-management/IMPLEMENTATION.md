@@ -1,2003 +1,1476 @@
-# Quality Management — Enterprise Implementation Guide
+# Quality Management Analytics — Implementation Guide
 
-**Department**: 08 — Quality Management  
-**Standard Alignment**: ISO 9001:2015 (§8.4, §8.5.2, §8.6, §8.7), ISO 2859-1:1999, IATF 16949:2016, AIAG FMEA 4th Ed., Six Sigma DMAIC  
-**Author**: Supply Chain Centre of Excellence  
-**Version**: 2.0  
-**Classification**: Internal — Senior Leadership  
-**Last Revised**: 2026-06-20
+**Department**: 08 — Quality Management
+**Analytics Domain**: IQC, PPM/DPMO, NCR Analysis, CAPA Effectiveness, SPC, Supplier Quality Scorecard
+**Standard Alignment**: ISO 9001:2015 (§8.4, §8.5.2, §8.6, §8.7), ISO 2859-1:1999 (AQL),
+IATF 16949:2016, AIAG FMEA 4th Ed., Six Sigma DMAIC, ASQ Body of Knowledge
+**Systems**: SAP S/4HANA QM, SAP Quality Notifications, Power BI, Python (SPC calculations), Azure SQL
+**Author**: Supply Chain Centre of Excellence
+**Version**: 3.0 — 2026-06-22
+**Status**: Approved for Implementation
 
 ---
 
 ## Table of Contents
 
 1. Executive Summary
-2. Prerequisites and Dependencies
-3. Phase 0: Assessment and AS-IS Analysis
-4. Phase 1: Foundation and Master Data
-5. Phase 2: Process Standardisation and Core Analytics
-6. Phase 3: Mathematical Models
-7. Phase 4: ML/AI Pipeline
-8. Phase 5: Integration and Automation
-9. Phase 6: Continuous Improvement
-10. Technology Stack and Architecture
-11. Change Management and Training
-12. Implementation KPIs
-13. Risk and Mitigation
-14. Timeline Summary
-15. References
+2. Analysis Objective
+3. Scope
+4. Business Questions
+5. Data Sources
+6. Data Model
+7. Data Dictionary
+8. Transformation Rules
+9. Business Rules
+10. KPIs and Formulas
+11. Analytical Logic
+12. Validations and Controls
+13. Required Evidence
+14. Dashboard Design
+15. Use Cases
+16. Recommended Actions
+17. Test Cases
+18. Risks and Mitigations
+19. Implementation Checklist
+20. Validation Checklist
+21. Pending Information
+22. Implementation Roadmap
 
 ---
 
 ## 1. Executive Summary
 
-Quality management in a modern enterprise supply chain is not a cost centre — it is a strategic differentiator. Organisations that achieve Six Sigma capability across their supplier base, manufacturing operations, and logistics network command 15–25% lower cost-of-poor-quality (COPQ), sustain fewer regulatory recalls, and earn premium shelf placement from major retailers such as Walmart (OTIF ≥ 98%) and Costco (defect rate ≤ 200 PPM).
+Quality management is a strategic differentiator and a compliance obligation. Organisations
+that achieve and sustain Six Sigma capability across their supplier base and internal operations
+command 15–25% lower cost of poor quality (COPQ), maintain fewer regulatory recalls, and
+earn preferred supplier status from major retailers demanding OTIF >= 98% and defect rates
+<= 200 PPM. In food and beverage, pharmaceutical, and automotive sectors, quality failures
+carry direct regulatory consequences including product recalls, FDA warning letters, IATF
+16949 de-certification, and loss of customer contracts.
 
-This implementation guide provides a phased, standards-aligned roadmap for deploying an enterprise-grade quality management capability within the Supply Chain Management platform. The scope covers:
+This implementation guide provides the complete analytics architecture, data model, KPI
+definitions, transformation rules, and dashboard design for the Quality Management
+Analytics capability within the Supply Chain Management platform. The scope covers five
+interconnected quality analytics domains:
 
-- **Incoming inspection** governed by ISO 2859-1 AQL sampling plans, fully digitalised and integrated with Supplier Quality Portals and SAP QM.
-- **In-process SPC** fed by MES/SCADA sensor streams, with real-time X-bar/R and CUSUM control charts computed in Python and visualised on shop-floor dashboards.
-- **Non-Conformance Reports (NCR)** managed through an 8D workflow with automated root-cause classification via NLP.
-- **FMEA Risk Priority Number (RPN)** computation and tracking, with automatic escalation when RPN > 100.
-- **Predictive quality** using XGBoost trained on process parameters, deployed to flag high-risk production batches before physical inspection.
-- **Computer vision defect detection** using YOLOv8, running at inspection stations on NVIDIA Jetson edge hardware.
-- **Process capability indices** (Cp, Cpk, Pp, Ppk) calculated per part number and control plan characteristic.
+1. **Incoming Quality Control (IQC)** — AQL sampling plan results by supplier, lot, and
+   inspection level, with acceptance/rejection decisions and disposition tracking.
+2. **PPM and DPMO Tracking** — defect rate monitoring at the supplier and commodity level,
+   with Sigma level calculation and trend analysis versus automotive, food, and general
+   manufacturing targets.
+3. **Non-Conformance Report (NCR) Analysis** — NCR volume, severity classification,
+   root-cause pareto, financial impact, and open versus closed rate tracking.
+4. **CAPA Effectiveness Tracking** — corrective and preventive action on-time closure,
+   recurrence rate, and effectiveness verification scores.
+5. **Statistical Process Control (SPC)** — X-bar/R charts, CUSUM, Cp and Cpk indices
+   calculated in Python from SAP QM inspection characteristic results.
 
-The expected return on investment horizon is 18 months post go-live, with a target reduction in COPQ of 20% in Year 1 and 35% by Year 3. All models, code, and integrations described in this document conform to the project's OSI-licensed technology mandate and SCOR-DS Enable process category requirements.
+### Expected Business Value
 
----
-
-## 2. Prerequisites and Dependencies
-
-### 2.1 Organisational Prerequisites
-
-| Prerequisite | Owner | Completion Criteria |
-|---|---|---|
-| Quality Policy signed by C-suite | Chief Quality Officer | Signed document in document management system |
-| Control Plan library available | Quality Engineering | ≥ 80% of active part numbers have approved Control Plans |
-| Supplier qualification data migrated | Supplier Management (Dept 02) | All Tier-1 suppliers have active Supplier master records |
-| ISO 9001:2015 gap assessment complete | External auditor | Gap report with open actions < 20 |
-| Measurement System Analysis (MSA) executed | Metrology team | GR&R ≤ 10% for all critical gauges |
-| IATF 16949 scope defined (if automotive) | Quality Director | Scope statement approved |
-
-### 2.2 Technical Prerequisites
-
-- Node.js ≥ 20, TypeScript ≥ 5.3 — domain aggregates
-- Python ≥ 3.11 with virtual environment (`python/venv/`)
-- PostgreSQL ≥ 15 — event store and relational master data
-- Redis ≥ 7 — SPC sliding-window state, real-time alert pub/sub
-- SAP QM module (or mock adapter) accessible via RFC/BAPI or REST wrapper
-- MES/SCADA OPC-UA endpoint or MQTT broker for sensor streams
-- NVIDIA Jetson Orin or equivalent edge device at each inspection station
-- LIMS (Laboratory Information Management System) REST API
-- GPU workstation or cloud instance (NVIDIA A10 minimum) for model training
-
-### 2.3 Module Dependencies within This Platform
-
-```
-08-quality-management
-  depends on:
-    01-procurement          (PO reference on NCR, supplier linkage)
-    02-supplier-management  (Supplier Scorecard PPM/DPMO feed)
-    03-inventory            (Stock hold / quarantine movements)
-    05-logistics            (Shipment reference on incoming inspection)
-    09-warehouse            (Quarantine bin management)
-    10-compliance           (REACH SVHC, hazmat handling on NCR)
-```
+| Benefit | Year 1 | Year 2 |
+|---------|--------|--------|
+| COPQ reduction | -20% | -35% |
+| Incoming PPM improvement | -30% | -50% |
+| CAPA on-time closure rate | +25 pp | +40 pp |
+| Supplier quality scorecard coverage | 80% of spend | 95% of spend |
+| IQC inspection cycle time | -40% (sampling optimisation) | -60% |
+| Regulatory audit findings (quality) | -50% | -75% |
 
 ---
 
-## 3. Phase 0: Assessment and AS-IS Analysis
+## 2. Analysis Objective
 
-**Duration**: Weeks 1–4  
-**Goal**: Establish baseline metrics, identify gaps against ISO 9001:2015 and IATF 16949, and define target state.
+The primary objective of the Quality Management Analytics implementation is to convert raw
+inspection results, quality notifications, and process parameter data from SAP QM into a
+structured, governed analytical layer that enables:
 
-### 3.1 Data Collection
+1. **Real-time quality status visibility** — incoming lots pending inspection, accepted,
+   rejected, and under disposition are tracked in a live operational view accessible to
+   QC supervisors and warehouse teams.
 
-Collect the following datasets for the trailing 24 months:
+2. **Supplier quality benchmarking** — incoming PPM, AQL rejection rate, and NCR rate are
+   calculated per supplier and commodity, enabling objective performance comparisons and
+   driving the supplier quality scorecard component of the overall supplier scorecard
+   (30% weight per the CLAUDE.md specification).
 
-- Incoming inspection records (pass/fail, quantity inspected, defects found by category)
-- NCR log (open date, close date, root cause, supplier/process, 8D steps completed)
-- Field complaints and warranty returns
-- Internal scrap and rework costs by cost centre
-- PPM history by supplier and commodity
-- Control chart data (if SPC exists) — raw subgroup measurements
+3. **Process capability monitoring** — Cp, Cpk, Pp, and Ppk indices are calculated per
+   part number and control plan characteristic from inspection results, identifying
+   characteristics approaching the control limit before non-conformances occur.
 
-### 3.2 AS-IS KPI Baseline
+4. **NCR and CAPA lifecycle management** — open, overdue, and recently closed NCRs and
+   CAPAs are tracked with aging, financial impact, and effectiveness verification, providing
+   the Quality Manager with a complete action item dashboard.
 
-| KPI | Formula | Baseline Target | World Class |
-|---|---|---|---|
-| Incoming Rejection Rate | (Rejected Lots / Total Lots) x 100 | < 5% | < 1% |
-| Supplier PPM | (Defective Units / Units Inspected) x 1,000,000 | Measure only | < 500 (automotive) |
-| NCR Cycle Time | Mean(Close Date - Open Date) | Measure only | ≤ 30 calendar days |
-| COPQ as % of Revenue | (Scrap + Rework + Warranty + Appraisal) / Revenue | Measure only | < 1% |
-| First Pass Yield (FPY) | Conforming Units / Total Started | Measure only | ≥ 99% |
-| Cp (process capability) | (USL - LSL) / (6σ) | Measure only | ≥ 1.33 |
-| Cpk | min[(USL-μ)/3σ, (μ-LSL)/3σ] | Measure only | ≥ 1.33 |
+5. **Cost of Poor Quality quantification** — internal failure costs (rework, scrap, re-
+   inspection), external failure costs (returns, warranty, customer chargebacks), appraisal
+   costs (inspection labour, equipment), and prevention costs are aggregated and reported
+   by supplier, product category, and business unit.
 
-### 3.3 Gap Analysis Framework
-
-Conduct gap analysis against ISO 9001:2015 clause structure:
-
-- **§8.4** Control of externally provided processes — supplier qualification, incoming inspection
-- **§8.5.2** Identification and traceability — lot tracking, SSCC labels
-- **§8.6** Release of products and services — inspector sign-off, QMS integration
-- **§8.7** Control of nonconforming outputs — NCR workflow, disposition authority
-
-Assign each gap a severity (Critical / Major / Minor) and estimated remediation effort (person-days). Prioritise Critical gaps in Phase 1.
-
-### 3.4 AS-IS Process Map
-
-Document the current state for:
-1. Incoming Inspection Flow (who, what, when, how many samples)
-2. NCR Initiation and Escalation
-3. Supplier Communication on quality rejects
-4. Management Review cadence
-
-This process map becomes the baseline for redesign in Phase 2.
+6. **Predictive quality alerting** — statistical signals (Western Electric rules violations,
+   Cpk < 1.33 threshold breaches) are surfaced automatically to QC engineers before
+   production batches fail final inspection, reducing scrap and rework costs.
 
 ---
 
-## 4. Phase 1: Foundation and Master Data
+## 3. Scope
 
-**Duration**: Weeks 5–10  
-**Goal**: Establish master data structures, configure AQL plans, and instrument core domain aggregates.
+### In Scope
 
-### 4.1 Quality Master Data Model
+- Incoming inspection results for all externally sourced materials and components,
+  governed by ISO 2859-1 AQL sampling plans configured in SAP QM
+- In-process inspection results for internal manufacturing or value-adding operations
+  with control plan characteristics managed in SAP QM
+- All Quality Notifications (QM notification types: F1 — customer complaint, F2 — internal
+  defect, F3 — supplier defect) created in SAP S/4HANA QM
+- NCR lifecycle from creation through disposition, CAPA assignment, CAPA implementation,
+  effectiveness verification, and closure
+- CAPA records linked to NCRs, FMEA risk items, or regulatory findings
+- Supplier PPM and DPMO calculation for all suppliers with >= 10 inspection lots per
+  rolling 12-month period
+- SPC calculations for critical-to-quality (CTQ) characteristics flagged in the
+  SAP QM control plan as requiring SPC monitoring
+- COPQ cost collection from SAP MM (scrap postings), SAP SD (return credit notes),
+  SAP FI (quality-related cost centre postings)
 
-The following master data entities must be established before any transactional processing:
+### Out of Scope
 
-**Part-Quality Profile** — links a SKU to its AQL level, inspection frequency, critical characteristics, and acceptance criteria.
-
-**Control Plan** — per part number, lists all characteristics (dimensional, functional, visual), measurement method, gauge type, sample size, frequency, and reaction plan.
-
-**Gauge Master** — calibration due dates, GR&R status, responsible metrology lab.
-
-**Defect Code Library** — structured taxonomy of defect types (cosmetic, dimensional, functional, safety-critical) mapped to AIAG codes and IATF 16949 requirements.
-
-**Supplier Quality Agreement (SQA)** — contractual PPM targets, AQL levels, and self-certification requirements per commodity.
-
-### 4.2 TypeScript Domain Aggregates
-
-Key domain types defined in `src/departments/08-quality-management/domain/`:
-
-```typescript
-// InspectionRecord.ts
-export type AQLLevel = '0.065' | '0.10' | '0.15' | '0.25' | '0.40' | '0.65'
-  | '1.0' | '1.5' | '2.5' | '4.0' | '6.5';
-
-export type InspectionLevel = 'I' | 'II' | 'III' | 'S1' | 'S2' | 'S3' | 'S4';
-
-export type SamplingType = 'NORMAL' | 'TIGHTENED' | 'REDUCED';
-
-export type DispositionCode =
-  | 'ACCEPT'
-  | 'REJECT_RETURN_TO_SUPPLIER'
-  | 'REJECT_SCRAP'
-  | 'CONDITIONAL_USE_AS_IS'
-  | 'SORT_AND_REWORK'
-  | 'DEVIATE_CONCESSION';
-
-export interface InspectionRecord {
-  readonly id: string;
-  readonly idempotencyKey: string;
-  readonly lotNumber: string;
-  readonly skuCode: string;
-  readonly supplierId: string;
-  readonly purchaseOrderId: string;
-  readonly shipmentId: string;
-  readonly inspectedAt: ISOTimestamp;
-  readonly inspectorId: string;
-  readonly lotSize: number;
-  readonly sampleSize: number;
-  readonly sampleSizeCodeLetter: string;
-  readonly aqlLevel: AQLLevel;
-  readonly inspectionLevel: InspectionLevel;
-  readonly samplingType: SamplingType;
-  readonly acceptNumber: number;
-  readonly rejectNumber: number;
-  readonly defectsFound: number;
-  readonly defectDetails: DefectRecord[];
-  readonly disposition: DispositionCode;
-  readonly dispositionAuthority: string;
-  readonly notes: string;
-  readonly isDeleted: boolean;
-  readonly createdAt: ISOTimestamp;
-  readonly updatedAt: ISOTimestamp;
-}
-```
-
-### 4.3 Event Store Integration
-
-Each inspection outcome generates a domain event fed into the shared Event Store (CQRS):
-
-```typescript
-export type QualityEvent =
-  | { type: 'INSPECTION_STARTED'; payload: InspectionStartedPayload }
-  | { type: 'INSPECTION_COMPLETED'; payload: InspectionCompletedPayload }
-  | { type: 'LOT_ACCEPTED'; payload: LotAcceptedPayload }
-  | { type: 'LOT_REJECTED'; payload: LotRejectedPayload }
-  | { type: 'NCR_OPENED'; payload: NCROpenedPayload }
-  | { type: 'NCR_8D_STEP_COMPLETED'; payload: NCR8DStepPayload }
-  | { type: 'NCR_CLOSED'; payload: NCRClosedPayload }
-  | { type: 'SPC_ALARM_RAISED'; payload: SPCAlarmPayload }
-  | { type: 'FMEA_RPN_EXCEEDED'; payload: FMEARPNPayload };
-```
-
-Rejected lot events trigger downstream workflows:
-- Quarantine stock movement in Inventory (Dept 03)
-- Supplier scorecard debit (Dept 02)
-- Accounts Payable deduction memo (if contractually agreed)
+- Customer satisfaction surveys and Net Promoter Score (handled by Sales Analytics)
+- Regulatory drug product quality (pharmaceutical GMP — separate validated system)
+- Environmental quality (ISO 14001 environmental non-conformances — handled by EHS)
+- Calibration management records (handled by Maintenance module)
+- Design quality (DFMEA, design verification testing — handled by R&D)
 
 ---
 
-## 5. Phase 2: Process Standardisation and Core Analytics
+## 4. Business Questions
 
-**Duration**: Weeks 11–18  
-**Goal**: Digitalise inspection workflows, implement NCR 8D process, activate SPC dashboards.
+**BQ-01** — Which suppliers are delivering materials above our incoming PPM threshold
+(500 PPM automotive, 1,000 PPM food, 2,000 PPM general), and what is the trend over the
+past 12 months? Are specific commodity categories driving most of the incoming defects?
 
-### 5.1 Incoming Inspection Workflow
+**BQ-02** — What is the overall AQL acceptance rate by supplier and inspection level?
+Which suppliers are consistently failing AQL sampling at Level II (normal inspection),
+and have they been escalated to Level III (tightened inspection) as required by ISO 2859-1?
 
-The standard incoming inspection flow follows this sequence:
+**BQ-03** — What is the average NCR severity distribution (Critical / Major / Minor) by
+supplier and product category? What are the top five root cause categories driving NCRs
+in the current fiscal year (Pareto analysis)?
 
-1. Goods Receipt posted in ERP (SAP MM) generates inspection lot in SAP QM.
-2. Quality Management module receives inspection lot event via integration layer.
-3. System computes sample size using ISO 2859-1 AQL table (see Phase 3).
-4. Inspector retrieves batch ticket on tablet, records measurements against control plan.
-5. Defect count entered; system evaluates accept/reject criterion.
-6. Disposition recorded; lot released to warehouse or placed in quarantine.
-7. NCR auto-generated if lot rejected; supplier notified via portal.
+**BQ-04** — What percentage of CAPAs are being closed by the agreed due date? Which
+suppliers and internal owners have the highest CAPA overdue rates? Are verified effective
+CAPAs actually preventing recurrence (recurrence rate within 12 months of CAPA closure)?
 
-### 5.2 NCR 8D Workflow
+**BQ-05** — What is the total Cost of Poor Quality (COPQ) for the current fiscal year,
+broken down by internal failure, external failure, appraisal, and prevention? Which
+supplier and product category contributes most to COPQ? How does COPQ trend versus
+revenue (COPQ as % of revenue)?
 
-The 8 Disciplines (8D) process is mandated for all Critical and Major non-conformances:
+**BQ-06** — Which critical-to-quality (CTQ) characteristics are showing Cpk < 1.33
+(minimum acceptable) or Cpk < 1.0 (unstable process)? Which part numbers and suppliers
+are responsible, and what is the trend — improving, stable, or deteriorating?
 
-| Discipline | Activity | Owner | Target Duration |
-|---|---|---|---|
-| D1 | Team Formation | Quality Engineer | Day 1 |
-| D2 | Problem Description (5W2H) | Quality Engineer | Day 2 |
-| D3 | Interim Containment Action (ICA) | Production / Warehouse | Day 3 |
-| D4 | Root Cause Analysis (Ishikawa / 5-Why) | Quality + Engineering | Day 7 |
-| D5 | Permanent Corrective Action (PCA) selection | Quality + Engineering | Day 14 |
-| D6 | PCA Implementation and validation | Engineering | Day 21 |
-| D7 | Systemic Prevention (FMEA update, Control Plan) | Quality + Engineering | Day 28 |
-| D8 | Team Recognition and closure | Quality Manager | Day 30 |
+**BQ-07** — Are SPC control charts showing out-of-control signals (Western Electric rules
+violations) on active production lines or incoming inspection lots? How many signals have
+been generated in the past 30 days, and how many triggered corrective action?
 
-NCR cycle time KPI: mean time from D1 open to D8 close. Target ≤ 30 calendar days.
+**BQ-08** — What is the First Pass Yield (FPY) by supplier, material group, and inspection
+stage? How many lots are being conditionally accepted (re-inspected or sorted) versus
+unconditionally accepted on first inspection?
 
-### 5.3 Supplier Scorecard Quality Feed
+**BQ-09** — What is the total financial exposure from open NCRs — value of stock on
+quality hold, potential scrap value, and cost of sorting / rework if disposition is
+approved? How long has stock been on hold by NCR?
 
-Each completed inspection feeds the supplier scorecard in real time:
+**BQ-10** — Which quality inspectors or inspection teams have the highest detection rate
+of defects per lot inspected? Is there variability in rejection rates between inspectors
+that might suggest measurement system inconsistency (gage R&R requirement)?
 
-```
-PPM contribution per shipment = (defects_found / units_inspected) * 1_000_000
-Rolling 12-month PPM = sum(defects_12m) / sum(units_inspected_12m) * 1_000_000
-```
+**BQ-11** — Are supplier quality improvements sustained after CAPA closure, or do
+suppliers revert to prior defect rates within 6–12 months? What is the recurrence rate
+by supplier tier (PREFERRED / APPROVED / CONDITIONAL)?
 
-The quality dimension of the Supplier Scorecard (30% weighting) uses:
-- PPM Score: 60% of quality sub-score
-- NCR Rate: 40% of quality sub-score
+**BQ-12** — What is the sigma level of our supplier base as a whole, and how has it
+trended over the past three years? Are we on track to achieve the Six Sigma aspirational
+targets defined in our quality strategy?
 
 ---
 
-## 6. Phase 3: Mathematical Models
+## 5. Data Sources
 
-**Duration**: Weeks 15–22 (overlaps with Phase 2)  
-**Goal**: Implement all statistical and mathematical quality models in Python with full audit trails.
+### DS-01: SAP QM — Inspection Lots and Results
 
-### 6.1 AQL Sampling — ISO 2859-1
+| Attribute | Detail |
+|-----------|--------|
+| Source Name | SAP QM Inspection Lots and Inspection Results |
+| System | SAP S/4HANA 2023, QM module |
+| Table / Report | QMEL (Inspection Lot), QMFE (Defect Item), QMUR (Inspection Characteristic Result), QMZR (Inspection Sample) |
+| Owner | Quality Control Manager / SAP QM System Administrator |
+| Frequency | Real-time via RFC; Power BI refresh every 2 hours |
+| Required Fields | QMEL: PRUEFLOS (lot number), LIEFNR (vendor), MATNR (material), CHARG (batch), MENGE (quantity), EINHEIT (UOM), STAT (status), CREATED_ON. QMUR: PRUEFLOS, MERKMAL (characteristic), SOLLWERT (target), ISTWERT (actual), FEHLERZAHL (defect count). QMFE: PRUEFLOS, FEHLART (defect type), FEHLZAHL (defect count), SCHWERE (severity) |
+| Critical Fields | PRUEFLOS (PK), LIEFNR, MATNR, STAT (status determines if inspection is complete), FEHLZAHL |
+| Primary Key | PRUEFLOS (inspection lot number) |
+| Validations | STAT must be in valid SAP QM status codes; MENGE > 0; FEHLZAHL >= 0; ISTWERT must be numeric for variable characteristics |
+| Known Errors | Historical lots pre-2022 may have incomplete QMUR records (paper-based inspection). Flag CREATED_ON < 2022-01-01 as LEGACY and exclude from SPC calculations |
+| Evidence Required | SAP QM inspection plan configuration, control plan extract, AQL table configuration in SAP |
 
-#### 6.1.1 Theory
+### DS-02: SAP QM — Quality Notifications (NCR)
 
-ISO 2859-1 (Sampling Procedures for Inspection by Attributes) defines statistically rigorous acceptance sampling plans. The key inputs are:
+| Attribute | Detail |
+|-----------|--------|
+| Source Name | SAP QM Quality Notifications — NCR, Customer Complaints, Internal Defects |
+| System | SAP S/4HANA 2023, QM module |
+| Table / Report | QMEL (Notification Header), QMFE (Defect Items), QMMA (Tasks / CAPA), QMSM (Activities) |
+| Owner | Quality Manager |
+| Frequency | Real-time event trigger on notification creation and status change |
+| Required Fields | QMEL: QMNUM (notification number), QMART (notification type: F1/F2/F3), QMTXT (short text), LIEFNR, MATNR, CHARG, MENGE, ERDAT (creation date), ADDAT (completion date), STAT. QMMA: QMNUM, MNGRP (task group), MNCOD (task code), FAEDN (due date), ERDAT, ADDAT, VERAN (responsible person) |
+| Critical Fields | QMNUM (PK), QMART (type), STAT (status), FAEDN (CAPA due date), ADDAT (actual closure date) |
+| Primary Key | QMNUM |
+| Validations | FAEDN >= ERDAT; ADDAT >= ERDAT; QMART in (F1, F2, F3); severity code must be in (CRITICAL, MAJOR, MINOR) |
+| Known Errors | Some older F3 notifications lack LIEFNR (vendor) — cross-reference to PO via CHARG/MATNR lookup |
+| Evidence Required | Quality notification type configuration, severity code master, task code master |
 
-- **Lot size (N)**: total quantity in the shipment lot
-- **Inspection Level**: I (less discriminating), II (normal), III (more discriminating), or special levels S1–S4
-- **AQL**: Acceptable Quality Level — the worst tolerable process average (expressed as defects per 100 units or percent defective)
-- **Sampling Type**: Normal, Tightened, or Reduced — switched based on preceding lot history
+### DS-03: SAP MM / WM — Goods Receipt and Stock Quality Hold
 
-The output is:
-- **Sample Size Code Letter** (A through R)
-- **Sample size (n)**
-- **Acceptance Number (Ac)**: maximum defects that allow lot acceptance
-- **Rejection Number (Re)**: minimum defects that force lot rejection
+| Attribute | Detail |
+|-----------|--------|
+| Source Name | SAP MM Goods Receipt and Quality Hold Stock |
+| System | SAP S/4HANA MM / WM |
+| Table / Report | MSEG (Material Document Segment), MKPF (Material Document Header), MCHB (Batch Stock), LGPLA (Warehouse Management Stock) |
+| Owner | Warehouse / Inventory Management Team |
+| Frequency | Real-time posting; batch extract for quality hold stock report |
+| Required Fields | MSEG: MBLNR (document), MATNR, CHARG, MENGE, WEMPF (receiving plant), MVTYP (movement type), KOSTL. MCHB: MATNR, CHARG, CLABS (unrestricted), CEINM (quality inspection stock), CSPEM (blocked stock) |
+| Critical Fields | CEINM (quantity in quality inspection stock), CHARG (batch links to inspection lot) |
+| Primary Key | MBLNR + MBLPO (document + line item) |
+| Validations | CEINM >= 0; MATNR must resolve to active material master; CHARG must link to QMEL inspection lot |
+| Known Errors | Partial GR postings may create multiple MSEG records per PO line — aggregate by MATNR+CHARG |
+| Evidence Required | Movement type configuration, quality inspection stock configuration |
 
-#### 6.1.2 Sample Size Code Letter Table (ISO 2859-1 Table I — Normal Inspection Level II)
+### DS-04: SAP FI / CO — COPQ Cost Postings
 
-| Lot Size Range | Code Letter |
-|---|---|
-| 2 – 8 | A |
-| 9 – 15 | B |
-| 16 – 25 | C |
-| 26 – 50 | D |
-| 51 – 90 | E |
-| 91 – 150 | F |
-| 151 – 280 | G |
-| 281 – 500 | H |
-| 501 – 1,200 | J |
-| 1,201 – 3,200 | K |
-| 3,201 – 10,000 | L |
-| 10,001 – 35,000 | M |
-| 35,001 – 150,000 | N |
-| 150,001 – 500,000 | P |
-| 500,001 and over | Q |
+| Attribute | Detail |
+|-----------|--------|
+| Source Name | SAP FI/CO — Quality-Related Cost Centre and GL Postings |
+| System | SAP S/4HANA FI/CO |
+| Table / Report | BSEG (FI Document Segment), COEP (CO Line Items), AUFK (Internal Order Master for quality orders) |
+| Owner | Finance Controller / QM Cost Accountant |
+| Frequency | Daily close; monthly COPQ report |
+| Required Fields | BSEG: BELNR (document), BUKRS (company code), HKONT (GL account), WRBTR (amount), KOSTL (cost centre), AUFNR (order). COEP: AUFNR, KSTAR (cost element), WOG001 (actual cost) |
+| Critical Fields | HKONT (GL account — must map to COPQ category: scrap, rework, warranty, appraisal), WRBTR, KOSTL |
+| Primary Key | BELNR + BUZEI |
+| Validations | GL accounts must resolve to COPQ category mapping table; WRBTR != 0; KOSTL resolves to active cost centre |
+| Known Errors | Some rework costs posted to general production cost centre rather than quality cost centre — requires mapping table maintained by Finance |
+| Evidence Required | COPQ GL account mapping table, cost centre hierarchy, Finance sign-off on COPQ classification |
 
-Inspection Level I uses one row lower (e.g., lot size 91–150 maps to E instead of F).  
-Inspection Level III uses one row higher (e.g., lot size 91–150 maps to G instead of F).
+### DS-05: Python SPC Engine — Calculated Control Chart Metrics
 
-#### 6.1.3 Master AQL Acceptance/Rejection Table (Single Sampling, Normal Inspection)
+| Attribute | Detail |
+|-----------|--------|
+| Source Name | Python SPC Engine output — control limits, Cp, Cpk, Pp, Ppk, OOC signals |
+| System | Azure ML compute / Python 3.11 scheduled job writing to Azure SQL |
+| Table / Report | analytics.SPC_CONTROL_LIMITS, analytics.SPC_OOC_SIGNALS, analytics.PROCESS_CAPABILITY |
+| Owner | Quality Analytics Engineer |
+| Frequency | Triggered on each new inspection lot completion; also nightly batch for bulk recalculation |
+| Required Fields | MATNR, CHARG, PRUEFLOS, MERKMAL, UCL, LCL, XBAR, RBAR, CP, CPK, PP, PPK, SIGMA_EST, OOC_FLAG, OOC_RULE, CALC_TIMESTAMP |
+| Critical Fields | CP, CPK (process capability indices), OOC_FLAG (out-of-control signal), UCL, LCL |
+| Primary Key | PRUEFLOS + MERKMAL + CALC_TIMESTAMP |
+| Validations | UCL > XBAR > LCL; CP > 0; CPK <= CP; OOC_RULE in valid rule codes (WE1–WE8 for Western Electric) |
+| Known Errors | Insufficient sample size (n < 25 subgroups) produces unreliable control limits — flag as PRELIMINARY |
+| Evidence Required | SPC engine code review, Python unit test results, validation against manual Minitab calculation for 5 test cases |
 
-| Code | n | AQL 0.65 Ac/Re | AQL 1.0 Ac/Re | AQL 1.5 Ac/Re | AQL 2.5 Ac/Re | AQL 4.0 Ac/Re |
-|---|---|---|---|---|---|---|
-| A | 2 | * | * | * | * | * |
-| B | 3 | * | * | * | * | * |
-| C | 5 | 0/1 | 0/1 | 0/1 | 0/1 | 0/1 |
-| D | 8 | 0/1 | 0/1 | 0/1 | 0/1 | 1/2 |
-| E | 13 | 0/1 | 0/1 | 0/1 | 1/2 | 1/2 |
-| F | 20 | 0/1 | 0/1 | 1/2 | 1/2 | 2/3 |
-| G | 32 | 0/1 | 1/2 | 1/2 | 2/3 | 3/4 |
-| H | 50 | 1/2 | 1/2 | 2/3 | 3/4 | 5/6 |
-| J | 80 | 1/2 | 2/3 | 3/4 | 5/6 | 7/8 |
-| K | 125 | 2/3 | 3/4 | 5/6 | 7/8 | 10/11 |
-| L | 200 | 3/4 | 5/6 | 7/8 | 10/11 | 14/15 |
-| M | 315 | 5/6 | 7/8 | 10/11 | 14/15 | 21/22 |
-| N | 500 | 7/8 | 10/11 | 14/15 | 21/22 | 21/22 |
-| P | 800 | 10/11 | 14/15 | 21/22 | 21/22 | 21/22 |
-| Q | 1250 | 14/15 | 21/22 | 21/22 | 21/22 | 21/22 |
+### DS-06: Supplier Quality Master
 
-(*) Use next code letter with arrow direction in actual ISO table.
+| Attribute | Detail |
+|-----------|--------|
+| Source Name | Supplier Quality Master — Inspection Level and AQL Configuration |
+| System | Azure SQL ref.SUPPLIER_QUALITY_CONFIG (maintained by Quality team) |
+| Table / Report | ref.SUPPLIER_QUALITY_CONFIG, ref.AQL_SAMPLING_PLAN |
+| Owner | Supplier Quality Engineer |
+| Frequency | Updated on supplier performance review; minimum quarterly |
+| Required Fields | LIEFNR, INSPECTION_LEVEL (I/II/III per ISO 2859-1), AQL_ACCEPTABLE (acceptable quality level %), SAMPLING_TYPE (NORMAL/TIGHTENED/REDUCED), SECTOR (AUTOMOTIVE/FOOD/GENERAL), PPM_TARGET, LAST_REVIEW_DATE |
+| Critical Fields | INSPECTION_LEVEL (drives sample size calculation), AQL_ACCEPTABLE, SAMPLING_TYPE |
+| Primary Key | LIEFNR + MATNR_GROUP |
+| Validations | INSPECTION_LEVEL in (I, II, III); AQL_ACCEPTABLE in standard AQL values (0.065, 0.1, 0.15, 0.25, 0.4, 0.65, 1.0, 1.5, 2.5, 4.0, 6.5); SAMPLING_TYPE in (NORMAL, TIGHTENED, REDUCED) |
+| Known Errors | Suppliers not yet configured default to Level II, AQL 1.0 — log these as UNCLASSIFIED |
+| Evidence Required | AQL sampling plan master (ISO 2859-1 Table I and II-A), supplier quality agreement extract |
 
-#### 6.1.4 Python Implementation
+---
+
+## 6. Data Model
+
+The Quality Management analytics data model follows a star schema with three central fact
+tables (inspections, quality notifications, and COPQ costs) connected by shared dimension
+tables.
+
+```
+DIM_DATE -----+--------+--------+
+              |        |        |
+DIM_SUPPLIER  |        |        |
+              v        v        v
+DIM_MATERIAL FACT_IQC FACT_NCR  FACT_COPQ
+              |        |        |
+DIM_DEFECT_TYPE        |
+              |        |
+              v        v
+         FACT_SPC_CAPABILITY (related via MATNR + MERKMAL)
+              |
+         FACT_CAPA (related via QMNUM from FACT_NCR)
+```
+
+### Central Fact Tables
+
+**FACT_IQC** — one row per inspection lot. Contains sample size, defect count, AQL decision
+(accept/reject), inspection level, disposition, and calculated PPM.
+
+**FACT_NCR** — one row per quality notification. Contains notification type, severity,
+material, supplier, financial impact, status, and age.
+
+**FACT_COPQ** — one row per cost posting in a quality-related GL account. Contains COPQ
+category (internal failure, external failure, appraisal, prevention), amount, cost centre,
+and period.
+
+**FACT_SPC_CAPABILITY** — one row per part number and control plan characteristic per
+calculation period. Contains UCL, LCL, Xbar, Rbar, Cp, Cpk, Pp, Ppk, and out-of-control
+signals from the Python SPC engine.
+
+**FACT_CAPA** — one row per CAPA task linked to a quality notification. Contains due date,
+responsible owner, actual closure date, effectiveness score, and recurrence flag.
+
+### Dimension Tables
+
+**DIM_DATE** — standard date dimension with fiscal year, quarter, month, week.
+
+**DIM_SUPPLIER** — supplier master with tier, commodity category, sector, country,
+ISO certifications, and current quality scorecard score.
+
+**DIM_MATERIAL** — material master with material group, description, unit of measure,
+lot size, storage condition, and sector classification.
+
+**DIM_DEFECT_TYPE** — defect type master with defect code, description, severity,
+detection method, and Ishikawa root-cause category (Man, Machine, Material, Method,
+Measurement, Environment).
+
+**DIM_INSPECTOR** — quality inspector master with team, shift, plant, and certification level.
+
+---
+
+## 7. Data Dictionary
+
+### FACT_IQC
+
+| Field | Description | Type | Nullable | Validation |
+|-------|-------------|------|----------|------------|
+| PRUEFLOS | Inspection lot number (PK, from SAP QM QMEL) | VARCHAR(12) | No | Unique; matches SAP QMEL.PRUEFLOS |
+| LIEFNR | Supplier number (FK to DIM_SUPPLIER) | VARCHAR(10) | No | Must resolve to active supplier |
+| MATNR | Material number (FK to DIM_MATERIAL) | VARCHAR(18) | No | Must resolve to active material master |
+| CHARG | Batch/lot number | VARCHAR(10) | Yes | Required for batch-managed materials |
+| PO_NUMBER | Purchase order reference | VARCHAR(10) | Yes | Resolves to active PO if populated |
+| MENGE | Total quantity received in inspection lot | DECIMAL(13,3) | No | > 0 |
+| EINHEIT | Unit of measure (GS1 UOM code) | VARCHAR(3) | No | Valid GS1 UOM code |
+| SAMPLE_SIZE_N | Number of units sampled per AQL plan | INT | No | > 0; must match AQL table for lot size |
+| DEFECT_COUNT_D | Number of defective units found in sample | INT | No | >= 0; <= SAMPLE_SIZE_N |
+| DEFECT_UNITS_TOTAL | Estimated total defective units in lot | INT | Yes | Calculated: DEFECT_COUNT_D / SAMPLE_SIZE_N * MENGE |
+| AQL_DECISION | Lot disposition decision | VARCHAR(10) | No | In (ACCEPT, REJECT, CONDITIONAL) |
+| INSPECTION_LEVEL | ISO 2859-1 inspection level | CHAR(3) | No | In (I, II, III) |
+| AQL_VALUE | AQL percentage applied | DECIMAL(5,3) | No | Standard AQL values per ISO 2859-1 |
+| ACCEPT_NUMBER_AC | Acceptance number (Ac) from sampling plan | INT | No | >= 0 |
+| REJECT_NUMBER_RE | Rejection number (Re) from sampling plan | INT | No | > ACCEPT_NUMBER_AC |
+| INCOMING_PPM | Calculated PPM for this lot | DECIMAL(10,2) | Yes | >= 0; DEFECT_COUNT_D / SAMPLE_SIZE_N * 1,000,000 |
+| INSPECTION_START | Inspection start date | DATE | No | <= INSPECTION_END |
+| INSPECTION_END | Inspection completion date | DATE | Yes | NULL = inspection in progress |
+| DISPOSITION_CODE | Final disposition of rejected lot | VARCHAR(20) | Yes | In (SCRAP, REWORK, RETURN_TO_SUPPLIER, CONDITIONAL_USE, PENDING) |
+| INSPECTOR_ID | FK to DIM_INSPECTOR | VARCHAR(10) | Yes | Must resolve if populated |
+| DATE_KEY | FK to DIM_DATE (inspection end date) | INT | Yes | YYYYMMDD integer |
+
+### FACT_NCR
+
+| Field | Description | Type | Nullable | Validation |
+|-------|-------------|------|----------|------------|
+| QMNUM | Quality notification number (PK) | VARCHAR(12) | No | Unique; from SAP QMEL.QMNUM |
+| QMART | Notification type | CHAR(2) | No | In (F1, F2, F3) |
+| LIEFNR | Supplier number (FK to DIM_SUPPLIER) | VARCHAR(10) | Yes | Required for F3; optional for F1/F2 |
+| MATNR | Material number (FK to DIM_MATERIAL) | VARCHAR(18) | Yes | Recommended for all types |
+| CHARG | Batch involved in NCR | VARCHAR(10) | Yes | |
+| NCR_SEVERITY | Severity classification | VARCHAR(10) | No | In (CRITICAL, MAJOR, MINOR) |
+| DEFECT_QTY | Quantity of defective units in NCR | DECIMAL(13,3) | Yes | >= 0 |
+| FINANCIAL_IMPACT_GC | Estimated financial impact in group currency (EUR) | DECIMAL(14,2) | Yes | >= 0 |
+| CREATION_DATE | NCR creation date | DATE | No | <= today |
+| TARGET_CLOSURE_DATE | Required closure date | DATE | Yes | >= CREATION_DATE |
+| ACTUAL_CLOSURE_DATE | Actual closure date | DATE | Yes | NULL = open |
+| NCR_STATUS | Current status | VARCHAR(20) | No | In (OPEN, IN_PROGRESS, PENDING_VERIFICATION, CLOSED) |
+| ROOT_CAUSE_CODE | Primary root cause category | VARCHAR(20) | Yes | In (MAN, MACHINE, MATERIAL, METHOD, MEASUREMENT, ENVIRONMENT) |
+| ROOT_CAUSE_TEXT | Detailed root cause description | NVARCHAR(500) | Yes | Free text |
+| RECURRENCE_FLAG | Is this NCR a recurrence of a prior NCR? | BIT | No | Default 0; set by matching logic |
+| PRIOR_QMNUM | Reference to prior NCR if recurrence | VARCHAR(12) | Yes | Required when RECURRENCE_FLAG = 1 |
+| AGE_DAYS | Calendar days since creation (if open) | INT | Yes | Calculated: DATEDIFF(today, CREATION_DATE) |
+| DATE_KEY | FK to DIM_DATE (creation date) | INT | No | YYYYMMDD integer |
+
+### FACT_CAPA
+
+| Field | Description | Type | Nullable | Validation |
+|-------|-------------|------|----------|------------|
+| CAPA_ID | Surrogate CAPA identifier (PK) | BIGINT | No | Auto-increment |
+| QMNUM | Parent NCR notification number | VARCHAR(12) | No | FK to FACT_NCR |
+| CAPA_TYPE | Corrective or Preventive | CHAR(1) | No | In (C, P) |
+| CAPA_DESCRIPTION | Description of the action | NVARCHAR(500) | No | Free text; minimum 20 characters |
+| RESPONSIBLE_PERSON | Person / team responsible for closure | VARCHAR(50) | No | Must be a valid HR employee or supplier contact |
+| DUE_DATE | Agreed CAPA due date | DATE | No | >= FACT_NCR.CREATION_DATE |
+| ACTUAL_CLOSURE_DATE | Actual date CAPA was implemented and verified | DATE | Yes | NULL = open |
+| IS_ON_TIME | Closed on or before DUE_DATE | BIT | Yes | Calculated |
+| EFFECTIVENESS_SCORE | Verified effectiveness score (0–100) | DECIMAL(5,2) | Yes | Between 0 and 100; populated after verification |
+| EFFECTIVENESS_VERIFIED | Effectiveness verification completed | BIT | No | Default 0 |
+| RECURRENCE_WITHIN_12M | Same defect recurred within 12 months of CAPA closure | BIT | Yes | Calculated after 12 months |
+| AGE_DAYS | Days open (if not closed) | INT | Yes | Calculated |
+
+### FACT_COPQ
+
+| Field | Description | Type | Nullable | Validation |
+|-------|-------------|------|----------|------------|
+| COPQ_RECORD_ID | Surrogate PK | BIGINT | No | Auto-increment |
+| BELNR | SAP FI document number | VARCHAR(10) | No | Resolves to FI document |
+| BUKRS | Company code | CHAR(4) | No | Valid SAP company code |
+| PERIOD_YYYYMM | Fiscal period YYYYMM | CHAR(6) | No | Valid fiscal period |
+| COPQ_CATEGORY | Top-level COPQ category | VARCHAR(20) | No | In (INTERNAL_FAILURE, EXTERNAL_FAILURE, APPRAISAL, PREVENTION) |
+| COPQ_SUBCATEGORY | Subcategory of cost | VARCHAR(30) | Yes | e.g., SCRAP, REWORK, WARRANTY, INSPECTION_LABOUR |
+| LIEFNR | Supplier if external failure | VARCHAR(10) | Yes | |
+| MATNR | Material | VARCHAR(18) | Yes | |
+| AMOUNT_GC | Cost amount in group currency (EUR) | DECIMAL(14,2) | No | != 0 |
+| KOSTL | Cost centre | VARCHAR(10) | No | Active cost centre |
+| QMNUM | Linked NCR if applicable | VARCHAR(12) | Yes | FK to FACT_NCR |
+
+### FACT_SPC_CAPABILITY
+
+| Field | Description | Type | Nullable | Validation |
+|-------|-------------|------|----------|------------|
+| SPC_RECORD_ID | Surrogate PK | BIGINT | No | Auto-increment |
+| MATNR | Material number | VARCHAR(18) | No | FK to DIM_MATERIAL |
+| MERKMAL | Inspection characteristic code | VARCHAR(10) | No | Matches SAP QM inspection plan characteristic |
+| CALC_PERIOD | Calculation period YYYYMM | CHAR(6) | No | Valid period |
+| N_SUBGROUPS | Number of subgroups in calculation | INT | No | >= 25 for stable control limits |
+| SUBGROUP_SIZE | Subgroup size (n) | INT | No | >= 2 |
+| XBAR | Grand mean (process centre) | DECIMAL(14,6) | No | Numeric |
+| RBAR | Average range | DECIMAL(14,6) | No | > 0 |
+| UCL | Upper control limit | DECIMAL(14,6) | No | > XBAR |
+| LCL | Lower control limit | DECIMAL(14,6) | No | < XBAR |
+| USL | Upper specification limit | DECIMAL(14,6) | Yes | From engineering drawing / control plan |
+| LSL | Lower specification limit | DECIMAL(14,6) | Yes | From engineering drawing / control plan |
+| CP | Process capability (Cp) | DECIMAL(8,4) | Yes | Calculated; >= 0 |
+| CPK | Process capability index (Cpk) | DECIMAL(8,4) | Yes | Calculated; <= Cp |
+| PP | Preliminary process performance (Pp) | DECIMAL(8,4) | Yes | Uses total standard deviation |
+| PPK | Preliminary performance index (Ppk) | DECIMAL(8,4) | Yes | Uses total standard deviation |
+| SIGMA_EST | Estimated process standard deviation | DECIMAL(14,6) | Yes | > 0 |
+| OOC_FLAG | Out-of-control signal present | BIT | No | Default 0 |
+| OOC_RULE | Western Electric rule violated (if OOC) | VARCHAR(10) | Yes | In (WE1, WE2, WE3, WE4, WE5, WE6, WE7, WE8) |
+| STATUS | Calculation status | VARCHAR(20) | No | In (STABLE, PRELIMINARY, INSUFFICIENT_DATA, OOC) |
+
+---
+
+## 8. Transformation Rules
+
+### TR-01: Incoming PPM Calculation per Inspection Lot
+
+```sql
+-- Applied in the Azure SQL analytical layer
+UPDATE FACT_IQC
+SET INCOMING_PPM = CASE
+    WHEN SAMPLE_SIZE_N > 0
+    THEN CAST(DEFECT_COUNT_D AS FLOAT) / CAST(SAMPLE_SIZE_N AS FLOAT) * 1000000.0
+    ELSE NULL
+END;
+```
+
+### TR-02: AQL Decision Flag (Accept / Reject / Conditional)
+
+The AQL decision is determined by comparing DEFECT_COUNT_D against the acceptance number
+(Ac) and rejection number (Re) from the ISO 2859-1 sampling plan table, stored in
+ref.AQL_SAMPLING_PLAN.
+
+```sql
+UPDATE fi
+SET fi.AQL_DECISION = CASE
+    WHEN fi.DEFECT_COUNT_D <= asp.AC THEN 'ACCEPT'
+    WHEN fi.DEFECT_COUNT_D >= asp.RE THEN 'REJECT'
+    ELSE 'CONDITIONAL'
+END
+FROM FACT_IQC fi
+JOIN ref.AQL_SAMPLING_PLAN asp
+    ON fi.SAMPLE_LETTER = asp.SAMPLE_LETTER
+    AND fi.AQL_VALUE = asp.AQL_VALUE;
+```
+
+### TR-03: NCR Age Calculation
+
+```sql
+UPDATE FACT_NCR
+SET AGE_DAYS = CASE
+    WHEN NCR_STATUS = 'CLOSED' THEN DATEDIFF(DAY, CREATION_DATE, ACTUAL_CLOSURE_DATE)
+    ELSE DATEDIFF(DAY, CREATION_DATE, CAST(GETDATE() AS DATE))
+END;
+```
+
+### TR-04: CAPA On-Time Flag
+
+```sql
+UPDATE FACT_CAPA
+SET IS_ON_TIME = CASE
+    WHEN ACTUAL_CLOSURE_DATE IS NULL THEN NULL  -- still open
+    WHEN ACTUAL_CLOSURE_DATE <= DUE_DATE THEN 1
+    ELSE 0
+END;
+```
+
+### TR-05: Supplier Rolling PPM Calculation (12-Month Rolling)
 
 ```python
-# python/08_quality_management/aql_sampling.py
-
-from __future__ import annotations
-from dataclasses import dataclass
-from typing import Literal
-
-AQLValue = Literal['0.065', '0.10', '0.15', '0.25', '0.40',
-                   '0.65', '1.0', '1.5', '2.5', '4.0', '6.5']
-InspectionLevel = Literal['I', 'II', 'III', 'S1', 'S2', 'S3', 'S4']
-SamplingType = Literal['NORMAL', 'TIGHTENED', 'REDUCED']
-
-
-# ISO 2859-1 Table I — lot size to code letter mapping per inspection level
-_LOT_SIZE_BREAKS = [2, 9, 16, 26, 51, 91, 151, 281, 501, 1201, 3201,
-                    10001, 35001, 150001, 500001]
-_CODE_LETTERS = list('ABCDEFGHJKLMNPQ')
-
-_LEVEL_OFFSET: dict[InspectionLevel, int] = {
-    'S1': -4, 'S2': -3, 'S3': -2, 'S4': -1,
-    'I': -1, 'II': 0, 'III': 1
-}
-
-# (sample_size, {aql: (accept, reject)})
-_NORMAL_TABLE: dict[str, tuple[int, dict[str, tuple[int, int]]]] = {
-    'A': (2,   {'0.065': (-1, 0), '1.0': (-1, 0), '1.5': (-1, 0), '2.5': (-1, 0), '4.0': (-1, 0)}),
-    'B': (3,   {'0.065': (-1, 0), '1.0': (-1, 0), '1.5': (-1, 0), '2.5': (-1, 0), '4.0': (-1, 0)}),
-    'C': (5,   {'0.065': (0, 1),  '1.0': (0, 1),  '1.5': (0, 1),  '2.5': (0, 1),  '4.0': (0, 1)}),
-    'D': (8,   {'0.065': (0, 1),  '1.0': (0, 1),  '1.5': (0, 1),  '2.5': (0, 1),  '4.0': (1, 2)}),
-    'E': (13,  {'0.065': (0, 1),  '1.0': (0, 1),  '1.5': (0, 1),  '2.5': (1, 2),  '4.0': (1, 2)}),
-    'F': (20,  {'0.065': (0, 1),  '1.0': (0, 1),  '1.5': (1, 2),  '2.5': (1, 2),  '4.0': (2, 3)}),
-    'G': (32,  {'0.065': (0, 1),  '1.0': (1, 2),  '1.5': (1, 2),  '2.5': (2, 3),  '4.0': (3, 4)}),
-    'H': (50,  {'0.065': (1, 2),  '1.0': (1, 2),  '1.5': (2, 3),  '2.5': (3, 4),  '4.0': (5, 6)}),
-    'J': (80,  {'0.065': (1, 2),  '1.0': (2, 3),  '1.5': (3, 4),  '2.5': (5, 6),  '4.0': (7, 8)}),
-    'K': (125, {'0.065': (2, 3),  '1.0': (3, 4),  '1.5': (5, 6),  '2.5': (7, 8),  '4.0': (10, 11)}),
-    'L': (200, {'0.065': (3, 4),  '1.0': (5, 6),  '1.5': (7, 8),  '2.5': (10, 11), '4.0': (14, 15)}),
-    'M': (315, {'0.065': (5, 6),  '1.0': (7, 8),  '1.5': (10, 11), '2.5': (14, 15), '4.0': (21, 22)}),
-    'N': (500, {'0.065': (7, 8),  '1.0': (10, 11), '1.5': (14, 15), '2.5': (21, 22), '4.0': (21, 22)}),
-    'P': (800, {'0.065': (10, 11), '1.0': (14, 15), '1.5': (21, 22), '2.5': (21, 22), '4.0': (21, 22)}),
-    'Q': (1250,{'0.065': (14, 15), '1.0': (21, 22), '1.5': (21, 22), '2.5': (21, 22), '4.0': (21, 22)}),
-}
-
-
-@dataclass(frozen=True)
-class AQLSamplingPlan:
-    lot_size: int
-    inspection_level: InspectionLevel
-    aql: AQLValue
-    sampling_type: SamplingType
-    code_letter: str
-    sample_size: int
-    accept_number: int
-    reject_number: int
-
-    def evaluate(self, defects_found: int) -> str:
-        """Return 'ACCEPT' or 'REJECT' based on defects found."""
-        if self.accept_number == -1:
-            # Arrow — use next code in actual implementation
-            return 'ACCEPT' if defects_found == 0 else 'REJECT'
-        if defects_found <= self.accept_number:
-            return 'ACCEPT'
-        return 'REJECT'
-
-
-def get_code_letter(lot_size: int, level: InspectionLevel) -> str:
-    """Derive ISO 2859-1 sample size code letter from lot size and inspection level."""
-    base_idx = 0
-    for i, threshold in enumerate(_LOT_SIZE_BREAKS):
-        if lot_size >= threshold:
-            base_idx = i
-    adjusted_idx = max(0, min(len(_CODE_LETTERS) - 1,
-                               base_idx + _LEVEL_OFFSET[level]))
-    return _CODE_LETTERS[adjusted_idx]
-
-
-def build_sampling_plan(
-    lot_size: int,
-    aql: AQLValue,
-    inspection_level: InspectionLevel = 'II',
-    sampling_type: SamplingType = 'NORMAL',
-) -> AQLSamplingPlan:
-    """
-    Construct an ISO 2859-1 single-sampling plan.
-
-    Parameters
-    ----------
-    lot_size : int
-        Total quantity in the submitted lot.
-    aql : AQLValue
-        Acceptable Quality Level string (e.g. '1.5').
-    inspection_level : InspectionLevel
-        'I', 'II', or 'III' for general; 'S1'–'S4' for special.
-    sampling_type : SamplingType
-        'NORMAL', 'TIGHTENED', or 'REDUCED'.
-
-    Returns
-    -------
-    AQLSamplingPlan
-        Fully resolved sampling plan with accept/reject numbers.
-    """
-    code = get_code_letter(lot_size, inspection_level)
-    sample_size, aql_map = _NORMAL_TABLE[code]
-    accept, reject = aql_map.get(aql, (-1, 0))
-    return AQLSamplingPlan(
-        lot_size=lot_size,
-        inspection_level=inspection_level,
-        aql=aql,
-        sampling_type=sampling_type,
-        code_letter=code,
-        sample_size=sample_size,
-        accept_number=accept,
-        reject_number=reject,
-    )
-
-
-# Example usage:
-# plan = build_sampling_plan(lot_size=2000, aql='1.5', inspection_level='II')
-# result = plan.evaluate(defects_found=8)  -> 'ACCEPT' (Ac=14 for code K at 1.5 AQL)
-```
-
-#### 6.1.5 Switching Rules
-
-- **Normal to Tightened**: triggered when 2 out of 5 consecutive lots are rejected under normal inspection.
-- **Tightened to Normal**: triggered when 5 consecutive lots are accepted under tightened inspection.
-- **Normal to Reduced**: triggered when 10 consecutive lots accepted, production steady, quality engineer approves.
-- **Reduced to Normal**: triggered by a single rejection, production irregularity, or any other adverse condition.
-
-### 6.2 PPM Calculation Pipeline
-
-#### 6.2.1 Formula
-
-```
-PPM = (Total Defective Units / Total Units Inspected) x 1,000,000
-```
-
-For sampling-based inspection, the defect count is extrapolated to lot level:
-
-```
-Estimated Lot Defectives = (defects_in_sample / sample_size) x lot_size
-Lot PPM contribution = (defects_in_sample / sample_size) x 1,000,000
-```
-
-Rolling 12-month supplier PPM:
-
-```
-PPM_rolling = sum(defects_i for i in last_12_months) /
-              sum(units_inspected_i for i in last_12_months) * 1,000,000
-```
-
-#### 6.2.2 Industry Benchmarks
-
-| Industry | PPM Target | Rationale |
-|---|---|---|
-| Automotive (IATF 16949) | < 500 PPM | AIAG Customer-Specific Requirements |
-| Aerospace (AS9100) | < 100 PPM | Safety-critical parts, FAA traceability |
-| Food & Beverage | <= 1,000 PPM | FDA 21 CFR Part 117, FSMA |
-| Consumer Electronics | < 2,000 PPM | IPC-A-610 Class 2 |
-| Pharmaceutical (GMP) | 0 tolerance on CQA | 21 CFR Part 211 — any OOS is NCR |
-| General manufacturing | < 5,000 PPM | Industry average |
-
-#### 6.2.3 Python Implementation
-
-```python
-# python/08_quality_management/ppm_calculator.py
-
-from __future__ import annotations
+# python/08_quality/rolling_ppm.py
 import pandas as pd
-from dataclasses import dataclass
 
-
-INDUSTRY_PPM_BENCHMARKS = {
-    'AUTOMOTIVE': 500,
-    'AEROSPACE': 100,
-    'FOOD': 1000,
-    'CONSUMER_ELECTRONICS': 2000,
-    'GENERAL': 5000,
-}
-
-
-@dataclass
-class PPMResult:
-    supplier_id: str
-    period_months: int
-    total_units_inspected: int
-    total_defects: int
-    ppm: float
-    benchmark_industry: str
-    benchmark_ppm: int
-    status: str  # 'CONFORMING' | 'WARNING' | 'CRITICAL'
-
-
-def calculate_rolling_ppm(
-    inspection_df: pd.DataFrame,
-    supplier_id: str,
-    months: int = 12,
-    industry: str = 'AUTOMOTIVE',
-) -> PPMResult:
+def calculate_rolling_ppm(df: pd.DataFrame, window_months: int = 12) -> pd.DataFrame:
     """
-    Calculate rolling PPM for a supplier over the specified number of months.
+    Calculate rolling PPM per supplier and material group over a sliding window.
 
-    Parameters
-    ----------
-    inspection_df : pd.DataFrame
-        Columns: supplier_id, inspected_at, units_inspected, defects_found
-    supplier_id : str
-        Supplier identifier to filter.
-    months : int
-        Rolling window in months (default 12).
-    industry : str
-        Industry benchmark key.
+    Args:
+        df: DataFrame with columns LIEFNR, MATNR_GROUP, PERIOD_YYYYMM,
+            DEFECT_COUNT_D, SAMPLE_SIZE_N
+        window_months: Rolling window in months (default 12)
 
-    Returns
-    -------
-    PPMResult
+    Returns:
+        DataFrame with ROLLING_PPM, ROLLING_DEFECTS, ROLLING_INSPECTED added
     """
-    cutoff = pd.Timestamp.now() - pd.DateOffset(months=months)
-    df = inspection_df[
-        (inspection_df['supplier_id'] == supplier_id) &
-        (pd.to_datetime(inspection_df['inspected_at']) >= cutoff)
-    ]
-
-    total_inspected = df['units_inspected'].sum()
-    total_defects = df['defects_found'].sum()
-
-    ppm = (total_defects / total_inspected * 1_000_000) if total_inspected > 0 else 0.0
-
-    benchmark = INDUSTRY_PPM_BENCHMARKS.get(industry, 5000)
-    if ppm <= benchmark * 0.5:
-        status = 'CONFORMING'
-    elif ppm <= benchmark:
-        status = 'WARNING'
-    else:
-        status = 'CRITICAL'
-
-    return PPMResult(
-        supplier_id=supplier_id,
-        period_months=months,
-        total_units_inspected=int(total_inspected),
-        total_defects=int(total_defects),
-        ppm=round(ppm, 1),
-        benchmark_industry=industry,
-        benchmark_ppm=benchmark,
-        status=status,
-    )
-```
-
-### 6.3 DPMO and Six Sigma Level
-
-#### 6.3.1 Formula
-
-```
-DPMO = (Total Defects / (Units Produced x Opportunities Per Unit)) x 1,000,000
-```
-
-Where "Opportunities Per Unit" (OPU) is the number of distinct ways a unit can fail (defined in the FMEA or Control Plan). For example, a printed circuit board assembly with 150 solder joints has OPU = 150 for solder defects.
-
-#### 6.3.2 Six Sigma Level Mapping Table
-
-| Sigma Level | DPMO | Yield (%) | Cp Equivalent |
-|---|---|---|---|
-| 1σ | 691,462 | 30.85 | 0.33 |
-| 2σ | 308,538 | 69.15 | 0.67 |
-| 3σ | 66,807 | 93.32 | 1.00 |
-| 4σ | 6,210 | 99.38 | 1.33 |
-| 5σ | 233 | 99.977 | 1.67 |
-| 6σ | 3.4 | 99.9997 | 2.00 |
-
-Note: Six Sigma methodology incorporates a 1.5σ long-term shift, hence 6σ process = 3.4 DPMO (not 0.002 DPMO for a pure 6σ normal distribution).
-
-#### 6.3.3 Python Implementation
-
-```python
-# python/08_quality_management/dpmo_calculator.py
-
-import scipy.stats as stats
-import numpy as np
-
-
-SIGMA_DPMO_MAP = {
-    1: 691462, 2: 308538, 3: 66807,
-    4: 6210,   5: 233,    6: 3.4,
-}
-
-
-def calculate_dpmo(
-    total_defects: int,
-    units_produced: int,
-    opportunities_per_unit: int,
-) -> float:
-    """Calculate Defects Per Million Opportunities."""
-    if units_produced == 0 or opportunities_per_unit == 0:
-        raise ValueError("units_produced and opportunities_per_unit must be > 0")
-    return (total_defects / (units_produced * opportunities_per_unit)) * 1_000_000
-
-
-def dpmo_to_sigma_level(dpmo: float) -> float:
-    """
-    Convert DPMO to sigma level, accounting for the 1.5-sigma long-term shift.
-
-    Formula: sigma_level = stats.norm.ppf(1 - dpmo/1e6) + 1.5
-    """
-    if dpmo <= 0:
-        return 6.0
-    z = stats.norm.ppf(1 - dpmo / 1_000_000)
-    return round(z + 1.5, 2)
-
-
-def sigma_level_to_dpmo(sigma_level: float) -> float:
-    """Convert sigma level to DPMO (with 1.5-sigma shift)."""
-    z = sigma_level - 1.5
-    return (1 - stats.norm.cdf(z)) * 1_000_000
-```
-
-### 6.4 Statistical Process Control (SPC)
-
-#### 6.4.1 X-bar and R Chart Theory
-
-SPC monitors process stability by plotting subgroup statistics over time and comparing them to statistically derived control limits.
-
-**X-bar chart (subgroup mean):**
-
-```
-Center Line (CL):  X-double-bar = mean of all subgroup means
-Upper Control Limit (UCL_Xbar) = X-double-bar + A2 * R-bar
-Lower Control Limit (LCL_Xbar) = X-double-bar - A2 * R-bar
-```
-
-**R chart (subgroup range):**
-
-```
-Center Line (CL):  R-bar = mean of all subgroup ranges
-UCL_R = D4 * R-bar
-LCL_R = D3 * R-bar
-```
-
-#### 6.4.2 Control Chart Constants Table
-
-| Subgroup Size (n) | A2 | D3 | D4 | d2 |
-|---|---|---|---|---|
-| 2 | 1.880 | 0 | 3.267 | 1.128 |
-| 3 | 1.023 | 0 | 2.574 | 1.693 |
-| 4 | 0.729 | 0 | 2.282 | 2.059 |
-| 5 | 0.577 | 0 | 2.114 | 2.326 |
-| 6 | 0.483 | 0 | 2.004 | 2.534 |
-| 7 | 0.419 | 0.076 | 1.924 | 2.704 |
-| 8 | 0.373 | 0.136 | 1.864 | 2.847 |
-| 9 | 0.337 | 0.184 | 1.816 | 2.970 |
-| 10 | 0.308 | 0.223 | 1.777 | 3.078 |
-
-#### 6.4.3 Western Electric Rules (All 8 Rules)
-
-A process is declared out of statistical control if any of the following occur on either the X-bar or R chart:
-
-| Rule | Description |
-|---|---|
-| Rule 1 | One point beyond 3-sigma control limits |
-| Rule 2 | Two of three consecutive points beyond 2-sigma warning limits (same side) |
-| Rule 3 | Four of five consecutive points beyond 1-sigma limits (same side) |
-| Rule 4 | Eight consecutive points on the same side of the center line |
-| Rule 5 | Six consecutive points steadily increasing or decreasing (trend) |
-| Rule 6 | Fifteen consecutive points within 1-sigma of center line (stratification) |
-| Rule 7 | Fourteen consecutive points alternating up and down (mixture) |
-| Rule 8 | Eight consecutive points beyond 1-sigma on either side (with none in zone C) |
-
-#### 6.4.4 Python SPC Implementation
-
-```python
-# python/08_quality_management/spc_charts.py
-
-from __future__ import annotations
-import numpy as np
-import pandas as pd
-from dataclasses import dataclass, field
-
-# A2, D3, D4 constants indexed by subgroup size (n=2 to n=10)
-_CONSTANTS = {
-    2:  {'A2': 1.880, 'D3': 0,     'D4': 3.267, 'd2': 1.128},
-    3:  {'A2': 1.023, 'D3': 0,     'D4': 2.574, 'd2': 1.693},
-    4:  {'A2': 0.729, 'D3': 0,     'D4': 2.282, 'd2': 2.059},
-    5:  {'A2': 0.577, 'D3': 0,     'D4': 2.114, 'd2': 2.326},
-    6:  {'A2': 0.483, 'D3': 0,     'D4': 2.004, 'd2': 2.534},
-    7:  {'A2': 0.419, 'D3': 0.076, 'D4': 1.924, 'd2': 2.704},
-    8:  {'A2': 0.373, 'D3': 0.136, 'D4': 1.864, 'd2': 2.847},
-    9:  {'A2': 0.337, 'D3': 0.184, 'D4': 1.816, 'd2': 2.970},
-    10: {'A2': 0.308, 'D3': 0.223, 'D4': 1.777, 'd2': 3.078},
-}
-
-
-@dataclass
-class SPCLimits:
-    subgroup_size: int
-    x_bar_bar: float
-    r_bar: float
-    ucl_xbar: float
-    cl_xbar: float
-    lcl_xbar: float
-    ucl_r: float
-    cl_r: float
-    lcl_r: float
-    sigma_estimate: float  # process sigma = R-bar / d2
-
-
-@dataclass
-class SPCAlarm:
-    subgroup_index: int
-    chart: str  # 'XBAR' or 'R'
-    rule: int
-    description: str
-    value: float
-
-
-def compute_spc_limits(subgroups: list[list[float]]) -> SPCLimits:
-    """
-    Compute X-bar/R control limits from historical subgroup data.
-
-    Parameters
-    ----------
-    subgroups : list of lists
-        Each inner list is one subgroup of measurements.
-    """
-    n = len(subgroups[0])
-    if n not in _CONSTANTS:
-        raise ValueError(f"Subgroup size {n} not supported (2–10 only)")
-
-    c = _CONSTANTS[n]
-    means = np.array([np.mean(sg) for sg in subgroups])
-    ranges = np.array([max(sg) - min(sg) for sg in subgroups])
-
-    x_bar_bar = float(np.mean(means))
-    r_bar = float(np.mean(ranges))
-
-    return SPCLimits(
-        subgroup_size=n,
-        x_bar_bar=x_bar_bar,
-        r_bar=r_bar,
-        ucl_xbar=x_bar_bar + c['A2'] * r_bar,
-        cl_xbar=x_bar_bar,
-        lcl_xbar=x_bar_bar - c['A2'] * r_bar,
-        ucl_r=c['D4'] * r_bar,
-        cl_r=r_bar,
-        lcl_r=c['D3'] * r_bar,
-        sigma_estimate=r_bar / c['d2'],
-    )
-
-
-def detect_western_electric_violations(
-    values: list[float],
-    cl: float,
-    ucl: float,
-    lcl: float,
-    chart: str = 'XBAR',
-) -> list[SPCAlarm]:
-    """Detect all 8 Western Electric rule violations in a sequence of plotted values."""
-    alarms: list[SPCAlarm] = []
-    n = len(values)
-    sigma = (ucl - cl) / 3
-
-    for i in range(n):
-        v = values[i]
-        # Rule 1: beyond 3-sigma
-        if v > ucl or v < lcl:
-            alarms.append(SPCAlarm(i, chart, 1, 'Beyond 3-sigma control limit', v))
-
-        if i >= 2:
-            window3 = values[i-2:i+1]
-            # Rule 2: 2 of 3 beyond 2-sigma (same side)
-            above2 = sum(1 for x in window3 if x > cl + 2*sigma)
-            below2 = sum(1 for x in window3 if x < cl - 2*sigma)
-            if above2 >= 2 or below2 >= 2:
-                alarms.append(SPCAlarm(i, chart, 2, '2 of 3 beyond 2-sigma', v))
-
-        if i >= 4:
-            window5 = values[i-4:i+1]
-            # Rule 3: 4 of 5 beyond 1-sigma
-            above1 = sum(1 for x in window5 if x > cl + sigma)
-            below1 = sum(1 for x in window5 if x < cl - sigma)
-            if above1 >= 4 or below1 >= 4:
-                alarms.append(SPCAlarm(i, chart, 3, '4 of 5 beyond 1-sigma', v))
-
-        if i >= 7:
-            window8 = values[i-7:i+1]
-            # Rule 4: 8 consecutive on same side
-            if all(x > cl for x in window8) or all(x < cl for x in window8):
-                alarms.append(SPCAlarm(i, chart, 4, '8 consecutive same side', v))
-            # Rule 5: 6 consecutive trending
-            diffs = [window8[j+1] - window8[j] for j in range(7)]
-            if all(d > 0 for d in diffs) or all(d < 0 for d in diffs[:6]):
-                alarms.append(SPCAlarm(i, chart, 5, '6 consecutive trend', v))
-
-    return alarms
-```
-
-### 6.5 Process Capability Indices (Cp and Cpk)
-
-#### 6.5.1 Formulas
-
-```
-sigma_process = R-bar / d2   (from SPC R chart)
-
-Cp  = (USL - LSL) / (6 * sigma_process)
-
-Cpk = min(
-        (USL - X-bar-bar) / (3 * sigma_process),
-        (X-bar-bar - LSL) / (3 * sigma_process)
-      )
-
-Pp  = (USL - LSL) / (6 * sigma_total)    [uses overall std dev, not R-bar/d2]
-Ppk = min((USL - mean) / (3 * sigma_total), (mean - LSL) / (3 * sigma_total))
-```
-
-Cp measures potential capability (spread vs. tolerance band).  
-Cpk measures actual capability (accounts for process centering).  
-Pp and Ppk use total process variation (including between-subgroup variation).
-
-#### 6.5.2 Process Capability Matrix
-
-| Cp | Cpk | Interpretation | Action |
-|---|---|---|---|
-| ≥ 1.67 | ≥ 1.67 | Six Sigma capable — excellent | Maintain; reduce inspection frequency |
-| ≥ 1.33 | ≥ 1.33 | Four Sigma — capable | Normal inspection; monitor quarterly |
-| ≥ 1.33 | 1.00–1.33 | Capable but off-center | Center the process; SPC monitoring |
-| 1.00–1.33 | 1.00–1.33 | Marginally capable | Increase sample frequency; SPC daily |
-| 1.00–1.33 | < 1.00 | Capable spread, poor centering | Immediate re-centering action |
-| < 1.00 | < 1.00 | Incapable | STOP production; NCR; process redesign |
-
-### 6.6 FMEA Risk Priority Number (RPN)
-
-#### 6.6.1 Formula
-
-```
-RPN = Severity (S) x Occurrence (O) x Detection (D)
-
-Where S, O, D each range from 1 (best) to 10 (worst).
-Maximum RPN = 1,000
-Action threshold: RPN > 100
-```
-
-#### 6.6.2 Severity Scale (AIAG FMEA 4th Ed.)
-
-| S | Effect | Automotive Criterion |
-|---|---|---|
-| 10 | Hazardous — no warning | Safety defect, regulatory non-compliance |
-| 9 | Hazardous — with warning | Safety defect with warning |
-| 8 | Very High | Vehicle/item inoperable — loss of primary function |
-| 7 | High | Vehicle/item operable — reduced primary function |
-| 6 | Moderate | Vehicle/item operable — comfort/convenience lost |
-| 5 | Low | Vehicle/item operable — reduced comfort |
-| 4 | Very Low | Fit/finish/squeak noticed by most customers |
-| 3 | Minor | Fit/finish/squeak noticed by discriminating customers |
-| 2 | Very Minor | Defect noticed by discriminating customers |
-| 1 | None | No effect |
-
-#### 6.6.3 Occurrence Scale
-
-| O | Probability | Rate |
-|---|---|---|
-| 10 | Very High | ≥ 1 in 2 |
-| 9 | Very High | 1 in 3 |
-| 8 | High | 1 in 8 |
-| 7 | High | 1 in 20 |
-| 6 | Moderate | 1 in 80 |
-| 5 | Moderate | 1 in 400 |
-| 4 | Moderate-Low | 1 in 2,000 |
-| 3 | Low | 1 in 15,000 |
-| 2 | Very Low | 1 in 150,000 |
-| 1 | Remote | < 1 in 1,500,000 |
-
-#### 6.6.4 Detection Scale
-
-| D | Detectability | Criterion |
-|---|---|---|
-| 10 | Absolutely impossible | No current controls; cannot detect |
-| 9 | Very Remote | Very unlikely to detect |
-| 8 | Remote | Poor chance to detect |
-| 7 | Very Low | Poor chance to detect in time |
-| 6 | Low | Controls may detect |
-| 5 | Moderate | Controls may detect (moderate chance) |
-| 4 | Moderately High | Controls likely to detect |
-| 3 | High | Controls have good chance of detection |
-| 2 | Very High | Controls almost certain to detect |
-| 1 | Almost Certain | Controls will detect; mistake-proof |
-
-#### 6.6.5 RPN Risk Priority Matrix
-
-| RPN Range | Risk Level | Required Action |
-|---|---|---|
-| > 500 | Critical | Immediate production hold; emergency containment within 24 h |
-| 200 – 500 | High | Design or process change required within 30 days |
-| 100 – 199 | Moderate | Corrective action plan with 8D within 60 days |
-| 50 – 99 | Low | Monitor; improve at next planned revision |
-| < 50 | Negligible | Document; no immediate action required |
-
-### 6.7 AQL Operating Characteristic (OC) Curve
-
-#### 6.7.1 Theory
-
-The OC curve plots the probability of lot acceptance (Pa) against the actual fraction defective (p) in the lot. It characterises the discriminating power of the sampling plan.
-
-- **Producer Risk (alpha)**: probability of rejecting a good lot (p = AQL). Typically alpha = 0.05 (5%).
-- **Consumer Risk (beta)**: probability of accepting a bad lot (p = LTPD, Lot Tolerance Percent Defective). Typically beta = 0.10 (10%).
-
-For a binomial sampling plan with sample size n and acceptance number c:
-
-```
-Pa(p) = sum_{k=0}^{c} C(n, k) * p^k * (1-p)^(n-k)
-```
-
-For large n and small p, the Poisson approximation is more convenient:
-
-```
-Pa(p) = sum_{k=0}^{c} exp(-n*p) * (n*p)^k / k!
-```
-
-#### 6.7.2 Python OC Curve
-
-```python
-# python/08_quality_management/oc_curve.py
-
-import numpy as np
-from scipy.stats import binom
-import matplotlib
-matplotlib.use('Agg')
-import matplotlib.pyplot as plt
-
-
-def oc_curve(n: int, c: int, p_range: np.ndarray | None = None) -> tuple[np.ndarray, np.ndarray]:
-    """
-    Compute the Operating Characteristic curve for a single-sampling plan.
-
-    Parameters
-    ----------
-    n : int   Sample size.
-    c : int   Acceptance number.
-    p_range : array of fraction defective values (0 to 1).
-
-    Returns
-    -------
-    (p_values, pa_values) arrays.
-    """
-    if p_range is None:
-        p_range = np.linspace(0, 0.20, 200)
-
-    pa = np.array([binom.cdf(c, n, p) for p in p_range])
-    return p_range, pa
-
-
-def find_producer_consumer_risk(
-    n: int,
-    c: int,
-    aql: float,
-    ltpd: float,
-) -> dict[str, float]:
-    """
-    Derive producer risk (alpha) and consumer risk (beta) from the OC curve.
-
-    Parameters
-    ----------
-    aql  : AQL as fraction defective (e.g. 0.015 for 1.5%)
-    ltpd : Lot Tolerance Percent Defective as fraction (e.g. 0.08)
-    """
-    pa_at_aql = float(binom.cdf(c, n, aql))
-    pa_at_ltpd = float(binom.cdf(c, n, ltpd))
-    return {
-        'producer_risk_alpha': round(1 - pa_at_aql, 4),
-        'consumer_risk_beta': round(pa_at_ltpd, 4),
-        'pa_at_aql': round(pa_at_aql, 4),
-        'pa_at_ltpd': round(pa_at_ltpd, 4),
-    }
-```
-
-### 6.8 NCR Cycle Time Analytics
-
-#### 6.8.1 Key Metrics
-
-```
-NCR Cycle Time = NCR_Close_Date - NCR_Open_Date  (calendar days)
-
-Mean Cycle Time = mean(NCR_Cycle_Time for all closed NCRs in period)
-P80 Cycle Time  = 80th percentile of NCR_Cycle_Time distribution
-Target          = mean <= 30 days; P80 <= 45 days
-```
-
-#### 6.8.2 Pareto of Root Causes
-
-Root causes are coded using the Ishikawa (5M1E) taxonomy:
-- **Man** (human error, training gap)
-- **Machine** (equipment failure, tooling wear)
-- **Material** (supplier non-conformance, raw material defect)
-- **Method** (process parameter deviation, work instruction error)
-- **Measurement** (gauge error, calibration lapse)
-- **Environment** (temperature, humidity, contamination)
-
-A Pareto chart of NCR frequency by root cause category is generated monthly. The top 2 root causes typically account for 70–80% of NCRs (Juran's 80/20 rule). These drive the monthly Quality Improvement Project (QIP) selection.
-
----
-
-## 7. Phase 4: ML/AI Pipeline
-
-**Duration**: Weeks 20–32  
-**Goal**: Deploy machine learning models that move the quality function from reactive to predictive.
-
-### 7.1 Architecture Overview
-
-```
-[MES/SCADA Sensors] ---MQTT---> [Redis Streams] ----> [LSTM Autoencoder (SPC anomaly)]
-[Inspection Images] ---USB/GigE-> [Jetson Orin] -----> [YOLOv8 defect detection]
-[Process Parameters] -> [Feature Store (PostgreSQL)] -> [XGBoost predictive quality]
-[NCR Text (D2 field)] -> [NLP Pipeline] --------------> [spaCy + DistilBERT classifier]
-                                                              |
-                                              [Quality Dashboard (Grafana)]
-```
-
-All models are retrained monthly using the latest production data. Model versioning is managed with MLflow (Apache-2.0). Champion/challenger framework: new model is promoted only when validation AUC exceeds incumbent by > 0.02 on held-out test set.
-
-### 7.2 Computer Vision Defect Detection (YOLOv8)
-
-#### 7.2.1 Use Case
-
-Automated visual inspection at incoming goods or end-of-line stations. The camera captures images of parts; YOLOv8 detects and classifies defects (scratch, crack, contamination, dimensional deviation) in real time. Results are posted to the NCR workflow if confidence > 0.85 and bounding box area > threshold.
-
-#### 7.2.2 Dataset Preparation
-
-1. Collect minimum 2,000 images per defect class (Roboflow benchmark for production-grade YOLO).
-2. Annotate with LabelImg (MIT licensed):
-   - Draw bounding boxes around each defect.
-   - Assign class labels from the defect code library.
-   - Export in YOLO format (`class cx cy w h` normalised to image dimensions).
-3. Split: 70% train / 15% val / 15% test.
-4. Apply data augmentation (albumentations library, MIT licensed):
-   - Horizontal flip, vertical flip, rotation ±15 degrees
-   - Brightness/contrast jitter ±20%
-   - Gaussian noise (sigma 5–25)
-   - Random crop and resize to 640x640
-
-#### 7.2.3 Training Pipeline
-
-```python
-# python/08_quality_management/cv/train_yolov8.py
-
-from ultralytics import YOLO
-import yaml
-from pathlib import Path
-
-
-def train_defect_detection_model(
-    dataset_yaml: str,
-    model_variant: str = 'yolov8m.pt',
-    epochs: int = 100,
-    imgsz: int = 640,
-    batch: int = 16,
-    device: str = 'cuda:0',
-    project: str = 'runs/quality/defect_detection',
-    run_name: str = 'v1',
-) -> str:
-    """
-    Train YOLOv8 defect detection model.
-
-    Parameters
-    ----------
-    dataset_yaml : str
-        Path to dataset configuration YAML.
-        Must define: path, train, val, test, nc (num classes), names (class list).
-    model_variant : str
-        YOLOv8 pre-trained weights: yolov8n/s/m/l/x.pt
-    epochs : int
-        Training epochs.
-    device : str
-        'cpu', 'cuda:0', or '0,1' for multi-GPU.
-
-    Returns
-    -------
-    str : Path to best weights file.
-    """
-    model = YOLO(model_variant)
-
-    results = model.train(
-        data=dataset_yaml,
-        epochs=epochs,
-        imgsz=imgsz,
-        batch=batch,
-        device=device,
-        project=project,
-        name=run_name,
-        patience=20,          # early stopping
-        save=True,
-        save_period=10,
-        val=True,
-        augment=True,
-        # Hyperparameters tuned for industrial defect images
-        lr0=0.01,
-        lrf=0.001,
-        momentum=0.937,
-        weight_decay=0.0005,
-        warmup_epochs=3,
-        mosaic=1.0,
-        mixup=0.1,
-        copy_paste=0.1,
-    )
-
-    best_weights = Path(project) / run_name / 'weights' / 'best.pt'
-    return str(best_weights)
-
-
-def export_to_tensorrt(weights_path: str, output_dir: str) -> str:
-    """Export trained model to TensorRT for Jetson Orin edge deployment."""
-    model = YOLO(weights_path)
-    # Export to TensorRT FP16 for Jetson
-    model.export(format='engine', half=True, device=0, imgsz=640)
-    engine_path = weights_path.replace('.pt', '.engine')
-    return engine_path
-
-
-def run_inference_at_station(
-    engine_path: str,
-    image_source: str,  # 'rtsp://...' or camera index
-    confidence_threshold: float = 0.85,
-    iou_threshold: float = 0.45,
-) -> list[dict]:
-    """
-    Real-time inference at inspection station.
-    Posts defect records to quality management API when detections exceed threshold.
-    """
-    model = YOLO(engine_path)
-    detections = []
-
-    for result in model.predict(
-        source=image_source,
-        conf=confidence_threshold,
-        iou=iou_threshold,
-        stream=True,
-        verbose=False,
-    ):
-        for box in result.boxes:
-            detections.append({
-                'class': result.names[int(box.cls)],
-                'confidence': float(box.conf),
-                'bbox': box.xyxy[0].tolist(),
-                'image_path': result.path,
+    df = df.copy()
+    df['PERIOD_DATE'] = pd.to_datetime(df['PERIOD_YYYYMM'], format='%Y%m')
+    result_rows = []
+    for (supplier, mat_grp), grp in df.groupby(['LIEFNR', 'MATNR_GROUP']):
+        grp = grp.sort_values('PERIOD_DATE')
+        for idx, row in grp.iterrows():
+            window_start = row['PERIOD_DATE'] - pd.DateOffset(months=window_months - 1)
+            window_data = grp[grp['PERIOD_DATE'] >= window_start]
+            total_defects = window_data['DEFECT_COUNT_D'].sum()
+            total_inspected = window_data['SAMPLE_SIZE_N'].sum()
+            rolling_ppm = (total_defects / total_inspected * 1_000_000) if total_inspected > 0 else None
+            result_rows.append({
+                'LIEFNR': supplier,
+                'MATNR_GROUP': mat_grp,
+                'PERIOD_YYYYMM': row['PERIOD_YYYYMM'],
+                'ROLLING_PPM': rolling_ppm,
+                'ROLLING_DEFECTS': int(total_defects),
+                'ROLLING_INSPECTED': int(total_inspected)
             })
-
-    return detections
+    return pd.DataFrame(result_rows)
 ```
 
-#### 7.2.4 Dataset YAML Example
-
-```yaml
-# datasets/defect_detection/dataset.yaml
-path: /data/quality/defect_images
-train: images/train
-val: images/val
-test: images/test
-
-nc: 6
-names:
-  - scratch
-  - crack
-  - contamination
-  - dimensional_deviation
-  - surface_void
-  - label_defect
-```
-
-#### 7.2.5 Edge Deployment on Jetson Orin
-
-1. Flash Jetson Orin with JetPack 6.x (includes CUDA 12, TensorRT 10).
-2. Install ultralytics with CUDA support: `pip install ultralytics[export]`
-3. Export model to TensorRT FP16 (inference latency target: < 50 ms at 640x640).
-4. Station control software calls `run_inference_at_station()` for each part image.
-5. Results posted to Quality Management API `/api/v1/inspections/{id}/cv-detections` within 100 ms.
-6. High-confidence detections trigger automatic NCR draft with annotated image attached.
-
-#### 7.2.6 Performance Targets
-
-| Metric | Target | Measurement |
-|---|---|---|
-| mAP@0.5 | ≥ 0.90 | YOLO validation set |
-| mAP@0.5:0.95 | ≥ 0.75 | YOLO validation set |
-| Inference Latency | < 50 ms | Jetson Orin TensorRT FP16 |
-| False Positive Rate | < 5% | Manual audit 500 images/month |
-| False Negative Rate | < 2% | Critical — missed defects |
-
-### 7.3 Predictive Quality with XGBoost
-
-#### 7.3.1 Use Case
-
-Predict the probability that a production batch will contain defects exceeding the AQL threshold, using in-process parameters (temperature, pressure, speed, humidity, tooling age, operator shift) as features. Batches above the risk threshold are flagged for 100% inspection or hold pending engineer review.
-
-#### 7.3.2 Feature Engineering
-
-| Feature | Source | Type | Notes |
-|---|---|---|---|
-| machine_temperature_mean | MES | Continuous | Mean over batch run |
-| machine_temperature_std | MES | Continuous | Instability indicator |
-| injection_pressure_bar | MES | Continuous | Average peak pressure |
-| cycle_time_seconds | MES | Continuous | Deviation from standard |
-| tooling_age_shots | MES | Integer | Shots since last PM |
-| ambient_humidity_pct | SCADA | Continuous | From environmental sensor |
-| operator_shift | ERP | Categorical | Morning/Afternoon/Night |
-| raw_material_lot_ppm | Quality | Continuous | Supplier PPM for input lot |
-| days_since_last_calibration | Metrology | Integer | Gauge calibration lag |
-| last_5_batch_dpmo | Quality | Continuous | Rolling quality trend |
-
-#### 7.3.3 Training Pipeline
+### TR-06: Process Capability (Cp, Cpk) Calculation in Python
 
 ```python
-# python/08_quality_management/ml/predictive_quality_xgboost.py
-
-from __future__ import annotations
+# python/08_quality/spc_engine.py
 import numpy as np
-import pandas as pd
-import xgboost as xgb
-import shap
-from sklearn.model_selection import StratifiedKFold
-from sklearn.metrics import (roc_auc_score, precision_score,
-                              recall_score, f1_score, classification_report)
-from sklearn.preprocessing import LabelEncoder
-import mlflow
-import mlflow.xgboost
-from pathlib import Path
-
-
-FEATURE_COLS = [
-    'machine_temperature_mean', 'machine_temperature_std',
-    'injection_pressure_bar', 'cycle_time_seconds',
-    'tooling_age_shots', 'ambient_humidity_pct',
-    'operator_shift_encoded', 'raw_material_lot_ppm',
-    'days_since_last_calibration', 'last_5_batch_dpmo',
-]
-
-TARGET_COL = 'batch_failed_aql'  # 1 = failed AQL, 0 = passed
-
-
-def prepare_features(df: pd.DataFrame) -> pd.DataFrame:
-    """Encode categorical features and handle missing values."""
-    df = df.copy()
-    le = LabelEncoder()
-    df['operator_shift_encoded'] = le.fit_transform(df['operator_shift'].fillna('UNKNOWN'))
-    # Clip extreme outliers at 99th percentile per feature
-    for col in FEATURE_COLS:
-        if col in df.columns:
-            cap = df[col].quantile(0.99)
-            df[col] = df[col].clip(upper=cap)
-    df[FEATURE_COLS] = df[FEATURE_COLS].fillna(df[FEATURE_COLS].median())
-    return df
-
-
-def train_predictive_quality_model(
-    df: pd.DataFrame,
-    experiment_name: str = 'quality-predictive-xgboost',
-    n_folds: int = 5,
-) -> xgb.XGBClassifier:
-    """
-    Train XGBoost defect prediction model with cross-validation and MLflow tracking.
-
-    Parameters
-    ----------
-    df : pd.DataFrame
-        Must contain FEATURE_COLS and TARGET_COL.
-    experiment_name : str
-        MLflow experiment name.
-    n_folds : int
-        Stratified K-fold splits.
-
-    Returns
-    -------
-    xgb.XGBClassifier : Best trained model.
-    """
-    df = prepare_features(df)
-    X = df[FEATURE_COLS].values
-    y = df[TARGET_COL].values
-
-    pos_weight = (y == 0).sum() / max((y == 1).sum(), 1)  # handle class imbalance
-
-    params = {
-        'n_estimators': 500,
-        'learning_rate': 0.05,
-        'max_depth': 6,
-        'min_child_weight': 3,
-        'subsample': 0.8,
-        'colsample_bytree': 0.8,
-        'reg_alpha': 0.1,
-        'reg_lambda': 1.0,
-        'scale_pos_weight': pos_weight,
-        'eval_metric': 'auc',
-        'use_label_encoder': False,
-        'random_state': 42,
-        'tree_method': 'hist',  # GPU-accelerated: 'gpu_hist'
-    }
-
-    mlflow.set_experiment(experiment_name)
-    skf = StratifiedKFold(n_splits=n_folds, shuffle=True, random_state=42)
-    fold_aucs = []
-
-    with mlflow.start_run():
-        mlflow.log_params(params)
-
-        for fold, (train_idx, val_idx) in enumerate(skf.split(X, y)):
-            model = xgb.XGBClassifier(**params)
-            model.fit(
-                X[train_idx], y[train_idx],
-                eval_set=[(X[val_idx], y[val_idx])],
-                verbose=False,
-                early_stopping_rounds=30,
-            )
-            val_preds = model.predict_proba(X[val_idx])[:, 1]
-            auc = roc_auc_score(y[val_idx], val_preds)
-            fold_aucs.append(auc)
-
-        mean_auc = float(np.mean(fold_aucs))
-        mlflow.log_metric('cv_mean_auc', mean_auc)
-
-        # Final model on full dataset
-        final_model = xgb.XGBClassifier(**params)
-        final_model.fit(X, y, verbose=False)
-        mlflow.xgboost.log_model(final_model, 'model')
-
-    return final_model
-
-
-def explain_prediction_with_shap(
-    model: xgb.XGBClassifier,
-    X_sample: pd.DataFrame,
-    top_n: int = 10,
-) -> pd.DataFrame:
-    """
-    Generate SHAP feature importance for a specific batch prediction.
-    Returns a DataFrame of feature name, SHAP value, and direction for engineer review.
-    """
-    X_prepared = prepare_features(X_sample)[FEATURE_COLS]
-    explainer = shap.TreeExplainer(model)
-    shap_values = explainer.shap_values(X_prepared)
-
-    shap_df = pd.DataFrame({
-        'feature': FEATURE_COLS,
-        'shap_value': shap_values[0],
-        'abs_shap': np.abs(shap_values[0]),
-        'direction': ['increase_risk' if v > 0 else 'decrease_risk' for v in shap_values[0]],
-    }).sort_values('abs_shap', ascending=False).head(top_n)
-
-    return shap_df
-```
-
-### 7.4 NLP for NCR Root Cause Classification
-
-#### 7.4.1 Use Case
-
-Quality engineers spend significant time manually categorising NCR root causes in D4 of the 8D report. An NLP classifier reads the free-text problem description (D2) and suggests the most likely root cause category from the Ishikawa 5M1E taxonomy. This reduces classification time from ~15 minutes to < 30 seconds and improves consistency across sites.
-
-#### 7.4.2 Architecture
-
-```
-[NCR D2 Text] -> [spaCy preprocessing] -> [DistilBERT fine-tuned]
-                                             -> [Softmax over 6 classes]
-                                             -> [Confidence score]
-                                             -> [Top-2 suggestions to engineer]
-```
-
-#### 7.4.3 Training Pipeline
-
-```python
-# python/08_quality_management/nlp/ncr_classifier.py
-
-from __future__ import annotations
-import pandas as pd
-import numpy as np
-import spacy
-from transformers import (
-    DistilBertTokenizer,
-    DistilBertForSequenceClassification,
-    Trainer,
-    TrainingArguments,
-)
-from datasets import Dataset
-import torch
-from sklearn.metrics import classification_report
-
-
-ROOT_CAUSE_LABELS = ['MAN', 'MACHINE', 'MATERIAL', 'METHOD', 'MEASUREMENT', 'ENVIRONMENT']
-LABEL2ID = {label: i for i, label in enumerate(ROOT_CAUSE_LABELS)}
-ID2LABEL = {i: label for label, i in LABEL2ID.items()}
-
-nlp = spacy.load('en_core_web_sm')  # loaded once at module level
-
-
-def preprocess_ncr_text(text: str) -> str:
-    """
-    Normalise NCR description text using spaCy:
-    - Lowercase, lemmatise, remove stop words and punctuation.
-    - Preserve domain-specific terms (part numbers, process codes).
-    """
-    doc = nlp(text.lower())
-    tokens = [
-        token.lemma_ for token in doc
-        if not token.is_stop and not token.is_punct and token.is_alpha
-    ]
-    return ' '.join(tokens)
-
-
-def build_hf_dataset(df: pd.DataFrame, tokenizer) -> Dataset:
-    """Convert DataFrame with 'text' and 'label' columns to HuggingFace Dataset."""
-    df = df.copy()
-    df['label'] = df['root_cause'].map(LABEL2ID)
-    df['text'] = df['d2_description'].apply(preprocess_ncr_text)
-
-    def tokenize(batch):
-        return tokenizer(batch['text'], truncation=True, padding='max_length', max_length=128)
-
-    dataset = Dataset.from_pandas(df[['text', 'label']])
-    return dataset.map(tokenize, batched=True)
-
-
-def train_ncr_classifier(
-    df_train: pd.DataFrame,
-    df_eval: pd.DataFrame,
-    output_dir: str = 'models/ncr_classifier',
-    epochs: int = 5,
-    batch_size: int = 16,
-    learning_rate: float = 2e-5,
-) -> DistilBertForSequenceClassification:
-    """Fine-tune DistilBERT for NCR root cause classification."""
-    model_name = 'distilbert-base-uncased'
-    tokenizer = DistilBertTokenizer.from_pretrained(model_name)
-    model = DistilBertForSequenceClassification.from_pretrained(
-        model_name,
-        num_labels=len(ROOT_CAUSE_LABELS),
-        id2label=ID2LABEL,
-        label2id=LABEL2ID,
-    )
-
-    train_dataset = build_hf_dataset(df_train, tokenizer)
-    eval_dataset = build_hf_dataset(df_eval, tokenizer)
-
-    training_args = TrainingArguments(
-        output_dir=output_dir,
-        num_train_epochs=epochs,
-        per_device_train_batch_size=batch_size,
-        per_device_eval_batch_size=batch_size,
-        learning_rate=learning_rate,
-        weight_decay=0.01,
-        evaluation_strategy='epoch',
-        save_strategy='epoch',
-        load_best_model_at_end=True,
-        metric_for_best_model='eval_loss',
-        logging_dir=f'{output_dir}/logs',
-        warmup_ratio=0.1,
-        fp16=torch.cuda.is_available(),
-    )
-
-    trainer = Trainer(
-        model=model,
-        args=training_args,
-        train_dataset=train_dataset,
-        eval_dataset=eval_dataset,
-    )
-    trainer.train()
-    trainer.save_model(output_dir)
-
-    return model
-
-
-def classify_ncr(
-    text: str,
-    model: DistilBertForSequenceClassification,
-    tokenizer: DistilBertTokenizer,
-    top_k: int = 2,
-) -> list[dict]:
-    """
-    Classify NCR description and return top-k root cause suggestions.
-
-    Returns list of {'label': str, 'confidence': float} sorted by confidence desc.
-    """
-    processed = preprocess_ncr_text(text)
-    inputs = tokenizer(processed, return_tensors='pt',
-                       truncation=True, padding=True, max_length=128)
-    with torch.no_grad():
-        logits = model(**inputs).logits
-    probs = torch.softmax(logits, dim=-1).squeeze().tolist()
-
-    results = [
-        {'label': ROOT_CAUSE_LABELS[i], 'confidence': round(prob, 4)}
-        for i, prob in enumerate(probs)
-    ]
-    return sorted(results, key=lambda x: x['confidence'], reverse=True)[:top_k]
-```
-
-### 7.5 SPC Anomaly Detection with LSTM Autoencoder
-
-#### 7.5.1 Use Case
-
-Traditional Western Electric rules detect univariate out-of-control signals on individual control charts. The LSTM Autoencoder extends this to multivariate sensor streams (e.g., 12 simultaneous process parameters from a CNC machining centre), detecting complex anomaly patterns invisible to single-variable SPC.
-
-The autoencoder is trained only on in-control data. When a new window of sensor readings has a reconstruction error above the 99th percentile of the training distribution, an alarm is raised.
-
-#### 7.5.2 Architecture
-
-```
-Input: sliding window [T=30 timesteps, F=12 features]
-   -> LSTM Encoder (64 units, return_sequences=False)
-   -> RepeatVector(30)
-   -> LSTM Decoder (64 units, return_sequences=True)
-   -> TimeDistributed(Dense(12))
-   -> Output: reconstructed window [T=30, F=12]
-
-Loss: MSE between input and reconstruction
-Threshold: 99th percentile of MSE on validation set (in-control data only)
-```
-
-#### 7.5.3 Training Pipeline
-
-```python
-# python/08_quality_management/ml/spc_lstm_autoencoder.py
-
-from __future__ import annotations
-import numpy as np
-import pandas as pd
-import torch
-import torch.nn as nn
-from torch.utils.data import DataLoader, TensorDataset
-from sklearn.preprocessing import StandardScaler
-from typing import Optional
-
-
-WINDOW_SIZE = 30   # timesteps per sliding window
-N_FEATURES = 12   # number of sensor channels
-ANOMALY_PERCENTILE = 99
-
-
-class LSTMAutoencoder(nn.Module):
-    """LSTM Autoencoder for multivariate SPC anomaly detection."""
-
-    def __init__(self, n_features: int = N_FEATURES, hidden_size: int = 64):
-        super().__init__()
-        self.n_features = n_features
-        self.hidden_size = hidden_size
-
-        self.encoder = nn.LSTM(
-            input_size=n_features,
-            hidden_size=hidden_size,
-            num_layers=1,
-            batch_first=True,
-        )
-        self.decoder = nn.LSTM(
-            input_size=hidden_size,
-            hidden_size=n_features,
-            num_layers=1,
-            batch_first=True,
-        )
-
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
-        # x: (batch, seq_len, n_features)
-        _, (hidden, _) = self.encoder(x)
-        # Repeat hidden state across sequence
-        context = hidden.permute(1, 0, 2).repeat(1, x.size(1), 1)
-        reconstruction, _ = self.decoder(context)
-        return reconstruction
-
-
-def create_windows(data: np.ndarray, window_size: int) -> np.ndarray:
-    """Create overlapping sliding windows from time series data."""
-    windows = []
-    for i in range(len(data) - window_size + 1):
-        windows.append(data[i:i + window_size])
-    return np.array(windows)
-
-
-def train_lstm_autoencoder(
-    normal_data: pd.DataFrame,
-    epochs: int = 50,
-    batch_size: int = 64,
-    learning_rate: float = 1e-3,
-    device: str = 'cuda' if torch.cuda.is_available() else 'cpu',
-) -> tuple[LSTMAutoencoder, StandardScaler, float]:
-    """
-    Train LSTM Autoencoder on in-control sensor data.
-
-    Parameters
-    ----------
-    normal_data : pd.DataFrame
-        Time series of shape (n_timesteps, n_features) — IN-CONTROL data only.
-
-    Returns
-    -------
-    (model, scaler, threshold) where threshold is 99th percentile reconstruction error.
-    """
-    scaler = StandardScaler()
-    scaled = scaler.fit_transform(normal_data.values)
-    windows = create_windows(scaled, WINDOW_SIZE)
-
-    # 80/20 train/val split
-    split = int(0.8 * len(windows))
-    X_train = torch.FloatTensor(windows[:split])
-    X_val = torch.FloatTensor(windows[split:])
-
-    train_loader = DataLoader(TensorDataset(X_train, X_train),
-                               batch_size=batch_size, shuffle=True)
-
-    model = LSTMAutoencoder(n_features=normal_data.shape[1]).to(device)
-    optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
-    criterion = nn.MSELoss()
-
-    for epoch in range(epochs):
-        model.train()
-        train_loss = 0.0
-        for x_batch, _ in train_loader:
-            x_batch = x_batch.to(device)
-            optimizer.zero_grad()
-            recon = model(x_batch)
-            loss = criterion(recon, x_batch)
-            loss.backward()
-            optimizer.step()
-            train_loss += loss.item()
-
-        if (epoch + 1) % 10 == 0:
-            model.eval()
-            with torch.no_grad():
-                val_recon = model(X_val.to(device))
-                val_loss = criterion(val_recon, X_val.to(device)).item()
-            print(f"Epoch {epoch+1}/{epochs} | Train: {train_loss/len(train_loader):.4f} | Val: {val_loss:.4f}")
-
-    # Compute threshold on validation set
-    model.eval()
-    with torch.no_grad():
-        val_recon = model(X_val.to(device))
-        errors = ((val_recon - X_val.to(device)) ** 2).mean(dim=(1, 2)).cpu().numpy()
-
-    threshold = float(np.percentile(errors, ANOMALY_PERCENTILE))
-    return model, scaler, threshold
-
-
-def detect_anomaly(
-    window: np.ndarray,
-    model: LSTMAutoencoder,
-    scaler: StandardScaler,
-    threshold: float,
-    device: str = 'cpu',
+from scipy import stats
+
+def calculate_process_capability(
+    values: list[float],
+    usl: float,
+    lsl: float,
+    subgroup_size: int = 5
 ) -> dict:
     """
-    Detect anomaly in a single sensor window.
+    Calculate Cp, Cpk, Pp, Ppk for a set of measurement values.
 
-    Parameters
-    ----------
-    window : np.ndarray shape (WINDOW_SIZE, N_FEATURES)
+    Args:
+        values: List of individual measurement values
+        usl: Upper specification limit
+        lsl: Lower specification limit
+        subgroup_size: Size of each rational subgroup for R-bar method
 
-    Returns
-    -------
-    dict with 'reconstruction_error', 'is_anomaly', 'threshold'.
+    Returns:
+        Dictionary with Cp, Cpk, Pp, Ppk, Sigma_est, Mean
     """
-    scaled = scaler.transform(window)
-    x = torch.FloatTensor(scaled).unsqueeze(0).to(device)
+    arr = np.array(values)
+    n = len(arr)
+    mean = np.mean(arr)
 
-    model.eval()
-    with torch.no_grad():
-        recon = model(x)
-        error = float(((recon - x) ** 2).mean().item())
+    # Control chart sigma estimate (from average range — Xbar/R method)
+    d2_constants = {2: 1.128, 3: 1.693, 4: 2.059, 5: 2.326, 6: 2.534,
+                    7: 2.704, 8: 2.847, 9: 2.970, 10: 3.078}
+    d2 = d2_constants.get(subgroup_size, 2.326)
+    subgroups = [arr[i:i+subgroup_size] for i in range(0, n - subgroup_size + 1, subgroup_size)]
+    ranges = [np.ptp(sg) for sg in subgroups if len(sg) == subgroup_size]
+    r_bar = np.mean(ranges) if ranges else np.std(arr, ddof=1)
+    sigma_est = r_bar / d2
+
+    # Process capability (uses sigma_est — within-subgroup variation)
+    cp = (usl - lsl) / (6 * sigma_est) if sigma_est > 0 else None
+    cpu = (usl - mean) / (3 * sigma_est) if sigma_est > 0 else None
+    cpl = (mean - lsl) / (3 * sigma_est) if sigma_est > 0 else None
+    cpk = min(cpu, cpl) if (cpu is not None and cpl is not None) else None
+
+    # Process performance (uses total standard deviation — overall variation)
+    sigma_total = np.std(arr, ddof=1)
+    pp = (usl - lsl) / (6 * sigma_total) if sigma_total > 0 else None
+    ppu = (usl - mean) / (3 * sigma_total) if sigma_total > 0 else None
+    ppl = (mean - lsl) / (3 * sigma_total) if sigma_total > 0 else None
+    ppk = min(ppu, ppl) if (ppu is not None and ppl is not None) else None
 
     return {
-        'reconstruction_error': round(error, 6),
-        'threshold': round(threshold, 6),
-        'is_anomaly': error > threshold,
-        'severity_ratio': round(error / threshold, 3),
+        'mean': float(mean),
+        'sigma_est': float(sigma_est),
+        'sigma_total': float(sigma_total),
+        'cp': float(cp) if cp is not None else None,
+        'cpk': float(cpk) if cpk is not None else None,
+        'pp': float(pp) if pp is not None else None,
+        'ppk': float(ppk) if ppk is not None else None,
+        'n_values': n,
+        'n_subgroups': len(subgroups)
     }
 ```
 
----
+### TR-07: Western Electric Rules (Out-of-Control Detection)
 
-## 8. Phase 5: Integration and Automation
+```python
+# python/08_quality/western_electric_rules.py
+import numpy as np
+from typing import list
 
-**Duration**: Weeks 28–36  
-**Goal**: Connect all quality models and workflows to enterprise systems.
+def detect_ooc_signals(values: list[float], ucl: float, lcl: float,
+                        xbar: float, sigma: float) -> list[dict]:
+    """
+    Detect Western Electric out-of-control signals in a control chart data series.
 
-### 8.1 SAP QM Integration
+    Args:
+        values: Ordered list of subgroup means
+        ucl: Upper control limit (xbar + 3*sigma)
+        lcl: Lower control limit (xbar - 3*sigma)
+        xbar: Grand mean (centre line)
+        sigma: Process sigma (sigma_est / sqrt(n))
 
-Integration points with SAP Quality Management (QM module):
+    Returns:
+        List of OOC signal records with index, rule code, and description
+    """
+    signals = []
+    arr = np.array(values)
+    n = len(arr)
+    zone_a_upper = xbar + 2 * sigma
+    zone_a_lower = xbar - 2 * sigma
+    zone_b_upper = xbar + sigma
+    zone_b_lower = xbar - sigma
 
-| Direction | SAP Object | Integration Method | Trigger |
-|---|---|---|---|
-| SAP -> QMS | Inspection Lot (QA01) | RFC BAPI_INSPLOT_CREATE | Goods receipt in SAP MM |
-| QMS -> SAP | Usage Decision (QA11) | RFC BAPI_QUAINSP_USAGEDEC | Inspector posts disposition |
-| QMS -> SAP | Defect Recording (QF01) | REST wrapper over RFC QM_QF01_* | Defects entered on tablet |
-| SAP -> QMS | Material Master AQL config | RFC BAPI_MATERIAL_GET_DETAIL | Synchronised nightly |
-| QMS -> SAP | NCR notification (QM10) | RFC BAPI_QM_CREATE_NOTIFICATION | NCR opened in QMS |
+    for i in range(n):
+        v = arr[i]
+        # WE1: Any point beyond 3-sigma control limits
+        if v > ucl or v < lcl:
+            signals.append({'index': i, 'rule': 'WE1', 'desc': 'Point beyond 3-sigma limit'})
 
-### 8.2 MES/SCADA for In-Process SPC
+        # WE2: 2 of 3 consecutive points in Zone A or beyond (same side)
+        if i >= 2:
+            seg = arr[i-2:i+1]
+            above_A = np.sum(seg > zone_a_upper)
+            below_A = np.sum(seg < zone_a_lower)
+            if above_A >= 2 or below_A >= 2:
+                signals.append({'index': i, 'rule': 'WE2', 'desc': '2 of 3 in Zone A'})
 
-SPC data acquisition follows this flow:
+        # WE3: 4 of 5 consecutive points in Zone B or beyond (same side)
+        if i >= 4:
+            seg = arr[i-4:i+1]
+            above_B = np.sum(seg > zone_b_upper)
+            below_B = np.sum(seg < zone_b_lower)
+            if above_B >= 4 or below_B >= 4:
+                signals.append({'index': i, 'rule': 'WE3', 'desc': '4 of 5 in Zone B'})
 
-1. SCADA publishes sensor readings to MQTT broker (topic: `factory/{line_id}/sensors`) at 1 Hz.
-2. Quality SPC service subscribes, buffers readings into Redis Streams.
-3. When a subgroup is complete (n=5 readings), the SPC computation service calculates X-bar and R, evaluates Western Electric rules, and persists to PostgreSQL.
-4. Violations trigger SPC alarms via Redis Pub/Sub to shop-floor dashboards (Grafana) and push notifications to line supervisors.
-5. LSTM Autoencoder runs on a 30-timestep sliding window, posting anomaly scores every 30 seconds.
+        # WE4: 8 consecutive points on same side of centreline
+        if i >= 7:
+            seg = arr[i-7:i+1]
+            if np.all(seg > xbar) or np.all(seg < xbar):
+                signals.append({'index': i, 'rule': 'WE4', 'desc': '8 points same side'})
 
-### 8.3 LIMS Integration
-
-Laboratory Information Management System integration:
-
-- Test requests created in LIMS when incoming inspection requires chemical or physical lab testing (e.g., tensile strength, pH, viscosity).
-- LIMS test results posted to QMS via REST API (`POST /api/v1/lab-results`).
-- Results automatically linked to inspection record; disposition decision deferred until lab results available.
-- EU REACH SVHC test results stored with minimum 5-year retention per CSDDD Article 23.
-
-### 8.4 Supplier Quality Portal
-
-Suppliers interact with the portal for:
-
-- **Defect notifications**: automatic email and portal alert on lot rejection, with AQL report and annotated images (from YOLOv8).
-- **8D response submission**: supplier uploads corrective action documents directly to NCR workflow.
-- **Self-certification**: suppliers upload PPAP (Production Part Approval Process) documents, CoC (Certificates of Conformance), and test reports.
-- **PPM dashboard**: real-time visibility of their rolling 12-month PPM vs. contractual target.
-
-### 8.5 IATF 16949 Audit Integration
-
-For automotive customers, the quality system must support IATF 16949 audit requirements:
-
-- All Control Plans stored with version history and approval workflow.
-- FMEA records linked to Control Plan characteristics; RPN history maintained.
-- Customer-Specific Requirements (CSRs) documented per OEM (Volkswagen VDA 6.3, GM BIQS, Ford Q1).
-- Audit findings tracked as NCRs with standard 8D response.
-- Management Review minutes stored with action owner, due date, and status.
-
----
-
-## 9. Phase 6: Continuous Improvement
-
-**Duration**: Ongoing from Week 36  
-**Goal**: Institutionalise improvement cadence; drive year-over-year quality gains.
-
-### 9.1 DMAIC Project Pipeline
-
-A formal Six Sigma DMAIC project pipeline is maintained with at minimum two active projects at any time:
-
-| Stage | Gate Criteria | Tool |
-|---|---|---|
-| Define | Problem statement, team, goal, scope | Project Charter |
-| Measure | Baseline Cp/Cpk, DPMO, Pareto | MSA, SPC, Pareto |
-| Analyse | Root causes validated (hypothesis test p < 0.05) | DOE, Regression, Fishbone |
-| Improve | Solution validated (paired t-test or ANOVA) | DOE, Poka-Yoke |
-| Control | Control Plan updated, SPC active, handoff | SPC, FMEA update |
-
-### 9.2 Kaizen Velocity Targets
-
-| Year | Kaizen Events | Expected COPQ Reduction |
-|---|---|---|
-| Year 1 | 6 events | 20% COPQ reduction |
-| Year 2 | 8 events | 15% additional COPQ reduction |
-| Year 3 | 10 events | 10% additional (compounding) |
-
-### 9.3 Supplier Development Programme
-
-Suppliers rated CONDITIONAL or PROBATION on the scorecard are placed on a Supplier Development Programme (SDP):
-
-- Dedicated SQE (Supplier Quality Engineer) assigned for 90 days.
-- Monthly on-site process audits.
-- Joint FMEA and Control Plan review.
-- PPM improvement target: 30% reduction within 6 months or supplier at risk of disqualification.
-
-### 9.4 Model Retraining Schedule
-
-| Model | Retraining Frequency | Trigger |
-|---|---|---|
-| YOLOv8 defect detection | Monthly | ≥ 500 new labelled images |
-| XGBoost predictive quality | Monthly | New production batch data |
-| DistilBERT NCR classifier | Quarterly | ≥ 200 new labelled NCRs |
-| LSTM SPC Autoencoder | Quarterly | Process engineering change |
-
----
-
-## 10. Technology Stack and Architecture
-
-### 10.1 Stack Summary
-
-| Layer | Technology | License | Purpose |
-|---|---|---|---|
-| Domain Logic | TypeScript 5.3+ | — | Aggregates, domain events, business rules |
-| Mathematical Models | Python 3.11+ | — | AQL, SPC, Cp/Cpk, PPM, DPMO |
-| ML Training | PyTorch 2.x, XGBoost, transformers | BSD-3/Apache | Model training |
-| ML Serving | TorchServe / FastAPI | Apache-2.0 | Model inference API |
-| Edge Vision | YOLOv8 TensorRT on Jetson Orin | AGPL-3.0 / commercial-ok for production | Station defect detection |
-| Event Store | PostgreSQL 15 + event sourcing | PostgreSQL License | Domain events |
-| Streaming | Redis 7 Streams | BSD-3 | MQTT buffering, SPC windows |
-| Model Registry | MLflow | Apache-2.0 | Model versioning, lineage |
-| Dashboards | Grafana | AGPL-3.0 | SPC charts, quality KPIs |
-| API Layer | FastAPI (Python) + Express (TypeScript) | MIT | REST APIs |
-| Message Bus | RabbitMQ | MPL-2.0 | Cross-module events |
-
-### 10.2 Deployment Architecture
-
+    return signals
 ```
-┌─────────────────────────────────────────────────────────┐
-│                   Kubernetes Cluster                      │
-│                                                           │
-│  [Quality API (FastAPI)] <--> [PostgreSQL Event Store]   │
-│       |                                                   │
-│  [SPC Service] <---------> [Redis Streams]               │
-│       |                         ^                         │
-│  [ML Inference API]        [MQTT Bridge]                  │
-│   - XGBoost                     ^                         │
-│   - DistilBERT                  |                         │
-│   - LSTM AE              [MES/SCADA OPC-UA]               │
-│                                                           │
-└─────────────────────────────────────────────────────────┘
-         |                              |
-  [Jetson Orin]              [Supplier Portal]
-  (YOLOv8 edge)              (Node.js / React)
+
+### TR-08: COPQ Category Assignment
+
+```sql
+-- GL account to COPQ category mapping
+UPDATE FACT_COPQ
+SET COPQ_CATEGORY = cm.COPQ_CATEGORY,
+    COPQ_SUBCATEGORY = cm.COPQ_SUBCATEGORY
+FROM FACT_COPQ fc
+JOIN ref.COPQ_GL_MAPPING cm ON fc.HKONT = cm.HKONT;
+-- Records without a mapping are flagged as UNCLASSIFIED
+UPDATE FACT_COPQ
+SET COPQ_CATEGORY = 'UNCLASSIFIED'
+WHERE COPQ_CATEGORY IS NULL;
 ```
 
 ---
 
-## 11. Change Management and Training
+## 9. Business Rules
 
-### 11.1 Stakeholder Impact Assessment
+**BR-01: AQL Sampling Plan Mandatory**
+All incoming lots must be inspected under an AQL sampling plan configured in SAP QM.
+Skip-lot inspection is only permitted for PREFERRED suppliers (supplier quality scorecard
+>= 90) with a minimum 12-month clean record (zero rejected lots). Skip-lot activation
+requires Quality Manager sign-off and is documented in ref.SUPPLIER_QUALITY_CONFIG.
 
-| Stakeholder | Change Impact | Resistance Risk | Mitigation |
-|---|---|---|---|
-| Quality Inspectors | New digital tablet workflow replaces paper | Medium | Hands-on training; involve champions early |
-| Quality Engineers | AI-assisted root cause classification | Low | Framed as decision support, not replacement |
-| Suppliers | Portal-based NCR communication | Medium | Simple UX; portal onboarding workshop |
-| Production Supervisors | Real-time SPC alarms disrupt flow | High | Clear alarm response procedure; false alarm governance |
-| QA Manager | KPI dashboards visible to leadership | Low | Co-design dashboard content |
-| IT/Infrastructure | New Jetson Orin fleet, GPU servers | Medium | Infrastructure sizing workshop early |
+**BR-02: Tightened Inspection Trigger**
+Per ISO 2859-1 Clause 9.3, a supplier is moved to tightened inspection (Level III) when
+5 consecutive lots are rejected under normal inspection. The system automatically updates
+the SAMPLING_TYPE in ref.SUPPLIER_QUALITY_CONFIG and generates a supplier quality alert.
+Tightened inspection remains active until 5 consecutive lots are accepted.
 
-### 11.2 Training Plan
+**BR-03: NCR Severity Classification**
+NCR severity is classified by the Quality Engineer at creation time using the following
+criteria:
+- CRITICAL: Safety risk, regulatory non-compliance, potential for product recall, or defects
+  that cause injury. Requires immediate containment within 24 hours.
+- MAJOR: Functional non-conformance that renders product unusable or out of specification.
+  Containment required within 72 hours. CAPA due within 30 days.
+- MINOR: Cosmetic or packaging non-conformance; product meets functional specification.
+  CAPA due within 60 days.
 
-| Role | Training Module | Duration | Delivery |
-|---|---|---|---|
-| Inspector | Digital Incoming Inspection Workflow | 4 hours | Classroom + hands-on |
-| Inspector | AQL Sampling Principles (ISO 2859-1) | 2 hours | E-learning |
-| Quality Engineer | SPC Interpretation and Response | 8 hours | Workshop |
-| Quality Engineer | XGBoost Model Outputs and SHAP | 4 hours | Workshop |
-| Quality Engineer | 8D NLP Classifier — how to use and override | 2 hours | E-learning |
-| SQE | Supplier Development Programme | 16 hours | Classroom |
-| Supervisor | Reading Grafana Dashboards | 2 hours | E-learning |
-| IT | Jetson Orin Operations | 8 hours | Vendor training |
+**BR-04: CAPA Due Date Enforcement**
+CAPAs overdue by > 7 days generate an automatic escalation from the responsible person's
+manager. CAPAs overdue by > 30 days are escalated to the Quality Director and flagged in
+the monthly supplier performance review.
 
-### 11.3 Communication Plan
+**BR-05: Recurrence Detection**
+A new NCR is flagged as a recurrence (RECURRENCE_FLAG = 1) when the same supplier, material
+group, and root-cause code combination has had a prior NCR with a closed CAPA within the
+preceding 12 months. Recurrence triggers automatic inspection level escalation.
 
-- Month -2: Executive sponsorship announcement; "What's changing and why" Q&A sessions.
-- Month -1: Super-user network identified; pilot site selection communicated.
-- Week 0: Go-live communications; helpdesk contact publicised.
-- Months 1–3: Weekly quality newsletter with early wins and KPI progress.
-- Month 6: Lessons learned workshop; Phase 2 improvement decisions.
+**BR-06: Process Capability Minimum Threshold**
+Production processes and incoming inspection characteristics must achieve Cpk >= 1.33 for
+critical dimensions (safety-critical or functional) and Cpk >= 1.0 for non-critical
+dimensions. Characteristics with Cpk < 1.0 require immediate engineering review and CAPA.
+Characteristics with Cpk < 1.33 but >= 1.0 are placed on enhanced monitoring (100%
+inspection until Cpk >= 1.33 sustained over 20 consecutive subgroups).
 
----
+**BR-07: Minimum Sample for SPC Reliability**
+SPC control limits are marked as PRELIMINARY until a minimum of 25 subgroups are available.
+Preliminary limits are displayed with a dashed line in dashboards and cannot be used for
+automated OOC alerts. Once 25 subgroups are reached, limits are promoted to STABLE.
 
-## 12. Implementation KPIs
+**BR-08: COPQ Mandatory Classification**
+All quality-related cost postings to monitored GL accounts must be classified by COPQ
+category. Unclassified postings generate a weekly exception report to the Finance Quality
+Cost Accountant for manual classification review.
 
-### 12.1 Programme Health KPIs (Implementation)
+**BR-09: Supplier Quality Scorecard Contribution**
+The quality dimension contributes 30% of the overall supplier scorecard (per CLAUDE.md).
+Within the quality dimension:
+- PPM score: 60% weight (benchmarked against sector target — automotive 500 PPM,
+  food 1,000 PPM, general 2,000 PPM)
+- NCR rate: 40% weight (NCRs per 100 lots inspected; target < 2.0)
 
-| KPI | Target | Measurement |
-|---|---|---|
-| % of inspections digitalised (vs. paper) | 100% by Week 18 | System record count |
-| % of active part numbers with digital Control Plan | ≥ 90% by Week 12 | QMS count |
-| Supplier portal adoption rate | ≥ 80% of Tier-1 by Week 24 | Login data |
-| SPC charts active on critical characteristics | 100% by Week 22 | SPC service report |
-| YOLOv8 model mAP@0.5 on test set | ≥ 0.90 before go-live | Validation log |
-| XGBoost AUC on held-out test set | ≥ 0.80 before go-live | MLflow metrics |
-
-### 12.2 Business Outcome KPIs (Post Go-Live)
-
-| KPI | Baseline | Year 1 Target | Year 3 Target |
-|---|---|---|---|
-| Supplier PPM (Tier-1 average) | Measured | -25% | -50% |
-| NCR Mean Cycle Time | Measured | ≤ 30 days | ≤ 21 days |
-| Incoming Rejection Rate | Measured | -20% | -40% |
-| COPQ as % of Revenue | Measured | -20% | -35% |
-| First Pass Yield | Measured | +2 pp | +5 pp |
-| Cpk (critical characteristics) | Measured | ≥ 1.33 avg | ≥ 1.67 avg |
-| % defects caught by CV before inspector | 0% | 60% | 85% |
-| Predictive quality alert precision | N/A | ≥ 75% | ≥ 85% |
-
----
-
-## 13. Risk and Mitigation
-
-| Risk | Probability | Impact | Mitigation |
-|---|---|---|---|
-| Insufficient labelled image data for YOLOv8 | High | High | Start labelling Day 1; synthetic data augmentation; transfer learning from similar domain |
-| MES/SCADA OPC-UA connectivity delays | Medium | High | Parallel CSV upload path for batch SPC; OPC-UA pilot on one line first |
-| Supplier resistance to portal adoption | Medium | Medium | Executive-level supplier meeting; incentivise early adopters with scorecard bonus |
-| SPC false alarm rate too high (>5%) | Medium | Medium | Phased Western Electric rule activation; start with Rule 1 only; tune over 60 days |
-| FMEA data not maintained by engineering | High | High | FMEA update mandatory gate on NCR closure; automated FMEA staleness report |
-| XGBoost model drift after process change | Medium | High | MLflow model monitoring; retrain trigger when PSI > 0.2 on feature distribution |
-| GDPR / data privacy on operator shift feature | Low | Medium | Anonymise shift data to shift code; DPA review before production use |
-| Jetson Orin firmware/driver incompatibility | Low | Medium | Validate JetPack version against ultralytics compatibility matrix before procurement |
-| ISO 9001 audit finding during implementation | Medium | Medium | Pre-audit internal review at Week 16; address Critical gaps before external audit |
-| Key quality engineer attrition | Low | High | Knowledge documentation at each phase; cross-training backup per model |
+Scoring:
+- PPM score = MAX(0, 100 - (Actual_PPM / Sector_Target_PPM) * 50)
+- NCR rate score = MAX(0, 100 - (NCR_Rate / 2.0) * 100)
 
 ---
 
-## 14. Timeline Summary
+## 10. KPIs and Formulas
 
-| Phase | Weeks | Key Deliverables |
-|---|---|---|
-| Phase 0: Assessment | 1–4 | AS-IS baseline, gap analysis, project charter |
-| Phase 1: Foundation | 5–10 | Master data loaded, TypeScript aggregates deployed, Event Store live |
-| Phase 2: Process Standardisation | 11–18 | Digital inspection workflow, NCR 8D active, Supplier Portal v1 |
-| Phase 3: Mathematical Models | 15–22 | AQL engine, PPM/DPMO pipeline, SPC charts, Cp/Cpk, FMEA RPN |
-| Phase 4: ML/AI Pipeline | 20–32 | YOLOv8 trained and edge-deployed, XGBoost live, NLP classifier live, LSTM AE live |
-| Phase 5: Integration | 28–36 | SAP QM bi-directional, MES/SCADA SPC feed, LIMS integration, IATF audit system |
-| Phase 6: Continuous Improvement | 36+ | DMAIC pipeline, Kaizen cadence, model retraining schedule, SDP programme |
+### KPI-01: Incoming PPM
 
-**Total programme duration**: 36 weeks to full capability; ongoing from Week 36.
+```
+Incoming PPM = (Total Defective Units in Sample / Total Units Inspected) × 1,000,000
 
-**Critical path**: Phase 0 -> Phase 1 -> Phase 2 (digital workflow is prerequisite for ML training data) -> Phase 3 (SPC needed before LSTM training) -> Phase 4 (depends on labelled data from Phases 2–3) -> Phase 5.
+Rolling 12-month Incoming PPM =
+    SUM(DEFECT_COUNT_D, last 12 months) / SUM(SAMPLE_SIZE_N, last 12 months) × 1,000,000
+```
 
-**Recommended governance**: Quality Steering Committee meeting bi-weekly; Phase gate reviews at Week 10, 18, 22, 32, 36 with formal sign-off before proceeding.
+Sector targets (world-class benchmarks):
+- Automotive (IATF 16949): < 500 PPM
+- Food & Beverage: < 1,000 PPM
+- General Manufacturing: < 2,000 PPM
+- Critical Medical Device: < 100 PPM
+
+### KPI-02: DPMO (Defects Per Million Opportunities)
+
+```
+DPMO = (Total Defects Found / (Total Units Inspected × Opportunities per Unit)) × 1,000,000
+```
+
+The "Opportunities per Unit" value must be defined in the inspection plan for each material.
+Default = 1 opportunity per unit when not explicitly defined (conservative assumption).
+
+### KPI-03: Sigma Level
+
+```
+Sigma Level = NORM.S.INV(1 - DPMO / 1,000,000) + 1.5
+```
+
+Python implementation:
+```python
+from scipy.stats import norm
+def dpmo_to_sigma(dpmo: float) -> float:
+    """Convert DPMO to Sigma Level using standard 1.5-sigma shift."""
+    if dpmo <= 0:
+        return 6.0
+    if dpmo >= 1_000_000:
+        return 0.0
+    return norm.ppf(1 - dpmo / 1_000_000) + 1.5
+```
+
+Sigma level benchmarks:
+- 6 Sigma: 3.4 DPMO (world-class)
+- 5 Sigma: 233 DPMO
+- 4 Sigma: 6,210 DPMO
+- 3 Sigma: 66,807 DPMO
+
+### KPI-04: AQL Acceptance Rate
+
+```
+AQL Acceptance Rate (%) = Lots Accepted (ACCEPT decision) / Total Lots Inspected × 100
+```
+
+Target: >= 95% at Level II normal inspection (i.e., < 5% rejection rate)
+Trigger for tightened inspection: < 90% acceptance over 5 consecutive lots (ISO 2859-1 §9.3)
+
+### KPI-05: NCR Open Rate
+
+```
+NCR Open Rate (%) = Open NCRs (NCR_STATUS in (OPEN, IN_PROGRESS)) / Total NCRs × 100
+```
+
+Target: < 20% open rate (80% of NCRs should be closed within SLA)
+
+NCR Rate per 100 Lots = Total NCRs / Total Lots Inspected × 100
+Target: < 2.0 NCRs per 100 lots
+
+### KPI-06: CAPA On-Time Closure Rate
+
+```
+CAPA On-Time Closure (%) = CAPAs closed on or before DUE_DATE / Total Closed CAPAs × 100
+```
+
+Target: >= 90% on-time closure
+Critical threshold: < 70% triggers Quality Director escalation
+
+### KPI-07: CAPA Effectiveness Rate
+
+```
+CAPA Effectiveness (%) = CAPAs with EFFECTIVENESS_SCORE >= 80 / Total Verified CAPAs × 100
+```
+
+Effectiveness verification is completed 3–6 months after CAPA implementation by re-inspecting
+the same defect characteristic on new lots from the same supplier.
+
+### KPI-08: CAPA Recurrence Rate
+
+```
+CAPA Recurrence Rate (%) = CAPAs where same defect recurred within 12 months / Total Closed CAPAs × 100
+```
+
+Target: < 10% recurrence rate
+High recurrence suggests root cause was not correctly identified or CAPA was not effective.
+
+### KPI-09: Cost of Poor Quality (COPQ)
+
+```
+COPQ Total = Internal_Failure + External_Failure + Appraisal + Prevention
+
+COPQ as % of Revenue = COPQ_Total / Net_Revenue × 100
+```
+
+Typical COPQ benchmarks:
+- Best-in-class: 1–3% of revenue
+- Average manufacturers: 5–10% of revenue
+- Poor performers: > 15% of revenue
+
+COPQ subcategories:
+- Internal Failure: scrap, rework, re-inspection, downtime from defects
+- External Failure: returns, warranty claims, customer chargebacks, recall costs
+- Appraisal: incoming inspection labour, test equipment calibration, supplier audits
+- Prevention: quality training, SPC systems, design reviews, supplier development
+
+### KPI-10: First Pass Yield (FPY)
+
+```
+FPY (%) = Units passing inspection on first attempt / Total units inspected × 100
+
+Also: Lots with ACCEPT decision on first inspection / Total Lots × 100
+```
+
+Target: >= 95% FPY
+FPY < 90% on a specific supplier/material combination triggers a formal supplier quality
+improvement plan (SQIP).
+
+### KPI-11: Process Capability Index (Cp and Cpk)
+
+```
+Cp = (USL - LSL) / (6 × sigma_est)
+
+Cpk = MIN((USL - mean) / (3 × sigma_est), (mean - LSL) / (3 × sigma_est))
+```
+
+Interpretation:
+- Cpk >= 1.67: Excellent — Six Sigma process
+- Cpk >= 1.33: Capable — minimum acceptable for critical characteristics
+- Cpk >= 1.0: Marginal — requires enhanced monitoring
+- Cpk < 1.0: Incapable — immediate corrective action required
+
+### KPI-12: Gage R&R (Measurement System Capability)
+
+```
+%R&R = (Measurement System Variation / Total Observed Variation) × 100
+```
+
+Acceptance criteria (AIAG MSA 4th Ed.):
+- %R&R < 10%: Excellent measurement system
+- %R&R 10–30%: Marginal (may be acceptable based on application)
+- %R&R > 30%: Unacceptable — measurement system must be improved
 
 ---
 
-## 15. References
+## 11. Analytical Logic
 
-### Standards and Regulations
+### AQL Inspection Level Management
 
-1. ISO 2859-1:1999 — *Sampling procedures for inspection by attributes — Part 1: Sampling schemes indexed by acceptance quality limit (AQL) for lot-by-lot inspection*. International Organisation for Standardisation, Geneva.
-2. ISO 9001:2015 — *Quality management systems — Requirements*. International Organisation for Standardisation, Geneva.
-3. IATF 16949:2016 — *Quality management system requirements for automotive production and relevant service parts organizations*. International Automotive Task Force.
-4. ISO 7870-2:2013 — *Control charts — Part 2: Shewhart control charts*. International Organisation for Standardisation.
-5. AIAG FMEA Reference Manual, 4th Edition (2008). Automotive Industry Action Group, Southfield, MI.
-6. AIAG MSA Reference Manual, 4th Edition (2010). Automotive Industry Action Group.
-7. AIAG PPAP Production Part Approval Process, 4th Edition (2006). Automotive Industry Action Group.
-8. Western Electric Company (1956). *Statistical Quality Control Handbook*. Western Electric Co., Indianapolis, IN.
-9. EU Directive 2024/1760 (CSDDD) — Corporate Sustainability Due Diligence Directive. Official Journal of the European Union.
-10. EU REACH Regulation 1907/2006. European Chemicals Agency.
+ISO 2859-1 defines three inspection levels (I, II, III) and three switching rules:
 
-### Academic and Practitioner References
+**Normal to Tightened**: 2 of 5 consecutive lots rejected under normal inspection.
+System action: Update SAMPLING_TYPE = TIGHTENED in ref.SUPPLIER_QUALITY_CONFIG;
+send alert to Supplier Quality Engineer.
 
-11. Montgomery, D.C. (2020). *Introduction to Statistical Quality Control*, 8th Edition. John Wiley & Sons, Hoboken, NJ.
-12. Pyzdek, T. and Keller, P. (2018). *The Six Sigma Handbook*, 5th Edition. McGraw-Hill, New York.
-13. Juran, J.M. and De Feo, J.A. (2010). *Juran's Quality Handbook*, 6th Edition. McGraw-Hill, New York.
-14. Shewhart, W.A. (1931). *Economic Control of Quality of Manufactured Product*. D. Van Nostrand, New York. (Republished ASQ, 1980.)
-15. Hoerl, R.W. and Snee, R.D. (2012). *Statistical Thinking: Improving Business Performance*, 2nd Edition. John Wiley & Sons.
-16. Redmon, J. and Farhadi, A. (2018). *YOLOv3: An Incremental Improvement*. arXiv:1804.02767.
-17. Jocher, G. et al. (2023). *Ultralytics YOLOv8*. https://github.com/ultralytics/ultralytics.
-18. Chen, T. and Guestrin, C. (2016). *XGBoost: A Scalable Tree Boosting System*. KDD 2016.
-19. Lundberg, S. and Lee, S. (2017). *A Unified Approach to Interpreting Model Predictions*. NeurIPS 2017 (SHAP).
-20. Sanh, V. et al. (2019). *DistilBERT, a distilled version of BERT*. arXiv:1910.01108.
-21. Hochreiter, S. and Schmidhuber, J. (1997). *Long Short-Term Memory*. Neural Computation 9(8):1735–1780.
+**Tightened to Discontinue**: 5 consecutive lots rejected under tightened inspection.
+System action: Set SAMPLING_TYPE = DISCONTINUE; escalate to Quality Manager;
+block future PO releases for this supplier/material combination pending quality review.
 
-### Internal Documents
+**Normal to Reduced**: 10 consecutive lots accepted, production rate steady, no quality
+concerns. System action: Update SAMPLING_TYPE = REDUCED; log reduction date.
 
-22. Supply Chain Management Platform — CLAUDE.md (project standards and architecture guide).
-23. `src/departments/08-quality-management/domain/InspectionRecord.ts` — TypeScript aggregate definitions.
-24. `python/08_quality_management/` — Python mathematical model implementations.
-25. `docs/standards/REGULATORY_FRAMEWORK.md` — Full regulatory reference.
-26. `src/departments/02-supplier-management/domain/SupplierScorecard.ts` — Supplier PPM feed specification.
-27. `src/departments/03-inventory/domain/StockMovement.ts` — Quarantine movement integration.
+**Reduced to Normal**: Any lot rejected, or lot is conditionally accepted, or production
+is irregular. System action: Immediate revert to NORMAL.
+
+All switching events are logged in audit table audit.AQL_SWITCHING_LOG with timestamp,
+trigger condition, and responsible approver.
+
+### NCR Severity Classification and Response Times
+
+| Severity | Definition | Containment SLA | CAPA Due | Escalation |
+|----------|------------|-----------------|----------|------------|
+| CRITICAL | Safety / regulatory / recall risk | 24 hours | 14 days | Quality Director + Legal + VP Supply Chain |
+| MAJOR | Functional non-conformance | 72 hours | 30 days | Quality Manager |
+| MINOR | Cosmetic / packaging non-conformance | 5 business days | 60 days | Supplier Quality Engineer |
+
+### NCR Pareto Analysis (Root Cause)
+
+Root causes are classified using the Ishikawa (5M+E) framework:
+- MAN: Operator error, insufficient training, procedure not followed
+- MACHINE: Equipment failure, tooling wear, calibration drift
+- MATERIAL: Raw material non-conformance, incorrect specification
+- METHOD: Incorrect process parameter, missing or inadequate SOP
+- MEASUREMENT: Measurement system error, gage out of calibration
+- ENVIRONMENT: Temperature, humidity, contamination
+
+The top three root cause categories by NCR count and by financial impact are reported
+monthly. Root cause Pareto drives the annual Quality Improvement Plan focus areas.
+
+### CAPA Aging Buckets
+
+Open CAPAs are classified by age from creation date:
+- GREEN: 0–30 days (within normal working period)
+- AMBER: 31–60 days (approaching or at due date)
+- RED: 61–90 days (overdue — manager escalated)
+- CRITICAL_OVERDUE: > 90 days (escalated to Quality Director)
+
+CAPA aging distribution is monitored weekly. Any business unit or supplier with > 20%
+of CAPAs in RED or CRITICAL_OVERDUE bucket triggers a management review.
+
+### SPC Alert Trigger Logic
+
+Out-of-control signals trigger the following automated workflow:
+
+| OOC Rule | Signal Description | Immediate Action |
+|----------|-------------------|------------------|
+| WE1 | Point beyond 3-sigma limit | Auto-hold production batch; notify QC Engineer |
+| WE2 | 2 of 3 in Zone A | Alert QC Engineer; review last 10 subgroups |
+| WE3 | 4 of 5 in Zone B | Alert QC Engineer; schedule process review |
+| WE4 | 8 consecutive on same side | Alert Process Engineer; trend investigation |
+| WE5–WE8 | Patterns suggesting systematic shift | Alert; schedule formal process review |
+
+All OOC signals are logged in analytics.SPC_OOC_SIGNALS. Unacknowledged signals
+older than 4 hours escalate to the QC Supervisor.
+
+### Supplier Quality Score Calculation
+
+The quality dimension of the supplier scorecard (30% of total) is calculated as follows:
+
+```
+Quality_Score = (PPM_Score × 0.60) + (NCR_Rate_Score × 0.40)
+
+PPM_Score = MAX(0, 100 - (Rolling_12M_PPM / Sector_PPM_Target) × 50)
+NCR_Rate_Score = MAX(0, 100 - (NCR_per_100_lots / 2.0) × 100)
+```
+
+A supplier with zero defects in 12 months achieves PPM_Score = 100.
+A supplier at exactly the sector PPM target achieves PPM_Score = 50.
+A supplier at 2× the sector target achieves PPM_Score = 0 (floor).
 
 ---
 
-*This document is subject to annual review by the Quality Centre of Excellence. Next scheduled review: 2027-06-20.*
+## 12. Validations and Controls
 
-*All implementations must comply with the OSI open-source licence mandate defined in CLAUDE.md. Proprietary libraries are prohibited.*
+### Data Quality Controls
+
+| Control ID | Description | Severity | Action |
+|------------|-------------|----------|--------|
+| DQC-01 | PRUEFLOS unique in FACT_IQC | Critical | Block load; alert QM administrator |
+| DQC-02 | DEFECT_COUNT_D <= SAMPLE_SIZE_N | Critical | Reject record; quarantine to error table |
+| DQC-03 | SAMPLE_SIZE_N matches AQL table for lot size | High | Flag mismatch; alert Supplier Quality Engineer |
+| DQC-04 | AQL_VALUE is a standard ISO 2859-1 value | High | Reject if non-standard; default to AQL 1.0 with alert |
+| DQC-05 | NCR QMNUM unique in FACT_NCR | Critical | Block load; alert QM administrator |
+| DQC-06 | NCR_SEVERITY populated for all F3 notifications | High | Reject; return to Quality Engineer for classification |
+| DQC-07 | CAPA DUE_DATE >= parent NCR CREATION_DATE | High | Reject CAPA record; alert responsible person |
+| DQC-08 | Cp >= Cpk (mathematical constraint) | Critical | Flag calculation error; rerun SPC engine |
+| DQC-09 | SPC UCL > XBAR > LCL (control limit order) | Critical | Flag; do not publish until resolved |
+| DQC-10 | COPQ_CATEGORY is not UNCLASSIFIED after 7 days | Medium | Weekly exception report to Finance |
+
+### Reconciliation Controls
+
+- Daily: Count of inspection lots in FACT_IQC vs. SAP QM transaction QA03 (lot count by
+  creation date). Tolerance: zero unmatched.
+- Weekly: Count of open NCRs in FACT_NCR vs. SAP QM notification list IW29 filtered to
+  quality notification types F1/F2/F3. Tolerance: zero unmatched.
+- Monthly: Total COPQ_AMOUNT in FACT_COPQ vs. SAP CO report for quality cost centres.
+  Tolerance: < EUR 100 rounding difference.
+- Quarterly: Supplier rolling PPM in analytics layer reviewed and confirmed by Supplier
+  Quality Engineers against their independently maintained records. Tolerance: < 5% variance.
+
+---
+
+## 13. Required Evidence
+
+| Evidence Item | Description | Owner | Required By |
+|---------------|-------------|-------|-------------|
+| EV-01 | SAP QM inspection lot field mapping (QMEL, QMFE, QMUR) | SAP QM Consultant | Phase 1 |
+| EV-02 | SAP QM Quality Notification field mapping (all types) | Quality Manager | Phase 1 |
+| EV-03 | AQL sampling plan configuration extract from SAP QM | QM System Admin | Phase 1 |
+| EV-04 | Supplier sector classification (automotive/food/general) | Supplier Quality Engineer | Phase 1 |
+| EV-05 | COPQ GL account mapping table signed off by Finance | Finance Controller | Phase 2 |
+| EV-06 | Control plan extract — CTQ characteristics requiring SPC | Quality Engineering | Phase 2 |
+| EV-07 | SPC engine Python code review and test results | Quality Analytics Engineer | Phase 2 |
+| EV-08 | SPC validation against Minitab for 5 test cases | Quality Manager | Phase 3 |
+| EV-09 | NCR severity classification guidelines (written procedure) | Quality Manager | Phase 1 |
+| EV-10 | CAPA due date policy document | Quality Director | Phase 1 |
+| EV-11 | Sector PPM targets approved by Quality Director | Quality Director | Phase 1 |
+| EV-12 | Opportunities-per-unit value for top 50 materials by spend | Quality Engineering | Phase 2 |
+
+---
+
+## 14. Dashboard Design
+
+### Dashboard 1: Quality Executive Summary
+
+**Audience**: Quality Director, VP Supply Chain, CPO
+**Refresh**: Daily at 06:00
+**Layout**: Single-page executive KPI summary
+
+Key visuals:
+- KPI cards: Incoming PPM (rolling 12M), DPMO, Sigma Level, COPQ YTD, CAPA On-Time %
+- PPM trend: Rolling 12-month line chart by month vs. sector target
+- Supplier quality heatmap: matrix of suppliers vs. months with PPM colour-coded
+- NCR severity distribution: stacked bar (CRITICAL / MAJOR / MINOR) by month
+- COPQ waterfall: breakdown by Internal Failure, External Failure, Appraisal, Prevention
+- Top 5 suppliers by NCR count: ranked bar chart with financial impact
+
+### Dashboard 2: Incoming Inspection (IQC) Detail
+
+**Audience**: QC Supervisor, Incoming QC Team, Supplier Quality Engineers
+**Refresh**: Every 2 hours (near real-time)
+
+Key visuals:
+- Lots pending inspection: operational count with age indicator
+- AQL acceptance rate by supplier: ranked bar chart with tightened inspection flags
+- PPM by supplier and material group: heat matrix
+- Inspection level distribution: pie chart (NORMAL / TIGHTENED / REDUCED / SKIP-LOT)
+- Lot disposition breakdown: stacked bar (ACCEPT / REJECT / CONDITIONAL / SCRAP / REWORK)
+- First Pass Yield trend: line chart by month with 95% target reference line
+
+### Dashboard 3: NCR and CAPA Management
+
+**Audience**: Quality Manager, Quality Engineers, Supplier Quality Engineers
+**Refresh**: Daily
+
+Key visuals:
+- Open NCR aging: stacked bar by CRITICAL/MAJOR/MINOR × age bucket (green/amber/red)
+- NCR root cause Pareto: horizontal bar chart (Man/Machine/Material/Method/Measurement/Environment)
+- CAPA on-time closure: gauge chart vs. 90% target
+- CAPA overdue list: table with supplier, NCR number, days overdue, responsible person
+- NCR financial impact: treemap by supplier with total EUR value of open NCRs
+- Recurrence rate trend: line chart by quarter vs. 10% target
+
+### Dashboard 4: SPC and Process Capability
+
+**Audience**: Quality Engineers, Process Engineers, Manufacturing Supervisors
+**Refresh**: Triggered on each new inspection lot; displayed in near real-time
+
+Key visuals:
+- X-bar/R control chart: for selected material and characteristic — interactive slicer
+- Cpk distribution: histogram of all monitored characteristics vs. 1.33 threshold
+- Capability summary table: MATNR, MERKMAL, Cp, Cpk, Pp, Ppk, OOC status — RAG coded
+- OOC signal log: table of recent Western Electric rule violations with rule code and date
+- Preliminary vs. stable limits: flag indicators for characteristics still in PRELIMINARY status
+- Process trend: Cpk trend over 6 months for selected characteristic
+
+### Dashboard 5: Supplier Quality Scorecard Contribution
+
+**Audience**: Supplier Quality Manager, Category Manager, Procurement Director
+**Refresh**: Monthly (1st business day)
+
+Key visuals:
+- Supplier quality score table: all active suppliers with PPM Score, NCR Rate Score,
+  composite Quality Score, trend vs. prior quarter
+- Sector benchmarking: supplier PPM vs. sector target — scatter plot
+- CAPA effectiveness by supplier: bar chart with effectiveness score and recurrence rate
+- Suppliers on tightened inspection: alert panel with supplier, trigger date, lots remaining
+- Quality improvement trajectory: 12-month Cpk and PPM trend for top 10 development suppliers
+- COPQ attribution by supplier: pie chart of external failure costs by supplier
+
+---
+
+## 15. Use Cases
+
+### UC-01: Incoming Lot Disposition Decision Support
+
+**User**: QC Inspector / QC Supervisor
+**Trigger**: New inspection lot created in SAP QM after GR posting
+**Process**:
+1. Inspector retrieves lot from Dashboard 2 (Lots Pending Inspection)
+2. System displays: sample size from AQL table, acceptance number, rejection number,
+   supplier historical PPM, prior NCRs for this material
+3. Inspector records defect count and defect types in SAP QM
+4. System automatically determines AQL decision (TR-02) and proposes disposition
+5. For REJECT decision: system pre-populates NCR creation form with supplier, material, batch
+6. Quality Engineer reviews and confirms disposition; lot moves to ACCEPTED, RETURNED, or SCRAP
+
+**Analytical Output**: AQL decision, lot PPM, disposition recommendation
+
+### UC-02: Supplier Quality Review — Monthly Business Review
+
+**User**: Supplier Quality Engineer
+**Trigger**: First week of each month
+**Process**:
+1. Extract supplier rolling 12-month PPM, NCR rate, AQL acceptance rate from Dashboard 5
+2. Compare against sector PPM target; identify suppliers in top 10% worst performers
+3. Pull CAPA status for all open NCRs for prioritised suppliers
+4. Check AQL switching status: any suppliers on TIGHTENED or at DISCONTINUE threshold
+5. Prepare supplier quality letter and 8D root cause request for suppliers > 2× sector PPM
+6. Update supplier quality scorecard component; feed into overall scorecard
+
+### UC-03: CAPA Overdue Escalation Management
+
+**User**: Quality Manager
+**Trigger**: Daily automated alert; weekly management review
+**Process**:
+1. Filter FACT_CAPA where AGE_DAYS > DUE_DATE and IS_ON_TIME IS NULL (open and overdue)
+2. Group by responsible person and by severity of linked NCR
+3. Generate escalation letters for CAPAs overdue > 30 days
+4. Update CAPA management tracker and report to Quality Director
+5. For critical-severity CAPAs overdue > 14 days: escalate to VP Supply Chain
+
+### UC-04: SPC Out-of-Control Response
+
+**User**: QC Engineer / Process Engineer
+**Trigger**: OOC signal detected by Python SPC engine
+**Process**:
+1. SPC engine writes OOC record to analytics.SPC_OOC_SIGNALS
+2. Alert sent to QC Engineer via email and displayed on Dashboard 4 OOC signal log
+3. QC Engineer investigates: reviews recent subgroups, production log, machine parameters
+4. If assignable cause found: log in SAP QM as a quality notification (F2 — internal defect)
+5. Production may continue if OOC is WE2/WE3/WE4 (trend) with documented justification
+6. For WE1 (beyond 3-sigma): batch on hold pending investigation
+
+### UC-05: COPQ Annual Budget Review
+
+**User**: Quality Controller, Finance Business Partner
+**Trigger**: Quarterly and annual budget review cycle
+**Process**:
+1. Extract COPQ by category from FACT_COPQ for fiscal year-to-date
+2. Calculate COPQ as % of revenue; compare against prior year and industry benchmark
+3. Decompose External Failure by supplier: identify top 3 suppliers driving warranty / return costs
+4. Build COPQ reduction business case: CAPA investments vs. projected failure cost reduction
+5. Present to Quality Director and CFO for annual quality budget approval
+
+---
+
+## 16. Recommended Actions
+
+### RA-01: Skip-Lot Programme for Top-Performing Suppliers
+
+Implement a formal skip-lot programme (ISO 2859-3) for PREFERRED suppliers that have
+demonstrated zero rejections over 12 consecutive months and Cpk >= 1.67 on all critical
+characteristics. Skip-lot reduces incoming inspection cost by 60–80% for these suppliers.
+Estimated annual inspection labour saving: EUR 80k–150k based on current inspection volume.
+
+### RA-02: Automated NCR Creation from AQL Rejection
+
+Currently, NCR creation after an AQL rejection is a manual step taken by the QC Inspector.
+This creates a gap: rejected lots are sometimes not formally NCR'd, resulting in dispositions
+not being tracked. Implement an automated SAP QM workflow that creates a draft F3 notification
+automatically upon REJECT decision, requiring only the Quality Engineer to confirm severity
+and root cause before activation.
+
+### RA-03: Supplier Self-Service Quality Portal
+
+Implement a supplier-facing quality portal where suppliers can view their real-time PPM
+dashboard, open NCRs, overdue CAPAs, and current inspection level. Self-service transparency
+reduces inbound enquiries to the Supplier Quality team by an estimated 40% and accelerates
+CAPA response times by making overdue items visible to the supplier without waiting for a
+formal letter.
+
+### RA-04: SPC Real-Time Monitoring at Receiving Dock
+
+Deploy SPC monitoring at the receiving dock for the top 20 incoming materials by inspection
+volume. Use Python SPC engine integrated with a tablet-based inspection data entry tool
+(replacing paper-based inspection forms) to capture measurement data in real-time. This
+enables immediate OOC detection during the inspection process rather than retrospectively.
+
+### RA-05: COPQ Reduction via Supplier Development Programme
+
+The top 5 suppliers by external failure COPQ contribution should be enrolled in a formal
+Supplier Development Programme (SDP). The SDP includes:
+- On-site process audit within 30 days
+- IATF-style production part approval process (PPAP) for critical components
+- Assigned Supplier Quality Engineer for 6-month improvement partnership
+- Monthly PPM review with CAPA tracking
+- Contractual PPM improvement targets with commercial consequence clauses
+
+### RA-06: Gage R&R Study Programme
+
+Commission a Gage R&R study for the top 15 critical inspection characteristics where
+measurement system capability has not been formally verified. Unqualified measurement
+systems contribute to false acceptance and false rejection decisions, inflating both COPQ
+(false rejections leading to scrap) and customer risk (false acceptances passing non-conforming
+product). Target: all CTQ characteristics verified with %R&R < 10% within 12 months.
+
+---
+
+## 17. Test Cases
+
+### TC-01: PPM Calculation Accuracy
+
+**Scenario**: Inspection lot with SAMPLE_SIZE_N = 200; DEFECT_COUNT_D = 3.
+**Expected PPM**: 3 / 200 × 1,000,000 = 15,000 PPM
+**Test Method**: Insert record into FACT_IQC; execute TR-01; verify INCOMING_PPM = 15000.0.
+**Pass Criteria**: INCOMING_PPM = 15000.0 ± 0.1.
+
+### TC-02: AQL Decision — Accept
+
+**Scenario**: Lot size 500 units; Level II; AQL 1.0. ISO 2859-1 → sample letter H →
+n = 50; Ac = 1; Re = 2. DEFECT_COUNT_D = 1.
+**Expected AQL_DECISION**: ACCEPT (1 <= 1)
+**Pass Criteria**: AQL_DECISION = 'ACCEPT'.
+
+### TC-03: AQL Decision — Reject
+
+**Same scenario but DEFECT_COUNT_D = 2.**
+**Expected AQL_DECISION**: REJECT (2 >= 2)
+**Pass Criteria**: AQL_DECISION = 'REJECT'; NCR draft auto-created (RA-02 implemented).
+
+### TC-04: Cpk Calculation Accuracy
+
+**Scenario**: 30 measurements with mean = 50.2, sigma_est = 1.5, USL = 55.0, LSL = 45.0.
+**Expected**:
+- Cp = (55 - 45) / (6 × 1.5) = 10 / 9 = 1.111
+- Cpu = (55 - 50.2) / (3 × 1.5) = 4.8 / 4.5 = 1.067
+- Cpl = (50.2 - 45) / (3 × 1.5) = 5.2 / 4.5 = 1.156
+- Cpk = MIN(1.067, 1.156) = 1.067
+**Pass Criteria**: Cp = 1.111 ± 0.001; Cpk = 1.067 ± 0.001. STATUS = STABLE.
+
+### TC-05: CAPA On-Time Flag
+
+**Scenario**: CAPA due 2026-06-15; actual closure 2026-06-20 (5 days late).
+**Expected**: IS_ON_TIME = 0; AGE_DAYS = 5 past due.
+**Pass Criteria**: IS_ON_TIME = 0; record appears in overdue CAPA list in Dashboard 3.
+
+### TC-06: Western Electric Rule WE1
+
+**Scenario**: Control chart with UCL = 105.0; LCL = 95.0; XBAR = 100.0.
+Point value = 106.5 (beyond UCL).
+**Expected**: OOC_FLAG = 1; OOC_RULE = 'WE1'.
+**Pass Criteria**: OOC record in analytics.SPC_OOC_SIGNALS; alert triggered to QC Engineer.
+
+### TC-07: Tightened Inspection Trigger
+
+**Scenario**: Supplier S001, material group MG01. 2 of last 5 consecutive lots rejected.
+**Expected**: SAMPLING_TYPE updated to TIGHTENED in ref.SUPPLIER_QUALITY_CONFIG;
+AQL_SWITCHING_LOG record created with trigger = '2OF5_REJECTED'.
+**Pass Criteria**: SAMPLING_TYPE = 'TIGHTENED'; switching log entry exists; supplier quality alert sent.
+
+### TC-08: DPMO and Sigma Level
+
+**Scenario**: DPMO = 3,400.
+**Expected Sigma Level**: norm.ppf(1 - 3400/1,000,000) + 1.5 ≈ 4.5 sigma
+**Pass Criteria**: Sigma Level output = 4.5 ± 0.05.
+
+### TC-09: Recurrence Flag Detection
+
+**Scenario**: Supplier S002, material group MG05, root cause = MATERIAL. Prior NCR closed
+with CAPA on 2025-12-01. New NCR same supplier/material/root cause created 2026-05-15
+(within 12 months).
+**Expected**: RECURRENCE_FLAG = 1; PRIOR_QMNUM populated.
+**Pass Criteria**: RECURRENCE_FLAG = 1; inspection level escalated to TIGHTENED.
+
+### TC-10: COPQ Category Assignment
+
+**Scenario**: GL account 500100 maps to INTERNAL_FAILURE / SCRAP per ref.COPQ_GL_MAPPING.
+FI posting EUR 1,250 to GL 500100.
+**Expected**: COPQ_CATEGORY = 'INTERNAL_FAILURE'; COPQ_SUBCATEGORY = 'SCRAP'.
+**Pass Criteria**: FACT_COPQ record with correct categories; not marked UNCLASSIFIED.
+
+---
+
+## 18. Risks and Mitigations
+
+| Risk ID | Risk Description | Likelihood | Impact | Mitigation |
+|---------|-----------------|------------|--------|------------|
+| R-01 | SAP QM inspection results incomplete — inspectors record accept/reject but not individual defect counts | High | High | Training; mandatory defect count field in SAP QM inspection cockpit; daily completeness report |
+| R-02 | Python SPC engine calculation discrepancy vs. SAP QM native SPC | Medium | High | Validation test cases (TC-04); parallel running period with manual spot-checks |
+| R-03 | Opportunities-per-unit not defined for all materials — DPMO calculation inaccurate | High | Medium | Default to 1 opportunity; flag as ESTIMATED; Quality Engineering to define for top 100 materials |
+| R-04 | COPQ GL account mapping incomplete — significant costs unclassified | Medium | High | Weekly exception report; Finance sign-off on mapping before go-live |
+| R-05 | NCR severity under-classification — critical NCRs downgraded to avoid escalation | Medium | Critical | Severity definition embedded in SAP QM notification form; random audit of F3 severity by Quality Manager |
+| R-06 | SPC sample size insufficient for reliable control limits (< 25 subgroups) | High | Medium | PRELIMINARY flag on dashboard; alert when nearing 25 subgroup threshold |
+| R-07 | Supplier quality data — 12-month rolling window crosses SAP go-live date; history unavailable | High | Medium | Load historical inspection results from legacy QMS or paper records for top 20 suppliers |
+| R-08 | AQL switching rule not enforced — suppliers remain on normal inspection despite trigger | Medium | High | Automated switching rule in transformation job; weekly audit of SAMPLING_TYPE vs. lot history |
+| R-09 | CAPA due dates not set consistently — some CAPAs have arbitrary dates reducing KPI value | Medium | Medium | Standard due date policy (BR-04) embedded in SAP QM workflow; mandatory field validation |
+| R-10 | Power BI SPC chart performance — large volume of inspection results causes slow refresh | Medium | Medium | Pre-aggregate control chart data in Python job; store computed limits in Azure SQL |
+
+---
+
+## 19. Implementation Checklist
+
+### Phase 1: Data Foundation (Weeks 1–8)
+
+- [ ] SAP QM inspection lot field mapping completed and validated
+- [ ] SAP QM quality notification field mapping completed
+- [ ] Azure SQL quality analytics schema created (FACT, DIM, stg, ref, analytics, audit tables)
+- [ ] DIM_SUPPLIER loaded with quality sector classification (automotive/food/general)
+- [ ] DIM_MATERIAL loaded with control plan CTQ flags
+- [ ] DIM_DEFECT_TYPE loaded from SAP QM defect code master
+- [ ] ref.AQL_SAMPLING_PLAN table loaded from ISO 2859-1 (Table II-A for all AQL levels)
+- [ ] ref.SUPPLIER_QUALITY_CONFIG loaded with current inspection level per supplier
+- [ ] ref.COPQ_GL_MAPPING loaded and signed off by Finance Controller
+- [ ] SAP QM → Azure SQL ETL pipeline deployed (FACT_IQC, FACT_NCR, FACT_CAPA, FACT_COPQ)
+- [ ] Sector PPM targets loaded and approved by Quality Director
+- [ ] Historical inspection lots loaded (minimum 24 months where available)
+
+### Phase 2: KPI and SPC Layer (Weeks 9–16)
+
+- [ ] TR-01 through TR-08 transformation rules implemented and unit-tested
+- [ ] Python SPC engine (python/08_quality/spc_engine.py) deployed to Azure ML compute
+- [ ] Western Electric rule detection (python/08_quality/western_electric_rules.py) deployed
+- [ ] SPC engine validated against Minitab for 5 test cases (TC-04)
+- [ ] Rolling PPM calculation (TR-05) implemented and back-tested on 12-month history
+- [ ] CAPA on-time flag and age calculation tested (TC-05)
+- [ ] Tightened inspection trigger logic tested (TC-07)
+- [ ] Recurrence detection logic tested (TC-09)
+- [ ] All 10 alert triggers implemented and tested in non-production environment
+- [ ] Power BI data model connected to Azure SQL; all 5 dashboards built
+
+### Phase 3: Scorecard and Workflows (Weeks 17–22)
+
+- [ ] Supplier quality scorecard calculation implemented and back-tested
+- [ ] AQL switching audit job deployed and scheduled
+- [ ] COPQ monthly report automated
+- [ ] NCR auto-creation from AQL reject implemented (RA-02)
+- [ ] Training delivered to Quality team, QC Inspectors, Supplier Quality Engineers
+- [ ] User acceptance testing with Quality Manager sign-off
+- [ ] Production go-live and hypercare period
+
+---
+
+## 20. Validation Checklist
+
+- [ ] Incoming PPM for top 10 suppliers matches independent QM team calculation within 5%
+- [ ] AQL decisions for 50 test lots reviewed and confirmed correct by Quality Engineer
+- [ ] Cpk for 10 characteristics matches Minitab output within ±0.01
+- [ ] Open NCR count in analytics matches SAP QM IW29 report — zero discrepancy
+- [ ] CAPA on-time closure rate matches Quality Manager's manual tracker within ±2 pp
+- [ ] COPQ total in analytics matches SAP CO quality cost centre report within EUR 100
+- [ ] All 7 AQL switching trigger scenarios tested and correct outcomes verified
+- [ ] All 8 Western Electric OOC rules produce alerts in test environment
+- [ ] UFLPA-blocked supplier materials reflected in supplier quality config restrictions
+- [ ] Dashboard refresh SLA: daily dashboards available by 07:00; SPC triggered within 15 min of lot closure
+- [ ] Data retention policy confirmed: 10 years for inspection records (medical/food grade); 7 years general
+- [ ] GDPR/data privacy review completed — no PII in quality inspection records
+
+---
+
+## 21. Pending Information
+
+| Item ID | Information Required | From Whom | Impact if Missing | Target Date |
+|---------|---------------------|-----------|-------------------|-------------|
+| PI-01 | Opportunities-per-unit definition for top 100 materials by inspection volume | Quality Engineering | DPMO uses default of 1; underestimates true DPMO | Week 4 |
+| PI-02 | Historical inspection results for top 20 suppliers (pre-SAP go-live) | Quality Manager / Legacy QMS | Rolling PPM will be < 12 months for Year 1 | Week 2 |
+| PI-03 | Sector classification for all active suppliers (automotive / food / general) | Supplier Quality Engineers | Default sector PPM target (general 2,000) applied; may be wrong | Week 3 |
+| PI-04 | COPQ GL account list and category mapping | Finance Controller | COPQ reporting unavailable until mapping complete | Week 5 |
+| PI-05 | Control plan extract — CTQ characteristics requiring SPC per material | Quality Engineering | SPC engine will not know which characteristics to calculate | Week 6 |
+| PI-06 | Specification limits (USL / LSL) for all CTQ characteristics | Engineering / R&D | Cannot calculate Cp or Cpk without specification limits | Week 6 |
+| PI-07 | CAPA due date policy document — standard due dates by severity | Quality Director | CAPA on-time KPI may be calculated inconsistently | Week 2 |
+| PI-08 | Gage R&R study results for top CTQ characteristics | Quality Engineering | Cannot flag measurement system issues; %R&R KPI unavailable | Week 12 |
+
+---
+
+## 22. Implementation Roadmap
+
+### Phase 1: Data Foundation and Infrastructure (Months 1–2)
+
+**Objective**: Establish all data pipelines, master data, reference tables, and base ETL.
+
+Week 1–2: Azure SQL schema creation; SAP QM field mapping documents; Power BI workspace
+Week 3–4: SAP QM ETL pipeline deployed (inspection lots, quality notifications, CAPA tasks)
+Week 5–6: Reference tables loaded (AQL plan, COPQ mapping, sector targets, supplier config)
+Week 7–8: Historical data load (24 months inspection history); DIM tables populated
+
+**Milestone**: 24 months of inspection history in Azure SQL; zero ETL errors on daily reconciliation.
+
+### Phase 2: KPI and Analytics Layer (Months 3–4)
+
+**Objective**: Implement all KPI calculations, SPC engine, and Power BI dashboards.
+
+Week 9–10: TR-01 through TR-05 implemented; PPM, AQL decision, CAPA flags validated
+Week 11–12: Python SPC engine deployed; Cpk and OOC calculation validated vs. Minitab
+Week 13–14: Supplier quality scorecard calculation back-tested; alert engine deployed
+Week 15–16: All 5 dashboards built; initial UAT with Quality Manager and 3 QC Engineers
+
+**Milestone**: All KPIs validated; OOC alerts firing correctly in test environment.
+
+### Phase 3: Advanced Analytics and Workflow Automation (Months 5–6)
+
+**Objective**: Deliver automated workflows, supplier quality portal, and production go-live.
+
+Week 17–18: NCR auto-creation from AQL reject (RA-02); CAPA escalation workflow
+Week 19–20: AQL switching rule automation deployed and tested; COPQ monthly report automated
+Week 21–22: Training delivery (QC team, Supplier Quality Engineers, Quality Manager)
+Week 23–24: Production go-live; hypercare period; first monthly quality KPI review
+
+**Milestone**: Production go-live signed off by Quality Director; first monthly Supplier Quality Review produced from analytics platform.
+
+### Phase 4: Continuous Improvement (Months 7–12)
+
+**Objective**: Expand SPC coverage, launch skip-lot programme, and drive measurable COPQ reduction.
+
+Month 7–8: Skip-lot programme for PREFERRED suppliers (RA-01); Gage R&R study programme (RA-06)
+Month 9–10: Supplier Development Programme launched for top 5 COPQ contributors (RA-05)
+Month 11–12: 12-month performance review; PPM improvement vs. baseline; COPQ reduction vs. target
+
+**Milestone**: 30% incoming PPM reduction vs. baseline for enrolled SDP suppliers;
+CAPA on-time closure rate >= 90%; Cpk >= 1.33 on all monitored CTQ characteristics.
+
+---
+
+## References
+
+- ISO 9001:2015 — Quality management systems — Requirements (Clauses 8.4, 8.5.2, 8.6, 8.7)
+- ISO 2859-1:1999 — Sampling procedures for inspection by attributes (AQL sampling plans)
+- IATF 16949:2016 — Quality management system requirements for automotive production
+- AIAG Measurement System Analysis (MSA) Reference Manual, 4th Ed. (Automotive Industry Action Group, 2010)
+- AIAG Failure Mode and Effects Analysis (FMEA), 4th Ed. (Automotive Industry Action Group, 2008)
+- Montgomery, D.C., Introduction to Statistical Quality Control, 8th Ed. (Wiley, 2020)
+- Pyzdek, T. & Keller, P., The Six Sigma Handbook, 5th Ed. (McGraw-Hill, 2018)
+- Western Electric Company, Statistical Quality Control Handbook (Western Electric, 1956)
+- SAP S/4HANA 2023 — Quality Management Configuration Guide (SAP SE)
+- SAP QM Inspection Planning and Processing User Guide (SAP SE)
+- Chopra & Meindl, Supply Chain Management, 6th Ed. (Pearson, 2016), Chapter 5 — Sourcing
+- SCOR Digital Standard — Enable Process Category (ASCM, 2019)
+- ASQ Body of Knowledge for Quality Engineer Certification (ASQ, 2022)
+- GS1 General Specifications v23.0 — Unit of Measure codes
+- EU Good Manufacturing Practice (GMP) Annex 11 — Computerised Systems (EMA, 2011)

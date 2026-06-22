@@ -1,1955 +1,1282 @@
-# Logistics & Transportation — Implementation Guide
+# Logistics & Transportation Analytics — Implementation Guide
 
 **Department**: 07 — Logistics & Transportation
-**Standard alignment**: Incoterms 2020, IATA, IMO/IMDG, WCO HS Nomenclature 2022,
-EU CBAM Regulation 2023/956, ISO 28000:2022, C-TPAT, AEO, WTO TFA Art. 7
+**Analytics Domain**: Delivery Performance, Freight Cost, Carrier Scorecard, Customs Risk, Carbon Footprint
+**Standard Alignment**: Incoterms® 2020, GLEC Framework v3, ISO 28000:2022, WCO HS Nomenclature 2022,
+EU CBAM Regulation 2023/956, C-TPAT, AEO, WTO TFA Art. 7, IMO/IMDG, IATA DGR
+**Systems**: SAP S/4HANA, SAP TM (Transportation Management), SAP GTS (Global Trade Services),
+Power BI, Azure SQL, EDI DESADV / IFTSTA
 **Author**: Supply Chain Centre of Excellence
-**Version**: 2.0 — 2026-06-20
-**Status**: Approved for implementation
+**Version**: 3.0 — 2026-06-22
+**Status**: Approved for Implementation
+**Scope**: 40 countries, multi-carrier, multi-modal, multi-freight-forwarder
 
 ---
 
 ## Table of Contents
 
 1. Executive Summary
-2. Prerequisites & Dependencies
-3. Phase 0: Assessment & AS-IS Analysis
-4. Phase 1: Foundation & Master Data
-5. Phase 2: Process Standardisation & Core Analytics
-6. Phase 3: Mathematical Models
-7. Phase 4: ML/AI Pipeline
-8. Phase 5: Integration & Automation
-9. Phase 6: Continuous Improvement
-10. Technology Stack & Architecture
-11. Change Management & Training
-12. Implementation KPIs
-13. Risk & Mitigation
-14. Timeline Summary
-15. References
+2. Analysis Objective
+3. Scope
+4. Business Questions
+5. Data Sources
+6. Data Model
+7. Data Dictionary
+8. Transformation Rules
+9. Business Rules
+10. KPIs and Formulas
+11. Analytical Logic
+12. Validations and Controls
+13. Required Evidence
+14. Dashboard Design
+15. Use Cases
+16. Recommended Actions
+17. Test Cases
+18. Risks and Mitigations
+19. Implementation Checklist
+20. Validation Checklist
+21. Pending Information
+22. Implementation Roadmap
 
 ---
 
 ## 1. Executive Summary
 
-The Logistics & Transportation module governs the end-to-end physical movement of goods
-from origin supplier facilities to final delivery destinations, spanning ocean freight,
-air cargo, road transport, rail, and multimodal intermodal movements. This implementation
-guide provides the complete technical and operational blueprint for deploying a
-best-in-class Transportation Management capability aligned with SCOR-DS Deliver processes
-(D1–D4) and Enable processes (EP.6 — Manage Transportation).
+The Logistics & Transportation Analytics module delivers end-to-end visibility into the physical
+movement of goods across the enterprise supply chain — from origin supplier facilities through
+international transit to final delivery destinations. Operating across 40 countries with a
+multi-modal network (ocean, air, road, rail, intermodal), the analytical capability described
+in this document transforms raw shipment events, freight invoices, customs declarations, and
+carrier EDI feeds into actionable intelligence for logistics managers, trade compliance teams,
+and senior supply chain leadership.
 
-### Strategic objectives
+### Strategic Context
 
-- Achieve carrier OTD of 95 percent or above across all lanes within 18 months
-- Reduce blended freight cost per kg-km by 12 percent year-one through lane consolidation
-  and carrier optimisation
-- Attain full Incoterms 2020 compliance on all international purchase orders, eliminating
-  DDP mis-classification errors that expose the company to customs liability
-- Implement real-time visibility on 100 percent of active shipments via GPS/AIS integration
-  with project44 and FourKites
-- Comply with EU CBAM carbon reporting requirements for all imports of covered goods
-  effective from the 2026 definitive phase
-- Automate HS code classification for 80 percent of new SKUs through BERT-based NLP,
-  reducing customs broker dependency and mis-declaration risk
+Logistics cost represents typically 8–12% of total revenue in consumer goods and industrial
+manufacturing sectors. Carrier OTD performance directly drives downstream customer service
+levels; a single percentage point improvement in OTD at the carrier level translates to a
+measurable reduction in expediting cost, customer penalty chargebacks, and safety stock
+requirements. Carbon reporting obligations under EU CBAM (effective October 2023) and the
+voluntary GLEC Framework create new data requirements that must be integrated into the
+core shipment data model.
 
-### Value at stake
+### Key Objectives
 
-Based on industry benchmarks (Gartner 2025, McKinsey Global Institute 2024), a
-mid-size manufacturer with USD 500 million in annual procurement spend can expect:
+- Achieve and sustain carrier OTD of 95% or above across all lanes and modes
+- Reduce blended freight cost per kg-km by 12% in Year 1 through lane consolidation,
+  modal shift optimisation, and carrier rate renegotiation
+- Deliver full Incoterms 2020 compliance on all international purchase orders, eliminating
+  DDP mis-classification that exposes the company to customs liability and penalties
+- Establish real-time shipment visibility across 100% of active shipments
+- Produce accurate CO2 per shipment reporting aligned with GLEC Framework v3 for
+  EU CBAM compliance and ESG disclosure
+- Build a carrier scorecard that drives quarterly business reviews and annual RFP decisions
 
-| Lever | Annual Saving (USD) | Confidence |
-|---|---|---|
-| Freight modal shift optimisation | 3.5 M | High |
-| Carrier consolidation & RFQ leverage | 2.1 M | High |
-| Demurrage & detention elimination | 1.4 M | Medium |
-| HS mis-classification duty recovery | 0.9 M | Medium |
-| CBAM avoidance through supplier carbon data | 0.6 M | Low-Medium |
-| **Total** | **8.5 M** | — |
+### Expected Business Value
 
----
-
-## 2. Prerequisites & Dependencies
-
-### 2.1 Upstream module dependencies
-
-| Module | Dependency | Criticality |
-|---|---|---|
-| 01-procurement | Confirmed PO with Incoterms, supplier GLN, ship-from address | Blocking |
-| 02-supplier-management | Supplier AEO/C-TPAT status, UFLPA clearance flags | Blocking |
-| 03-inventory | Lot numbers, FEFO expiry dates, REACH SVHC flags | High |
-| 04-demand-planning | Replenishment triggers, safety stock alerts | High |
-| 06-warehouse | Dock scheduling, inbound appointment management | Medium |
-| 10-compliance | CSDDD country risk, UFLPA supplier flags | High |
-
-### 2.2 Infrastructure prerequisites
-
-- Event Store operational (shared/EventStore.ts) — all shipment state transitions
-  must be event-sourced
-- Money type enforced: all freight costs in integer cents (USD or EUR base currency)
-- ISO 8601 timestamps in UTC for all ETA/ATD/ATA fields
-- Carrier master data loaded (SCAC codes, service contracts, rate cards)
-- HS code tariff database loaded from WCO 2022 Harmonised System nomenclature
-
-### 2.3 External API accounts & credentials
-
-- project44 Movement API (real-time multimodal visibility)
-- FourKites (ocean + road GPS tracking)
-- CargoWise One (freight forwarding TMS)
-- Customs broker API (e.g., Flexport, Expeditors, Kuehne+Nagel Digital)
-- Port Community Systems: DAKOSY (Hamburg), Portbase (Rotterdam), PortXchange
-- Carrier EDI gateway (Stedi, SPS Commerce, or direct VAN)
+| Benefit | Year 1 | Year 2 |
+|---------|--------|--------|
+| Freight cost reduction (lane optimisation) | 8% | 12% |
+| Carrier penalty recovery improvement | +25% recovery rate | +40% |
+| Customs delay reduction | -30% clearance days | -50% |
+| CO2 reporting compliance | 100% CBAM coverage | GLEC certified |
+| OTD improvement | +4 pp to 95% | +2 pp to 97% |
 
 ---
 
-## 3. Phase 0: Assessment & AS-IS Analysis
+## 2. Analysis Objective
 
-**Duration**: Weeks 1–4
-**Owner**: Logistics Centre of Excellence + external consulting partner
+The primary objective of this analytics implementation is to provide the Logistics &
+Transportation department with a robust, governed, and automated analytical layer that:
 
-### 3.1 Current-state data collection
+1. **Measures delivery performance** at granular levels — by carrier, lane, transport mode,
+   origin country, destination country, and shipment type — against contractual and
+   operational targets.
 
-Collect the following datasets for baseline analysis:
+2. **Controls freight spend** by comparing actual invoiced freight costs against budgeted
+   rates, quoted rates, and benchmark market rates, segmented by cost-per-kg, cost-per-km,
+   and cost-per-unit.
 
-```
-Minimum 24 months of:
-- Shipment history (origin, destination, carrier, mode, weight, volume,
-  cost, requested delivery date, actual delivery date)
-- Freight invoice data (carrier, lane, base rate, surcharges, accessorials)
-- Customs entry data (HS codes used, duty paid, broker fees, exam holds)
-- Carrier performance scorecards (if any)
-- Claims history (damage, loss, shortage by carrier and lane)
-```
+3. **Scores carrier performance** through a weighted multi-dimensional scorecard
+   (OTIF, transit time adherence, documentation accuracy, claims rate, sustainability),
+   driving carrier tiering decisions (Preferred / Approved / Watch / Disqualified).
 
-### 3.2 AS-IS maturity assessment
+4. **Identifies customs and trade compliance risk** at the shipment level, flagging
+   shipments with missing documentation, HS code inconsistencies, denied party screening
+   hits, or UFLPA exposure.
 
-Score each capability on Gartner's Supply Chain Technology Maturity Model (1–5):
+5. **Quantifies carbon emissions** per shipment using GLEC Framework v3 methodology,
+   enabling CO2 reporting by business unit, product category, Incoterm, and trade lane
+   for EU CBAM compliance and voluntary ESG disclosure.
 
-| Capability | Target Score | Typical AS-IS |
-|---|---|---|
-| Shipment visibility | 4 (predictive ETAs) | 2 (milestone updates) |
-| Freight cost management | 4 (dynamic benchmarking) | 2 (static rate cards) |
-| Carrier performance management | 4 (automated scorecards) | 1 (manual reviews) |
-| Customs compliance | 4 (automated classification) | 2 (broker-dependent) |
-| Carbon footprint tracking | 3 (CBAM reporting) | 1 (none) |
-| Route optimisation | 4 (AI-driven VRP) | 1 (manual routing) |
-
-### 3.3 Gap analysis outputs
-
-Deliverables from Phase 0:
-
-1. Carrier spend cube (carrier x lane x mode x month)
-2. OTD by carrier by lane (24-month trend)
-3. Freight cost per kg-km by mode
-4. HS code error rate from customs audits
-5. Demurrage & detention spend by port and carrier
-6. Carbon emissions inventory (tonne CO2e by shipment)
+6. **Automates alerts and escalations** so that exception management is proactive rather
+   than reactive — late shipments, cost overruns, customs holds, and high-emission lanes
+   are surfaced automatically to responsible owners.
 
 ---
 
-## 4. Phase 1: Foundation & Master Data
+## 3. Scope
 
-**Duration**: Weeks 5–10
-**Owner**: Data Management team + IT
+### In Scope
 
-### 4.1 Carrier master data
+- All outbound shipments from supplier to company warehouses (inbound logistics)
+- All outbound shipments from company warehouses to customers (outbound logistics)
+- Inter-company / inter-warehouse stock transfer orders with logistics cost allocation
+- Ocean freight (FCL and LCL), air freight, road transport (FTL and LTL), rail, and parcel
+- All 40 operational countries across Europe, North America, LATAM, Asia-Pacific, Middle East
+- All contracted carriers and freight forwarders in the approved vendor list
+- Customs entries managed through SAP GTS (import and export)
+- Freight invoices processed through SAP TM freight settlement
+- EDI DESADV (Despatch Advice) and IFTSTA (Multimodal Status Report) message feeds
+- CO2 calculation per shipment leg using GLEC Framework v3 emission factors
 
-Every carrier record must contain:
+### Out of Scope
 
-```typescript
-interface CarrierMaster {
-  carrierId: string;           // internal UUID
-  scacCode: string;            // Standard Carrier Alpha Code (4-char)
-  name: string;
-  modes: TransportMode[];      // OCEAN | AIR | ROAD | RAIL | MULTIMODAL
-  serviceContracts: ServiceContract[];
-  aeoStatus: AEOStatus;        // EU AEO-C, AEO-S, AEO-F, or NONE
-  ctpatStatus: boolean;        // US C-TPAT certified
-  iataCode?: string;           // IATA 2-letter airline code (air carriers)
-  ediCapabilities: EDIMessage[]; // DESADV, IFTMBC, IFTSTA
-  isDeleted: boolean;          // soft-delete only
-}
+- Last-mile B2C parcel delivery managed by third-party logistics providers without EDI feed
+- Informal couriers and hand-carry shipments below EUR 200 customs value threshold
+- Internal plant-to-plant movements within the same legal entity and same customs territory
+  (unless specific cost allocation is requested by Finance)
+- Passenger air cargo booking analytics (handled by the Travel Management team)
+
+### Geographic Boundaries
+
+Primary trade lanes: Europe–Asia (ocean), Europe–North America (ocean and air),
+Intra-Europe (road and rail), North America domestic (road and rail).
+Secondary lanes: LATAM, Middle East, Africa (limited carrier EDI availability — manual
+reconciliation required for these lanes until EDI onboarding is complete).
+
+---
+
+## 4. Business Questions
+
+The following business questions define the analytical agenda for this implementation.
+Each question maps to one or more KPIs defined in Section 10.
+
+**BQ-01** — Which carriers are consistently missing their ETA commitments, and on which
+specific trade lanes does the worst OTD performance occur? Is the root cause carrier
+operational failure or systemic port congestion and customs delay outside carrier control?
+
+**BQ-02** — What is our total freight cost per kg, per km, and per unit by transport mode
+and trade lane for the current fiscal year? How does this compare to the budgeted rate,
+the contracted rate, and the market spot rate? Where are the largest cost overruns?
+
+**BQ-03** — Which freight invoices deviate from quoted rates by more than the agreed
+tolerance (typically ±5%)? Are there systematic billing errors by specific carriers or
+freight forwarders, and what is the total financial exposure from unrecovered overbilling?
+
+**BQ-04** — What is the modal split (ocean vs. air vs. road vs. rail) by trade lane,
+and is air freight being used for non-emergency shipments where ocean would suffice?
+What is the premium cost of air versus ocean on lanes where both modes are available?
+
+**BQ-05** — What is the customs clearance lead time by country, commodity, and customs
+broker? Which shipments are experiencing clearance delays above the country-specific
+threshold? What are the most frequent causes of customs holds (documentation, valuation,
+classification disputes)?
+
+**BQ-06** — Which shipments carry the highest customs compliance risk score, combining
+factors such as UFLPA supplier exposure, HS code mismatch probability, missing preferential
+origin documentation, and denied party screening alerts?
+
+**BQ-07** — What is the CO2 footprint per shipment, per trade lane, and per transport mode?
+Which lanes and carriers are driving the highest absolute and intensity emissions?
+What would the CO2 impact of modal shift from air to ocean be on the top 20 air lanes?
+
+**BQ-08** — How is carrier OTIF (on-time and in-full) trending over the last 12 rolling
+months? Are there seasonal patterns? Which carriers show consistent improvement or
+deterioration versus their contractual OTIF commitment?
+
+**BQ-09** — What is the claims rate (damaged, lost, or short-delivered shipments) by
+carrier and commodity category? What is the financial value of open cargo claims, and
+what is the average claim resolution time by carrier?
+
+**BQ-10** — Which freight forwarders are providing accurate and timely documentation
+(commercial invoice, packing list, bill of lading, certificate of origin) within the
+agreed cut-off windows? What is the documentation error rate by forwarder?
+
+**BQ-11** — What is the dwell time at major hub ports and consolidation centres, and
+how does excessive dwell time correlate with final delivery delay and incremental
+storage cost?
+
+**BQ-12** — For the EU CBAM-covered commodities (steel, aluminium, cement, fertilisers,
+electricity, hydrogen), what is the total verified CO2 content per import shipment,
+and are all required CBAM declarant certificates in place?
+
+---
+
+## 5. Data Sources
+
+### DS-01: SAP TM — Transportation Orders
+
+| Attribute | Detail |
+|-----------|--------|
+| Source Name | SAP Transportation Management — Transportation Orders |
+| System | SAP TM 9.6 (integrated with SAP S/4HANA 2023) |
+| Table / Report | /SCMTMS/D_TOR (Transportation Order), /SCMTMS/D_TORITEM (Order Items) |
+| Owner | Global Logistics Operations — TM System Administrator |
+| Frequency | Real-time via RFC/iDoc; Power BI refresh every 4 hours |
+| Required Fields | TOR_ID, CARRIER_ID, ORIGIN_LOC, DEST_LOC, PLANNED_DEP_DATE, PLANNED_ARR_DATE, ACTUAL_DEP_DATE, ACTUAL_ARR_DATE, FREIGHT_COST_LC, FREIGHT_COST_GC, WEIGHT_KG, VOLUME_CBM, DISTANCE_KM, TRANSPORT_MODE, INCOTERM_CODE, CURRENCY, STATUS |
+| Critical Fields | ACTUAL_ARR_DATE (null = in-transit), FREIGHT_COST_GC (must not be zero for settled orders), CARRIER_ID (must resolve to approved carrier master) |
+| Primary Key | TOR_ID |
+| Validations | ACTUAL_ARR_DATE >= ACTUAL_DEP_DATE; FREIGHT_COST_GC > 0 when status = SETTLED; WEIGHT_KG > 0; INCOTERM_CODE in approved Incoterms 2020 list |
+| Known Errors | Duplicate TOR records created during system cutover periods (filter by CREATED_ON > go-live date); DISTANCE_KM occasionally NULL for short-haul road — requires geocoding fill |
+| Evidence Required | SAP TM configuration document, carrier master extract, TOR field mapping document |
+
+### DS-02: SAP GTS — Customs Declarations
+
+| Attribute | Detail |
+|-----------|--------|
+| Source Name | SAP Global Trade Services — Customs Declarations |
+| System | SAP GTS 14.0 |
+| Table / Report | /SAPSLL/CUHD (Customs Header), /SAPSLL/CUITEM (Customs Item), /SAPSLL/DOCFLOW |
+| Owner | Trade Compliance Manager |
+| Frequency | Daily batch extract at 06:00 UTC; supplemented by real-time status events |
+| Required Fields | CUSTOMS_DECL_ID, TOR_ID, HS_CODE, COUNTRY_OF_ORIGIN, COUNTRY_OF_IMPORT, CUSTOMS_VALUE_GC, DUTY_AMOUNT, VAT_AMOUNT, CUSTOMS_ENTRY_DATE, RELEASE_DATE, DECLARATION_STATUS, BROKER_ID, REGIME_CODE |
+| Critical Fields | HS_CODE (8-digit minimum for EU, 10-digit for US HTS), RELEASE_DATE (null = pending clearance), CUSTOMS_VALUE_GC |
+| Primary Key | CUSTOMS_DECL_ID |
+| Validations | HS_CODE length >= 8; CUSTOMS_VALUE_GC > 0; RELEASE_DATE >= CUSTOMS_ENTRY_DATE; COUNTRY_OF_ORIGIN is a valid ISO 3166-1 alpha-2 code |
+| Known Errors | RELEASE_DATE not populated for informal entries below de minimis threshold — these must be excluded from clearance lead time calculations |
+| Evidence Required | GTS configuration guide, HS code master extract, customs broker agreement |
+
+### DS-03: EDI DESADV — Despatch Advice (EDIFACT D.96A)
+
+| Attribute | Detail |
+|-----------|--------|
+| Source Name | EDI DESADV — Supplier Despatch Advice Messages |
+| System | EDI middleware (Azure Integration Services) mapped to Azure SQL staging table |
+| Table / Report | stg.EDI_DESADV, stg.EDI_DESADV_LINE |
+| Owner | Supplier Integration Team / EDI Operations |
+| Frequency | Real-time on despatch; processed within 15 minutes of receipt |
+| Required Fields | DESADV_ID, PO_NUMBER, SUPPLIER_ID, DESPATCH_DATE, ESTIMATED_ARRIVAL, CARRIER_SCAC, TRACKING_NUMBER, GROSS_WEIGHT_KG, PACKAGE_COUNT, LINE_ITEM_QTY, UNIT_OF_MEASURE |
+| Critical Fields | DESPATCH_DATE, TRACKING_NUMBER (null = no carrier visibility), CARRIER_SCAC |
+| Primary Key | DESADV_ID + LINE_NUMBER |
+| Validations | DESPATCH_DATE <= today + 5 days (reject future-dated by >5 days as likely error); GROSS_WEIGHT_KG > 0; PO_NUMBER resolves to active PO in SAP |
+| Known Errors | Some suppliers send DESADV after goods already in transit — DESPATCH_DATE post-dated; handle with tolerance window |
+| Evidence Required | EDI partner agreement, DESADV message specification, carrier SCAC code master |
+
+### DS-04: EDI IFTSTA — Multimodal Status Report (EDIFACT D.00B)
+
+| Attribute | Detail |
+|-----------|--------|
+| Source Name | EDI IFTSTA — Carrier Status Updates |
+| System | Azure Integration Services → Azure SQL stg.EDI_IFTSTA |
+| Table / Report | stg.EDI_IFTSTA, stg.EDI_IFTSTA_EVENT |
+| Owner | Carrier Integration Team |
+| Frequency | Real-time event streaming; carriers transmit at each status milestone |
+| Required Fields | IFTSTA_MSG_ID, TRACKING_NUMBER, EVENT_CODE, EVENT_DATETIME, EVENT_LOCATION, VESSEL_NAME, VOYAGE_NUMBER, CONTAINER_NUMBER, ETA_UPDATED |
+| Critical Fields | EVENT_CODE (maps to milestone: DEPARTED, ARRIVED, CUSTOMS_CLEARED, DELIVERED), EVENT_DATETIME, ETA_UPDATED |
+| Primary Key | IFTSTA_MSG_ID |
+| Validations | EVENT_DATETIME <= current UTC time (no future events except ETA); EVENT_CODE in approved event code master; TRACKING_NUMBER resolves to active TOR |
+| Known Errors | Carriers occasionally send duplicate IFTSTA events with same event code and datetime — deduplicate on TRACKING_NUMBER + EVENT_CODE + EVENT_DATETIME |
+| Evidence Required | IFTSTA message guide per carrier, event code mapping table |
+
+### DS-05: SAP TM — Freight Settlement (Freight Invoices)
+
+| Attribute | Detail |
+|-----------|--------|
+| Source Name | SAP TM Freight Settlement — Freight Cost Documents |
+| System | SAP TM / SAP S/4HANA FI |
+| Table / Report | /SCMTMS/D_FSD (Freight Settlement Document), RSEG (Invoice Line Items) |
+| Owner | Freight Audit & Payment Team |
+| Frequency | Daily batch; invoice matching runs nightly |
+| Required Fields | FSD_ID, TOR_ID, CARRIER_ID, INVOICE_NUMBER, INVOICE_DATE, QUOTED_RATE_GC, ACTUAL_INVOICE_GC, SURCHARGE_AMOUNT, CURRENCY, SETTLEMENT_STATUS, DISPUTE_FLAG, DISPUTE_REASON |
+| Critical Fields | ACTUAL_INVOICE_GC, QUOTED_RATE_GC (both required for variance calculation), SETTLEMENT_STATUS |
+| Primary Key | FSD_ID |
+| Validations | ACTUAL_INVOICE_GC > 0; QUOTED_RATE_GC > 0 for contracted carriers; variance abs((ACTUAL - QUOTED)/QUOTED) > 0.05 triggers dispute flag |
+| Known Errors | Spot market shipments may lack QUOTED_RATE_GC — use market benchmark rate from freight rate management system |
+| Evidence Required | Freight rate cards, carrier contract extracts, SAP TM settlement configuration |
+
+### DS-06: Carbon Emission Factor Reference Table
+
+| Attribute | Detail |
+|-----------|--------|
+| Source Name | GLEC Framework v3 Emission Factors — Reference Table |
+| System | Azure SQL ref.GLEC_EMISSION_FACTORS (manually maintained, version-controlled) |
+| Table / Report | ref.GLEC_EMISSION_FACTORS |
+| Owner | Sustainability / ESG Analytics Team |
+| Frequency | Annual update aligned with GLEC Framework release cycle |
+| Required Fields | MODE, VESSEL_TYPE, FUEL_TYPE, LADEN_FACTOR, EMISSION_FACTOR_gCO2e_PER_TKM, VALID_FROM, VALID_TO, GLEC_VERSION |
+| Critical Fields | EMISSION_FACTOR_gCO2e_PER_TKM, LADEN_FACTOR, VALID_FROM (use version valid at shipment date) |
+| Primary Key | MODE + VESSEL_TYPE + FUEL_TYPE + VALID_FROM |
+| Validations | No gaps in VALID_FROM / VALID_TO coverage; EMISSION_FACTOR > 0; LADEN_FACTOR between 0.4 and 1.0 |
+| Known Errors | N/A — manually maintained reference table; changes require change request and dual approval |
+| Evidence Required | GLEC Framework v3 publication, internal ESG team sign-off on factor selection |
+
+### DS-07: Carrier and Lane Master
+
+| Attribute | Detail |
+|-----------|--------|
+| Source Name | Carrier Master and Trade Lane Configuration |
+| System | Azure SQL ref.CARRIER_MASTER, ref.TRADE_LANE |
+| Table / Report | ref.CARRIER_MASTER, ref.TRADE_LANE, ref.CARRIER_CONTRACT |
+| Owner | Procurement — Logistics Category Manager |
+| Frequency | Updated on contract changes; at minimum quarterly review |
+| Required Fields | CARRIER_ID, CARRIER_NAME, CARRIER_SCAC, CARRIER_TYPE (OCEAN/AIR/ROAD/RAIL/PARCEL), CONTRACT_OTD_TARGET_PCT, CONTRACT_OTIF_TARGET_PCT, TIER (PREFERRED/APPROVED/WATCH/DISQUALIFIED), COUNTRY_OF_REGISTRATION, IS_ACTIVE |
+| Critical Fields | CARRIER_ID, CONTRACT_OTD_TARGET_PCT (defaults to 95% if no contract), TIER |
+| Primary Key | CARRIER_ID |
+| Validations | CARRIER_SCAC is unique; CONTRACT_OTD_TARGET_PCT between 85 and 100; TIER in (PREFERRED, APPROVED, WATCH, DISQUALIFIED) |
+| Known Errors | Legacy carriers in SAP with deprecated SCAC codes — must be mapped to current SCAC via alias table |
+| Evidence Required | Approved vendor list extract, carrier contract summaries, logistics category strategy document |
+
+---
+
+## 6. Data Model
+
+The logistics analytics data model follows a star schema optimised for Power BI DirectQuery
+and Azure SQL analytical queries. The central fact table is FACT_SHIPMENT, joined to seven
+dimension tables.
+
+```
+                    DIM_CARRIER
+                        |
+DIM_DATE -------- FACT_SHIPMENT -------- DIM_LOCATION
+                        |
+                   DIM_TRANSPORT_MODE
+                        |
+                   DIM_INCOTERM
+                        |
+                   FACT_FREIGHT_INVOICE (related via TOR_ID)
+                        |
+                   FACT_CUSTOMS_DECLARATION (related via TOR_ID)
+                        |
+                   FACT_SHIPMENT_CO2 (related via TOR_ID)
+                        |
+                   FACT_CARRIER_EVENTS (related via TRACKING_NUMBER)
 ```
 
-### 4.2 Lane master data
+### Central Fact Tables
 
-```typescript
-interface LaneMaster {
-  laneId: string;
-  originGLN: string;           // GS1 GLN of origin facility
-  destinationGLN: string;      // GS1 GLN of destination facility
-  originPortLocode: string;    // UN/LOCODE
-  destinationPortLocode: string;
-  incoterms2020: Incoterms2020Rule;
-  primaryMode: TransportMode;
-  transitTimeDays: number;     // contractual transit time
-  rateCents: number;           // base rate per UOM in integer cents
-  rateUOM: 'PER_KG' | 'PER_CBM' | 'PER_TEU' | 'PER_FEU' | 'PER_UNIT';
-  fuelSurchargePercent: number; // BAF/YAS/FSC as decimal (e.g. 0.18 for 18%)
-  thcOriginCents: number;      // Terminal Handling Charge origin
-  thcDestinationCents: number; // Terminal Handling Charge destination
-  lastUpdated: ISOTimestamp;
-}
-```
+**FACT_SHIPMENT** — one row per transportation order. Contains planned and actual dates,
+weights, volumes, distances, Incoterm, carrier, origin and destination.
 
-### 4.3 HS code tariff database
+**FACT_FREIGHT_INVOICE** — one row per freight invoice line. Contains quoted rate, actual
+invoice amount, surcharges, settlement status, and dispute flag.
 
-Load the WCO 2022 HS nomenclature (98 chapters, ~5,000 headings, ~21,000 subheadings).
-Augment with country-level extensions to 8-digit (EU Combined Nomenclature) and
-10-digit (US HTS, CN Tariff).
+**FACT_CUSTOMS_DECLARATION** — one row per customs declaration. Contains HS code, declared
+value, duty, VAT, entry date, release date, and compliance risk flags.
+
+**FACT_SHIPMENT_CO2** — one row per shipment leg. Contains distance, weight, laden factor,
+emission factor applied, CO2e calculated, and GLEC version used.
+
+**FACT_CARRIER_EVENTS** — one row per carrier milestone event. Contains event code, timestamp,
+location, and delta versus planned schedule.
+
+### Dimension Tables
+
+**DIM_DATE** — standard date dimension with fiscal year, quarter, week, and holiday flags.
+
+**DIM_CARRIER** — carrier master with tier, mode, contract targets, country of registration,
+and sustainability certifications (ISO 14001, SmartWay, Clean Cargo).
+
+**DIM_LOCATION** — port, airport, warehouse, and customer site master with country, region,
+UN/LOCODE, lat/lon, and customs office code.
+
+**DIM_TRANSPORT_MODE** — ocean FCL, ocean LCL, air, road FTL, road LTL, rail, intermodal,
+parcel. Includes GLEC mode code for CO2 calculation lookup.
+
+**DIM_INCOTERM** — 11 Incoterms 2020 rules with risk transfer point, cost responsibility,
+insurance obligation, and typical usage by mode.
+
+---
+
+## 7. Data Dictionary
+
+### FACT_SHIPMENT
+
+| Field | Description | Type | Nullable | Validation |
+|-------|-------------|------|----------|------------|
+| TOR_ID | Transportation order unique identifier (PK) | VARCHAR(20) | No | Must be unique; format TOR-YYYYNNNNNNN |
+| CARRIER_ID | Foreign key to DIM_CARRIER | VARCHAR(10) | No | Must exist in DIM_CARRIER.CARRIER_ID |
+| ORIGIN_LOC_ID | Foreign key to DIM_LOCATION (origin) | VARCHAR(10) | No | Must be a valid UN/LOCODE |
+| DEST_LOC_ID | Foreign key to DIM_LOCATION (destination) | VARCHAR(10) | No | Must be a valid UN/LOCODE |
+| MODE_ID | Foreign key to DIM_TRANSPORT_MODE | VARCHAR(10) | No | Must exist in DIM_TRANSPORT_MODE |
+| INCOTERM_CODE | Incoterms 2020 rule (3-letter code) | CHAR(3) | No | Must be in (EXW,FCA,CPT,CIP,DAP,DPU,DDP,FAS,FOB,CFR,CIF) |
+| PLANNED_DEP_DATE | Contractual planned departure date | DATE | No | Must be <= PLANNED_ARR_DATE |
+| PLANNED_ARR_DATE | Contractual planned arrival / ETA at destination | DATE | No | Must be >= PLANNED_DEP_DATE |
+| ACTUAL_DEP_DATE | Actual gate-out / departure date | DATE | Yes | If populated: >= PLANNED_DEP_DATE - 3 days (early departures flagged) |
+| ACTUAL_ARR_DATE | Actual delivery / arrival confirmed date | DATE | Yes | NULL = shipment still in transit; if populated: >= ACTUAL_DEP_DATE |
+| GROSS_WEIGHT_KG | Total gross weight of shipment in kilograms | DECIMAL(12,3) | No | > 0; <= physical transport mode capacity |
+| VOLUME_CBM | Total volume in cubic metres | DECIMAL(10,3) | Yes | > 0 if populated |
+| DISTANCE_KM | Great-circle or routed distance in kilometres | DECIMAL(10,1) | Yes | > 0; geocoding fill for NULL values |
+| FREIGHT_COST_GC | Total freight cost in group currency (EUR) | DECIMAL(14,2) | Yes | >= 0; NULL only for pre-settlement orders |
+| PO_NUMBER | Related purchase order number | VARCHAR(20) | Yes | Resolves to active PO in SAP MM |
+| TRACKING_NUMBER | Carrier tracking reference (B/L, AWB, CMR) | VARCHAR(50) | Yes | Must be unique per carrier |
+| SHIPMENT_STATUS | Current status of the transportation order | VARCHAR(20) | No | In (PLANNED, IN_TRANSIT, CUSTOMS_HOLD, DELIVERED, CANCELLED) |
+| IS_ON_TIME | Delivery on or before PLANNED_ARR_DATE | BIT | Yes | Calculated: ACTUAL_ARR_DATE <= PLANNED_ARR_DATE |
+| IS_IN_FULL | Delivered quantity equals ordered quantity | BIT | Yes | Calculated from DESADV vs. GR quantity |
+| DATE_KEY | Foreign key to DIM_DATE (planned arrival date) | INT | No | Standard YYYYMMDD integer key |
+
+### FACT_FREIGHT_INVOICE
+
+| Field | Description | Type | Nullable | Validation |
+|-------|-------------|------|----------|------------|
+| FSD_ID | Freight settlement document ID (PK) | VARCHAR(20) | No | Unique |
+| TOR_ID | Parent transportation order | VARCHAR(20) | No | FK to FACT_SHIPMENT |
+| CARRIER_ID | Carrier billing the invoice | VARCHAR(10) | No | FK to DIM_CARRIER |
+| INVOICE_NUMBER | Carrier invoice reference number | VARCHAR(30) | No | Unique per carrier |
+| INVOICE_DATE | Date of carrier invoice | DATE | No | <= today |
+| QUOTED_RATE_GC | Agreed contracted or quoted rate (EUR) | DECIMAL(14,2) | Yes | > 0 for contracted carriers |
+| ACTUAL_INVOICE_GC | Actual invoiced amount (EUR) | DECIMAL(14,2) | No | > 0 |
+| SURCHARGE_AMOUNT_GC | Total surcharges billed (BAF, CAF, PSS, etc.) | DECIMAL(14,2) | Yes | >= 0 |
+| RATE_VARIANCE_PCT | (ACTUAL_INVOICE_GC - QUOTED_RATE_GC) / QUOTED_RATE_GC | DECIMAL(8,4) | Yes | Calculated field |
+| SETTLEMENT_STATUS | Invoice processing status | VARCHAR(20) | No | In (PENDING, APPROVED, DISPUTED, PAID) |
+| DISPUTE_FLAG | Invoice sent to dispute workflow | BIT | No | Default 0 |
+| DISPUTE_REASON | Reason code for dispute | VARCHAR(100) | Yes | Required when DISPUTE_FLAG = 1 |
+
+### FACT_CUSTOMS_DECLARATION
+
+| Field | Description | Type | Nullable | Validation |
+|-------|-------------|------|----------|------------|
+| CUSTOMS_DECL_ID | Customs declaration unique ID (PK) | VARCHAR(20) | No | Unique |
+| TOR_ID | Parent transportation order | VARCHAR(20) | No | FK to FACT_SHIPMENT |
+| HS_CODE | Harmonised System commodity code | VARCHAR(10) | No | Minimum 8 digits; 10 digits for US HTS |
+| COUNTRY_OF_ORIGIN | ISO 3166-1 alpha-2 country code | CHAR(2) | No | Valid ISO country code |
+| COUNTRY_OF_IMPORT | ISO 3166-1 alpha-2 country code | CHAR(2) | No | Valid ISO country code |
+| CUSTOMS_VALUE_GC | CIF customs value in group currency (EUR) | DECIMAL(14,2) | No | > 0 |
+| DUTY_AMOUNT_GC | Total duty assessed (EUR) | DECIMAL(14,2) | No | >= 0 |
+| CUSTOMS_ENTRY_DATE | Date customs declaration filed | DATE | No | <= today |
+| RELEASE_DATE | Date goods released by customs authority | DATE | Yes | NULL = pending; >= CUSTOMS_ENTRY_DATE if populated |
+| CLEARANCE_DAYS | RELEASE_DATE - CUSTOMS_ENTRY_DATE | INT | Yes | >= 0; calculated |
+| BROKER_ID | Customs broker identifier | VARCHAR(10) | No | FK to ref.CUSTOMS_BROKER_MASTER |
+| COMPLIANCE_RISK_SCORE | Composite risk score 0–100 | DECIMAL(5,2) | Yes | Calculated; see Section 11 |
+| UFLPA_FLAG | Supplier has XUAR operations flag | BIT | No | Default 0 |
+| DENIED_PARTY_HIT | Screening match against denied party lists | BIT | No | Default 0 |
+
+### FACT_SHIPMENT_CO2
+
+| Field | Description | Type | Nullable | Validation |
+|-------|-------------|------|----------|------------|
+| CO2_RECORD_ID | Surrogate primary key | BIGINT | No | Auto-increment |
+| TOR_ID | Parent transportation order | VARCHAR(20) | No | FK to FACT_SHIPMENT |
+| LEG_SEQUENCE | Leg number within multi-leg shipment | TINYINT | No | >= 1 |
+| MODE_ID | Transport mode for this leg | VARCHAR(10) | No | FK to DIM_TRANSPORT_MODE |
+| DISTANCE_KM | Distance of this leg in kilometres | DECIMAL(10,1) | No | > 0 |
+| WEIGHT_KG | Cargo weight on this leg in kilograms | DECIMAL(12,3) | No | > 0 |
+| LADEN_FACTOR | Load utilisation factor (0.4–1.0) | DECIMAL(4,3) | No | Between 0.4 and 1.0 |
+| EMISSION_FACTOR_gCO2e_PER_TKM | GLEC factor for this mode and fuel type | DECIMAL(8,3) | No | > 0 |
+| CO2e_KG | Calculated CO2 equivalent in kilograms | DECIMAL(12,3) | No | Calculated |
+| GLEC_VERSION | GLEC Framework version used | VARCHAR(10) | No | e.g., '3.0' |
+| CBAM_COVERED | Commodity is within EU CBAM scope | BIT | No | Default 0 |
+
+---
+
+## 8. Transformation Rules
+
+### TR-01: OTD Flag Calculation
 
 ```sql
--- Schema for tariff database
-CREATE TABLE hs_codes (
-  hs_code        VARCHAR(10) PRIMARY KEY,
-  level          SMALLINT CHECK (level IN (2,4,6,8,10)),
-  description    TEXT NOT NULL,
-  parent_hs_code VARCHAR(10),
-  chapter        CHAR(2),
-  heading        CHAR(4),
-  subheading     CHAR(6)
-);
-
-CREATE TABLE duty_rates (
-  id              UUID PRIMARY KEY,
-  hs_code         VARCHAR(10) REFERENCES hs_codes(hs_code),
-  country_origin  CHAR(2),   -- ISO 3166-1 alpha-2
-  country_import  CHAR(2),
-  rate_type       VARCHAR(20), -- MFN | GSP | FTA | PREFERENTIAL | ANTIDUMPING
-  ad_valorem_rate NUMERIC(6,4), -- e.g. 0.065 for 6.5%
-  specific_rate_per_unit NUMERIC(12,4),
-  unit_of_measure VARCHAR(10),
-  effective_from  DATE,
-  effective_to    DATE
-);
+-- Applied in Azure SQL transformation layer
+UPDATE FACT_SHIPMENT
+SET IS_ON_TIME = CASE
+    WHEN ACTUAL_ARR_DATE IS NULL THEN NULL  -- in transit; cannot determine yet
+    WHEN ACTUAL_ARR_DATE <= PLANNED_ARR_DATE THEN 1
+    ELSE 0
+END;
 ```
 
-### 4.4 Incoterms 2020 rule master
+### TR-02: OTIF Flag Calculation
 
-All 11 Incoterms 2020 rules must be loaded with their risk/cost transfer points:
-
-```typescript
-const INCOTERMS_2020_RULES = {
-  EXW: { riskTransfer: 'AT_SELLERS_PREMISES', costCoveredBySeller: [] },
-  FCA: { riskTransfer: 'NAMED_PLACE_DELIVERY_TO_CARRIER',
-         costCoveredBySeller: ['EXPORT_CLEARANCE'] },
-  CPT: { riskTransfer: 'NAMED_PLACE_DELIVERY_TO_CARRIER',
-         costCoveredBySeller: ['EXPORT_CLEARANCE', 'MAIN_CARRIAGE'] },
-  CIP: { riskTransfer: 'NAMED_PLACE_DELIVERY_TO_CARRIER',
-         costCoveredBySeller: ['EXPORT_CLEARANCE', 'MAIN_CARRIAGE', 'INSURANCE_ICC_A'] },
-  DAP: { riskTransfer: 'NAMED_DESTINATION',
-         costCoveredBySeller: ['EXPORT_CLEARANCE', 'MAIN_CARRIAGE', 'DELIVERY'] },
-  DPU: { riskTransfer: 'NAMED_DESTINATION_UNLOADED',
-         costCoveredBySeller: ['EXPORT_CLEARANCE', 'MAIN_CARRIAGE', 'DELIVERY', 'UNLOADING'] },
-  DDP: { riskTransfer: 'NAMED_DESTINATION',
-         costCoveredBySeller: ['EXPORT_CLEARANCE', 'MAIN_CARRIAGE',
-                               'DELIVERY', 'IMPORT_DUTY', 'IMPORT_VAT'] },
-  FAS: { riskTransfer: 'ALONGSIDE_VESSEL_ORIGIN_PORT',
-         costCoveredBySeller: ['EXPORT_CLEARANCE'] },
-  FOB: { riskTransfer: 'ON_BOARD_VESSEL_ORIGIN_PORT',
-         costCoveredBySeller: ['EXPORT_CLEARANCE', 'LOADING'] },
-  CFR: { riskTransfer: 'ON_BOARD_VESSEL_ORIGIN_PORT',
-         costCoveredBySeller: ['EXPORT_CLEARANCE', 'LOADING', 'MAIN_CARRIAGE_SEA'] },
-  CIF: { riskTransfer: 'ON_BOARD_VESSEL_ORIGIN_PORT',
-         costCoveredBySeller: ['EXPORT_CLEARANCE', 'LOADING',
-                               'MAIN_CARRIAGE_SEA', 'INSURANCE_ICC_C'] },
-} as const;
-```
-
----
-
-## 5. Phase 2: Process Standardisation & Core Analytics
-
-**Duration**: Weeks 11–18
-**Owner**: Logistics Operations + Business Process team
-
-### 5.1 Shipment lifecycle process
-
-Define standard state machine for all shipments:
-
-```
-DRAFT -> BOOKING_REQUESTED -> BOOKING_CONFIRMED -> IN_TRANSIT
-      -> PORT_OF_LOADING -> CUSTOMS_CLEARANCE_EXPORT
-      -> MAIN_CARRIAGE -> PORT_OF_DISCHARGE
-      -> CUSTOMS_CLEARANCE_IMPORT -> LAST_MILE
-      -> DELIVERED | EXCEPTION | CANCELLED
-```
-
-Every state transition emits a domain event to the Event Store:
-`ShipmentBooked`, `ShipmentDeparted`, `ShipmentArrived`, `CustomsClearedExport`,
-`CustomsClearedImport`, `ShipmentDelivered`, `ShipmentExceptionRaised`.
-
-### 5.2 Carrier performance baseline
-
-Establish automated weekly carrier scorecards from day one of Phase 2.
-Do not wait for ML models. Simple SQL aggregations are sufficient for baseline:
+OTIF requires both on-time AND in-full. The in-full determination joins DESADV line quantities
+against SAP MM Goods Receipt quantities per PO line.
 
 ```sql
+UPDATE FACT_SHIPMENT fs
+SET IS_IN_FULL = CASE
+    WHEN gr.RECEIVED_QTY >= (gr.ORDERED_QTY * 0.995) THEN 1  -- 99.5% tolerance
+    ELSE 0
+END
+FROM FACT_SHIPMENT fs
+JOIN stg.GR_QUANTITIES gr ON fs.TOR_ID = gr.TOR_ID;
+
+UPDATE FACT_SHIPMENT
+SET IS_OTIF = CASE
+    WHEN IS_ON_TIME = 1 AND IS_IN_FULL = 1 THEN 1
+    ELSE 0
+END
+WHERE ACTUAL_ARR_DATE IS NOT NULL;
+```
+
+### TR-03: Freight Cost per kg and per km
+
+```sql
+-- Applied as calculated columns in the Azure SQL analytical view
+ALTER VIEW analytics.v_shipment_cost AS
 SELECT
-  carrier_id,
-  COUNT(*) AS total_shipments,
-  SUM(CASE WHEN actual_delivery_date <= requested_delivery_date THEN 1 ELSE 0 END)
-    * 100.0 / COUNT(*) AS otd_percent,
-  AVG(actual_transit_days - contracted_transit_days) AS avg_transit_variance_days,
-  SUM(claims_amount_cents) * 1.0 / SUM(freight_cost_cents) AS damage_loss_ratio,
-  SUM(freight_cost_cents) * 1.0 / SUM(gross_weight_kg * distance_km)
-    AS cost_per_kg_km_cents
-FROM shipments
-WHERE shipment_date >= CURRENT_DATE - INTERVAL '90 days'
-GROUP BY carrier_id;
+    TOR_ID,
+    FREIGHT_COST_GC,
+    GROSS_WEIGHT_KG,
+    DISTANCE_KM,
+    CASE WHEN GROSS_WEIGHT_KG > 0 THEN FREIGHT_COST_GC / GROSS_WEIGHT_KG ELSE NULL END AS COST_PER_KG,
+    CASE WHEN DISTANCE_KM > 0 THEN FREIGHT_COST_GC / DISTANCE_KM ELSE NULL END AS COST_PER_KM,
+    CASE WHEN GROSS_WEIGHT_KG > 0 AND DISTANCE_KM > 0
+         THEN FREIGHT_COST_GC / (GROSS_WEIGHT_KG * DISTANCE_KM / 1000)
+         ELSE NULL END AS COST_PER_TKM
+FROM FACT_SHIPMENT
+WHERE FREIGHT_COST_GC IS NOT NULL;
 ```
 
-### 5.3 Freight invoice audit process
+### TR-04: CO2 Calculation per Shipment Leg (GLEC Framework v3)
 
-Automate matching of carrier invoices against contracted rates. Flag exceptions:
+```sql
+-- Applied in FACT_SHIPMENT_CO2 population procedure
+INSERT INTO FACT_SHIPMENT_CO2 (TOR_ID, LEG_SEQUENCE, MODE_ID, DISTANCE_KM,
+                                WEIGHT_KG, LADEN_FACTOR, EMISSION_FACTOR_gCO2e_PER_TKM,
+                                CO2e_KG, GLEC_VERSION, CBAM_COVERED)
+SELECT
+    sl.TOR_ID,
+    sl.LEG_SEQUENCE,
+    sl.MODE_ID,
+    sl.DISTANCE_KM,
+    sl.WEIGHT_KG,
+    ef.LADEN_FACTOR,
+    ef.EMISSION_FACTOR_gCO2e_PER_TKM,
+    -- CO2e_kg = Distance_km * (Weight_kg / 1000) * Laden_Factor * EmissionFactor_gCO2ePertKm / 1000
+    (sl.DISTANCE_KM * (sl.WEIGHT_KG / 1000.0) * ef.LADEN_FACTOR
+     * ef.EMISSION_FACTOR_gCO2e_PER_TKM / 1000.0) AS CO2e_KG,
+    ef.GLEC_VERSION,
+    CASE WHEN hs.CBAM_COVERED = 1 THEN 1 ELSE 0 END
+FROM stg.SHIPMENT_LEGS sl
+JOIN ref.GLEC_EMISSION_FACTORS ef
+    ON sl.MODE_ID = ef.MODE
+    AND sl.VESSEL_TYPE = ef.VESSEL_TYPE
+    AND sl.FUEL_TYPE = ef.FUEL_TYPE
+    AND sl.SHIPMENT_DATE BETWEEN ef.VALID_FROM AND ef.VALID_TO
+JOIN FACT_CUSTOMS_DECLARATION cd ON sl.TOR_ID = cd.TOR_ID
+JOIN ref.HS_CBAM_SCOPE hs ON LEFT(cd.HS_CODE, 4) = hs.HS4_CODE;
+```
 
-- Rate applied differs from contracted rate by more than 2 percent
-- Fuel surcharge percentage exceeds agreed BAF index cap
-- Accessorial charges not pre-authorised (detention, re-delivery, address correction)
-- Invoice received more than 30 days after delivery (statute of limitations risk)
+### TR-05: Freight Invoice Variance Calculation
 
-Target: 100 percent automated matching on standard charges; exceptions routed to
-logistics analyst queue within 24 hours.
+```sql
+UPDATE FACT_FREIGHT_INVOICE
+SET
+    RATE_VARIANCE_PCT = CASE
+        WHEN QUOTED_RATE_GC IS NOT NULL AND QUOTED_RATE_GC > 0
+        THEN (ACTUAL_INVOICE_GC - QUOTED_RATE_GC) / QUOTED_RATE_GC
+        ELSE NULL
+    END,
+    DISPUTE_FLAG = CASE
+        WHEN QUOTED_RATE_GC IS NOT NULL AND QUOTED_RATE_GC > 0
+             AND ABS((ACTUAL_INVOICE_GC - QUOTED_RATE_GC) / QUOTED_RATE_GC) > 0.05
+        THEN 1
+        ELSE 0
+    END;
+```
+
+### TR-06: Customs Clearance Lead Time
+
+```sql
+UPDATE FACT_CUSTOMS_DECLARATION
+SET CLEARANCE_DAYS = DATEDIFF(DAY, CUSTOMS_ENTRY_DATE, RELEASE_DATE)
+WHERE RELEASE_DATE IS NOT NULL;
+```
+
+### TR-07: Distance Geocoding Fill (for NULL DISTANCE_KM)
+
+When DISTANCE_KM is NULL in SAP TM (typically for short-haul road movements), the
+transformation applies a geocoded distance lookup based on origin and destination UN/LOCODE
+coordinates stored in DIM_LOCATION, using the Haversine formula:
+
+```python
+# python/07_logistics/geocoding_fill.py
+import math
+
+def haversine_km(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
+    """Calculate great-circle distance in km between two coordinates."""
+    R = 6371.0
+    phi1, phi2 = math.radians(lat1), math.radians(lat2)
+    dphi = math.radians(lat2 - lat1)
+    dlambda = math.radians(lon2 - lon1)
+    a = math.sin(dphi/2)**2 + math.cos(phi1)*math.cos(phi2)*math.sin(dlambda/2)**2
+    return 2 * R * math.asin(math.sqrt(a))
+```
+
+A road-distance correction factor of 1.25 is applied to Haversine distance for road mode
+(to account for non-straight road routing); 1.10 for rail; 1.0 for ocean and air.
 
 ---
 
-## 6. Phase 3: Mathematical Models
-
-**Duration**: Weeks 15–24
-**Owner**: Analytics & Data Science team
-
-### 6.1 Incoterms 2020 Cost Allocation Model
-
-#### 6.1.1 Risk and cost transfer points (all 11 rules)
-
-| Rule | Risk Transfers At | Seller Pays | Buyer Pays | Insurance |
-|---|---|---|---|---|
-| EXW | Seller's premises | Nothing | Everything | Buyer arranges |
-| FCA | Named place / On board (FCA+B/L) | Export clearance | Main carriage, import | Buyer arranges |
-| FAS | Alongside vessel, origin port | Export clearance | Loading, main carriage, import | Buyer arranges |
-| FOB | On board vessel, origin port | Export clearance, loading | Main carriage, import | Buyer arranges |
-| CFR | On board vessel, origin port | Export clearance, loading, sea freight | Import, unloading | Buyer arranges |
-| CIF | On board vessel, origin port | Export clearance, loading, sea freight, ICC-C insurance | Import, unloading | Seller — minimum ICC-C |
-| CPT | Delivery to first carrier | Export clearance, main carriage | Import, last mile | Buyer arranges |
-| CIP | Delivery to first carrier | Export clearance, main carriage, ICC-A insurance | Import, last mile | Seller — full ICC-A |
-| DAP | Named destination, uncleared | Export clearance, main carriage, last mile | Import duty, VAT, unloading | Seller's risk from origin |
-| DPU | Named destination, unloaded | Export clearance, main carriage, last mile, unloading | Import duty, VAT | Seller's risk |
-| DDP | Named destination | Everything including import duty and VAT | Nothing | Seller's risk |
-
-**Critical note on CIF vs CIP insurance**: CIF requires only Institute Cargo Clauses (C)
-— minimum cover. CIP requires ICC (A) — all-risk cover. This is a common negotiation
-trap: sellers prefer CIF, buyers should push for CIP when seller arranges insurance.
-
-#### 6.1.2 CIF vs DDP landed cost comparison
-
-```typescript
-interface LandedCostCalculation {
-  goodsValueCents: number;       // FOB value in cents
-  oceanFreightCents: number;
-  insuranceCents: number;        // 0.5-1.5% of CIF value typical
-  originTHCCents: number;        // Terminal Handling Charge at loading port
-  destinationTHCCents: number;
-  customsDutyRateBps: number;    // basis points (e.g. 650 = 6.5%)
-  customsBrokerFeeCents: number;
-  importVatRateBps: number;      // e.g. 2000 = 20% (EU standard rate)
-  demurrageCents: number;        // if container not returned within free time
-  lastMileFreightCents: number;
-}
-
-function computeLandedCost(input: LandedCostCalculation): {
-  cifValueCents: number;
-  dutiableValueCents: number;
-  customsDutyCents: number;
-  importVatCents: number;
-  totalLandedCostCents: number;
-} {
-  const cifValueCents =
-    input.goodsValueCents +
-    input.oceanFreightCents +
-    input.insuranceCents;
-
-  // WTO Customs Valuation Agreement Art.1: dutiable value = CIF at port of import
-  const dutiableValueCents = cifValueCents + input.destinationTHCCents;
-
-  const customsDutyCents = Math.round(
-    (dutiableValueCents * input.customsDutyRateBps) / 10000
-  );
-
-  // EU VAT base = CIF + duty + THC (Article 86 UCC)
-  const vatBaseCents = dutiableValueCents + customsDutyCents;
-  const importVatCents = Math.round(
-    (vatBaseCents * input.importVatRateBps) / 10000
-  );
-
-  const totalLandedCostCents =
-    cifValueCents +
-    input.originTHCCents +
-    input.destinationTHCCents +
-    customsDutyCents +
-    input.customsBrokerFeeCents +
-    importVatCents +
-    input.demurrageCents +
-    input.lastMileFreightCents;
-
-  return {
-    cifValueCents,
-    dutiableValueCents,
-    customsDutyCents,
-    importVatCents,
-    totalLandedCostCents,
-  };
-}
-```
-
-**CIF vs DDP decision table** (buyer perspective):
-
-| Scenario | Prefer CIF | Prefer DDP |
-|---|---|---|
-| Buyer has AEO status | Yes — lower duty cost, AEO fast lane | No |
-| Supplier in UFLPA-risk country | Yes — buyer controls clearance | Never — supplier controls, risk of seizure |
-| High-value goods with damage risk | Avoid (ICC-C only) | N/A (buyer arranges ICC-A under DAP/DDP variant) |
-| Buyer lacks import license | No | Yes — seller handles |
-| VAT-registered at destination | Yes — reclaim import VAT | Yes — but seller may not recover VAT |
-
-### 6.2 Freight Cost Calculation
-
-#### 6.2.1 IATA volumetric weight formula (air cargo)
-
-The International Air Transport Association defines chargeable weight as the greater
-of actual gross weight and volumetric weight:
-
-```
-Volumetric Weight (kg) = (L_cm x W_cm x H_cm) / 6000
-
-Equivalently:
-1 cubic metre = 166.67 kg (commonly rounded to 167 kg)
-
-Chargeable Weight = max(Gross Weight, Volumetric Weight)
-```
-
-```python
-def compute_chargeable_weight_air(
-    gross_weight_kg: float,
-    length_cm: float,
-    width_cm: float,
-    height_cm: float,
-) -> dict:
-    """
-    Compute IATA chargeable weight for air freight.
-
-    Returns dict with volumetric_kg, chargeable_kg, and basis.
-    Reference: IATA Cargo Services Conference Resolution 123.
-    """
-    volumetric_kg = (length_cm * width_cm * height_cm) / 6000.0
-    chargeable_kg = max(gross_weight_kg, volumetric_kg)
-    basis = "VOLUMETRIC" if volumetric_kg > gross_weight_kg else "ACTUAL"
-    return {
-        "gross_weight_kg": gross_weight_kg,
-        "volumetric_kg": round(volumetric_kg, 2),
-        "chargeable_kg": round(chargeable_kg, 2),
-        "basis": basis,
-    }
-```
-
-#### 6.2.2 Fuel surcharge (BAF / YAS / FSC)
-
-Bunker Adjustment Factor (ocean) and Fuel Surcharge (air) are contractually linked
-to published indices. Calculate as follows:
-
-```python
-def compute_freight_cost_cents(
-    base_rate_cents_per_kg: int,
-    chargeable_kg: float,
-    fuel_surcharge_rate: float,   # e.g. 0.18 for 18%
-    security_surcharge_cents: int,
-    war_risk_surcharge_cents: int,
-    peak_season_surcharge_cents: int,
-) -> int:
-    """
-    Compute total air/ocean freight cost in integer cents.
-    All monetary inputs and outputs are integer cents.
-    """
-    base_cost_cents = round(base_rate_cents_per_kg * chargeable_kg)
-    fuel_surcharge_cents = round(base_cost_cents * fuel_surcharge_rate)
-    total_cents = (
-        base_cost_cents
-        + fuel_surcharge_cents
-        + security_surcharge_cents
-        + war_risk_surcharge_cents
-        + peak_season_surcharge_cents
-    )
-    return total_cents
-```
-
-#### 6.2.3 Terminal Handling Charge (THC)
-
-THC is assessed per TEU or per cargo unit by the ocean carrier at origin and destination.
-It is NOT included in the ocean freight rate under Incoterms 2020:
-
-```
-THC Total = THC_Origin (charged to shipper) + THC_Destination (charged to consignee)
-
-For FCL:
-  THC_Origin per TEU:  USD 165–280 (Shanghai), USD 195–310 (Rotterdam)
-  THC_Destination per TEU: USD 200–350 (Los Angeles), USD 165–240 (Hamburg)
-
-For LCL (charged per CBM or per W/M — weight/measurement ton, whichever greater):
-  W/M ton = max(weight_kg / 1000, volume_cbm)  [1 revenue ton = 1 tonne or 1 CBM]
-```
-
-```python
-def compute_lcl_revenue_tons(weight_kg: float, volume_cbm: float) -> float:
-    """
-    Compute LCL revenue tons (W/M — weight or measurement, whichever greater).
-    Used for LCL ocean freight and THC calculation.
-    """
-    weight_tons = weight_kg / 1000.0
-    return max(weight_tons, volume_cbm)
-```
-
-### 6.3 Landed Cost Model
-
-The complete landed cost formula integrating all cost elements:
-
-```
-Landed Cost = Goods Value (EXW)
-            + Origin Charges (export clearance + origin THC + stuffing)
-            + Main Carriage (ocean/air/road freight)
-            + Insurance Premium
-            + Destination THC
-            + Customs Duty (ad valorem or specific)
-            + Anti-Dumping / Countervailing Duty (if applicable)
-            + Customs Broker Fee
-            + Import VAT / GST (where non-recoverable)
-            + Port Demurrage (if free time exceeded)
-            + Detention (container usage beyond free time)
-            + Last Mile Delivery
-            + CBAM Carbon Cost (EU imports of covered goods from 2026)
-```
-
-```python
-from dataclasses import dataclass
-
-@dataclass
-class LandedCostInputs:
-    goods_value_cents: int          # EXW value in integer cents
-    export_clearance_cents: int
-    origin_thc_cents: int
-    ocean_freight_cents: int
-    insurance_cents: int
-    destination_thc_cents: int
-    customs_duty_rate_bps: int      # basis points (10000 = 100%)
-    antidumping_duty_rate_bps: int  # 0 if not applicable
-    customs_broker_fee_cents: int
-    import_vat_rate_bps: int
-    vat_recoverable: bool           # False for B2C, often True for B2B
-    demurrage_cents: int
-    detention_cents: int
-    last_mile_cents: int
-    cbam_cost_cents: int            # 0 if non-EU or non-covered goods
-
-def compute_full_landed_cost(inp: LandedCostInputs) -> dict:
-    """
-    Compute full landed cost with all cost components.
-    All values in integer cents. Returns breakdown dict.
-    """
-    cif_value_cents = (
-        inp.goods_value_cents
-        + inp.origin_thc_cents
-        + inp.ocean_freight_cents
-        + inp.insurance_cents
-    )
-
-    # WTO Customs Valuation Agreement: transaction value = CIF at port of import
-    dutiable_value_cents = cif_value_cents + inp.destination_thc_cents
-
-    customs_duty_cents = round(dutiable_value_cents * inp.customs_duty_rate_bps / 10000)
-    antidumping_cents = round(dutiable_value_cents * inp.antidumping_duty_rate_bps / 10000)
-    total_duty_cents = customs_duty_cents + antidumping_cents
-
-    vat_base_cents = dutiable_value_cents + total_duty_cents
-    import_vat_gross_cents = round(vat_base_cents * inp.import_vat_rate_bps / 10000)
-    import_vat_net_cents = 0 if inp.vat_recoverable else import_vat_gross_cents
-
-    total_landed_cost_cents = (
-        inp.goods_value_cents
-        + inp.export_clearance_cents
-        + inp.origin_thc_cents
-        + inp.ocean_freight_cents
-        + inp.insurance_cents
-        + inp.destination_thc_cents
-        + total_duty_cents
-        + inp.customs_broker_fee_cents
-        + import_vat_net_cents
-        + inp.demurrage_cents
-        + inp.detention_cents
-        + inp.last_mile_cents
-        + inp.cbam_cost_cents
-    )
-
-    return {
-        "goods_value_cents": inp.goods_value_cents,
-        "cif_value_cents": cif_value_cents,
-        "dutiable_value_cents": dutiable_value_cents,
-        "customs_duty_cents": customs_duty_cents,
-        "antidumping_duty_cents": antidumping_cents,
-        "import_vat_gross_cents": import_vat_gross_cents,
-        "import_vat_net_cents": import_vat_net_cents,
-        "total_landed_cost_cents": total_landed_cost_cents,
-    }
-```
-
-### 6.4 HS Code Classification Pipeline
-
-#### 6.4.1 HS code hierarchy
-
-```
-Level 1: Chapter (2 digits)       e.g. 84 — Nuclear reactors, boilers, machinery
-Level 2: Heading (4 digits)       e.g. 8471 — Automatic data processing machines
-Level 3: Subheading (6 digits)    e.g. 847130 — Portable ADP machines, weight <= 10 kg
-Level 4: Tariff line (8 digits)   e.g. 84713000 — EU CN 8-digit
-Level 5: Statistical (10 digits)  e.g. 8471300000 — US HTS / national extensions
-```
-
-#### 6.4.2 Duty rate lookup pipeline
-
-```python
-def lookup_duty_rate(
-    hs_code_6: str,
-    country_of_origin: str,
-    country_of_import: str,
-    db_session,
-) -> dict:
-    """
-    Look up applicable duty rate for HS code + trade lane combination.
-    Preferential rates take precedence over MFN where RoO are met.
-
-    Returns dict with rate_type, ad_valorem_rate, notes.
-    """
-    # Priority: FTA > GSP > MFN > Antidumping
-    rates = db_session.query(DutyRate).filter(
-        DutyRate.hs_code.startswith(hs_code_6),
-        DutyRate.country_origin == country_of_origin,
-        DutyRate.country_import == country_of_import,
-        DutyRate.effective_from <= date.today(),
-        (DutyRate.effective_to == None) | (DutyRate.effective_to >= date.today()),
-    ).order_by(DutyRate.ad_valorem_rate.asc()).all()
-
-    if not rates:
-        raise ValueError(f"No duty rate found for HS {hs_code_6} "
-                         f"{country_of_origin}->{country_of_import}")
-
-    preferred = next((r for r in rates if r.rate_type in ('FTA', 'GSP')), None)
-    mfn = next((r for r in rates if r.rate_type == 'MFN'), None)
-    antidumping = next((r for r in rates if r.rate_type == 'ANTIDUMPING'), None)
-
-    applicable = preferred or mfn
-    return {
-        "rate_type": applicable.rate_type if applicable else "UNKNOWN",
-        "ad_valorem_rate": applicable.ad_valorem_rate if applicable else None,
-        "antidumping_rate": antidumping.ad_valorem_rate if antidumping else 0,
-        "mfn_rate": mfn.ad_valorem_rate if mfn else None,
-        "saving_vs_mfn_bps": round(
-            (mfn.ad_valorem_rate - preferred.ad_valorem_rate) * 10000
-        ) if (preferred and mfn) else 0,
-    }
-```
-
-#### 6.4.3 Rules of origin determination
-
-Two primary tests apply under most FTAs:
-
-| Test | Description | Triggers |
-|---|---|---|
-| Wholly Obtained (WO) | Product entirely produced in one country (minerals, agricultural goods) | Chapter 1-24 primary goods |
-| Substantial Transformation (ST) | Change of HS chapter/heading/subheading, or RVC threshold met | Manufactured goods |
-| Regional Value Content (RVC) | Value added in FTA territory meets percentage threshold | USMCA: 60-75% depending on method |
-| Specific Process Rule | Must undergo defined manufacturing process | Textiles, chemicals |
-
-```python
-def assess_rules_of_origin(
-    hs_code_input: str,    # HS code of input materials
-    hs_code_output: str,   # HS code of finished good
-    input_value_cents: int,
-    output_value_cents: int,
-    fta_agreement: str,    # e.g. 'EU-KOREA', 'USMCA', 'CPTPP'
-) -> dict:
-    """
-    Assess whether substantial transformation test is met for FTA preferential rate.
-    Returns eligibility assessment and confidence score.
-    """
-    chapter_change = hs_code_input[:2] != hs_code_output[:2]
-    heading_change = hs_code_input[:4] != hs_code_output[:4]
-    subheading_change = hs_code_input[:6] != hs_code_output[:6]
-
-    # Simplified RVC (build-down method)
-    non_originating_value = input_value_cents
-    rvc_percent = (output_value_cents - non_originating_value) / output_value_cents * 100
-
-    return {
-        "chapter_change": chapter_change,
-        "heading_change": heading_change,
-        "subheading_change": subheading_change,
-        "rvc_percent": round(rvc_percent, 1),
-        "fta_agreement": fta_agreement,
-        "preliminary_eligible": chapter_change or (rvc_percent >= 40),
-        "requires_legal_review": not chapter_change and rvc_percent < 40,
-    }
-```
-
-### 6.5 Carrier Performance Scorecard Model
-
-```python
-import numpy as np
-
-def compute_carrier_scorecard(
-    shipment_records: list[dict],
-    weights: dict = None,
-) -> dict:
-    """
-    Compute weighted carrier KPI scorecard.
-
-    Formula for cost per kg*km (efficiency index):
-    cost_index = sum(freight_cost_cents) / sum(weight_kg * distance_km)
-
-    OTD = on-time deliveries / total deliveries
-    Transit time variance = std(actual_transit - contracted_transit)
-    Damage rate = damaged shipments / total shipments
-    """
-    if weights is None:
-        weights = {
-            "otd": 0.40,
-            "transit_variance": 0.25,
-            "damage_rate": 0.20,
-            "cost_efficiency": 0.15,
-        }
-
-    total = len(shipment_records)
-    if total == 0:
-        raise ValueError("No shipment records provided")
-
-    on_time = sum(1 for s in shipment_records
-                  if s["actual_delivery_date"] <= s["requested_delivery_date"])
-    otd_score = on_time / total
-
-    transit_variances = [
-        s["actual_transit_days"] - s["contracted_transit_days"]
-        for s in shipment_records
-    ]
-    transit_variance_days = float(np.std(transit_variances))
-    # Normalise: 0 variance = 1.0 score, 3-day std = 0.0 score
-    transit_score = max(0.0, 1.0 - (transit_variance_days / 3.0))
-
-    damaged = sum(1 for s in shipment_records if s.get("has_damage_claim", False))
-    damage_rate = damaged / total
-    damage_score = max(0.0, 1.0 - (damage_rate / 0.05))  # 5% damage rate = 0 score
-
-    total_cost = sum(s["freight_cost_cents"] for s in shipment_records)
-    total_tkm = sum(s["weight_kg"] * s["distance_km"] for s in shipment_records)
-    cost_per_tkm = total_cost / total_tkm if total_tkm > 0 else 0
-    # Normalised against benchmark: lower is better
-    benchmark_cents_per_tkm = 5.0  # adjust per mode/lane
-    cost_score = min(1.0, benchmark_cents_per_tkm / cost_per_tkm) if cost_per_tkm else 0
-
-    composite_score = (
-        weights["otd"] * otd_score
-        + weights["transit_variance"] * transit_score
-        + weights["damage_rate"] * damage_score
-        + weights["cost_efficiency"] * cost_score
-    ) * 100
-
-    return {
-        "otd_percent": round(otd_score * 100, 1),
-        "transit_variance_days": round(transit_variance_days, 2),
-        "damage_rate_percent": round(damage_rate * 100, 2),
-        "cost_per_tkm_cents": round(cost_per_tkm, 4),
-        "composite_score": round(composite_score, 1),
-        "rating": (
-            "PREFERRED" if composite_score >= 90 else
-            "APPROVED" if composite_score >= 75 else
-            "CONDITIONAL" if composite_score >= 60 else
-            "PROBATION" if composite_score >= 45 else
-            "DISQUALIFIED"
-        ),
-    }
-```
-
-### 6.6 Route Optimisation — Vehicle Routing Problem (VRP)
-
-#### 6.6.1 VRP mathematical formulation
-
-The Capacitated Vehicle Routing Problem with Time Windows (CVRPTW) is formulated as:
-
-```
-Minimise:  sum_{k in K} sum_{i in V} sum_{j in V} c_ij * x_ijk
-
-Subject to:
-  (1) sum_{k in K} sum_{j in V} x_ijk = 1        for all i in C  [each customer visited once]
-  (2) sum_{i in V} x_ijk = sum_{i in V} x_jik    for all j in C, k in K  [flow conservation]
-  (3) sum_{i in C} d_i * sum_{j in V} x_ijk <= Q_k  for all k in K  [capacity constraint]
-  (4) s_ik + t_ij - M(1 - x_ijk) <= s_jk        for all i,j in V, k in K  [time propagation]
-  (5) a_i <= s_ik <= b_i                          for all i in C, k in K  [time windows]
-
-Where:
-  K = set of vehicles
-  V = set of all nodes (depot + customers)
-  C = set of customer nodes
-  c_ij = cost of arc (i,j) [distance or time]
-  x_ijk = 1 if vehicle k travels from i to j, else 0
-  d_i = demand at customer i
-  Q_k = capacity of vehicle k
-  s_ik = service start time at node i by vehicle k
-  t_ij = travel time from i to j
-  [a_i, b_i] = time window at node i
-  M = large constant (big-M method)
-```
-
-#### 6.6.2 OR-Tools CVRPTW implementation
-
-```python
-from ortools.constraint_solver import routing_enums_pb2
-from ortools.constraint_solver import pywrapcp
-import numpy as np
-
-def solve_vrptw(
-    distance_matrix: list[list[int]],  # in metres, integer
-    demands: list[int],                # in kg, integer
-    vehicle_capacities: list[int],     # in kg, integer
-    time_windows: list[tuple[int,int]], # (earliest, latest) in minutes from depot open
-    depot_index: int = 0,
-    time_limit_seconds: int = 30,
-) -> dict:
-    """
-    Solve CVRPTW using Google OR-Tools.
-    Returns optimised routes, total distance, and total load per vehicle.
-
-    Reference: OR-Tools CVRPTW example — Google Operations Research (2024).
-    """
-    num_vehicles = len(vehicle_capacities)
-    manager = pywrapcp.RoutingIndexManager(
-        len(distance_matrix), num_vehicles, depot_index
-    )
-    routing = pywrapcp.RoutingModel(manager)
-
-    def distance_callback(from_idx, to_idx):
-        from_node = manager.IndexToNode(from_idx)
-        to_node = manager.IndexToNode(to_idx)
-        return distance_matrix[from_node][to_node]
-
-    transit_callback_index = routing.RegisterTransitCallback(distance_callback)
-    routing.SetArcCostEvaluatorOfAllVehicles(transit_callback_index)
-
-    # Capacity constraint
-    def demand_callback(from_idx):
-        from_node = manager.IndexToNode(from_idx)
-        return demands[from_node]
-
-    demand_callback_index = routing.RegisterUnaryTransitCallback(demand_callback)
-    routing.AddDimensionWithVehicleCapacity(
-        demand_callback_index, 0, vehicle_capacities, True, "Capacity"
-    )
-
-    # Time window constraint (assume speed = 50 km/h avg; distance in m -> time in min)
-    def time_callback(from_idx, to_idx):
-        from_node = manager.IndexToNode(from_idx)
-        to_node = manager.IndexToNode(to_idx)
-        return int(distance_matrix[from_node][to_node] / 1000 / 50 * 60)
-
-    time_callback_index = routing.RegisterTransitCallback(time_callback)
-    routing.AddDimension(time_callback_index, 30, 480, False, "Time")
-    time_dimension = routing.GetDimensionOrDie("Time")
-    for node_idx, (tw_start, tw_end) in enumerate(time_windows):
-        index = manager.NodeToIndex(node_idx)
-        time_dimension.CumulVar(index).SetRange(tw_start, tw_end)
-
-    search_params = pywrapcp.DefaultRoutingSearchParameters()
-    search_params.first_solution_strategy = (
-        routing_enums_pb2.FirstSolutionStrategy.PATH_CHEAPEST_ARC
-    )
-    search_params.local_search_metaheuristic = (
-        routing_enums_pb2.LocalSearchMetaheuristic.GUIDED_LOCAL_SEARCH
-    )
-    search_params.time_limit.seconds = time_limit_seconds
-
-    solution = routing.SolveWithParameters(search_params)
-
-    if not solution:
-        return {"status": "NO_SOLUTION", "routes": [], "total_distance_m": 0}
-
-    routes = []
-    total_distance = 0
-    for vehicle_id in range(num_vehicles):
-        index = routing.Start(vehicle_id)
-        route = []
-        route_distance = 0
-        while not routing.IsEnd(index):
-            node = manager.IndexToNode(index)
-            route.append(node)
-            prev_index = index
-            index = solution.Value(routing.NextVar(index))
-            route_distance += routing.GetArcCostForVehicle(prev_index, index, vehicle_id)
-        routes.append({"vehicle_id": vehicle_id, "route": route, "distance_m": route_distance})
-        total_distance += route_distance
-
-    return {
-        "status": "OPTIMAL" if solution.ObjectiveValue() > 0 else "FEASIBLE",
-        "routes": routes,
-        "total_distance_m": total_distance,
-        "objective_value": solution.ObjectiveValue(),
-    }
-```
-
-### 6.7 CBAM Carbon Cost in Freight
-
-EU Carbon Border Adjustment Mechanism (Regulation 2023/956) applies to imports of
-iron/steel, aluminium, cement, fertilisers, electricity, and hydrogen from 2026.
-Embedded emissions in freight must be reported and certificates purchased.
-
-#### 6.7.1 Emission intensity by transport mode (tonne CO2e per tonne-km)
-
-| Mode | CO2e per tonne-km (g) | Source | Notes |
-|---|---|---|---|
-| Air freight | 500–800 | ICAO Carbon Calculator | Includes uplift factor 1.9 (non-CO2 effects) |
-| Ocean (container) | 10–16 | IMO 4th GHG Study 2020 | Per MEPC.342(78) CII rating |
-| Road (diesel HGV) | 60–100 | GLEC Framework v3.0 | EU average Euro VI fleet |
-| Road (electric HGV) | 10–25 | GLEC Framework v3.0 | Depends on grid intensity |
-| Rail (electrified) | 5–15 | EEA 2024 | EU average grid mix |
-| Rail (diesel) | 25–40 | GLEC Framework v3.0 | |
-| Inland waterway | 25–35 | GLEC Framework v3.0 | |
-
-#### 6.7.2 CBAM carbon cost calculation
-
-```python
-def compute_cbam_freight_carbon_cost_cents(
-    weight_kg: float,
-    distance_km: float,
-    mode: str,                    # 'AIR' | 'OCEAN' | 'ROAD' | 'RAIL'
-    cbam_allowance_price_eur_cents: int,  # EU ETS price per tonne CO2e in cents
-    emission_factor_g_per_tkm: float = None,
-) -> dict:
-    """
-    Compute CBAM carbon cost for freight movements into the EU.
-    Uses GLEC Framework v3.0 emission factors.
-
-    cbam_allowance_price_eur_cents: current EU ETS price (e.g. 6500 = EUR 65.00)
-    Returns cost in EUR cents (integer).
-    """
-    DEFAULT_FACTORS = {
-        "AIR": 600.0,    # g CO2e per tonne-km (with RFI uplift)
-        "OCEAN": 12.0,
-        "ROAD": 75.0,
-        "RAIL": 10.0,
-    }
-    factor = emission_factor_g_per_tkm or DEFAULT_FACTORS[mode]
-
-    tonne_km = (weight_kg / 1000.0) * distance_km
-    emissions_g = factor * tonne_km
-    emissions_tonnes = emissions_g / 1_000_000.0
-
-    # CBAM certificate cost = emissions (tCO2e) x ETS price (EUR/tonne)
-    cost_eur_cents = round(emissions_tonnes * cbam_allowance_price_eur_cents)
-
-    return {
-        "tonne_km": round(tonne_km, 2),
-        "emissions_g_co2e": round(emissions_g, 2),
-        "emissions_tonnes_co2e": round(emissions_tonnes, 6),
-        "cbam_cost_eur_cents": cost_eur_cents,
-        "mode": mode,
-        "emission_factor_g_per_tkm": factor,
-    }
-```
-
-### 6.8 Customs Duty Calculation with MFN vs Preferential Rates
-
-```python
-def compute_customs_duty_cents(
-    dutiable_value_cents: int,
-    hs_code_6: str,
-    country_of_origin: str,
-    country_of_import: str,
-    has_eur1_certificate: bool,
-    has_form_a_gsp: bool,
-    db_session,
-) -> dict:
-    """
-    Compute customs duty applying correct rate (MFN, GSP, FTA).
-    Preferential rates require documentary proof (EUR.1, Form A, REX).
-    Returns duty breakdown in integer cents.
-    """
-    rates = lookup_duty_rate(hs_code_6, country_of_origin, country_of_import, db_session)
-
-    mfn_rate = rates["mfn_rate"] or 0.0
-    preferred_rate = None
-    rate_type = "MFN"
-
-    if has_eur1_certificate and rates["rate_type"] == "FTA":
-        preferred_rate = rates["ad_valorem_rate"]
-        rate_type = "FTA"
-    elif has_form_a_gsp and rates["rate_type"] == "GSP":
-        preferred_rate = rates["ad_valorem_rate"]
-        rate_type = "GSP"
-
-    applied_rate = preferred_rate if preferred_rate is not None else mfn_rate
-
-    duty_cents = round(dutiable_value_cents * applied_rate)
-    mfn_duty_cents = round(dutiable_value_cents * mfn_rate)
-    antidumping_cents = round(dutiable_value_cents * rates["antidumping_rate"])
-
-    return {
-        "applied_rate_type": rate_type,
-        "applied_rate": applied_rate,
-        "duty_cents": duty_cents,
-        "mfn_duty_cents": mfn_duty_cents,
-        "antidumping_duty_cents": antidumping_cents,
-        "total_duty_cents": duty_cents + antidumping_cents,
-        "duty_saving_vs_mfn_cents": mfn_duty_cents - duty_cents,
-        "documentary_proof_required": rate_type in ("FTA", "GSP"),
-    }
-```
+## 9. Business Rules
+
+**BR-01: OTD Window**
+A shipment is considered on-time if the actual arrival date is on or before the planned
+arrival date. No grace period is applied by default. Where carrier contracts specify a
+±1 day tolerance window, the CARRIER_OTD_TOLERANCE_DAYS field in DIM_CARRIER is used:
+`IS_ON_TIME = ACTUAL_ARR_DATE <= PLANNED_ARR_DATE + CARRIER_OTD_TOLERANCE_DAYS`
+
+**BR-02: Incoterms 2020 Compliance**
+All INCOTERM_CODE values must be from the 11 valid Incoterms 2020 rules. The discontinued
+DAT term (Incoterms 2010) must be migrated to DPU. Shipments with INCOTERM_CODE = 'DAT'
+generate a data quality alert and are excluded from compliance reporting until corrected.
+
+**BR-03: Freight Invoice Dispute Threshold**
+An invoice is automatically flagged for dispute when the absolute variance between actual
+invoiced amount and quoted rate exceeds 5% (±5%). The Finance and Logistics teams jointly
+approve any variance above 10% before payment. Variances below 5% are auto-approved.
+
+**BR-04: Carrier Tier Assignment**
+Carrier tier is reviewed quarterly based on rolling 6-month OTD, OTIF, claims rate, and
+documentation accuracy. Tier thresholds are defined in BR-09 (Carrier Scorecard section).
+A carrier cannot move from DISQUALIFIED to APPROVED without a 90-day probation period at
+WATCH tier with minimum 90% OTD demonstrated.
+
+**BR-05: Customs Clearance SLA**
+Country-specific clearance SLA targets are defined in ref.COUNTRY_CLEARANCE_SLA. Default
+SLA: import declarations must be released within 3 business days. Shipments exceeding the
+country SLA generate a customs delay alert to the Trade Compliance team and the relevant
+logistics coordinator.
+
+**BR-06: UFLPA Screening Mandatory**
+All suppliers shipping goods that include raw materials, components, or finished goods from
+the Xinjiang Uyghur Autonomous Region (XUAR) must have UFLPA clearance documentation
+attached to the customs declaration. Shipments with UFLPA_FLAG = 1 and no clearance
+document reference are blocked from GTS release.
+
+**BR-07: CO2 Calculation Mandatory for Air Shipments**
+All air freight shipments with FREIGHT_COST_GC > EUR 500 must have a CO2 calculation
+record in FACT_SHIPMENT_CO2. Air shipments without a CO2 record are excluded from the
+carrier sustainability scorecard and flagged in the ESG dashboard.
+
+**BR-08: Modal Shift Justification**
+Air freight used for non-emergency replenishment (i.e., where stock is not below reorder
+point) requires a modal shift justification code entered in SAP TM. Valid codes:
+EMERGENCY_STOCK, CUSTOMER_EXPEDITE, SUPPLIER_DELAY, QUALITY_REPLACEMENT, APPROVED_EXCEPTION.
+Unjustified air shipments are reported to the Logistics Director monthly.
+
+**BR-09: Carrier Scorecard Minimum Data**
+A carrier scorecard record can only be generated when the carrier has completed a minimum
+of 10 shipments in the scoring period. Carriers below this threshold are marked as
+INSUFFICIENT_DATA and excluded from tier ranking calculations.
 
 ---
 
-## 7. Phase 4: ML/AI Pipeline
+## 10. KPIs and Formulas
 
-**Duration**: Weeks 20–36
-**Owner**: Data Science team + Logistics Analytics
-
-### 7.1 XGBoost Delivery Delay Prediction
-
-#### 7.1.1 Feature engineering
-
-| Feature | Type | Source | Notes |
-|---|---|---|---|
-| carrier_id | Categorical (OHE) | Carrier master | SCAC code encoded |
-| origin_locode | Categorical (OHE) | Shipment | UN/LOCODE |
-| destination_locode | Categorical (OHE) | Shipment | UN/LOCODE |
-| transport_mode | Categorical | Shipment | OCEAN/AIR/ROAD/RAIL |
-| contracted_transit_days | Numeric | Lane master | |
-| booking_lead_days | Numeric | Computed | Days between booking and ETD |
-| shipment_weight_kg | Numeric | Shipment | |
-| shipment_volume_cbm | Numeric | Shipment | |
-| incoterms_rule | Categorical | PO | FOB/CIF/DDP etc. |
-| week_of_year | Numeric | ETD | Seasonality (peak season = weeks 36-42) |
-| month | Numeric | ETD | |
-| origin_port_congestion_index | Numeric | External API | 0-100 scale |
-| destination_port_congestion_index | Numeric | External API | 0-100 scale |
-| weather_risk_origin | Numeric | Weather API | 0-1 probability of disruption |
-| carrier_90d_otd | Numeric | Computed rolling | Historical OTD on lane |
-| lane_avg_delay_days_90d | Numeric | Computed rolling | |
-
-#### 7.1.2 Training pipeline
-
-```python
-import xgboost as xgb
-import shap
-import pandas as pd
-from sklearn.model_selection import TimeSeriesSplit
-from sklearn.metrics import mean_absolute_error, roc_auc_score
-from sklearn.preprocessing import OrdinalEncoder
-
-def train_delay_prediction_model(
-    df: pd.DataFrame,
-    target_col: str = "delay_days",
-    binary_target_col: str = "is_delayed",
-    n_splits: int = 5,
-) -> dict:
-    """
-    Train XGBoost model to predict delivery delays.
-    Uses time-series cross-validation to prevent data leakage.
-    Returns trained model, feature importance, and SHAP explainer.
-
-    Features must be pre-computed as described in Section 7.1.1.
-    Target: delay_days (regression) or is_delayed (classification).
-    """
-    categorical_cols = [
-        "carrier_id", "origin_locode", "destination_locode",
-        "transport_mode", "incoterms_rule"
-    ]
-    numeric_cols = [
-        "contracted_transit_days", "booking_lead_days", "shipment_weight_kg",
-        "shipment_volume_cbm", "week_of_year", "month",
-        "origin_port_congestion_index", "destination_port_congestion_index",
-        "weather_risk_origin", "carrier_90d_otd", "lane_avg_delay_days_90d"
-    ]
-
-    encoder = OrdinalEncoder(handle_unknown="use_encoded_value", unknown_value=-1)
-    df[categorical_cols] = encoder.fit_transform(df[categorical_cols])
-
-    feature_cols = categorical_cols + numeric_cols
-    X = df[feature_cols]
-    y_binary = df[binary_target_col]
-
-    tscv = TimeSeriesSplit(n_splits=n_splits)
-    auc_scores = []
-
-    model = xgb.XGBClassifier(
-        n_estimators=500,
-        max_depth=6,
-        learning_rate=0.05,
-        subsample=0.8,
-        colsample_bytree=0.8,
-        min_child_weight=10,
-        scale_pos_weight=(y_binary == 0).sum() / (y_binary == 1).sum(),
-        use_label_encoder=False,
-        eval_metric="auc",
-        early_stopping_rounds=50,
-        random_state=42,
-        enable_categorical=True,
-    )
-
-    for fold, (train_idx, val_idx) in enumerate(tscv.split(X)):
-        X_train, X_val = X.iloc[train_idx], X.iloc[val_idx]
-        y_train, y_val = y_binary.iloc[train_idx], y_binary.iloc[val_idx]
-        model.fit(X_train, y_train, eval_set=[(X_val, y_val)], verbose=False)
-        preds = model.predict_proba(X_val)[:, 1]
-        auc_scores.append(roc_auc_score(y_val, preds))
-
-    # Retrain on full dataset
-    model.fit(X, y_binary, verbose=False)
-
-    # SHAP explainability
-    explainer = shap.TreeExplainer(model)
-    shap_values = explainer.shap_values(X.sample(min(1000, len(X)), random_state=42))
-
-    feature_importance = pd.DataFrame({
-        "feature": feature_cols,
-        "shap_mean_abs": abs(shap_values).mean(axis=0),
-    }).sort_values("shap_mean_abs", ascending=False)
-
-    return {
-        "model": model,
-        "encoder": encoder,
-        "explainer": explainer,
-        "cv_auc_mean": round(sum(auc_scores) / len(auc_scores), 4),
-        "cv_auc_scores": auc_scores,
-        "feature_importance": feature_importance,
-        "feature_cols": feature_cols,
-        "categorical_cols": categorical_cols,
-    }
-```
-
-#### 7.1.3 Inference and alerting
-
-```python
-def predict_delay_risk(
-    model_artifacts: dict,
-    shipment_features: pd.DataFrame,
-    alert_threshold: float = 0.60,
-) -> pd.DataFrame:
-    """
-    Run inference on new shipments and flag high-risk deliveries.
-    Returns DataFrame with delay_probability and risk_tier columns.
-    """
-    encoder = model_artifacts["encoder"]
-    model = model_artifacts["model"]
-    cat_cols = model_artifacts["categorical_cols"]
-    feature_cols = model_artifacts["feature_cols"]
-
-    df = shipment_features.copy()
-    df[cat_cols] = encoder.transform(df[cat_cols])
-
-    delay_proba = model.predict_proba(df[feature_cols])[:, 1]
-    df["delay_probability"] = delay_proba
-    df["risk_tier"] = pd.cut(
-        delay_proba,
-        bins=[0, 0.30, 0.60, 1.0],
-        labels=["LOW", "MEDIUM", "HIGH"],
-    )
-    df["alert"] = delay_proba >= alert_threshold
-    return df[["shipment_id", "delay_probability", "risk_tier", "alert"]]
-```
-
-### 7.2 NLP for Customs Document Classification (HS Code Suggestion)
-
-#### 7.2.1 Model architecture
-
-Use a fine-tuned DistilBERT model (66 million parameters, 40 percent faster than BERT-base)
-for multi-class classification of HS codes at 4-digit heading level (~1,200 classes).
+### KPI-01: On-Time Delivery (OTD) by Carrier
 
 ```
-Input: Invoice line description (free text, up to 128 tokens)
-       + optional: commodity description, unit of measure, country of origin
-Architecture: DistilBERT-base-uncased -> [CLS] pooler -> Dropout(0.3) -> Linear(768, 1200)
-Output: Softmax probabilities over HS 4-digit headings
-Confidence threshold: >= 0.80 auto-classify; < 0.80 route to customs broker
+OTD (%) = (Shipments with ACTUAL_ARR_DATE <= PLANNED_ARR_DATE) / Total Completed Shipments × 100
 ```
 
-#### 7.2.2 Training pipeline
+World-class target: >= 95%
+Minimum acceptable: >= 85% (triggers WATCH tier)
+Below 75%: DISQUALIFIED tier
 
-```python
-from transformers import (
-    DistilBertTokenizerFast,
-    DistilBertForSequenceClassification,
-    TrainingArguments,
-    Trainer,
-)
-from datasets import Dataset
-import torch
-import numpy as np
-from sklearn.metrics import accuracy_score, f1_score
+Segmentations: by Carrier, by Mode, by Trade Lane (Origin Country → Destination Country),
+by Month, by Incoterm.
 
-def train_hs_classifier(
-    descriptions: list[str],
-    hs_heading_labels: list[int],  # integer class indices (0 to num_classes-1)
-    num_classes: int,
-    output_dir: str = "./models/hs_classifier",
-    num_epochs: int = 5,
-    batch_size: int = 32,
-) -> dict:
-    """
-    Fine-tune DistilBERT for HS 4-digit heading classification.
-    Training data: minimum 10,000 labelled invoice descriptions recommended.
-    GPU required for training (CPU inference is feasible for batch <100).
-    """
-    tokenizer = DistilBertTokenizerFast.from_pretrained("distilbert-base-uncased")
+### KPI-02: On-Time In-Full (OTIF) by Carrier
 
-    def tokenize(batch):
-        return tokenizer(batch["text"], padding="max_length",
-                         truncation=True, max_length=128)
-
-    dataset = Dataset.from_dict({"text": descriptions, "label": hs_heading_labels})
-    dataset = dataset.map(tokenize, batched=True)
-    split = dataset.train_test_split(test_size=0.15, seed=42)
-
-    model = DistilBertForSequenceClassification.from_pretrained(
-        "distilbert-base-uncased", num_labels=num_classes
-    )
-
-    def compute_metrics(eval_pred):
-        logits, labels = eval_pred
-        preds = np.argmax(logits, axis=1)
-        return {
-            "accuracy": accuracy_score(labels, preds),
-            "f1_macro": f1_score(labels, preds, average="macro"),
-        }
-
-    training_args = TrainingArguments(
-        output_dir=output_dir,
-        num_train_epochs=num_epochs,
-        per_device_train_batch_size=batch_size,
-        per_device_eval_batch_size=batch_size,
-        evaluation_strategy="epoch",
-        save_strategy="best",
-        load_best_model_at_end=True,
-        metric_for_best_model="f1_macro",
-        warmup_steps=200,
-        weight_decay=0.01,
-        logging_dir=f"{output_dir}/logs",
-        fp16=torch.cuda.is_available(),
-    )
-
-    trainer = Trainer(
-        model=model,
-        args=training_args,
-        train_dataset=split["train"],
-        eval_dataset=split["test"],
-        compute_metrics=compute_metrics,
-    )
-    trainer.train()
-    trainer.save_model(output_dir)
-    tokenizer.save_pretrained(output_dir)
-
-    return {
-        "model_dir": output_dir,
-        "eval_results": trainer.evaluate(),
-    }
+```
+OTIF (%) = Shipments where IS_ON_TIME = 1 AND IS_IN_FULL = 1 / Total Completed Shipments × 100
 ```
 
-#### 7.2.3 Inference with confidence routing
+Walmart standard: >= 98% (for suppliers shipping to Walmart DCs)
+Internal target: >= 94%
 
-```python
-def classify_hs_code(
-    description: str,
-    model_dir: str,
-    hs_heading_index: dict,  # {class_index: hs_4digit_code}
-    confidence_threshold: float = 0.80,
-) -> dict:
-    """
-    Classify invoice description into HS 4-digit heading.
-    Descriptions below confidence threshold are flagged for manual review.
-    """
-    from transformers import pipeline
+### KPI-03: Freight Cost per Kilogram
 
-    classifier = pipeline(
-        "text-classification",
-        model=model_dir,
-        return_all_scores=False,
-        top_k=3,
-    )
-    results = classifier(description)[0]
-    top = max(results, key=lambda x: x["score"])
-    class_idx = int(top["label"].replace("LABEL_", ""))
-    hs_heading = hs_heading_index.get(class_idx, "UNKNOWN")
-
-    return {
-        "description": description,
-        "predicted_hs_heading": hs_heading,
-        "confidence": round(top["score"], 4),
-        "auto_classify": top["score"] >= confidence_threshold,
-        "route_to_broker": top["score"] < confidence_threshold,
-        "top_3": [
-            {"hs_heading": hs_heading_index.get(int(r["label"].replace("LABEL_","")), "?"),
-             "confidence": round(r["score"], 4)}
-            for r in sorted(results, key=lambda x: x["score"], reverse=True)[:3]
-        ],
-    }
+```
+Cost per kg (EUR/kg) = Total Freight Cost GC / Total Gross Weight KG
 ```
 
-### 7.3 Satellite/GPS ETA Prediction
+Benchmarks by mode (illustrative — update with actual contracted benchmarks):
+- Ocean FCL Europe–Asia: EUR 0.30–0.60 / kg
+- Air Europe–Asia: EUR 3.50–6.00 / kg
+- Road intra-Europe FTL: EUR 0.05–0.15 / kg
 
-#### 7.3.1 Data sources
+### KPI-04: Freight Cost per Kilometre
 
-| Source | Data | Update Frequency |
-|---|---|---|
-| AIS (MarineTraffic / exactEarth) | Vessel position, speed, heading | Every 2–5 minutes |
-| Sentinel-2 (ESA Copernicus) | Port satellite imagery for congestion | Daily (cloud permitting) |
-| Port Community Systems | Gate-in/gate-out, berth availability | Real-time |
-| Weather APIs (ECMWF / NOAA) | Wind, swell, visibility | 6-hourly forecast |
-| project44 / FourKites | Road GPS telematics | Every 30 seconds |
-
-#### 7.3.2 ETA prediction model
-
-```python
-import torch
-import torch.nn as nn
-import numpy as np
-
-class VesselETALSTM(nn.Module):
-    """
-    LSTM model for ocean vessel ETA prediction.
-    Input: sequence of AIS position + weather + port congestion observations.
-    Output: predicted hours to destination port.
-
-    Architecture:
-        Input (seq_len, batch, features=16) -> LSTM(hidden=128, layers=2)
-        -> Dropout(0.2) -> Linear(128, 64) -> ReLU -> Linear(64, 1)
-    """
-
-    def __init__(self, input_size: int = 16, hidden_size: int = 128,
-                 num_layers: int = 2, dropout: float = 0.2):
-        super().__init__()
-        self.lstm = nn.LSTM(
-            input_size=input_size,
-            hidden_size=hidden_size,
-            num_layers=num_layers,
-            dropout=dropout,
-            batch_first=True,
-        )
-        self.head = nn.Sequential(
-            nn.Dropout(dropout),
-            nn.Linear(hidden_size, 64),
-            nn.ReLU(),
-            nn.Linear(64, 1),
-        )
-
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
-        # x: (batch, seq_len, features)
-        lstm_out, _ = self.lstm(x)
-        last_step = lstm_out[:, -1, :]  # use final time step
-        return self.head(last_step).squeeze(-1)
-
-
-def build_ais_feature_sequence(
-    ais_observations: list[dict],
-    port_congestion_index: float,
-    weather_forecast: list[dict],
-    sequence_length: int = 24,  # last 24 hours of observations
-) -> np.ndarray:
-    """
-    Build feature matrix from AIS + contextual data for LSTM input.
-    Returns array of shape (sequence_length, 16).
-
-    Features per time step:
-      0: latitude (normalised)
-      1: longitude (normalised)
-      2: speed_over_ground_knots
-      3: course_over_ground_deg (sin)
-      4: course_over_ground_deg (cos)
-      5: distance_to_destination_nm
-      6: time_elapsed_hours
-      7: origin_port_congestion_index
-      8: destination_port_congestion_index
-      9: wind_speed_knots
-      10: significant_wave_height_m
-      11: visibility_km
-      12: hour_of_day (sin)
-      13: hour_of_day (cos)
-      14: day_of_week (sin)
-      15: day_of_week (cos)
-    """
-    obs = ais_observations[-sequence_length:]
-    features = np.zeros((sequence_length, 16), dtype=np.float32)
-
-    for i, obs_row in enumerate(obs):
-        h = obs_row.get("hour_of_day", 12)
-        d = obs_row.get("day_of_week", 0)
-        cog = obs_row.get("course_over_ground_deg", 0)
-        features[i] = [
-            obs_row.get("latitude", 0) / 90.0,
-            obs_row.get("longitude", 0) / 180.0,
-            obs_row.get("sog_knots", 0) / 25.0,
-            np.sin(np.radians(cog)),
-            np.cos(np.radians(cog)),
-            obs_row.get("distance_to_dest_nm", 0) / 10000.0,
-            obs_row.get("time_elapsed_hours", 0) / 720.0,
-            port_congestion_index / 100.0,
-            obs_row.get("dest_congestion", 50) / 100.0,
-            obs_row.get("wind_knots", 0) / 60.0,
-            obs_row.get("wave_height_m", 0) / 10.0,
-            obs_row.get("visibility_km", 10) / 50.0,
-            np.sin(2 * np.pi * h / 24),
-            np.cos(2 * np.pi * h / 24),
-            np.sin(2 * np.pi * d / 7),
-            np.cos(2 * np.pi * d / 7),
-        ]
-    return features
+```
+Cost per km (EUR/km) = Total Freight Cost GC / Total Distance KM
 ```
 
-### 7.4 GNN for Logistics Network Optimisation
+Used for cross-modal comparability on the same trade lane.
 
-#### 7.4.1 Problem formulation
+### KPI-05: Freight Cost per Tonne-Kilometre
 
-The logistics network is modelled as a directed graph G = (V, E) where:
-- V = nodes (suppliers, DCs, ports, customer locations)
-- E = edges (transport lanes with cost, capacity, lead time attributes)
-- Node features: throughput capacity, operating cost, location coordinates
-- Edge features: freight cost per unit, transit time, reliability score
-
-The GNN learns optimal DC location selection and flow allocation by minimising
-total network cost subject to service level constraints.
-
-#### 7.4.2 GNN architecture with torch-geometric
-
-```python
-import torch
-import torch.nn as nn
-import torch.nn.functional as F
-from torch_geometric.nn import GCNConv, GATConv, global_mean_pool
-from torch_geometric.data import Data, DataLoader
-
-class LogisticsNetworkGNN(nn.Module):
-    """
-    Graph Neural Network for logistics network optimisation.
-    Uses Graph Attention Network (GAT) layers to learn node embeddings
-    that capture network topology and flow patterns.
-
-    Node features (7):
-      [throughput_capacity_norm, operating_cost_norm, lat_norm, lon_norm,
-       is_dc, is_supplier, is_customer]
-
-    Edge features (4):
-      [freight_cost_norm, transit_time_norm, reliability_score, lane_volume_norm]
-
-    Output: per-node score (higher = better DC location candidate)
-    """
-
-    def __init__(
-        self,
-        node_features: int = 7,
-        edge_features: int = 4,
-        hidden_dim: int = 64,
-        num_heads: int = 4,
-        dropout: float = 0.3,
-    ):
-        super().__init__()
-        self.gat1 = GATConv(node_features, hidden_dim, heads=num_heads,
-                            dropout=dropout, edge_dim=edge_features)
-        self.gat2 = GATConv(hidden_dim * num_heads, hidden_dim, heads=1,
-                            dropout=dropout, edge_dim=edge_features)
-        self.node_scorer = nn.Sequential(
-            nn.Linear(hidden_dim, 32),
-            nn.ReLU(),
-            nn.Dropout(dropout),
-            nn.Linear(32, 1),
-        )
-        self.flow_predictor = nn.Sequential(
-            nn.Linear(hidden_dim * 2, 32),
-            nn.ReLU(),
-            nn.Linear(32, 1),
-            nn.Sigmoid(),
-        )
-
-    def forward(self, data: Data):
-        x, edge_index, edge_attr = data.x, data.edge_index, data.edge_attr
-
-        # GAT layer 1
-        x = F.elu(self.gat1(x, edge_index, edge_attr))
-        x = F.dropout(x, p=0.3, training=self.training)
-
-        # GAT layer 2
-        x = F.elu(self.gat2(x, edge_index, edge_attr))
-
-        # Node-level DC location score
-        node_scores = self.node_scorer(x).squeeze(-1)
-
-        # Edge-level flow allocation
-        src_emb = x[edge_index[0]]
-        dst_emb = x[edge_index[1]]
-        edge_emb = torch.cat([src_emb, dst_emb], dim=-1)
-        flow_allocation = self.flow_predictor(edge_emb).squeeze(-1)
-
-        return node_scores, flow_allocation
-
-
-def build_network_graph(
-    nodes: list[dict],
-    edges: list[dict],
-) -> Data:
-    """
-    Convert logistics network to PyG Data object.
-
-    nodes: list of dicts with keys:
-        id, throughput_capacity, operating_cost_cents, latitude, longitude,
-        is_dc, is_supplier, is_customer
-    edges: list of dicts with keys:
-        source_id, target_id, freight_cost_cents, transit_days, reliability_score,
-        annual_volume_units
-    """
-    node_id_map = {n["id"]: i for i, n in enumerate(nodes)}
-
-    # Normalise node features
-    cap_max = max(n["throughput_capacity"] for n in nodes) or 1
-    cost_max = max(n["operating_cost_cents"] for n in nodes) or 1
-    x = torch.tensor([
-        [
-            n["throughput_capacity"] / cap_max,
-            n["operating_cost_cents"] / cost_max,
-            (n["latitude"] + 90) / 180,
-            (n["longitude"] + 180) / 360,
-            float(n["is_dc"]),
-            float(n["is_supplier"]),
-            float(n["is_customer"]),
-        ]
-        for n in nodes
-    ], dtype=torch.float)
-
-    edge_index = torch.tensor(
-        [[node_id_map[e["source_id"]], node_id_map[e["target_id"]]] for e in edges],
-        dtype=torch.long,
-    ).t().contiguous()
-
-    freq_max = max(e.get("annual_volume_units", 1) for e in edges) or 1
-    cost_e_max = max(e.get("freight_cost_cents", 1) for e in edges) or 1
-    edge_attr = torch.tensor([
-        [
-            e.get("freight_cost_cents", 0) / cost_e_max,
-            e.get("transit_days", 0) / 30.0,
-            e.get("reliability_score", 0.95),
-            e.get("annual_volume_units", 0) / freq_max,
-        ]
-        for e in edges
-    ], dtype=torch.float)
-
-    return Data(x=x, edge_index=edge_index, edge_attr=edge_attr)
 ```
+Cost per tKm (EUR/tKm) = Total Freight Cost GC / (Total Weight Tonnes × Total Distance KM)
+```
+
+The tonne-kilometre metric enables true cross-modal cost comparison independent of shipment
+size and distance.
+
+### KPI-06: Modal Split Percentage
+
+```
+Modal Split % (by mode) = Shipments by Mode / Total Shipments × 100
+Also calculated by: Freight Cost by Mode / Total Freight Cost × 100
+And by: CO2e by Mode / Total CO2e × 100
+```
+
+Monitor air freight modal split: target < 15% of shipment volume (cost-based).
+
+### KPI-07: Freight Invoice vs. Quote Variance
+
+```
+Rate Variance (%) = (Actual Invoice GC - Quoted Rate GC) / Quoted Rate GC × 100
+```
+
+Target: < ±5% for all contracted carriers
+Alert threshold: > ±10% triggers automatic dispute flag
+
+Aggregate: Total Overbilling EUR = SUM(MAX(0, ACTUAL_INVOICE_GC - QUOTED_RATE_GC * 1.05))
+
+### KPI-08: Customs Clearance Lead Time
+
+```
+Clearance Days = RELEASE_DATE - CUSTOMS_ENTRY_DATE (calendar days)
+```
+
+SLA by import country (examples):
+- EU countries: target <= 2 business days
+- US (CBP entry): target <= 3 business days
+- China: target <= 5 business days
+- India: target <= 7 business days
+
+KPI: % shipments meeting country clearance SLA = Shipments cleared within SLA / Total Import Shipments × 100
+
+### KPI-09: CO2 per Shipment (GLEC Framework v3)
+
+```
+CO2e per shipment (kg) = SUM over all legs of:
+    Distance_km × (Weight_kg / 1000) × Laden_Factor × EmissionFactor_gCO2ePertKm / 1000
+
+CO2e intensity (gCO2e/tKm) = Total_CO2e_kg × 1000 / (Total_Weight_Tonnes × Total_Distance_km)
+```
+
+GLEC emission factors (illustrative, from GLEC v3 Table A1):
+- Ocean Container (HFO): 10–12 gCO2e/tKm (laden factor 0.7)
+- Air freight (kerosene): 500–600 gCO2e/tKm (laden factor 0.7)
+- Road FTL (diesel Euro VI): 80–100 gCO2e/tKm (laden factor 0.7)
+- Rail electric (EU grid): 25–35 gCO2e/tKm (laden factor 0.7)
+
+### KPI-10: Carrier Claims Rate
+
+```
+Claims Rate (%) = Shipments with Cargo Claim Filed / Total Completed Shipments × 100
+Claims Value Rate (%) = Total Open Claims Value GC / Total Freight Cost GC × 100
+```
+
+Target: < 0.5% shipment claims rate
+Critical: > 2% triggers WATCH tier escalation
+
+### KPI-11: Documentation Accuracy Rate
+
+```
+Doc Accuracy (%) = Shipments with Zero Documentation Errors / Total Shipments × 100
+```
+
+Documentation errors include: incorrect HS code, missing certificate of origin, incorrect
+commercial invoice value, missing packing list, incorrect Incoterm.
+
+### KPI-12: Carrier Sustainability Score
+
+Weighted composite of:
+- CO2e intensity vs. fleet average: 40%
+- ISO 14001 certification: 20%
+- Biofuel / low-carbon fuel usage: 20%
+- Clean Cargo / SmartWay membership: 20%
 
 ---
 
-## 8. Phase 5: Integration & Automation
+## 11. Analytical Logic
 
-**Duration**: Weeks 28–40
-**Owner**: IT Integration team + Logistics Operations
+### Carrier Tier Classification
 
-### 8.1 TMS integrations
+Carrier tier is computed quarterly using the following multi-dimensional scoring model.
+Each dimension is scored 0–100 and the weighted composite determines tier.
 
-#### SAP Transportation Management (SAP TM)
+| Dimension | Weight | Metric | Source |
+|-----------|--------|--------|--------|
+| OTD | 35% | % shipments on-time (rolling 6 months) | FACT_SHIPMENT |
+| OTIF | 20% | % shipments on-time and in-full | FACT_SHIPMENT |
+| Claims Rate | 15% | 1 - (claims/shipments) × 100 | FACT_CARGO_CLAIMS |
+| Invoice Accuracy | 15% | % invoices within ±5% of quoted rate | FACT_FREIGHT_INVOICE |
+| Documentation Accuracy | 10% | % shipments with zero doc errors | FACT_SHIPMENT |
+| Sustainability | 5% | CO2e intensity vs. mode average | FACT_SHIPMENT_CO2 |
 
-Integrate via SAP TM Web Services (SOAP/REST). Key integration points:
-- Freight Order creation from confirmed POs (RFC_FO_CREATE)
-- Carrier tendering (electronic spot and contract)
-- Freight settlement (invoice matching, GR/IR clearing)
-- Shipment tracking status push to SAP EWM
+**Tier Thresholds:**
 
-```typescript
-// SAP TM adapter — create freight order from PO
-async function createSAPFreightOrder(
-  poId: string,
-  carrierId: string,
-  laneMaster: LaneMaster,
-  authToken: string,
-): Promise<{ freightOrderId: string; status: string }> {
-  const payload = {
-    PurchaseOrderID: poId,
-    CarrierID: carrierId,
-    TransportMode: laneMaster.primaryMode,
-    RequestedDeliveryDate: laneMaster.lastUpdated, // replace with actual RDD
-    Incoterms: laneMaster.incoterms2020,
-  };
-  const response = await fetchWithRetry(
-    `${SAP_TM_BASE_URL}/api/v1/freight-orders`,
-    { method: 'POST', headers: { Authorization: `Bearer ${authToken}`,
-        'Content-Type': 'application/json' },
-      body: JSON.stringify(payload) },
-    { maxRetries: 3, backoffMs: 1000 },
-  );
-  return response.json();
-}
-```
+| Tier | Composite Score | Action |
+|------|----------------|--------|
+| PREFERRED | >= 90 | Annual contract renewal preferred; priority allocation |
+| APPROVED | 75–89 | Standard carrier; eligible for tenders |
+| WATCH | 60–74 | Quarterly review required; no new volume allocation |
+| DISQUALIFIED | < 60 | No new bookings; existing shipments completed then suspended |
 
-#### Oracle Transportation Management (Oracle TMS / GTM)
+### Lane Risk Scoring
 
-Integrate via Oracle Integration Cloud (OIC) or direct REST API:
-- Shipment order creation from ERP sales orders
-- Global Trade Management: denied party screening, export licence check
-- Rate engine API: real-time carrier rate comparison
-
-#### project44 Movement API
-
-```typescript
-// project44 shipment tracking webhook handler
-async function handleProject44TrackingEvent(
-  event: Project44TrackingEvent,
-  eventStore: EventStore,
-): Promise<void> {
-  const domainEvent: ShipmentTrackingUpdated = {
-    eventId: generateUUID(),
-    eventType: 'SHIPMENT_TRACKING_UPDATED',
-    shipmentId: event.trackingNumber,
-    source: 'PROJECT44',
-    timestamp: event.eventTimestamp,
-    location: {
-      locode: event.locationCode,
-      latitude: event.latitude,
-      longitude: event.longitude,
-    },
-    statusCode: mapProject44Status(event.statusCode),
-    predictedETA: event.predictedArrivalTime,
-    etaConfidencePercent: event.confidenceScore,
-  };
-  await eventStore.append('shipment', event.trackingNumber, domainEvent);
-}
-```
-
-#### CargoWise One
-
-Integrate via CargoWise eAdaptor (XML-based) for:
-- Customs entry creation and amendment
-- Freight invoice import and matching
-- Document management (B/L, AWB, packing list, COO)
-
-#### Carrier EDI Integration
-
-Standard UN/EDIFACT messages for carrier communication:
-
-| Message | Direction | Purpose |
-|---|---|---|
-| IFTMBF | Outbound (to carrier) | Firm booking request |
-| IFTMBC | Inbound (from carrier) | Booking confirmation |
-| IFTSTA | Inbound (from carrier) | Status update / tracking |
-| DESADV | Inbound (from supplier) | Despatch advice / ASN |
-| IFCSUM | Inbound (from forwarder) | Consolidation summary |
-| CUSCAR | Outbound (to customs) | Cargo declaration |
-
-```typescript
-// EDI DESADV parser — despatch advice inbound
-function parseDESADV(ediMessage: string): DespatchAdvice {
-  const segments = parseEDIFACTSegments(ediMessage);
-  const bgmSegment = segments.find(s => s.tag === 'BGM');
-  const dtmSegments = segments.filter(s => s.tag === 'DTM');
-  const linSegments = segments.filter(s => s.tag === 'LIN');
-
-  return {
-    documentNumber: bgmSegment?.elements[1],
-    despatchDate: parseDTM(dtmSegments.find(s => s.elements[0] === '11')),
-    estimatedDeliveryDate: parseDTM(dtmSegments.find(s => s.elements[0] === '17')),
-    lines: linSegments.map(parseLINSegment),
-  };
-}
-```
-
-### 8.2 Port Community System integration
-
-Connect to port community systems for pre-arrival processing (WTO TFA Art. 7):
-- DAKOSY (Port of Hamburg): CARIX container tracking, Atlas customs
-- Portbase (Port of Rotterdam): Port Call Optimisation, EDI container notification
-- PortXchange: Port Call Optimisation for berth scheduling and vessel planning
-
-Pre-arrival processing reduces customs dwell time by 60–80 percent for AEO shippers.
-
-### 8.3 Customs broker API integration
-
-Implement standardised broker API adapter with:
-- Entry filing (ICS2 EU, ACE US, CHIEF/CDS UK)
-- Automated HS code suggestion from ML model (Section 7.2)
-- Duty drawback management
-- Denied party screening (OFAC, EU consolidated list, UN sanctions)
-
-```typescript
-interface CustomsBrokerAdapter {
-  fileEntry(entry: CustomsEntry): Promise<{ entryNumber: string; status: string }>;
-  getEntryStatus(entryNumber: string): Promise<CustomsEntryStatus>;
-  screenDeniedParties(party: DeniedPartyQuery): Promise<DeniedPartyScreeningResult>;
-  lookupDutyRate(hsCode: string, originCountry: string): Promise<DutyRateLookup>;
-}
-```
-
----
-
-## 9. Phase 6: Continuous Improvement
-
-**Duration**: Ongoing from Week 36
-**Owner**: Logistics Centre of Excellence
-
-### 9.1 Weekly cadence
-
-- Automated carrier scorecards distributed every Monday (previous week data)
-- Freight invoice exception queue reviewed Tuesday/Thursday
-- Delay-risk alert review: daily at 08:00 (ML model inference on active shipments)
-- Port congestion index update: every 6 hours from API feeds
-
-### 9.2 Monthly cadence
-
-- Lane optimisation review: compare actual vs VRP-optimised route costs
-- Carrier tender trigger: if OTD < 90 percent on a lane for two consecutive months,
-  issue RFQ to alternative carriers
-- HS code model retraining: monthly refresh with new classification decisions
-
-### 9.3 Quarterly cadence
-
-- Full landed cost model recalibration (duty rates change quarterly for some FTAs)
-- GNN network optimisation re-run: annual DC network review triggered if demand
-  pattern shifts >15 percent or new sourcing countries onboarded
-- CBAM embedded emissions data collection: quarterly supplier survey per
-  Implementing Regulation 2023/1773
-
-### 9.4 Model monitoring
-
-Track the following ML model KPIs in production:
-
-| Model | KPI | Alert Threshold |
-|---|---|---|
-| XGBoost delay prediction | AUC-ROC (weekly validation) | < 0.72 triggers retraining |
-| DistilBERT HS classifier | Auto-classify accuracy | < 0.85 triggers retraining |
-| LSTM ETA | MAE vs actual ETA (hours) | > 12 hours mean error |
-| GNN network opt | Cost vs benchmark | > 5% above VRP baseline |
-
----
-
-## 10. Technology Stack & Architecture
-
-### 10.1 Core technology decisions
-
-| Layer | Technology | Rationale |
-|---|---|---|
-| Domain logic | TypeScript | Type-safe aggregates, event sourcing |
-| Mathematical models | Python 3.11+ | NumPy, SciPy, OR-Tools |
-| ML training | PyTorch 2.x + HuggingFace | DistilBERT, LSTM |
-| Graph ML | torch-geometric | GNN for network optimisation |
-| Boosting | XGBoost | Delay prediction |
-| Route optimisation | Google OR-Tools | CVRPTW solver |
-| Graph analysis | NetworkX | Network topology metrics |
-| Satellite imagery | rasterio + GeoPandas | Port congestion from Sentinel-2 |
-| Event Store | PostgreSQL + custom EventStore.ts | CQRS, audit trail |
-| TMS integration | SAP TM REST / Oracle OIC | Enterprise ERP |
-| Visibility | project44 + FourKites | Multimodal real-time tracking |
-| Freight audit | CargoWise One eAdaptor | Invoice matching |
-| EDI | Stedi / SPS Commerce | DESADV, IFTMBC, CUSCAR |
-
-### 10.2 Architecture principles
-
-- All shipment state transitions are event-sourced: no direct DB updates
-- Idempotency keys on all carrier API calls — safe to retry on timeout
-- Soft-delete only: cancelled shipments retain full audit trail
-- Money values: always integer cents, never floating point
-- Dates: ISO 8601 UTC throughout; no timezone-naive timestamps
-- Secrets: carrier API credentials in environment variables or vault, never in source
-
-### 10.3 Data flow diagram
+Each trade lane (Origin Country → Destination Country → Mode) receives a risk score
+calculated monthly from:
 
 ```
-PO Confirmed
-    |
-    v
-Shipment Booking Request
-    |-> Carrier EDI (IFTMBF)
-    |-> SAP TM Freight Order
-    v
-Booking Confirmed (IFTMBC)
-    |
-    v
-ASN Received (DESADV)
-    |
-    v
-In-Transit Tracking
-    |-> project44 / FourKites webhook
-    |-> AIS vessel positions
-    |-> LSTM ETA prediction (6-hourly)
-    |-> XGBoost delay risk (daily)
-    v
-Port of Discharge
-    |-> Port Community System (DAKOSY / Portbase)
-    |-> Customs entry filing (CargoWise / broker API)
-    |-> HS code ML classification
-    |-> Duty calculation (Section 6.8)
-    v
-Customs Released
-    |
-    v
-Last Mile Delivery
-    |-> VRP route optimisation (OR-Tools)
-    v
-Delivered — POD received
-    |-> Carrier scorecard update
-    |-> Freight invoice matching
-    |-> CBAM carbon cost posting
+Lane Risk Score = (0.30 × Customs_Delay_Risk) + (0.25 × Port_Congestion_Index)
+                + (0.20 × Geopolitical_Risk_Score) + (0.15 × UFLPA_Supplier_Exposure)
+                + (0.10 × Hazmat_Complexity)
 ```
 
----
+- **Customs Delay Risk**: Avg clearance days / Country SLA target (normalised 0–100)
+- **Port Congestion Index**: Average dwell time at origin and destination port vs. baseline
+- **Geopolitical Risk Score**: Derived from OECD country risk classification (0–7 scale)
+- **UFLPA Supplier Exposure**: % of shipments on this lane with UFLPA_FLAG = 1
+- **Hazmat Complexity**: % of shipments requiring IMDG/ADR/IATA DGR documentation
 
-## 11. Change Management & Training
+Risk tiers: LOW (0–30), MEDIUM (31–60), HIGH (61–80), CRITICAL (> 80)
 
-### 11.1 Stakeholder map
+### Alert Triggers
 
-| Stakeholder | Impact | Engagement | Key Concern |
-|---|---|---|---|
-| Logistics Manager | High | Co-owner | Carrier relationships, visibility |
-| Customs Compliance | High | Co-owner | HS code accuracy, CBAM |
-| Procurement | High | Consulted | Incoterms on POs, landed cost |
-| Finance | Medium | Informed | Freight cost allocation, CBAM accruals |
-| IT Integration | High | Co-owner | TMS connectivity, EDI |
-| Customs Brokers | Medium | Managed | ML model replacing manual classification |
-| Carriers | Low | Informed | EDI mandate, scorecard sharing |
+| Alert | Trigger Condition | Recipient | Escalation |
+|-------|-------------------|-----------|------------|
+| Shipment Late Alert | IN_TRANSIT and current date > PLANNED_ARR_DATE | Logistics Coordinator | +2 days: Logistics Manager |
+| Carrier OTD Alert | Carrier rolling 30-day OTD drops below 85% | Category Manager | If persistent 60 days: Director |
+| Invoice Dispute Alert | RATE_VARIANCE_PCT > 5% | Freight Audit Team | > 10%: Finance Controller |
+| Customs Hold Alert | Shipment in CUSTOMS_HOLD > country SLA days | Trade Compliance | +2 days over SLA: VP Supply Chain |
+| CO2 Air Alert | Air shipment without modal shift justification code | Logistics Planner | Monthly report to Director |
+| UFLPA Alert | UFLPA_FLAG = 1 and no clearance document | Trade Compliance | Immediate: Legal |
+| High Cost Lane Alert | Cost per tKm > 2× mode average for that lane | Category Manager | Quarterly review |
 
-### 11.2 Training programme
+### Segmentation Framework
 
-| Role | Training Module | Duration | Delivery |
-|---|---|---|---|
-| Logistics coordinators | Incoterms 2020 fundamentals | 4 hours | Instructor-led |
-| Logistics coordinators | TMS navigation & shipment lifecycle | 8 hours | Instructor-led |
-| Customs team | HS classification process + ML tool | 6 hours | Instructor-led |
-| Customs team | CBAM reporting requirements | 4 hours | E-learning |
-| Logistics analysts | Carrier scorecard interpretation | 3 hours | E-learning |
-| Data science team | ML model monitoring & retraining | 8 hours | Workshop |
-| Finance | CBAM accrual accounting | 2 hours | E-learning |
-
-### 11.3 Benefits realisation
-
-Assign a benefits owner for each value lever identified in Section 1.
-Review actuals vs target quarterly. Escalate to Supply Chain Director if any lever
-is tracking below 50 percent of target by month 12.
+Delivery performance and cost analytics are segmented across six dimensions:
+1. **Carrier dimension**: Individual carrier, carrier group, carrier tier
+2. **Mode dimension**: Ocean FCL, Ocean LCL, Air, Road FTL, Road LTL, Rail, Parcel
+3. **Geography dimension**: Origin country, destination country, trade lane, region
+4. **Time dimension**: Day, week, month, quarter, fiscal year, rolling 12 months
+5. **Product dimension**: Business unit, product category, HS chapter
+6. **Incoterm dimension**: 11 Incoterms 2020 rules grouped by risk transfer point
 
 ---
 
-## 12. Implementation KPIs
+## 12. Validations and Controls
 
-Track the following KPIs from go-live. Report monthly to Supply Chain Director.
+### Data Quality Controls
 
-### 12.1 Operational KPIs
+| Control ID | Control Description | Severity | Action |
+|------------|---------------------|----------|--------|
+| DQC-01 | TOR_ID unique in FACT_SHIPMENT | Critical | Block load; alert data steward |
+| DQC-02 | ACTUAL_ARR_DATE >= ACTUAL_DEP_DATE | Critical | Reject record; quarantine to error table |
+| DQC-03 | FREIGHT_COST_GC = NULL only for unsettled orders | High | Flag for settlement review |
+| DQC-04 | INCOTERM_CODE in valid Incoterms 2020 list | High | Reject; alert trade compliance |
+| DQC-05 | CARRIER_ID resolves to active carrier in DIM_CARRIER | High | Reject; map to unknown carrier placeholder |
+| DQC-06 | HS_CODE minimum 8 digits | High | Reject customs record; alert broker |
+| DQC-07 | GROSS_WEIGHT_KG > 0 | Medium | Warn; use estimated weight from DESADV |
+| DQC-08 | DISTANCE_KM > 0 (geocoding fill applied) | Medium | Fill with geocoded estimate; log fill |
+| DQC-09 | EMISSION_FACTOR joined on date range — no gap | High | Alert ESG team; hold CO2 record |
+| DQC-10 | Carrier has >= 10 shipments before scorecard calc | Low | Mark as INSUFFICIENT_DATA |
 
-| KPI | Baseline | 6-Month Target | 12-Month Target | World-Class |
-|---|---|---|---|---|
-| Carrier OTD (%) | Measure in Phase 0 | + 5 pp | + 10 pp | >= 95% |
-| OTIF (%) | Measure in Phase 0 | + 4 pp | + 8 pp | >= 92% |
-| Freight cost per kg-km (index) | 100 | 95 | 88 | 70 |
-| Customs dwell time (days) | Measure | -1 day | -2 days | <= 1 day AEO |
-| Demurrage & detention (USD/shipment) | Measure | -20% | -45% | < USD 150 |
-| HS mis-classification rate (%) | Measure | -30% | -60% | < 0.5% |
-| Shipment visibility coverage (%) | Measure | 80% | 100% | 100% |
-| CBAM reporting completeness (%) | 0% | 100% from 2026 | 100% | 100% |
+### Reconciliation Controls
 
-### 12.2 ML model KPIs
-
-| Model | Metric | Go-Live Target | Steady-State Target |
-|---|---|---|---|
-| XGBoost delay | AUC-ROC | >= 0.75 | >= 0.82 |
-| DistilBERT HS | Auto-classify accuracy | >= 0.78 | >= 0.88 |
-| LSTM ETA | MAE (hours) | <= 18 | <= 10 |
-| GNN network | Cost reduction vs baseline | >= 3% | >= 8% |
-
-### 12.3 Integration KPIs
-
-| Integration | KPI | Target |
-|---|---|---|
-| project44 / FourKites | Shipments with real-time tracking | 100% |
-| Carrier EDI | Bookings via EDI vs manual | >= 80% |
-| Freight invoice auto-match | Rate | >= 90% |
-| Customs HS auto-classify | Rate (>= 0.80 confidence) | >= 80% of SKUs |
+- Daily reconciliation: Count of TOR records in Azure SQL vs. SAP TM report S_ALR_87013570.
+  Tolerance: zero unmatched records.
+- Weekly reconciliation: Total FREIGHT_COST_GC in FACT_FREIGHT_INVOICE vs. SAP FI cost
+  centre report. Tolerance: < EUR 500 rounding difference.
+- Monthly reconciliation: Total CO2e_KG per business unit reconciled against ESG team's
+  independent calculation. Tolerance: < 1% variance.
 
 ---
 
-## 13. Risk & Mitigation
+## 13. Required Evidence
 
-| Risk | Likelihood | Impact | Mitigation |
-|---|---|---|---|
-| Carrier EDI adoption resistance | High | Medium | Mandate EDI in carrier contracts; provide Stedi portal as fallback |
-| HS code ML model accuracy below threshold | Medium | High | Maintain customs broker SLA for manual classification; track miss rate weekly |
-| AIS data gaps for inland/road | High | Medium | Supplement with FourKites road GPS; accept lower confidence on road legs |
-| CBAM regulation uncertainty | Low | High | Monitor European Commission guidance; build flexible emission factor table |
-| SAP TM integration delay | Medium | High | Phase integration: manual workaround for first 3 months; prioritise EDI |
-| Data quality — historical shipment records | High | High | Data cleansing sprint in Phase 0; accept partial ML training on clean subset |
-| Customs seizure UFLPA | Low | Critical | Mandatory UFLPA screening at supplier onboarding; DDP prohibited for XUAR suppliers |
-| Ocean congestion spike (peak season) | Medium | Medium | LSTM model monitors congestion index; pre-book capacity 8 weeks ahead in Q3 |
-| CBAM allowance price spike | Low | Medium | Budget contingency 20% above baseline ETS price; hedge via financial instruments |
-| Carrier rate card expiry mid-implementation | High | Low | Automate rate card refresh; monitor contract renewal dates in carrier master |
-
----
-
-## 14. Timeline Summary
-
-| Phase | Weeks | Key Deliverables | Owner |
-|---|---|---|---|
-| Phase 0: Assessment | 1–4 | Baseline KPIs, data gaps, carrier spend cube | CoE + Consulting |
-| Phase 1: Foundation | 5–10 | Carrier master, lane master, HS tariff DB, Incoterms rules | Data Mgmt + IT |
-| Phase 2: Standardisation | 11–18 | Shipment lifecycle events, carrier scorecards, invoice audit | Logistics Ops |
-| Phase 3: Math Models | 15–24 | Landed cost engine, VRP solver, CBAM calculator, duty engine | Analytics |
-| Phase 4: ML/AI | 20–36 | XGBoost delay model, DistilBERT HS classifier, LSTM ETA, GNN | Data Science |
-| Phase 5: Integration | 28–40 | SAP TM, project44, FourKites, CargoWise, carrier EDI live | IT Integration |
-| Phase 6: CImp | 36+ | Model monitoring, quarterly retraining, carrier tenders | CoE ongoing |
-
-**Go-live (core TMS + visibility)**: Week 28
-**Go-live (ML models + full automation)**: Week 40
-**Benefits realisation review**: Month 18
+| Evidence Item | Description | Owner | Required By |
+|---------------|-------------|-------|-------------|
+| EV-01 | SAP TM transportation order field mapping | SAP Basis / TM Consultant | Implementation Phase 1 |
+| EV-02 | SAP GTS customs declaration field mapping | Trade Compliance / GTS Consultant | Phase 1 |
+| EV-03 | Carrier SCAC code master extract | Logistics Operations | Phase 1 |
+| EV-04 | Approved Incoterms 2020 configuration in SAP | Trade Compliance | Phase 1 |
+| EV-05 | GLEC Framework v3 emission factors — selected table | ESG / Sustainability Team | Phase 1 |
+| EV-06 | Country clearance SLA targets signed off by Trade Compliance | Trade Compliance Manager | Phase 2 |
+| EV-07 | Carrier contract rate cards (all active carriers) | Logistics Category Manager | Phase 2 |
+| EV-08 | UFLPA supplier list — XUAR exposure mapping | Compliance Officer | Phase 1 |
+| EV-09 | EDI DESADV message specification per supplier | EDI Operations | Phase 2 |
+| EV-10 | Power BI workspace and Azure SQL connection approved | IT Security | Phase 1 |
+| EV-11 | HS code to CBAM commodity mapping table | Trade Compliance | Phase 3 |
+| EV-12 | Cargo claims data extract from insurance system | Risk Management | Phase 3 |
 
 ---
 
-## 15. References
+## 14. Dashboard Design
 
-### Regulatory & Standards
+### Dashboard 1: Executive Logistics KPI Summary
 
-1. International Chamber of Commerce. *Incoterms 2020 Rules*. ICC Publication 723E.
-   Paris: ICC, 2019.
-2. World Customs Organization. *Harmonised System Nomenclature 2022*.
-   Brussels: WCO, 2021.
-3. International Air Transport Association. *IATA Cargo Services Conference Resolution 123:
-   Volumetric Weight*. Montreal: IATA, 2023.
-4. International Maritime Organization. *Fourth IMO GHG Study 2020*. MEPC.323(74).
-   London: IMO, 2020.
-5. European Parliament. *Regulation (EU) 2023/956 — Carbon Border Adjustment Mechanism*.
-   Official Journal of the European Union, May 2023.
-6. European Commission. *Implementing Regulation (EU) 2023/1773 — CBAM Reporting*.
-   Official Journal of the European Union, September 2023.
-7. US Customs and Border Protection. *Uyghur Forced Labor Prevention Act (UFLPA)
-   Entity List and Enforcement Guidance*. Washington DC: CBP, 2022.
-8. ISO. *ISO 28000:2022 — Security and Resilience — Supply Chain Security Management
-   Systems — Requirements*. Geneva: ISO, 2022.
-9. WTO. *Agreement on Trade Facilitation (TFA), Article 7 — Pre-Arrival Processing*.
-   Geneva: WTO, 2014.
+**Audience**: VP Supply Chain, Logistics Director, CFO
+**Refresh**: Daily at 07:00 local time
+**Layout**: Single-page executive summary
 
-### Textbooks & Academic
+Key visuals:
+- KPI cards: OTD %, OTIF %, Freight Cost vs. Budget, CO2e YTD
+- OTD trend line chart: rolling 12 months, with target reference line at 95%
+- Freight cost variance waterfall: budget vs. actual by mode
+- Top 5 late carriers: table with OTD%, shipment count, financial impact
+- Modal split donut chart: by shipment count and by freight cost
+- World map: delivery performance heatmap by destination country
 
-10. Chopra, S. & Meindl, P. *Supply Chain Management: Strategy, Planning, and Operation*,
-    6th ed. Hoboken NJ: Pearson, 2016. Chapters 13–15 (Transportation).
-11. Ballou, R.H. *Business Logistics/Supply Chain Management*, 5th ed.
-    Hoboken NJ: Pearson, 2004.
-12. Christopher, M. *Logistics and Supply Chain Management*, 6th ed.
-    Harlow: Pearson FT Publishing, 2022.
-13. Toth, P. & Vigo, D. *Vehicle Routing: Problems, Methods, and Applications*, 2nd ed.
-    Philadelphia: SIAM MOS-SIAM Series on Optimization, 2014.
-14. Vaswani, A. et al. "Attention Is All You Need." *NeurIPS 2017*. arXiv:1706.03762.
-15. Chen, T. & Guestrin, C. "XGBoost: A Scalable Tree Boosting System."
-    *KDD 2016*. arXiv:1603.02754.
-16. Scarselli, F. et al. "The Graph Neural Network Model."
-    *IEEE Transactions on Neural Networks*, 20(1), 61–80, 2009.
+### Dashboard 2: Carrier Performance Scorecard
 
-### Industry Reports & Frameworks
+**Audience**: Logistics Category Manager, Procurement Director
+**Refresh**: Weekly (Mondays 08:00)
 
-17. Gartner. *Magic Quadrant for Transportation Management Systems* (TMS). 2025.
-18. McKinsey Global Institute. *Delivering on the Promise of Supply Chain
-    Technology*. McKinsey & Company, February 2024.
-19. ASCM. *SCOR Digital Standard — Deliver Process Reference*. Chicago: ASCM, 2019.
-20. Smart Freight Centre. *GLEC Framework for Logistics Emissions Accounting*, v3.0.
-    Amsterdam: SFC, 2023.
-21. Google. *OR-Tools Vehicle Routing Problem Documentation*.
-    developers.google.com/optimization/routing, 2024.
-22. Hugging Face. *DistilBERT: a distilled version of BERT*. arXiv:1910.01108. 2019.
-23. APICS. *APICS Dictionary*, 16th ed. Chicago: ASCM, 2024.
-24. ICC. *ICC Guide to Incoterms 2020*. ICC Publication 785E. Paris: ICC, 2019.
+Key visuals:
+- Carrier tier matrix: bubble chart (OTD% vs. OTIF%, sized by volume)
+- Carrier scorecard table: all active carriers with composite score, tier, trend vs. prior quarter
+- OTD trend by carrier: small multiples line chart, top 20 carriers
+- Invoice accuracy by carrier: clustered bar chart
+- Carrier performance vs. contract target: heatmap (green/amber/red)
+
+### Dashboard 3: Freight Cost Analysis
+
+**Audience**: Logistics Controller, Category Manager
+**Refresh**: Daily
+
+Key visuals:
+- Cost per kg by mode: bar chart with budget and prior year reference lines
+- Cost per tKm by trade lane: ranked bar chart
+- Freight invoice variance: scatter plot (shipment count vs. average variance %)
+- Budget vs. actual by trade lane: table with traffic light RAG status
+- Air vs. ocean cost premium by lane: comparison table with modal shift opportunity value
+- Disputed invoice aging: stacked bar by dispute age bucket (< 30d, 30-60d, > 60d)
+
+### Dashboard 4: Customs & Compliance Risk
+
+**Audience**: Trade Compliance Manager, Customs Broker Manager
+**Refresh**: Daily
+
+Key visuals:
+- Shipments in customs hold: live count with average hold days
+- Clearance lead time by country: box plot
+- Compliance risk score distribution: histogram
+- UFLPA flagged shipments: table with supplier, HS code, clearance status
+- Denied party screening hits: alert panel (red badge count)
+- HS code mismatch alerts: ranked by financial exposure
+
+### Dashboard 5: Carbon Footprint
+
+**Audience**: ESG Team, Sustainability Director, Finance (CBAM reporting)
+**Refresh**: Monthly (1st business day)
+
+Key visuals:
+- CO2e YTD by mode: stacked bar chart
+- CO2e intensity (gCO2e/tKm) by carrier: ranking bar chart vs. mode average
+- CBAM-covered shipment CO2 content: table by commodity and origin country
+- Modal shift opportunity: air lanes where ocean viable — CO2 saving potential
+- CO2e trend: rolling 12-month line chart vs. science-based target trajectory
+- Carrier sustainability tier: table with ISO 14001 status, Clean Cargo membership
+
+---
+
+## 15. Use Cases
+
+### UC-01: Monthly Carrier Business Review Preparation
+
+**User**: Logistics Category Manager
+**Trigger**: First week of each month
+**Process**:
+1. Export carrier scorecard from Dashboard 2 for carriers with composite score < 80
+2. Pull OTD root-cause analysis: late shipments breakdown (carrier fault vs. port/customs delay)
+3. Review freight invoice disputes outstanding > 30 days
+4. Prepare QBR slide deck with trend data and contractual penalty calculation
+5. Send carrier performance letter to WATCH and DISQUALIFIED carriers
+
+**Analytical Output**: Carrier scorecard PDF, root-cause pareto, financial exposure from late deliveries
+
+### UC-02: Annual Freight RFP Lane Analysis
+
+**User**: Logistics Category Manager, Procurement Director
+**Trigger**: Q3 annually (RFP preparation for next fiscal year)
+**Process**:
+1. Extract 12-month lane volume: shipment count, weight, cost per tKm by lane
+2. Identify top 50 lanes by freight spend (Pareto)
+3. Benchmark current rate vs. spot market rate (Xeneta / Freightos data integration)
+4. Model modal shift scenarios: air to ocean on qualifying lanes
+5. Prepare RFP volume data packages per lane cluster
+
+### UC-03: Customs Delay Root Cause Investigation
+
+**User**: Trade Compliance Manager
+**Trigger**: Country clearance SLA breach alert
+**Process**:
+1. Filter FACT_CUSTOMS_DECLARATION by CLEARANCE_DAYS > country SLA
+2. Group by BROKER_ID, DELAY_REASON_CODE, HS_CODE chapter
+3. Identify systemic patterns (e.g., specific broker repeatedly missing deadlines,
+   specific HS chapters with valuation disputes)
+4. Escalate to broker or initiate pre-clearance process improvement
+
+### UC-04: CBAM Monthly CO2 Reporting
+
+**User**: ESG Analytics Team, Finance (Tax & Trade)
+**Trigger**: Monthly, by 10th working day
+**Process**:
+1. Extract FACT_SHIPMENT_CO2 filtered by CBAM_COVERED = 1 for prior month
+2. Aggregate CO2e_KG by HS_CODE (4-digit chapter), COUNTRY_OF_ORIGIN
+3. Reconcile against customs entry values in FACT_CUSTOMS_DECLARATION
+4. Produce CBAM declarant report in EU registry format
+5. Archive report with version-controlled emission factors used
+
+### UC-05: Emergency Air Freight Justification Audit
+
+**User**: Logistics Director, Finance Controller
+**Trigger**: Monthly, or triggered when air freight spend > budget by > 15%
+**Process**:
+1. Extract all air shipments in period with MODAL_SHIFT_JUSTIFICATION_CODE
+2. Identify shipments without a valid justification code (BR-08 violation)
+3. For justified air shipments: verify that stock position at destination justified expedite
+4. Calculate the ocean-equivalent cost and quantify the premium paid
+5. Report to VP Supply Chain with breakdown by business unit and product category
+
+---
+
+## 16. Recommended Actions
+
+### RA-01: Carrier Consolidation on Low-Volume Lanes
+
+Analyse lanes where three or more carriers are used with < 10 shipments per carrier per
+quarter. Consolidate to one or two preferred carriers per lane to improve negotiating power,
+increase volume commitments, and improve carrier accountability. Expected benefit: 5–8%
+freight cost reduction on consolidated lanes.
+
+### RA-02: Modal Shift Programme (Air to Ocean)
+
+Identify the top 20 air lanes where the lead time difference between air and ocean is within
+customer or production planning tolerance. Build a business case for each lane showing
+CO2 reduction, cost saving, and required safety stock increase. Present to Supply Chain
+Director for approval. Target: reduce air freight share from current level to < 15% of
+freight cost within 24 months.
+
+### RA-03: Carrier EDI Onboarding for IFTSTA
+
+Carriers without EDI IFTSTA feeds (particularly on LATAM and Africa lanes) should be
+prioritised for EDI onboarding or connection via a freight visibility platform (project44
+or FourKites). Without real-time events, OTD can only be measured at final delivery,
+preventing proactive exception management. Target: 95% EDI coverage within 12 months.
+
+### RA-04: Freight Invoice Audit Automation
+
+Implement automated freight audit rules in SAP TM Freight Settlement to flag invoices
+exceeding the ±5% tolerance before payment. Current manual audit process catches only
+60% of billing errors. Automation target: 100% invoice coverage, < 48-hour dispute
+resolution cycle. Estimated annual recovery: EUR 150k–300k based on industry benchmarks.
+
+### RA-05: UFLPA Pre-Clearance Documentation Process
+
+Suppliers with XUAR_FLAG = 1 should be required to submit UFLPA clearance packages
+(supply chain mapping, forced labour audit certificates, import certifications) 30 days
+before shipment arrival. Current process is reactive (documentation collected after
+customs hold). Pre-clearance process will reduce UFLPA-related customs hold time
+from average 14 days to < 3 days.
+
+### RA-06: CO2 Intensity Target by Carrier Mode
+
+Establish CO2e intensity targets per transport mode aligned with Science Based Targets
+initiative (SBTi) FLAG pathway. Incorporate CO2e intensity (gCO2e/tKm) as a 5% weighted
+factor in carrier scorecard (already built into scoring model). Publish carrier CO2
+rankings in annual ESG report.
+
+---
+
+## 17. Test Cases
+
+### TC-01: OTD Calculation Accuracy
+
+**Scenario**: 100 shipments; 80 arrive on or before planned date; 15 arrive 1 day late;
+5 arrive 2+ days late.
+**Expected OTD**: 80 / 100 = 80.0%
+**Test Method**: Insert synthetic records into FACT_SHIPMENT; execute OTD measure;
+verify Power BI KPI card displays 80.0%.
+**Pass Criteria**: OTD = 80.0% ± 0.1%; late shipments appear in drill-through.
+
+### TC-02: CO2 Calculation Accuracy
+
+**Scenario**: Ocean FCL shipment, 10,000 kg, 18,000 km, laden factor 0.7,
+emission factor 10.0 gCO2e/tKm.
+**Expected CO2e**: 18,000 × (10,000/1,000) × 0.7 × 10.0 / 1,000 = 1,260 kg CO2e
+**Test Method**: Insert record into FACT_SHIPMENT_CO2 with above parameters;
+verify CO2e_KG = 1,260.0.
+**Pass Criteria**: CO2e_KG = 1,260.0 ± 0.1.
+
+### TC-03: Freight Invoice Dispute Auto-Flag
+
+**Scenario**: Quoted rate EUR 5,000; actual invoice EUR 5,350 (7% over).
+**Expected**: DISPUTE_FLAG = 1; RATE_VARIANCE_PCT = 0.07.
+**Test Method**: Insert freight invoice record; run transformation TR-05;
+verify DISPUTE_FLAG and RATE_VARIANCE_PCT.
+**Pass Criteria**: DISPUTE_FLAG = 1; RATE_VARIANCE_PCT = 0.0700 ± 0.0001.
+
+### TC-04: Carrier Tier Assignment
+
+**Scenario**: Carrier with OTD = 92%, OTIF = 88%, claims rate = 0.3%,
+invoice accuracy = 96%, doc accuracy = 98%, sustainability = 75.
+**Composite**: (0.35×92) + (0.20×88) + (0.15×97) + (0.15×96) + (0.10×98) + (0.05×75)
+= 32.2 + 17.6 + 14.55 + 14.4 + 9.8 + 3.75 = 92.3 → PREFERRED
+**Pass Criteria**: Carrier tier = PREFERRED in quarterly scorecard output.
+
+### TC-05: UFLPA Block Validation
+
+**Scenario**: Customs declaration with UFLPA_FLAG = 1 and no CLEARANCE_DOCUMENT_REF.
+**Expected**: COMPLIANCE_RISK_SCORE = 100 (maximum); alert generated; GTS release blocked.
+**Pass Criteria**: Alert record exists in alert log; GTS release status = BLOCKED.
+
+### TC-06: Null ACTUAL_ARR_DATE Handling
+
+**Scenario**: Shipment with ACTUAL_ARR_DATE = NULL (in transit).
+**Expected**: IS_ON_TIME = NULL; shipment appears in "In Transit" view; not counted in OTD denominator.
+**Pass Criteria**: OTD denominator excludes in-transit shipments; IS_ON_TIME = NULL.
+
+### TC-07: Incoterm Validation
+
+**Scenario**: Shipment with INCOTERM_CODE = 'DAT' (deprecated Incoterms 2010 term).
+**Expected**: DQC-04 fires; record rejected; alert sent to trade compliance.
+**Pass Criteria**: Record in error table with DQC_04 error code; not in FACT_SHIPMENT.
+
+---
+
+## 18. Risks and Mitigations
+
+| Risk ID | Risk Description | Likelihood | Impact | Mitigation |
+|---------|-----------------|------------|--------|------------|
+| R-01 | SAP TM DISTANCE_KM field sparsely populated for road shipments | High | Medium | Geocoding fill algorithm (TR-07); track fill rate monthly |
+| R-02 | Carriers without EDI IFTSTA — OTD only measurable at final delivery | High | High | Manual milestone upload portal for non-EDI carriers; EDI onboarding roadmap |
+| R-03 | GLEC emission factors not updated annually by ESG team | Medium | Medium | Change management process; annual review task in ESG calendar |
+| R-04 | SAP GTS RELEASE_DATE not populated for informal entries | Medium | Medium | Exclude de minimis entries from KPI; document exclusion in methodology |
+| R-05 | Carrier SCAC code inconsistency between SAP TM and EDI messages | High | High | SCAC alias mapping table maintained by EDI Operations; automated reconciliation |
+| R-06 | UFLPA supplier list not kept current | High | Critical | Monthly refresh from compliance database; blocking rule in SAP GTS |
+| R-07 | Air freight modal shift justification codes not used by logistics planners | Medium | Medium | Mandatory field in SAP TM booking workflow; training; monthly exception report |
+| R-08 | CO2 calculation methodology challenged in CBAM audit | Low | High | GLEC certification; full audit trail of emission factors and versions used |
+| R-09 | Power BI DirectQuery performance on large FACT_SHIPMENT table | Medium | Medium | Partitioning by year-month; pre-aggregated summary tables for executive views |
+| R-10 | Currency conversion errors in multi-currency freight invoices | Medium | High | Daily FX rates from ECB; all costs converted to EUR at invoice date rate |
+
+---
+
+## 19. Implementation Checklist
+
+### Phase 1: Data Foundation (Weeks 1–8)
+
+- [ ] SAP TM field mapping document completed and signed off
+- [ ] SAP GTS customs declaration field mapping completed
+- [ ] Azure SQL database schemas created (FACT, DIM, stg, ref tables)
+- [ ] Carrier master extract loaded into DIM_CARRIER
+- [ ] DIM_LOCATION populated with UN/LOCODE and geocoordinates
+- [ ] GLEC emission factor reference table loaded (ref.GLEC_EMISSION_FACTORS)
+- [ ] Country clearance SLA targets loaded (ref.COUNTRY_CLEARANCE_SLA)
+- [ ] HS code CBAM scope table loaded (ref.HS_CBAM_SCOPE)
+- [ ] EDI DESADV staging table created and tested with 3 pilot suppliers
+- [ ] EDI IFTSTA staging table created and tested with 3 pilot carriers
+- [ ] UFLPA supplier flag data loaded from compliance database
+- [ ] SAP TM → Azure SQL ETL pipeline deployed (initial load)
+
+### Phase 2: KPI Layer (Weeks 9–16)
+
+- [ ] Transformation TR-01 through TR-07 implemented and unit-tested
+- [ ] OTD, OTIF calculated and reconciled against SAP TM standard reports
+- [ ] CO2 calculation validated against manual GLEC calculation for 10 sample shipments
+- [ ] Freight invoice variance calculation tested (TC-03 pass)
+- [ ] Customs clearance lead time calculation validated against GTS
+- [ ] UFLPA block logic validated (TC-05 pass)
+- [ ] Alert engine deployed for all 7 alert trigger conditions
+- [ ] Power BI data model connected and relationships validated
+- [ ] All 5 dashboards built and reviewed by business users
+
+### Phase 3: Carrier Scorecard and Lane Risk (Weeks 17–22)
+
+- [ ] Carrier scorecard model implemented and back-tested on 6 months of history
+- [ ] Carrier tier assignments reviewed and approved by Category Manager
+- [ ] Lane risk scoring model implemented and calibrated
+- [ ] QBR reporting pack template built in Power BI
+- [ ] Training delivered to Logistics team (8 hours)
+- [ ] User acceptance testing completed with sign-off from Logistics Director
+
+---
+
+## 20. Validation Checklist
+
+- [ ] OTD calculation matches SAP TM standard OTD report within ±0.5 percentage points
+- [ ] Total freight cost in analytics layer matches SAP FI cost centre report within EUR 500
+- [ ] CO2e per shipment for 10 test cases matches manual GLEC calculation within 1%
+- [ ] Customs clearance lead time distribution matches GTS aging report
+- [ ] Carrier tier assignments reviewed and confirmed by Category Manager for all PREFERRED carriers
+- [ ] All 7 alert triggers tested and confirmed firing correctly in test environment
+- [ ] UFLPA block validated: blocked shipments do not appear in approved shipment list
+- [ ] Dashboard refresh SLA met: daily dashboards updated by 07:00 on next business day
+- [ ] Data retention policy confirmed: 7 years for customs records, 5 years for freight invoices
+- [ ] GDPR/data privacy review completed for any PII in shipment records
+
+---
+
+## 21. Pending Information
+
+| Item ID | Information Required | From Whom | Impact if Missing | Target Date |
+|---------|---------------------|-----------|-------------------|-------------|
+| PI-01 | Complete carrier rate card extract for all 40 countries | Logistics Category Manager | Cannot compute invoice variance for spot carriers | Week 3 |
+| PI-02 | Confirmation of GLEC v3 emission factor selection for ocean HFO vs. LNG carriers | ESG Team | CO2 calculation will use default factors pending confirmation | Week 4 |
+| PI-03 | Country clearance SLA targets for LATAM and Africa regions | Trade Compliance Manager | Default 5-day SLA applied; alerts may be inaccurate | Week 6 |
+| PI-04 | EDI partner agreement list — carriers not yet onboarded | EDI Operations | Manual upload required for non-EDI carriers | Week 2 |
+| PI-05 | CBAM-covered HS code mapping for company's product portfolio | Trade Compliance / Finance | CBAM reporting scope incomplete | Week 8 |
+| PI-06 | Cargo claims data source — insurance system API or manual extract | Risk Management | Claims rate KPI unavailable until resolved | Week 10 |
+| PI-07 | Geopolitical risk score source for lane risk model | SCM Risk Team | Lane risk model incomplete; country risk defaults applied | Week 12 |
+| PI-08 | Confirmation of Power BI Premium workspace allocation | IT | Dashboard publishing blocked | Week 1 |
+
+---
+
+## 22. Implementation Roadmap
+
+### Phase 1: Data Foundation and Infrastructure (Months 1–2)
+
+**Objective**: Establish all data pipelines, master data, and reference tables.
+
+Week 1–2: Environment setup — Azure SQL provisioning, Power BI workspace, ETL tooling
+Week 3–4: SAP TM and SAP GTS extraction development and initial load
+Week 5–6: EDI DESADV and IFTSTA staging pipelines; carrier master and location master loaded
+Week 7–8: Reference tables loaded (GLEC, country SLA, CBAM scope, UFLPA supplier list)
+
+**Milestone**: Full historical load of 24 months of shipment data in Azure SQL validated.
+
+### Phase 2: KPI Implementation and Analytics Layer (Months 3–4)
+
+**Objective**: Implement all transformation rules and KPI calculations; validate against source systems.
+
+Week 9–10: Transformation rules TR-01 through TR-05 developed and tested
+Week 11–12: CO2 calculation (TR-04) validated; customs lead time calculated (TR-06)
+Week 13–14: Alert engine built and tested; Power BI data model connected
+Week 15–16: All 5 dashboards built; initial UAT with 3 business users
+
+**Milestone**: OTD, OTIF, Cost per kg, CO2, and Clearance Lead Time KPIs validated and signed off.
+
+### Phase 3: Carrier Scorecard and Advanced Analytics (Months 5–6)
+
+**Objective**: Deliver carrier scoring, lane risk model, and use case workflows.
+
+Week 17–18: Carrier scorecard model implemented; tier assignments back-tested
+Week 19–20: Lane risk scoring model; modal shift analysis tool
+Week 21–22: Training delivery; UAT completion; production go-live
+Week 23–24: Hypercare period; issue resolution; first monthly CBAM report produced
+
+**Milestone**: Production go-live signed off by Logistics Director and Trade Compliance Manager.
+
+### Phase 4: Continuous Improvement (Months 7–12)
+
+**Objective**: Optimise, expand scope, and drive business outcomes.
+
+Month 7–8: Freight invoice automation (RA-04 implementation); LATAM/Africa EDI onboarding
+Month 9–10: Modal shift programme analysis (RA-02); carrier consolidation recommendations (RA-01)
+Month 11–12: Annual carrier RFP lane analysis; first full-year OTD review; CO2 target setting
+
+**Milestone**: 12-month OTD improvement of +4 percentage points vs. baseline; freight cost reduction of 8%.
+
+---
+
+## References
+
+- ICC Incoterms® 2020 (International Chamber of Commerce, 2019)
+- GLEC Framework for Logistics Emissions Accounting and Reporting, Version 3.0 (Smart Freight Centre, 2023)
+- EU CBAM Regulation 2023/956 (Carbon Border Adjustment Mechanism)
+- WCO Harmonised System Nomenclature 2022 (World Customs Organization)
+- ISO 28000:2022 — Security and resilience — Supply chain security management systems
+- SAP TM 9.6 Configuration Guide (SAP SE)
+- SAP GTS 14.0 Customs Management Configuration Guide (SAP SE)
+- UN/EDIFACT Message Type DESADV D.96A (United Nations)
+- UN/EDIFACT Message Type IFTSTA D.00B (United Nations)
+- SCOR Digital Standard — Deliver Process Category (ASCM, 2019)
+- Chopra & Meindl, Supply Chain Management, 6th Ed. (Pearson, 2016), Chapter 14 — Transportation
+- Christopher, M., Logistics and Supply Chain Management, 6th Ed. (FT Publishing, 2022)
+- Smart Freight Centre, Clean Cargo Working Group (2024)
+- US CBP UFLPA Entity List (updated quarterly)
+- C-TPAT Program Requirements (US CBP, 2023)

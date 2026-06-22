@@ -1,1380 +1,1018 @@
-# Procurement — Enterprise Implementation Playbook
+# Procurement Analytics — Data & Analytics Implementation Document
 
-## Executive Summary
-
-Procurement is the largest single controllable cost lever in a €50B global multinational.
-Direct and indirect spend typically represents 50–70% of revenue, meaning even a 2%
-efficiency gain delivers €500M–€700M in bottom-line impact. This playbook provides a
-structured, phased roadmap to transform procurement from a transactional function into a
-strategic value engine, covering the full Source-to-Pay (S2P) cycle across 40 countries,
-10,000+ suppliers, and a multi-ERP landscape anchored on SAP S/4HANA with SAP Ariba as
-the procurement front-end.
-
-The strategic case rests on four pillars. First, spend visibility: without a unified spend
-cube, category managers cannot negotiate leverage, maverick spend remains invisible, and
-savings targets are set without baseline. Second, process standardisation: a harmonised
-PR-to-PO workflow with 3-way matching eliminates duplicate payments, reduces cycle time,
-and enables straight-through processing (STP) rates above 80%. Third, supplier base
-rationalisation: applying Kraljic segmentation and TCO modelling allows consolidation of
-the long tail (typically the bottom 80% of suppliers by spend account for less than 20%
-of value) while deepening strategic partnerships with top-tier partners. Fourth, advanced
-analytics and ML: NLP-based contract analysis, commodity price forecasting, and fraud
-detection move procurement from reactive to predictive, protecting margin.
-
-Expected ROI across a 3-year horizon: 3–5% addressable spend reduction (€750M–€1.25B on
-€25B addressable spend), 40% reduction in PO cycle time, 60% reduction in invoice
-exceptions, and a fraud detection coverage rate above 95% of invoice volume. The
-implementation runs 72 weeks from kick-off to steady-state continuous improvement, with
-quick wins (spend visibility dashboard, e-auction rollout) delivered by Week 20 to
-demonstrate early value to the CFO and CPO.
-
-The programme requires a dedicated team of 25–35 FTEs including category managers,
-data engineers, SAP functional consultants, data scientists, and change management
-specialists. External consulting support is recommended for Phases 0–2 (AS-IS, foundation,
-standardisation), with internal teams taking full ownership from Phase 3 onward. A Centre
-of Excellence (CoE) structure is established in Phase 6 to sustain and extend capability.
+**Department**: Procurement  
+**Workstream**: Purchase Order Follow-up, Open Orders Risk, Spend Analysis, Supplier Compliance  
+**Organization**: €50B Global Multinational | 40 Countries | 10,000+ Active Suppliers  
+**Technology Stack**: SAP S/4HANA · SAP Ariba · Azure SQL · Power BI · Python · Power Automate  
+**Document Version**: 1.0  
+**Last Updated**: 2026-06-22  
+**Classification**: Internal — Restricted
 
 ---
 
-## Prerequisites & Dependencies
+## 1. Executive Summary
 
-### Systems
-- SAP S/4HANA 2023 (or later) — Materials Management (MM), Finance (FI), Controlling (CO)
-- SAP Ariba Procurement (Buying & Invoicing, Sourcing, Contracts, Supplier Lifecycle)
-- SAP Business Network (formerly Ariba Network) for supplier connectivity
-- SAP Analytics Cloud (SAC) or equivalent BI platform (Power BI, Tableau)
-- Master Data Governance (SAP MDG or equivalent) for vendor and material master
-- Data lake / lakehouse (Apache Iceberg on object storage, or Databricks Delta Lake)
-- ML platform (MLflow for experiment tracking, seldon or BentoML for serving)
-- EDI gateway (OpenText, Seeburger, or IBM Sterling) for EDIFACT message exchange
-- Identity & Access Management (IAM) — LDAP/Active Directory integration
+Procurement is the largest single controllable cost lever in a €50B global multinational. Direct and indirect spend typically represents 50–70% of total revenue, meaning even a 2% efficiency gain generates €500M–€700M in measurable bottom-line impact. This implementation document provides a rigorous, technically complete specification for the Procurement Analytics workstream, translating raw transactional data from SAP S/4HANA and SAP Ariba into actionable intelligence across four analytical domains: Purchase Order (PO) Follow-up, Open Orders Risk, Spend Analysis, and Supplier Compliance (UFLPA and CSDDD).
 
-### Data Prerequisites
-- Vendor master cleansed and deduplicated (golden record per DUNS number)
-- Material master with UNSPSC commodity codes assigned to ≥90% of line items
-- 3 years of historical PO, invoice, and GR data migrated to data lake
-- Contract repository scanned to PDF/A and OCR-processed
-- Open PO and outstanding invoice backlog reconciled before go-live
+The analytics architecture is built on a Microsoft Azure SQL data warehouse feeding Power BI dashboards, with Python-based transformation pipelines orchestrated via Azure Data Factory and monitored through Power Automate alerts. The data model follows a star schema optimized for slice-and-dice analysis across 40 countries, 14 commodity categories, and the full supplier base.
 
-### Teams Required
-- CPO sponsorship (mandatory executive champion)
-- Category management leads (direct materials, indirect, services, capex)
-- SAP MM/FI functional consultants (minimum 4 FTEs)
-- Data engineering team (minimum 3 FTEs)
-- Data science / ML team (minimum 2 FTEs)
-- Change management & training lead
-- Legal / contract management (contract templates, T&Cs, GDPR compliance)
-- Finance (AP, controlling, treasury for FX and payment terms)
-- IT security (API gateway, credential management, penetration testing)
+Regulatory compliance coverage spans the US Uyghur Forced Labor Prevention Act (UFLPA, Pub.L. 117-78, effective June 2022), the EU Corporate Sustainability Due Diligence Directive (CSDDD, Directive 2024/1760, phased enforcement from 2027), and EU REACH Regulation 1907/2006. Non-compliance exposure at this revenue scale represents fines up to 5% of global turnover (CSDDD Art. 22) and US import bans with seizure of goods.
 
-### Skills Required
-- SAP S/4HANA MM configuration (ME21N, MIGO, MIRO transaction flows)
-- Python ≥ 3.11 with scikit-learn, XGBoost, LightGBM, HuggingFace Transformers, Prophet
-- TypeScript domain modelling (this codebase)
-- SQL and dbt for spend analytics transformations
-- EDIFACT message standards: ORDERS (850), DESADV (856), INVOIC (810), RECADV (861)
-- Ariba APIs (REST, cXML) and SAP Business Network connectivity
-- Statistical process control for quality and lead-time variance analysis
+The primary deliverable is a Power BI solution with five report pages, automated daily data refresh, and Power Automate alerts for high-risk purchase orders, overdue deliveries, and compliance flags.
 
 ---
 
-## Phase 0: AS-IS Assessment (Weeks 1–8)
+## 2. Analysis Objective
 
-### Week 1–2: Stakeholder Mapping & Programme Governance
+The Procurement Analytics workstream has the following measurable objectives:
 
-1. Identify all stakeholder groups: CPO, CFO, CIO, category managers, AP team, plant
-   managers, legal, IT, and top-20 strategic suppliers.
-2. Conduct 45-minute structured interviews with each stakeholder group using a standard
-   questionnaire covering: current pain points, system landscape, process maturity, data
-   availability, and change readiness.
-3. Map stakeholders on a power/interest grid. CPO and CFO are high-power/high-interest
-   and must be engaged weekly. Plant managers are high-power/low-interest and need
-   monthly briefings with clear WIIFM (what's in it for me) messaging.
-4. Establish Programme Steering Committee (PSC): CPO (chair), CFO representative, CIO,
-   and implementation lead. Cadence: bi-weekly.
-5. Stand up project management tooling: Jira for task tracking, Confluence for
-   documentation, SharePoint for deliverable repository.
-6. Define RACI matrix covering all 14 procurement sub-processes (PR creation,
-   approval, sourcing, RFQ, award, PO issuance, GR, invoice receipt, 3-way match,
-   payment, contract management, supplier onboarding, performance review, dispute
-   resolution).
-
-### Week 3–4: Current State Process Documentation
-
-1. Shadow the PR-to-PO process in 3 representative business units (high-volume
-   manufacturing, indirect services, capex). Document every step, system touchpoint,
-   approval escalation, and manual workaround.
-2. Map all existing systems by country: identify ERP instances (SAP, Oracle, legacy),
-   procurement portals, e-mail-based PO processes, and paper-based approvals.
-3. Document approval authority matrix (Delegation of Authority — DoA) per country
-   and spend category. Note: the codebase enforces PO_APPROVAL_THRESHOLD_CENTS
-   ($5,000 / ~€4,600) as the baseline; actual DoA tiers are typically 5 levels
-   (buyer, senior buyer, category manager, CPO, board).
-4. Photograph and document all paper-based workflows. Estimate volume of transactions
-   that bypass the ERP (shadow spend / P-card spend / petty cash procurement).
-5. Collect existing KPI reports (if any): PO cycle time, invoice exception rate,
-   supplier OTD, contract coverage %, maverick spend %.
-
-### Week 5–6: Data Quality Audit
-
-1. Extract vendor master from SAP: run deduplication analysis using fuzzy matching on
-   vendor name + bank account + DUNS. Target: ≤2% duplicate rate before go-live.
-2. Audit material master: % of materials with UNSPSC L4 codes, % with valid UOM,
-   % with active price conditions. Flag materials with >12 months no movement.
-3. Pull 3-year PO history. Compute: average lines per PO, % single-line POs,
-   % POs raised after goods receipt (retrospective POs — a control weakness), and
-   % POs with no GR ever posted.
-4. Invoice quality audit: % invoices requiring manual intervention, % with price
-   variance >2%, % with quantity variance, average days to approve, % duplicate
-   invoices (same vendor + amount + date).
-5. Contract repository audit: total contracts by category, % with expiry dates in
-   system, % with scanned PDF available, % with structured data (pricing schedules,
-   SLA terms) extracted.
-6. Produce data quality scorecard with RAG (Red/Amber/Green) status per data domain.
-   Any domain Red (>15% error rate) requires a dedicated data remediation sprint
-   before Phase 1 can proceed.
-
-### Week 7–8: Gap Analysis & KPI Baseline
-
-1. Benchmark current state KPIs against world-class targets (see KPIs & Success
-   Metrics section). Document the gap for each KPI.
-2. Apply APQC (American Productivity & Quality Center) procurement benchmarking
-   framework. Identify which quartile the organisation currently sits in across:
-   cost to procure per PO, PO cycle time, contract coverage, and STP rate.
-3. Perform spend analysis on the 3-year extract using the 80/20 (Pareto) rule:
-   identify the top 20% of suppliers by spend, top 20% of categories by spend,
-   and any single-supplier concentration above 30% in a critical category (supply
-   concentration risk — see HHI in supplier management module).
-4. Conduct a compliance audit: % of spend under contract, % of invoices matched to PO,
-   % of POs raised without approved supplier, % of payments outside agreed terms.
-5. Produce AS-IS Assessment Report (mandatory PSC deliverable). Include: process maps,
-   data quality scorecard, KPI baseline, gap analysis, and prioritised list of
-   quick wins. Present to PSC for approval before Phase 1 kick-off.
+1. **Reduce PO Cycle Time**: Achieve full visibility into PO status from creation to goods receipt, targeting a 15% reduction in average PO cycle time within 6 months of go-live.
+2. **Open Order Risk Quantification**: Identify, score, and escalate at-risk open purchase orders (overdue, no confirmation, high-value, single-sourced) before they cause supply disruptions.
+3. **Spend Under Management (SUM)**: Increase the percentage of total spend routed through approved channels (Ariba catalogue or PO-based) from a baseline to a ≥90% target.
+4. **Supplier Compliance Monitoring**: Maintain 100% UFLPA screening coverage for high-risk country-of-origin suppliers and achieve CSDDD Art. 7 due diligence documentation for Tier-1 suppliers before the 2027 enforcement deadline.
+5. **Maverick Spend Elimination**: Detect and quantify off-contract spend (invoices with no prior PO) and route correction actions to category managers within 48 hours.
 
 ---
 
-## Phase 1: Foundation & Master Data (Weeks 9–20)
+## 3. Scope
 
-### Master Data Model Design (Weeks 9–11)
+### In Scope
 
-The master data foundation is the most critical and most often underestimated phase.
-Errors here propagate through every downstream process.
+- All purchase orders created in SAP S/4HANA (company codes: all 40 country entities)
+- Ariba Network sourcing events linked to S/4HANA POs via integration
+- PO types: standard (NB), framework orders (MK), consignment (KO), subcontracting (LB), service (DIEN)
+- Spend categories: Direct Materials, Indirect MRO, Logistics & Freight, Professional Services, IT
+- Supplier master data maintained in SAP S/4HANA (LFA1/LFB1) and Ariba SLP
+- UFLPA risk screening: suppliers with manufacturing or sourcing operations in Xinjiang (XUAR), China
+- CSDDD: all Tier-1 suppliers with annual spend ≥ €1M per legal entity
+- Countries in scope: all 40 operating countries; reporting currency: EUR
 
-**Vendor Master (SAP Vendor Account Group)**
+### Out of Scope
 
-Each vendor record must carry:
-- DUNS number (mandatory for strategic and bottleneck suppliers)
-- UNSPSC category codes (up to 5 per vendor, representing their supply scope)
-- Incoterms® 2020 default (one of 11 rules: EXW, FCA, CPT, CIP, DAP, DPU, DDP,
-  FAS, FOB, CFR, CIF)
-- Payment terms code (mapped to SAP payment term key)
-- Withholding tax classification per country
-- Bank account (encrypted, IBAN-validated)
-- ISO 28000:2022 certification flag and expiry
-- Sanction screening status (OFAC, EU, UN) — auto-refreshed weekly
-- UFLPA risk flag (see compliance module)
-- Supplier tier (1 = direct contract, 2 = sub-tier, 3 = sub-sub-tier)
-- Kraljic segment (STRATEGIC / LEVERAGE / BOTTLENECK / NON_CRITICAL)
+- Inter-company purchase orders (document type UB)
+- Capital expenditure orders (account assignment category A) — handled by Finance CapEx module
+- Emergency credit card purchases below €500 (P-Card) — handled by Accounts Payable
+- Tier-2 and Tier-3 CSDDD mapping (Phase 2, post-2028)
 
-**Material / Service Master**
+### Reporting Period
 
-- UNSPSC Level 4 code (mandatory)
-- GS1 GTIN (for physical goods)
-- Base UOM (GS1 UOM code)
-- Order UOM and conversion factor
-- Valuation class (for FI integration)
-- Price control (S = standard, V = moving average)
-- ABC classification (A/B/C by spend or volume)
-- Lead time (planned delivery time in days)
-- Minimum order quantity and order increment
-
-**Contract Master (SAP CLM / Ariba Contracts)**
-
-- Contract ID (UUID)
-- Effective date, expiry date, auto-renewal flag
-- Commodity scope (UNSPSC list)
-- Pricing schedule (structured — not PDF only)
-- Index linkage (commodity index, base period, adjustment formula)
-- SLA terms (OTD target, OTIF target, PPM limit)
-- Penalty and bonus clauses (structured fields, not free text)
-- Governing law and dispute resolution jurisdiction
-
-### ERP Integration: SAP S/4HANA (Weeks 9–14)
-
-**PR-to-PO Integration**
-
-1. Configure SAP document types: ZPR (purchase requisition), ZPO (standard PO),
-   ZBL (blanket/release order), ZFPO (framework PO).
-2. Map approval workflows in SAP (using SAP Business Workflow or SAP BTP Process
-   Automation) to the DoA matrix established in Phase 0. The codebase
-   PO_APPROVAL_THRESHOLD_CENTS constant must match the SAP approval condition value.
-3. Enable Ariba Buying integration via SAP Business Network: configure cXML PunchOut
-   catalogs for all indirect categories (IT, office supplies, MRO). This alone
-   typically reduces maverick spend by 30–40% in indirect categories.
-4. Configure 3-way matching tolerance rules in SAP MIRO:
-   - Price variance tolerance: ±2% or ±€50 (whichever is greater) — auto-post
-   - Quantity variance tolerance: ±1% or ±1 EA — auto-post
-   - Outside tolerance: route to buyer queue for manual review
-5. Enable evaluated receipt settlement (ERS) for strategic suppliers: auto-generate
-   MIRO documents from GR posts, eliminating invoice entirely for top-tier partners.
-6. Configure output determination for PO output: EDI ORDERS (EDIFACT D.01B or
-   D.96A) for EDI-capable suppliers, PDF e-mail for others, cXML for Ariba Network.
-
-**Finance Integration**
-
-1. Map each procurement document type to a commitment item and funds center (for
-   budget control / Funds Management module if applicable).
-2. Configure GR/IR clearing account (SAP account 19300000 typically) and accrual
-   rules: goods receipted but not invoiced must accrue at period-end.
-3. Enable real-time COGS posting from GR for direct materials (movement type 101).
-4. Configure intercompany purchasing (STO — Stock Transfer Order) for the 40-country
-   intercompany supply chain. Transfer pricing rules must be configured per country
-   pair per tax authority requirements.
-
-### Data Migration (Weeks 12–16)
-
-Data migration follows the standard ETL-validate-load-reconcile pattern:
-
-1. **Extract**: Pull vendor master, material master, open POs, open contracts, and
-   3-year transactional history from all legacy systems. Use SAP BAPI
-   (BAPI_VENDOR_GETLIST, BAPI_PO_GETDETAIL) or SAP IDOC outbound for structured
-   extract.
-2. **Transform**: Apply cleansing rules (deduplication, DUNS enrichment, UNSPSC
-   tagging, IBAN validation). All transformations documented in dbt models, version-
-   controlled in Git.
-3. **Load (pilot)**: Load 10% sample into SAP development system. Run automated
-   reconciliation: record count, spend total, open commitment total must match
-   source within 0.01%.
-4. **UAT load**: Full load into UAT system. Category managers and AP team perform
-   parallel running: raise 50 test POs, process 20 test invoices, verify 3-way
-   match outcomes match expected.
-5. **Cutover**: Freeze legacy systems 48 hours before go-live. Load delta (new
-   transactions in freeze window) using fast-track LSMW or LTMC (SAP LTMC = Legacy
-   System Migration Cockpit). Post-load reconciliation must complete within 4 hours.
-6. **Day-1 support**: 10-person hypercare team on-site for 2 weeks post go-live.
-   Dedicated SAP OSS (Online Support System) priority queue for P1/P2 issues.
-
-### User Roles & Access Control (Weeks 15–17)
-
-Define SAP authorisation concept following the principle of least privilege:
-
-| Role | SAP Transaction Access | Ariba Access | Spend Limit |
-|------|----------------------|--------------|-------------|
-| Requisitioner | ME51N (create PR) | Self-service catalog | Per DoA |
-| Buyer | ME21N, ME22N, ME23N, ME2N | Sourcing (view) | Per DoA |
-| Senior Buyer | All buyer + source selection | Sourcing (full) | Per DoA |
-| Category Manager | All + contract creation | Sourcing + Contracts | Per DoA |
-| AP Specialist | MIRO, MR8M, F-44 | Invoice management | N/A |
-| Procurement Manager | All + reports | Full access | Full |
-| Auditor | Display only (ME23N, FB03) | Read-only | None |
-
-Segregation of duties (SoD) controls — mandatory:
-- Cannot create vendor AND create PO (prevents fictitious vendor fraud)
-- Cannot approve own PO (prevents self-approval)
-- Cannot post GR AND approve invoice for same PO (prevents collusion)
-- AP team cannot access vendor master creation
-
-### Core Process Mapping (Weeks 17–20)
-
-Document all 8 core procurement processes as swimlane diagrams (BPMN 2.0):
-
-1. **Purchase Requisition to Purchase Order**: Requestor → Budget check → Approval
-   routing → Buyer sourcing decision → PO issue → Supplier acknowledgement
-2. **Request for Quotation (RFQ) to Award**: Scope definition → Supplier shortlist
-   → RFQ issue → Bid receipt → TCO evaluation → Award decision → Contract / PO
-3. **Contract Lifecycle Management**: Negotiation → Execution → Obligation tracking
-   → Price adjustment triggers → Renewal / termination
-4. **Supplier Onboarding**: Registration → Document collection → Risk assessment
-   → UFLPA / sanctions check → Quality audit → Approval → Activation in ERP
-5. **3-Way Match & Invoice Processing**: GR post → Invoice receipt → System match
-   → Exception handling → Approval → Payment run (F110)
-6. **Blanket Order / Scheduling Agreement**: Framework negotiation → Release order
-   issuance → Delivery schedule (JIT) → Cumulative quantity reconciliation
-7. **e-Auction / Reverse Auction**: Event setup → Supplier briefing → Live event
-   → Bid evaluation → Award → Savings documentation
-8. **Procurement Performance Review**: Monthly scorecard → Supplier development →
-   Corrective action tracking → Annual strategy review
+- Historical load: 3 years (2023-01-01 to present) for trend analysis
+- Operational window: rolling 12 months for open order management
+- CSDDD retention: 5 years minimum per Art. 23
 
 ---
 
-## Phase 2: Process Standardisation (Weeks 21–36)
+## 4. Business Questions
 
-### Standard Operating Procedures
+This analytics implementation answers the following specific business questions:
 
-Produce SOPs for each of the 8 core processes. Each SOP must include: purpose, scope,
-roles, inputs, process steps with system screenshots, outputs, KPIs, and escalation path.
-SOPs are stored in Confluence and linked from SAP transaction help text.
-
-Critical SOPs for compliance:
-- **SOP-PROC-001**: Vendor master creation and maintenance (SoD controls, DUNS
-  mandatory, sanctions screening)
-- **SOP-PROC-002**: Emergency/off-contract purchase (limited to genuine emergencies;
-  requires CPO approval and post-hoc competitive justification within 30 days)
-- **SOP-PROC-003**: Retrospective PO (forbidden except for utilities/telecom; must
-  be flagged for internal audit review)
-- **SOP-PROC-004**: Payment term negotiation (standard: Net 30; strategic partners:
-  Net 45; extended supply chain finance: up to Net 90 with SCF programme)
-
-### Reporting & Dashboards (Weeks 28–33)
-
-Build the following dashboards in SAP Analytics Cloud (or equivalent):
-
-**Executive Dashboard** (CPO / CFO audience):
-- Total addressable spend by category and region (drill-down to L4 UNSPSC)
-- Savings pipeline: identified → committed → realised
-- Contract coverage % (target: >85% of addressable spend)
-- STP rate (target: >80%)
-- Maverick spend % (target: <10%)
-- Supplier diversity spend (target per policy)
-
-**Operational Dashboard** (Category Manager audience):
-- Open POs by status (issued, acknowledged, overdue)
-- PO cycle time distribution (PR approval + sourcing + PO issue)
-- Invoice exception queue by reason code
-- Expiring contracts (next 90 days)
-- Supplier performance by category (OTD, OTIF, PPM)
-
-**AP Dashboard** (Accounts Payable audience):
-- Invoice exception rate and ageing
-- Early payment discount capture rate
-- Days Payable Outstanding (DPO) vs target
-- Duplicate invoice alerts
-- GRIR (Goods Receipt / Invoice Receipt) open items ageing
-
-### Training & Change Management (Weeks 30–36)
-
-Training curriculum by role group:
-
-**Requisitioners (estimated 2,000 users across 40 countries)**:
-- E-learning module: 45 minutes, multilingual (English mandatory per CLAUDE.md;
-  local language supplementary materials permitted)
-- Topics: how to raise a PR in Ariba, catalog shopping, approval status tracking,
-  when to contact the buyer
-- Certification: pass rate ≥80% on 20-question assessment
-
-**Buyers & Category Managers (estimated 150 users)**:
-- 3-day instructor-led workshop (virtual)
-- Day 1: S2P process, SAP ME transactions, Ariba Sourcing
-- Day 2: TCO modelling, e-auction mechanics, contract setup
-- Day 3: Spend analytics, KPI interpretation, supplier performance management
-- Hands-on exercises in UAT system
-
-**AP Specialists (estimated 80 users)**:
-- 2-day instructor-led workshop
-- Day 1: MIRO processing, 3-way match logic, exception handling
-- Day 2: ERS, payment runs, GRIR clearing, month-end close
-- Shadowing sessions with experienced AP leads post-training
-
-**Change management communications plan**:
-- Week 18: "What's changing and why" video message from CPO (2 minutes)
-- Week 22: Department-level town halls (category managers present to business units)
-- Week 30: Go-live countdown newsletter (bi-weekly)
-- Week 36: Go-live day: helpdesk activated, floor-walkers in key sites
-- Week 38–40: Post go-live pulse survey (target: >70% satisfaction)
+- Which purchase orders are overdue (confirmed delivery date passed, no goods receipt posted) and what is the total value at risk by commodity and country?
+- What percentage of total company spend is routed through approved procurement channels (PO-backed or catalogue), and which cost centers have the highest maverick spend rate?
+- Which suppliers have not confirmed purchase orders within the standard 48-hour confirmation window, and what is the downstream delivery risk if no action is taken?
+- What is the spend concentration by supplier (top-10 supplier as % of total spend) and how has it trended over the past 3 years by category?
+- Which suppliers in our active base have manufacturing operations in Xinjiang and have not provided the required UFLPA clearance documentation?
+- Which Tier-1 suppliers (spend ≥ €1M/year) lack a valid CSDDD human rights risk assessment as required by Directive 2024/1760 Art. 7?
+- What is the total value of purchase orders pending approval beyond the standard SLA (24 hours for <€5,000; 48 hours for €5,000–€50,000; 72 hours for >€50,000)?
+- Which commodity categories show the highest price variance between PO unit price and the contracted price in SAP condition records?
+- What is the PO-to-invoice matching rate (2-way vs. 3-way match) by supplier and country, and where are the highest rates of invoice exceptions?
+- Which open purchase orders are single-sourced for a critical item (ABC classification A) with lead time >60 days and no safety stock coverage?
+- How has the early payment discount capture rate trended, and what is the annualized value of uncaptured discounts by payment term bucket?
+- What is the average PO cycle time (requisition approval date to first goods receipt) by commodity category and buyer, and where are the process bottlenecks?
 
 ---
 
-## Phase 3: Mathematical Models — Step-by-Step
+## 5. Data Sources
 
-### Model 1: Economic Order Quantity (EOQ)
+### Source 1: SAP S/4HANA — Purchase Order Header
 
-**Business Problem Solved**
+- **Source Name**: SAP S/4HANA Purchase Order Header
+- **Origin System**: SAP S/4HANA 2023 (on-premise, Azure-hosted)
+- **Report/Table/Query**: Table EKKO (Purchasing Document Header); extracted via Azure Data Factory SAP connector or SAP BW/4HANA ODP extraction
+- **Data Owner**: Global Procurement Operations — Director of Procurement Systems
+- **Update Frequency**: Daily batch at 01:00 UTC; near-real-time CDC available via SAP LT Replication Server (SLT) for P1 use cases
+- **Required Fields**: EBELN (PO Number), BUKRS (Company Code), BSART (PO Type), LIFNR (Vendor Number), EKGRP (Purchasing Group), EKORG (Purchasing Organization), WAERS (Currency), BEDAT (PO Date), AEDAT (Last Change Date), FRGKE (Release Indicator), LOEKZ (Deletion Flag)
+- **Critical Fields**: EBELN (unique identifier), FRGKE (approval status — must = 'R' for released), LOEKZ (soft delete flag — exclude 'L')
+- **Primary/Logical Key**: EBELN (10-digit alphanumeric, unique per client)
+- **Required Validations**: EBELN must be 10 characters; BUKRS must exist in company code master (T001); WAERS must be a valid ISO 4217 currency code; BEDAT must be ≥ 2023-01-01; LOEKZ ≠ 'L'
+- **Possible Errors**: Duplicate EBELN records due to SLT replication lag; NULL LIFNR for plan-driven POs (handle by joining to EBAN for source of supply); currency conversion errors when WAERS ≠ EUR
+- **Extraction Evidence**: Azure Data Factory pipeline run log (Pipeline: SAP_EKKO_Daily_Extract); row count reconciliation report comparing SAP SE16N transaction count vs. Azure SQL staging table count, signed off by SAP Basis team
 
-Determines the optimal purchase quantity Q* that minimises total inventory cost
-(ordering cost + holding cost). Without EOQ, buyers order too frequently (high
-ordering cost) or in excess (high holding cost). For a €50B company with 50,000+ SKUs,
-a 5% reduction in total inventory cost can free €200M+ in working capital.
+### Source 2: SAP S/4HANA — Purchase Order Line Items
 
-**Mathematical Formulation**
+- **Source Name**: SAP S/4HANA Purchase Order Line Items
+- **Origin System**: SAP S/4HANA 2023
+- **Report/Table/Query**: Table EKPO (Purchasing Document Item)
+- **Data Owner**: Global Procurement Operations
+- **Update Frequency**: Daily batch at 01:00 UTC (same pipeline as EKKO)
+- **Required Fields**: EBELN, EBELP (PO Item), MATNR (Material Number), TXZ01 (Short Text), MENGE (PO Quantity), MEINS (Unit of Measure), NETPR (Net Price), PEINH (Price Unit), NETWR (Net Value), MWSKZ (Tax Code), WERKS (Plant), LGORT (Storage Location), MATKL (Material Group), PSTYP (Item Category), KNTTP (Account Assignment Category), EINDT (Scheduled Delivery Date), WEPOS (Goods Receipt Indicator), REPOS (Invoice Receipt Indicator), LOEKZ (Deletion Flag at Item Level)
+- **Critical Fields**: NETWR (Net Value in PO currency — used for spend aggregation), EINDT (delivery date — used for overdue calculation), WEPOS (must = 'X' for items requiring GR)
+- **Primary/Logical Key**: EBELN + EBELP (composite key)
+- **Required Validations**: NETWR ≥ 0 (no negative PO values in scope); MEINS must be a valid GS1 UOM code; EINDT must be ≥ PO creation date (EKKO.BEDAT); MENGE > 0 for standard items
+- **Possible Errors**: MATNR = blank for text-based service POs (expected — use TXZ01 as description); EINDT = NULL for framework orders without schedule lines (join EKET for schedule lines); LOEKZ = 'L' at item level while header LOEKZ is blank (must filter at both levels)
+- **Extraction Evidence**: Row count and NETWR sum reconciliation between SAP ME2M report output and Azure SQL fact_po_line staging table, signed by Category Management lead
 
-Basic EOQ (Harris, 1913):
+### Source 3: SAP S/4HANA — PO Schedule Lines and Confirmations
 
-    Q* = √(2 · D · S / H)
+- **Source Name**: SAP S/4HANA PO Schedule Lines
+- **Origin System**: SAP S/4HANA 2023
+- **Report/Table/Query**: Table EKET (Scheduling Agreement Schedule Lines) and EKAB (PO Release Orders)
+- **Data Owner**: Procurement Operations
+- **Update Frequency**: Daily batch
+- **Required Fields**: EBELN, EBELP, ETENR (Schedule Line Counter), EINDT (Delivery Date), MENGE (Scheduled Quantity), WEMNG (Quantity of Goods Received), REMNG (Remaining Quantity), GLMNG (Total Goods Received Quantity)
+- **Critical Fields**: EINDT (committed delivery date), WEMNG (confirmed received quantity — for open quantity calculation)
+- **Primary/Logical Key**: EBELN + EBELP + ETENR
+- **Required Validations**: MENGE must equal sum of WEMNG + REMNG (tolerance ±0.001 for rounding); EINDT must be populated for all non-framework PO schedule lines
+- **Possible Errors**: Multiple schedule lines per PO item (correct — aggregate by EBELN + EBELP); WEMNG may lag 24 hours vs. MKPF goods movement postings
+- **Extraction Evidence**: Reconciliation of EKET REMNG totals vs. MB52 open stock report for a sample of 100 PO items
 
-Where:
-- D = annual demand (units/year)
-- S = ordering cost per order (€/order) — includes buyer time, system cost, freight
-  fixed element
-- H = annual holding cost per unit (€/unit/year) = unit cost × holding cost rate
-  (typically 20–30% per annum including capital cost, storage, obsolescence, insurance)
+### Source 4: SAP S/4HANA — Goods Receipt (Material Documents)
 
-Total Cost:
+- **Source Name**: SAP S/4HANA Material Documents (Goods Receipts)
+- **Origin System**: SAP S/4HANA 2023
+- **Report/Table/Query**: Tables MKPF (Material Document Header) and MSEG (Material Document Segment), filtered on BWART IN ('101','102') for GR against PO
+- **Data Owner**: Warehouse / Receiving Operations
+- **Update Frequency**: Real-time posting; daily batch extract
+- **Required Fields**: MBLNR (Material Document), MJAHR (Year), ZEILE (Item), EBELN (Reference PO), EBELP (Reference PO Item), MATNR, WERKS, LGORT, MENGE (GR Quantity), MEINS, BUDAT (Posting Date), BLDAT (Document Date), BWART (Movement Type)
+- **Critical Fields**: BUDAT (used for on-time delivery calculation: BUDAT vs. EKET.EINDT), BWART (101 = GR, 102 = GR Reversal — must handle reversals in net quantity calculation)
+- **Primary/Logical Key**: MBLNR + MJAHR + ZEILE
+- **Required Validations**: Every MBLNR + MJAHR + ZEILE must reference a valid EBELN + EBELP in EKPO; BUDAT must be ≤ system date; reversals (BWART=102) must subtract from net GR quantity
+- **Possible Errors**: GR posted to wrong PO item (requires correction via MBST); delayed GR postings (warehouse posts GR 1-3 days after physical receipt — noted in OTD calculation methodology)
+- **Extraction Evidence**: Reconciliation of total GR quantity in MSEG vs. MIGO display for top-20 PO items by volume
 
-    TC(Q) = (D/Q) · S + (Q/2) · H + D · P
+### Source 5: SAP Ariba — Sourcing and Supplier Data
 
-Where P = unit purchase price.
+- **Source Name**: SAP Ariba Network — Supplier Profile and Compliance Data
+- **Origin System**: SAP Ariba (cloud, integrated with S/4HANA via Ariba Integration Toolkit)
+- **Report/Table/Query**: Ariba Analytical Reporting API v2 — Reports: "Supplier Registration Status", "Compliance Questionnaire Responses", "Sourcing Event Summary"
+- **Data Owner**: Supplier Lifecycle & Performance (SLP) team — Global Procurement
+- **Update Frequency**: Daily API pull at 02:00 UTC
+- **Required Fields**: SupplierId (Ariba ANID), SupplierName, RegistrationStatus, ComplianceStatus, QuestionnaireId, QuestionnaireResponse, LastUpdatedDate, RiskScore, CountryOfOrigin, CertificationList
+- **Critical Fields**: ComplianceStatus (must = 'APPROVED' for active suppliers), UFLPA_Flag (custom field: boolean, populated from XUAR screening questionnaire), CSDDD_Assessment_Date (must be ≤ 3 years old per CSDDD Art. 10)
+- **Primary/Logical Key**: SupplierId (Ariba ANID, 16-character alphanumeric)
+- **Required Validations**: SupplierId must have a matching LIFNR in SAP S/4HANA vendor master (LFA1) via cross-reference table; ComplianceStatus cannot be NULL for active suppliers; CSDDD_Assessment_Date must be populated for all Tier-1 suppliers
+- **Possible Errors**: Ariba API rate limit (429 errors — implement exponential backoff); supplier name mismatches between Ariba and S/4HANA (use SupplierId-LIFNR mapping table as authoritative join); questionnaire responses in multiple languages (normalize to English)
+- **Extraction Evidence**: Ariba API call log in Azure Data Factory with HTTP response codes; row count comparison between Ariba SLP portal supplier count and Azure SQL staging table
 
-**Extension: EOQ with All-Units Quantity Discounts**
+### Source 6: UFLPA Entity List (US CBP)
 
-Suppliers often offer tiered pricing: P1 for Q < Q_break1, P2 for Q ≥ Q_break1, etc.
+- **Source Name**: UFLPA Entity List — US Customs and Border Protection
+- **Origin System**: External — US CBP public dataset (https://www.cbp.gov/trade/forced-labor/UFLPA)
+- **Report/Table/Query**: CSV download from CBP website; updated irregularly (typically monthly)
+- **Data Owner**: Global Trade Compliance team
+- **Update Frequency**: Manual check weekly; automated web scrape with Python (requests + BeautifulSoup) monitoring CBP page for file hash change
+- **Required Fields**: EntityName, EntityType, CountryOfOperation, DateAdded, DateRevised, BasisForListing
+- **Critical Fields**: EntityName (fuzzy-matched against SAP LFA1.NAME1 and Ariba SupplierName), DateAdded (for determining when risk was first identified)
+- **Primary/Logical Key**: EntityName + DateAdded (no unique numeric ID in CBP dataset)
+- **Required Validations**: File hash must change from prior download before reprocessing; EntityName must be normalized (remove legal suffixes: Ltd, Co., LLC, GmbH) before fuzzy matching; confidence threshold for match ≥ 85% (RapidFuzz library)
+- **Possible Errors**: False positives in fuzzy matching (common company names); supplier name in SAP recorded in local script (Chinese characters) — requires transliteration; CBP list may include holding companies not directly in our supply base (require manual review)
+- **Extraction Evidence**: Python script execution log with file hash comparison; list of matched EntityNames with confidence scores reviewed and signed off by Trade Compliance Manager
 
-    For each price tier i:
-      Q*_i = √(2 · D · S / H_i)   where H_i = h · P_i
-      If Q*_i is feasible in tier i, compute TC(Q*_i)
-      Otherwise, evaluate TC at the tier break-point
+### Source 7: EUR/FX Exchange Rates (ECB)
 
-Select the Q that yields the minimum feasible TC across all tiers.
-
-**Input Data Requirements**
-
-| Input | Source | Update Frequency |
-|-------|--------|-----------------|
-| D (annual demand) | SAP MMBE / consumption history | Monthly |
-| S (ordering cost) | Finance time study + SAP system cost allocation | Annual |
-| h (holding cost rate) | Treasury (WACC) + warehouse cost per pallet | Annual |
-| P (unit price) | SAP info record / contract pricing | Per contract change |
-| Q_break (quantity discount tiers) | Supplier price lists / contracts | Per contract change |
-
-**Step-by-Step Implementation**
-
-1. Extract 24 months of GI (goods issue) postings from SAP (movement type 261/201)
-   per material-plant combination. Compute D = annualised consumption.
-2. Conduct ordering cost study: time-track a sample of 50 POs across categories.
-   Include: buyer time to source (hours × hourly rate), SAP transaction time,
-   supplier acknowledgement follow-up, freight booking (fixed element). Typical
-   range: €50–€250 per PO depending on complexity.
-3. Compute holding cost rate h: h = WACC + physical storage rate + obsolescence
-   write-off rate + insurance rate. Example: 12% WACC + 5% storage + 3%
-   obsolescence + 1% insurance = 21% per annum.
-4. Extract unit prices from SAP ME1M (list of info records) or contract conditions
-   (ME33K).
-5. Collect quantity discount tiers from contract management system or supplier
-   price lists.
-6. Implement EOQ calculation in Python (see `python/01_procurement/eoq.py`).
-   Use numpy for vectorised computation across all SKUs simultaneously.
-7. Apply feasibility check: Q* must be ≥ minimum order quantity (MOQ) and a
-   multiple of the order increment. Round up to the nearest valid quantity.
-8. Compute reorder point: ROP = D_daily · LT + safety_stock. Where LT is the
-   vendor-material planned delivery time from SAP info record.
-9. Load Q* back to SAP as the "rounding value" or "lot size" in the MRP view of
-   the material master (MM02, MRP1 tab, field "Fixed lot size" or "Maximum lot size"
-   depending on MRP type).
-10. Schedule monthly batch re-computation: demand is not static. A Δ>20% in
-    annualised demand triggers automatic recalculation and buyer notification.
-11. Document savings: compare pre-EOQ average order quantity vs Q* for each SKU.
-    Report total inventory cost reduction and ordering cost reduction in the
-    procurement savings tracker.
-
-**Validation Approach**
-
-- Back-test: apply EOQ to 12 months of historical data, simulate inventory levels,
-  and compare total cost to actual total cost. Target: ≥5% cost reduction vs actuals.
-- Sensitivity analysis: compute ∂TC/∂Q at Q=Q*. The EOQ cost function is relatively
-  flat near the optimum (±20% of Q* changes TC by <2%), so MOQ rounding is safe.
-- Pilot: select 200 SKUs in one plant, implement EOQ lot sizes, measure actual
-  inventory turns and order frequency over 6 months vs control group.
-
-**Example Calculation**
-
-    D = 10,000 units/year
-    S = €120 per order
-    P = €50 per unit
-    h = 25% → H = €50 × 0.25 = €12.50 per unit/year
-
-    Q* = √(2 × 10,000 × 120 / 12.50) = √192,000 = 438 units
-
-    TC(Q*) = (10,000/438) × 120 + (438/2) × 12.50 = 2,740 + 2,738 = €5,478/year
-
-    With quantity discount: P2 = €47 for Q ≥ 500
-    H2 = €47 × 0.25 = €11.75
-    TC(500) = (10,000/500) × 120 + (500/2) × 11.75 + 10,000 × 47
-             = 2,400 + 2,938 + 470,000 = €475,338/year (vs €505,478 at P1)
-    Discount saves €30,140/year → take the 500-unit break quantity.
+- **Source Name**: European Central Bank — Daily Reference Exchange Rates
+- **Origin System**: External — ECB Statistical Data Warehouse API (https://data-api.ecb.europa.eu)
+- **Report/Table/Query**: ECB SDMX API: `/service/data/EXR/D.{currency}.EUR.SP00.A`
+- **Data Owner**: Finance — Treasury Operations
+- **Update Frequency**: Daily at 16:00 CET (ECB publication time)
+- **Required Fields**: CURRENCY, DATE, EUR_RATE (units of currency per 1 EUR)
+- **Critical Fields**: DATE (must match PO posting date for historical FX conversion), EUR_RATE (must not be NULL or 0)
+- **Primary/Logical Key**: CURRENCY + DATE
+- **Required Validations**: All 40 country currencies must be present for each business day; weekends/holidays use prior business day rate (Friday rate); EUR_RATE > 0; no rate older than 3 business days should be used as current rate
+- **Possible Errors**: ECB API downtime (fallback to prior day rate with alert); exotic currencies for certain operating countries may not be available from ECB (use Bloomberg terminal extract via Finance)
+- **Extraction Evidence**: Azure Data Factory pipeline log; Finance sign-off that ECB rates match SAP TCURR table rates for the same date (reconciliation tolerance: ±0.01%)
 
 ---
 
-### Model 2: Supplier Scoring — Weighted Average
+## 6. Data Model
 
-**Business Problem Solved**
+The Procurement Analytics data model follows a **star schema** hosted in Azure SQL Database (Premium tier, 500 DTU, with read replicas for Power BI DirectQuery).
 
-Provides a single, objective numerical score for each supplier enabling ranking, tier
-assignment, and qualification decisions. Without a consistent scoring model, buyer
-preferences dominate, favourable incumbent suppliers are retained despite declining
-performance, and cost reduction initiatives lack objective supplier selection criteria.
+### Fact Tables
 
-**Mathematical Formulation**
+**fact_po_line** — Grain: one row per PO line item (EBELN + EBELP). Contains all measurable quantities and amounts: PO quantity, net value in PO currency, net value in EUR, open quantity, GR quantity, invoice quantity. Foreign keys to all dimension tables. Partitioned by fiscal year for query performance.
 
-    Score_total = Σ (w_i × norm_i(KPI_i))
+**fact_gr_receipt** — Grain: one row per goods receipt line (MBLNR + MJAHR + ZEILE). Contains GR quantity, GR date, reference PO/item, plant. Used for on-time delivery calculation and PO completion tracking. Linked to fact_po_line via EBELN + EBELP.
 
-Where:
-- w_i = weight of dimension i (sum to 1.0)
-- KPI_i = raw KPI value for dimension i
-- norm_i = normalisation function mapping KPI_i to [0, 100]
+**fact_compliance_assessment** — Grain: one row per supplier per compliance framework per assessment period. Contains UFLPA screening result, CSDDD assessment date and status, REACH classification. Updated from Ariba SLP data. Foreign key to dim_supplier.
 
-Standard normalisation for "higher is better" KPIs:
+### Dimension Tables
 
-    norm(x) = min(100, (x / x_target) × 100)
+**dim_supplier** — Grain: one row per supplier (LIFNR). Contains vendor name, country, Ariba ANID, Kraljic classification (STRATEGIC / LEVERAGE / BOTTLENECK / NON_CRITICAL), UFLPA flag, CSDDD tier designation, ISO 28000 certification status, payment terms.
 
-Standard normalisation for "lower is better" KPIs (e.g., PPM):
+**dim_material** — Grain: one row per material number (MATNR). Contains material description, material group (MATKL), ABC classification, XYZ classification, storage condition, REACH SVHC flag, lot tracking requirement, base unit of measure.
 
-    norm(x) = max(0, 100 - (x / x_max_acceptable) × 100)
+**dim_purchasing_org** — Grain: one row per purchasing organization (EKORG). Contains org name, lead buyer, region, associated company codes.
 
-The full weight structure (from CLAUDE.md):
+**dim_company_code** — Grain: one row per company code (BUKRS). Contains company name, country, ISO country code, local currency, fiscal year variant.
 
-    Delivery (40%):
-      OTD score × 0.35
-      OTIF score × 0.45
-      RFT (Right First Time) score × 0.20
+**dim_plant** — Grain: one row per plant (WERKS). Contains plant name, country, address, plant type (production / distribution / warehouse).
 
-    Quality (30%):
-      PPM score × 0.60
-      NCR rate score × 0.40
+**dim_date** — Standard date dimension with fiscal year, fiscal period, calendar week, quarter, year, holiday flag, working day flag. Fiscal year variant aligned to SAP T009 configuration.
 
-    Commercial (20%):
-      Invoice accuracy score × 0.70
-      PO variance score × 0.30
+**dim_commodity** — Grain: one row per commodity category. Maps SAP MATKL (material group) codes to standardized UNSPSC commodity codes and internal category hierarchy (Level 1 → Level 2 → Level 3).
 
-    Soft metrics (10%):
-      Manual assessment by category manager (innovation, responsiveness, ESG)
+### Key Relationships
 
-Rating thresholds: PREFERRED ≥90 | APPROVED ≥75 | CONDITIONAL ≥60 |
-                   PROBATION ≥45 | DISQUALIFIED <45
-
-**Step-by-Step Implementation**
-
-1. Define KPI data sources: OTD and OTIF from SAP GR timestamps vs PO delivery dates
-   (EKPO-EINDT vs EKBE-BUDAT); PPM from QM module (QA32); NCR rate from Quality
-   Notification (QM01); invoice accuracy from MIRO exception log; PO variance from
-   MIRO price variance posting (WE19 tolerance exceeded events).
-2. Build the KPI extraction SQL/ABAP query. Run monthly on the last business day.
-   Group by vendor number and rolling 12-month window.
-3. Apply normalisation. Define target values per category (automotive: PPM target
-   500, food: PPM target 1000, general industrial: PPM target 2000).
-4. Compute sub-scores for each dimension. Validate that sub-scores are in [0, 100].
-5. Apply weights and compute total score. Round to 1 decimal place.
-6. Assign rating label based on threshold table.
-7. Persist scorecard to the `SupplierScorecard` aggregate in the event store
-   (see `src/departments/02-supplier-management/`). Each scorecard is an immutable
-   event; never overwrite — append new monthly scorecard events.
-8. Generate automated email notification to supplier for scores below 75 (CONDITIONAL
-   or worse). Email includes score breakdown, trend chart (last 6 months), and
-   a 30-day corrective action request.
-9. Trigger automated Ariba Supplier Lifecycle workflow for PROBATION suppliers:
-   assign 90-day improvement plan with bi-weekly check-ins.
-10. Trigger DISQUALIFIED flag in SAP vendor master (block for new PO creation via
-    vendor block code) and notify category manager and legal.
-11. Publish quarterly aggregate to executive dashboard: average score by category,
-    score distribution histogram, number of suppliers per rating tier.
-
-**Example Calculation**
-
-    Supplier ABC, Q3 data:
-    OTD = 93.2% → norm = min(100, 93.2/95×100) = 98.1
-    OTIF = 89.1% → norm = min(100, 89.1/98×100) = 90.9
-    RFT = 96.0% → norm = min(100, 96.0/98×100) = 98.0
-
-    Delivery score = 98.1×0.35 + 90.9×0.45 + 98.0×0.20 = 34.3 + 40.9 + 19.6 = 94.8
-
-    PPM = 320 → norm = max(0, 100 - 320/500×100) = 36.0
-    NCR rate = 0.8% → norm = max(0, 100 - 0.8/2.0×100) = 60.0
-
-    Quality score = 36.0×0.60 + 60.0×0.40 = 21.6 + 24.0 = 45.6
-
-    Invoice accuracy = 98.5% → norm = min(100, 98.5/99×100) = 99.5
-    PO variance = 1.2% → norm = max(0, 100 - 1.2/2.0×100) = 40.0
-
-    Commercial score = 99.5×0.70 + 40.0×0.30 = 69.7 + 12.0 = 81.7
-    Soft = 72.0 (category manager assessment)
-
-    Total = 94.8×0.40 + 45.6×0.30 + 81.7×0.20 + 72.0×0.10
-          = 37.9 + 13.7 + 16.3 + 7.2 = 75.1 → APPROVED
+- fact_po_line → dim_supplier (LIFNR = dim_supplier.vendor_id)
+- fact_po_line → dim_material (MATNR = dim_material.material_id)
+- fact_po_line → dim_date on BEDAT (PO date), EINDT (delivery date), and AEDAT (change date — role-playing dimension)
+- fact_po_line → dim_company_code (BUKRS)
+- fact_po_line → dim_plant (WERKS)
+- fact_po_line → dim_purchasing_org (EKORG)
+- fact_gr_receipt → fact_po_line (EBELN + EBELP — many-to-one, multiple GR lines per PO item)
+- fact_compliance_assessment → dim_supplier (vendor_id)
+- dim_material → dim_commodity (material_group_code)
 
 ---
 
-### Model 3: Spend Analysis Clustering — Spend Cube & Pareto
+## 7. Data Dictionary
 
-**Business Problem Solved**
+### Table: fact_po_line
 
-Creates a structured, searchable spend cube (Category × Supplier × Business Unit × Country)
-enabling category managers to identify savings opportunities, consolidation targets, and
-maverick spend. Without spend classification, procurement operates blind.
+- **Table Name**: fact_po_line
+- **Description**: Central fact table containing one row per purchase order line item, capturing all procurement transactional measures
+- **Granularity**: One row per SAP PO line (EBELN + EBELP)
+- **Required Fields**:
+  - po_number | VARCHAR(10) | SAP PO number (EKKO.EBELN)
+  - po_item | VARCHAR(5) | PO line item number (EKPO.EBELP)
+  - po_date | DATE | PO creation date (EKKO.BEDAT)
+  - vendor_id | VARCHAR(10) | SAP vendor number (EKKO.LIFNR)
+  - material_id | VARCHAR(18) | SAP material number (EKPO.MATNR)
+  - plant_id | VARCHAR(4) | Plant (EKPO.WERKS)
+  - company_code | VARCHAR(4) | Company code (EKKO.BUKRS)
+  - purchasing_org | VARCHAR(4) | Purchasing organization (EKKO.EKORG)
+  - commodity_code | VARCHAR(9) | Material group mapped to UNSPSC
+  - po_quantity | DECIMAL(13,3) | PO ordered quantity (EKPO.MENGE)
+  - uom | VARCHAR(3) | Unit of measure GS1 code (EKPO.MEINS)
+  - net_price | DECIMAL(11,2) | Net price per price unit in PO currency (EKPO.NETPR)
+  - price_unit | DECIMAL(5,0) | Price unit quantity (EKPO.PEINH)
+  - net_value_loc | DECIMAL(15,2) | Net value in PO/local currency (EKPO.NETWR)
+  - currency_code | VARCHAR(3) | PO currency ISO code (EKKO.WAERS)
+  - net_value_eur | DECIMAL(15,2) | Net value converted to EUR using ECB rate on PO date
+  - scheduled_delivery_date | DATE | Committed delivery date (EKET.EINDT, earliest open line)
+  - gr_quantity | DECIMAL(13,3) | Total GR quantity posted (sum from MSEG BWART 101 minus 102)
+  - open_quantity | DECIMAL(13,3) | po_quantity minus gr_quantity (floored at 0)
+  - open_value_eur | DECIMAL(15,2) | open_quantity * net_price_eur
+  - po_status | VARCHAR(20) | Derived: OPEN / PARTIALLY_DELIVERED / DELIVERED / CANCELLED
+  - is_overdue | BIT | 1 if scheduled_delivery_date < GETDATE() AND open_quantity > 0
+  - days_overdue | INT | DATEDIFF(day, scheduled_delivery_date, GETDATE()) when is_overdue=1, else 0
+  - approval_status | VARCHAR(20) | Derived from EKKO.FRGKE: RELEASED / PENDING / BLOCKED
+  - po_type | VARCHAR(4) | SAP document type (EKKO.BSART)
+  - account_assignment | VARCHAR(1) | Account assignment category (EKPO.KNTTP)
+  - deletion_flag | BIT | 1 if EKKO.LOEKZ='L' OR EKPO.LOEKZ='L'
+  - load_date | DATETIME | ETL load timestamp (UTC)
+  - source_system | VARCHAR(20) | 'SAP_S4H' constant
+- **Primary Key**: po_number + po_item
+- **Relationships**: FK to dim_supplier (vendor_id), dim_material (material_id), dim_plant (plant_id), dim_company_code (company_code), dim_purchasing_org (purchasing_org), dim_date (po_date, scheduled_delivery_date)
+- **Required Transformations**: Convert NETWR from PO currency to EUR using dim_fx_rate; derive po_status from gr_quantity vs. po_quantity; calculate is_overdue and days_overdue at load time; map MATKL to UNSPSC via commodity mapping table
+- **Cleaning Rules**: Exclude rows where deletion_flag = 1; exclude inter-company POs (BSART = 'UB'); exclude CapEx POs (KNTTP = 'A'); set gr_quantity = 0 when no MSEG records exist for the PO item; handle NULL MATNR (text-based service items) by setting material_id = 'NOMAT' and populating short_text field
+- **Validations**: net_value_eur must not be NULL; open_quantity must be ≥ 0; po_date must be ≤ load_date; scheduled_delivery_date must be ≥ po_date
+- **Use in Analysis**: Primary fact table for all spend analysis, PO follow-up, open order risk, overdue KPIs, price variance analysis, and buyer performance metrics
 
-**Mathematical Formulation**
+### Table: dim_supplier
 
-Spend Cube dimensions:
+- **Table Name**: dim_supplier
+- **Description**: Supplier master dimension combining SAP vendor master (LFA1/LFB1) with Ariba SLP profile and compliance data
+- **Granularity**: One row per active supplier (LIFNR)
+- **Required Fields**:
+  - vendor_id | VARCHAR(10) | SAP vendor number (LFA1.LIFNR)
+  - ariba_anid | VARCHAR(16) | Ariba Network ID (from cross-reference table)
+  - vendor_name | VARCHAR(100) | Vendor name (LFA1.NAME1)
+  - vendor_name_2 | VARCHAR(100) | Additional name (LFA1.NAME2)
+  - country_code | VARCHAR(3) | ISO 3166-1 alpha-3 country code (LFA1.LAND1 mapped)
+  - country_name | VARCHAR(50) | Full country name
+  - city | VARCHAR(35) | City (LFA1.ORT01)
+  - postal_code | VARCHAR(10) | Postal code (LFA1.PSTLZ)
+  - payment_terms | VARCHAR(4) | SAP payment terms (LFB1.ZTERM)
+  - currency | VARCHAR(3) | Vendor currency (LFB1.WAERS)
+  - kraljic_classification | VARCHAR(20) | STRATEGIC / LEVERAGE / BOTTLENECK / NON_CRITICAL
+  - uflpa_flag | BIT | 1 = identified as potential XUAR operations risk
+  - uflpa_screening_date | DATE | Date of last UFLPA screening
+  - uflpa_clearance_doc | VARCHAR(200) | Reference to clearance document (URL or doc ID)
+  - csddd_tier | VARCHAR(10) | TIER1 (≥€1M spend) / TIER2 / OUT_OF_SCOPE
+  - csddd_assessment_date | DATE | Date of last CSDDD Art. 7 human rights assessment
+  - csddd_status | VARCHAR(20) | COMPLIANT / NON_COMPLIANT / PENDING / NOT_ASSESSED
+  - iso28000_certified | BIT | 1 = holds valid ISO 28000:2022 certification
+  - iso28000_expiry | DATE | ISO 28000 certificate expiry date
+  - is_active | BIT | 1 = active vendor (LFA1.SPRAS not blocked)
+  - is_blocked | BIT | 1 = purchasing block (LFM1.SPERM = 'X')
+  - load_date | DATETIME | ETL load timestamp
+- **Primary Key**: vendor_id
+- **Relationships**: Referenced by fact_po_line, fact_gr_receipt, fact_compliance_assessment
+- **Required Transformations**: Join LFA1 + LFB1 + LFM1 in SAP; merge with Ariba SLP data on ANID cross-reference; apply UFLPA entity list fuzzy match (RapidFuzz ≥85% threshold); map LFA1.LAND1 (2-char SAP code) to ISO 3166-1 alpha-3
+- **Cleaning Rules**: Exclude one-time vendors (LFA1.XCPDK = 'X'); normalize vendor name (strip leading/trailing spaces, convert to title case); deduplicate where same legal entity has multiple LIFNR (flag with parent_vendor_id)
+- **Validations**: vendor_id must be unique; country_code must exist in ISO 3166-1; payment_terms must exist in SAP T052 table; if csddd_tier = 'TIER1' then csddd_assessment_date must not be NULL
+- **Use in Analysis**: UFLPA compliance dashboard, CSDDD status tracking, spend by supplier country, supplier block monitoring, Kraljic portfolio view
 
-    Spend(c, s, b, t) = Σ PO_line_value
-        where category = c, supplier = s, business_unit = b, time_period = t
+### Table: fact_compliance_assessment
 
-Pareto (80/20) Analysis:
-
-    Sort suppliers by cumulative spend descending.
-    Identify S_80 = smallest set of suppliers whose cumulative spend ≥ 80% of total.
-    Typically: |S_80| / |S_total| ≈ 0.20 (20% of suppliers = 80% of spend).
-
-Category Concentration (HHI-equivalent for categories):
-
-    HHI_cat = Σ (spend_i / total_spend)²   for all suppliers i in category
-    HHI_cat > 0.25 → high concentration risk; consider dual-sourcing.
-
-**Step-by-Step Implementation**
-
-1. Extract 3-year PO line data from SAP (table EKPO joined to EKKO, EKBE). Fields:
-   MATNR (material), LIFNR (vendor), WERKS (plant), MENGE, NETPR, WAERS, BEDAT.
-2. Enrich with UNSPSC L4 code from material master (MARA-MATKL mapped to UNSPSC
-   via a maintained mapping table). Target: 95%+ coverage.
-3. FX normalisation: convert all spend to EUR using ECB rates at the PO date.
-   Maintain a daily FX rate table (source: ECB SDMX API, free and open).
-4. Build dbt model: `fct_spend_cube` with grain = (UNSPSC_L4, vendor, plant,
-   fiscal_period). Aggregate net PO value and PO line count.
-5. Compute Pareto analysis: rank suppliers by total 12-month spend. Calculate
-   cumulative % of spend. Tag each supplier as Top-20%, Next-30%, Long-Tail.
-6. Run K-Means clustering (k=10–20) on supplier spend profile vector
-   [spend_by_category_1, ..., spend_by_category_N] to identify supplier segments
-   (broad-line generalists, specialists, niche). Use scikit-learn KMeans.
-7. Compute HHI per L4 category. Flag categories with HHI > 0.25 for dual-sourcing
-   review.
-8. Publish spend cube as interactive Power BI / SAC dashboard with drill-down from
-   L1 UNSPSC → L4, region → country → plant, and supplier group → individual.
-9. Export top-50 savings opportunities: categories with HHI > 0.25, low contract
-   coverage (<60%), or large long-tail (>40 suppliers in same L4 code).
-10. Schedule quarterly spend refresh. Annual deep-cleanse to re-validate UNSPSC
-    classifications as product ranges and suppliers evolve.
-
----
-
-### Model 4: Tender TCO Model
-
-**Business Problem Solved**
-
-Purchase price is a poor proxy for true supplier cost. A supplier 15% cheaper on
-unit price but with 3× higher quality defect rate, 2× longer lead time, and
-unreliable delivery can be more expensive in total. TCO quantifies all cost elements
-enabling objective, apples-to-apples comparison in tenders.
-
-**Mathematical Formulation**
-
-    TCO = P_purchase + C_transaction + C_quality + C_logistics + C_risk
-
-Where:
-
-    P_purchase = unit_price × annual_volume
-    C_transaction = (PO_cost + invoice_cost + payment_cost) × annual_order_frequency
-    C_quality = (PPM_rate / 1,000,000) × annual_volume × rework_cost_per_unit
-                + NCR_rate × annual_volume × NCR_avg_cost
-                + warranty_return_rate × annual_volume × warranty_cost_per_unit
-    C_logistics = freight_rate × annual_weight + customs_duty × annual_value
-                  + lead_time_days × daily_inventory_carry_cost × safety_stock_multiplier
-    C_risk = (probability_of_disruption × expected_disruption_cost)
-             + (concentration_premium: add 5% if single source in critical category)
-
-**Step-by-Step Implementation**
-
-1. Build TCO template in Excel (for buyer use during RFQ) and Python (for
-   batch comparison of multiple bidders). The Python version uses pandas DataFrames
-   with one row per bidder × one column per cost element.
-2. Standardise cost assumptions: rework cost per unit is set by Engineering and
-   Finance annually. NCR average cost (including buyer/supplier time, logistics
-   return, corrective action administration) is costed by Quality. These are fixed
-   inputs — buyers do not adjust them.
-3. Collect bid data from RFQ: unit price, MOQ, lead time, freight terms (Incoterms),
-   payment terms, and quality certifications.
-4. Pull historical PPM and NCR data for incumbent suppliers from QM module. For new
-   suppliers, use industry benchmark PPM adjusted for certification level.
-5. Compute logistics cost: for EXW/FCA terms, add freight quote. For DDP, freight
-   is included — ensure the freight component is visible (request unbundled pricing).
-6. Compute risk premium: use the supplier risk score from the risk module (EAL —
-   Expected Annual Loss). Add concentration premium if award would create >50%
-   single-source dependency.
-7. Rank bidders by TCO, not by unit price. Present TCO waterfall chart to sourcing
-   committee (shows how each cost element contributes).
-8. Document TCO savings vs incumbent / vs budget in the savings tracker.
-   "Savings" = (TCO_baseline - TCO_awarded) × annual_volume.
-9. Include TCO model as a mandatory attachment to the Award Recommendation memo.
-   This is an audit trail requirement under CSDDD and most corporate governance
-   frameworks.
-
----
-
-### Model 5: Contract Index-Linked Pricing
-
-**Business Problem Solved**
-
-Commodity-linked contracts (steel, aluminium, resins, energy) must have structured
-price adjustment mechanisms. Without them, either the supplier absorbs cost increases
-(creating distress and supply risk) or the buyer pays spot prices through renegotiation
-(losing price certainty).
-
-**Mathematical Formulation**
-
-    P_adjusted = P_base × [α + β × (I_current / I_base) + γ × (E_current / E_base)]
-
-Where:
-- P_base = contract base price at execution date
-- α = fixed component (not index-linked) — typically 30–50% for labour/overhead
-- β = commodity index weight — e.g., LME Aluminium
-- γ = energy index weight — e.g., TTF Natural Gas (Europe)
-- α + β + γ = 1.0
-- I_current = current index value (monthly average)
-- I_base = index value at contract base date
-- E_current = current energy index
-- E_base = energy index at base date
-
-Price escalation cap (common clause): maximum ±10% per 12-month period regardless
-of index movement.
-
-**Step-by-Step Implementation**
-
-1. Define the index mix at contract negotiation. Benchmarks: injection-moulded
-   plastics — 40% resin index + 20% energy + 40% fixed. Steel fabrications —
-   50% HRC steel index + 10% energy + 40% fixed.
-2. Select publicly available, verifiable indices only: LME (London Metal Exchange),
-   Platts, ICIS, Eurostat energy price index, CRU. Avoid proprietary indices.
-3. Specify base period: typically the monthly average for the month of contract
-   signature, or an average of 3 months centred on signature date.
-4. Implement automated price adjustment calculation in Python. Source current index
-   values via API (LME has a REST API; ICIS requires subscription; Eurostat is
-   free via SDMX API).
-5. Load adjusted prices to SAP contract conditions (ME33K → condition record update
-   via BAPI_CONTRACT_CHANGE or IDOCtype ORDERS05) on a monthly or quarterly
-   cadence per contract terms.
-6. Generate price change notification to supplier and buyer 10 business days before
-   effective date.
-7. Maintain audit trail: every price change event logged with index values used,
-   formula output, effective date, and the user/system that triggered the update.
+- **Table Name**: fact_compliance_assessment
+- **Description**: Tracks the compliance status of each supplier against each regulatory framework (UFLPA, CSDDD, REACH, ISO 28000)
+- **Granularity**: One row per supplier per compliance framework per assessment period
+- **Required Fields**:
+  - assessment_id | BIGINT IDENTITY | Surrogate key
+  - vendor_id | VARCHAR(10) | SAP vendor number
+  - framework | VARCHAR(20) | 'UFLPA' / 'CSDDD' / 'REACH' / 'ISO28000'
+  - assessment_date | DATE | Date assessment was completed
+  - assessment_result | VARCHAR(20) | COMPLIANT / NON_COMPLIANT / PENDING / WAIVED
+  - risk_score | DECIMAL(5,2) | Numeric risk score 0–100 (higher = higher risk)
+  - assessor_id | VARCHAR(50) | User ID of assessor (from Ariba or manual input)
+  - document_ref | VARCHAR(500) | Reference to supporting document (SharePoint URL or Ariba doc ID)
+  - next_review_date | DATE | Scheduled next assessment date
+  - notes | VARCHAR(2000) | Free-text notes from assessor
+  - load_date | DATETIME | ETL timestamp
+- **Primary Key**: assessment_id
+- **Relationships**: FK to dim_supplier (vendor_id); FK to dim_date (assessment_date)
+- **Required Transformations**: CSDDD next_review_date = assessment_date + 3 years (Art. 10 periodicity for Tier-1); UFLPA next_review_date = assessment_date + 1 year; auto-set assessment_result = 'PENDING' when next_review_date < GETDATE() and no newer assessment exists
+- **Cleaning Rules**: One active record per vendor per framework (use assessment_date DESC to identify current); archive superseded assessments with is_current = 0 flag
+- **Validations**: document_ref must not be NULL for COMPLIANT or NON_COMPLIANT results; assessment_date must not be in the future; risk_score must be in range [0, 100]
+- **Use in Analysis**: CSDDD compliance dashboard, UFLPA risk heat map, audit evidence package for regulatory inspectors
 
 ---
 
-### Model 6: e-Auction Reverse Auction Mathematics
+## 8. Transformation Rules
 
-**Business Problem Solved**
+1. **Currency Conversion**: Join fact_po_line to dim_fx_rate on currency_code and po_date. Compute net_value_eur = net_value_loc / EUR_RATE. For dates with no ECB rate (weekends, public holidays), use the most recent prior business day rate. Log any PO where conversion was performed with a non-current-day rate.
 
-Reverse auctions create real-time competitive tension among pre-qualified suppliers,
-driving prices toward market equilibrium. Academic research (Jap, 2002; Emiliani,
-2000) shows average savings of 15–25% vs negotiated price. Most effective for
-commodity/standardised products with ≥3 qualified bidders.
+2. **PO Status Derivation**: After aggregating GR quantities from MSEG, apply: IF open_quantity = 0 THEN 'DELIVERED'; ELSE IF gr_quantity > 0 AND open_quantity > 0 THEN 'PARTIALLY_DELIVERED'; ELSE IF EKKO.LOEKZ = 'L' THEN 'CANCELLED'; ELSE 'OPEN'.
 
-**Mathematical Formulation**
+3. **Overdue Calculation**: Set is_overdue = 1 when scheduled_delivery_date < CAST(GETDATE() AS DATE) AND open_quantity > 0 AND po_status NOT IN ('DELIVERED', 'CANCELLED'). Calculate days_overdue = DATEDIFF(day, scheduled_delivery_date, GETDATE()). Set days_overdue = 0 for non-overdue lines.
 
-**Rank Score (for multi-attribute auctions):**
+4. **Delivery Date Resolution**: When multiple EKET schedule lines exist per EBELP, select the earliest EINDT with REMNG > 0 (earliest outstanding delivery commitment). If no EKET records exist, use EKPO.EINDT as fallback.
 
-    Score_i = w_price × (P_min / P_i) × 100 + Σ_{j} w_j × Q_{i,j}
+5. **UNSPSC Commodity Mapping**: Apply lookup table (matkl_to_unspsc) joining on EKPO.MATKL to assign UNSPSC Level-3 code. Where no mapping exists, assign UNSPSC = '00000000' and flag for manual classification. Mapping coverage must be ≥ 95% of PO value.
 
-Where:
-- P_i = bid price from supplier i
-- P_min = current lowest bid price
-- Q_{i,j} = normalised quality score for attribute j (delivery, payment terms, etc.)
-- w_price + Σ w_j = 1.0
+6. **Vendor Name Normalization**: Apply Python pipeline step: strip() to remove whitespace; title case conversion; remove legal suffixes (GmbH, S.A., Ltd, Co., Inc., BV, SAS, AG) for UFLPA fuzzy matching only (retain original name in display field).
 
-**Reserve price (minimum acceptable bid):**
+7. **UFLPA Fuzzy Match**: Python script using RapidFuzz token_sort_ratio between normalized vendor names and normalized CBP entity list names. Matches ≥ 85% score → set uflpa_flag = 1 and record match details in uflpa_match log table. Matches 70–84% → set uflpa_flag = 0 with manual_review_required = 1. Matches < 70% → no flag.
 
-    P_reserve = TCO_target - C_non_price_elements
-    (Set based on should-cost model; never disclosed to suppliers)
+8. **Approval Status Mapping**: Map EKKO.FRGKE values: blank = 'RELEASED' (no approval needed, below threshold); '1' = 'PENDING' (partial approval); '2' = 'PENDING' (full release pending); 'R' = 'RELEASED'; 'B' = 'BLOCKED'. Derive approval_sla_breached = 1 when approval_status = 'PENDING' AND DATEDIFF(hour, po_date, GETDATE()) > SLA_hours (SLA_hours = 24 for <€5K; 48 for €5K–€50K; 72 for >€50K).
 
-**Step-by-Step Implementation**
+9. **Spend Aggregation**: For spend analysis, aggregate fact_po_line by (vendor_id, commodity_code, company_code, fiscal_year, fiscal_period). Sum net_value_eur where po_status NOT IN ('CANCELLED') and deletion_flag = 0. Compute running totals using window functions for trend analysis.
 
-1. Pre-qualify suppliers: minimum 3 bidders mandatory. Fewer than 3 creates
-   pseudo-competition and is likely to be challenged by internal audit.
-2. Build should-cost model for the product/service to establish the reserve price.
-   Should-cost = material cost + labour + overhead + reasonable margin (8–12%
-   for industrial goods).
-3. Configure event in Ariba Sourcing: define bid line items, lot structure,
-   opening prices (typically last price paid), decrement rules (minimum bid
-   improvement: 0.5% of lot value or €500, whichever is greater), event duration
-   (60–90 minutes standard, with automatic 5-minute extension if a bid arrives
-   in final 5 minutes — the "overtime" rule).
-4. Conduct supplier briefing: explain rules, test connectivity, confirm
-   Incoterms for the lot (Incoterms® 2020 — ensure all bidders quote on the
-   same basis, e.g., all DDP destination warehouse).
-5. Run the event. Monitor in real-time. Capture all bids with timestamps (audit
-   log mandatory).
-6. Post-event: extract bid history. Compute final TCO for each bidder at their
-   closing bid price. Confirm reserve price was met.
-7. Award within 5 business days. Send award/non-award notifications to all
-   participants simultaneously.
-8. Document savings: baseline = (P_baseline - P_awarded) × volume × contract term.
-   Enter in savings tracker with event ID reference.
+10. **Maverick Spend Flag**: Join Accounts Payable invoice table (RBKP/RSEG) to fact_po_line on EBELN. Invoices with no matching EBELN (no PO reference) are classified as maverick spend. Compute maverick_spend_eur = SUM(invoice_amount_eur) for unmatched invoices by cost center and GL account.
+
+11. **PO-to-Invoice Match Rate**: For each PO line with WEPOS = 'X' (GR-based), compute 3-way match rate = (count of invoices matched on PO + GR) / (total invoices for PO). For POs with WEPOS = blank (PO-based matching only), compute 2-way match rate. Report separately.
+
+12. **Price Variance Calculation**: Join EKPO.NETPR to SAP condition records (KONP table, condition type PB00 or PBXX) for the same material, vendor, plant, and validity date range. Compute price_variance_pct = (EKPO.NETPR - KONP.KBETR) / KONP.KBETR * 100. Flag items where ABS(price_variance_pct) > 5% for buyer review.
+
+13. **Spend Under Management Calculation**: Classify each spend transaction as 'MANAGED' (has valid PO reference in approved system) or 'UNMANAGED' (no PO or PO created after invoice). Compute SUM_rate = SUM(net_value_eur WHERE managed='MANAGED') / SUM(net_value_eur) * 100 by company code and fiscal period.
+
+14. **ABC Classification at PO Level**: For inventory items (account assignment category blank or K), join to inventory master ABC classification (dim_material.abc_class). Propagate ABC class to PO line. For service/CapEx items without material number, assign ABC = 'C' as default.
+
+15. **Historical Load Deduplication**: During initial 3-year historical load, deduplicate MSEG records where the same MBLNR + MJAHR + ZEILE appears multiple times due to SLT replication (keep latest CPUDT + CPUTM). Apply SHA-256 hash of key fields to detect true duplicates vs. legitimate reversals.
 
 ---
 
-## Phase 4: ML/AI Pipeline — Step-by-Step
+## 9. Business Rules
 
-### ML Model 1: NLP Risk Classification (DistilBERT)
+### Rule 1: PO Approval Threshold
 
-**Business Problem Solved**
+- **Rule Name**: PO_APPROVAL_THRESHOLD
+- **Description**: Purchase orders above defined thresholds require manager approval before release to supplier
+- **Logic Condition**: IF net_value_eur < 5,000 → no approval required (auto-release); IF 5,000 ≤ net_value_eur < 50,000 → Category Manager approval required; IF net_value_eur ≥ 50,000 → Director of Procurement approval required; IF net_value_eur ≥ 500,000 → CPO approval required
+- **Expected Result**: POs above threshold show approval_status = 'PENDING' until approved; released POs show 'RELEASED'; SLA breach alert fired when approval not completed within SLA window
+- **Example**: PO 4500012345 for €75,000 for metal components requires Director approval within 48 hours of PO creation
+- **Exception**: Emergency POs (PO type 'FO' — Framework Call-off) are pre-approved under the framework agreement; BSART = 'FO' bypasses individual approval workflow
+- **Required Evidence**: SAP release strategy configuration screenshot (transaction OME9); approval log from SAP workflow (SWWL); Power Automate flow run history showing escalation alert sent after SLA breach
 
-Procurement teams cannot manually monitor news and regulatory filings for 10,000+
-suppliers. NLP models continuously scan structured and unstructured text (news,
-sanctions lists, court filings, NGO reports) and classify suppliers by risk type
-(financial distress, ESG violation, sanctions, quality recall, geopolitical).
+### Rule 2: UFLPA Mandatory Clearance
 
-**Model Architecture**
+- **Rule Name**: UFLPA_CLEARANCE_REQUIRED
+- **Description**: Any active supplier with uflpa_flag = 1 must provide CBP-accepted clearance documentation before new POs can be released
+- **Logic Condition**: IF dim_supplier.uflpa_flag = 1 AND dim_supplier.uflpa_clearance_doc IS NULL THEN block PO release AND generate compliance alert
+- **Expected Result**: POs referencing UFLPA-flagged suppliers without clearance docs are blocked; alert sent to Trade Compliance team and Category Manager
+- **Example**: Supplier "Xinjiang Textile Co." (LIFNR: 1000567) matched CBP entity list with 92% confidence; all open POs totaling €2.3M flagged; buyer notified within 24 hours
+- **Exception**: Suppliers with CBP-issued "rebuttal of presumption" letter on file (clearance_doc_type = 'CBP_REBUTTAL') are exempt from blocking; must be renewed annually
+- **Required Evidence**: UFLPA entity list match log with confidence scores; Ariba compliance questionnaire response showing clearance document upload; Trade Compliance Manager sign-off email
 
-DistilBERT (Sanh et al., 2019) fine-tuned for multi-label classification:
-- Base: `distilbert-base-uncased` from HuggingFace (Apache-2.0 licence)
-- Task: multi-label classification (each text can trigger multiple risk labels)
-- Labels: FINANCIAL_DISTRESS, SANCTIONS_ALERT, ESG_VIOLATION, QUALITY_RECALL,
-  GEOPOLITICAL_RISK, LABOUR_VIOLATION, ENVIRONMENTAL_INCIDENT, NONE
-- Output: probability score per label; threshold 0.60 triggers alert
+### Rule 3: CSDDD Assessment Currency
 
-**Training Data Requirements**
+- **Rule Name**: CSDDD_ASSESSMENT_CURRENCY
+- **Description**: CSDDD Tier-1 suppliers (≥€1M annual spend per legal entity) must have a human rights and environmental risk assessment not older than 3 years
+- **Logic Condition**: IF csddd_tier = 'TIER1' AND (csddd_assessment_date IS NULL OR DATEDIFF(year, csddd_assessment_date, GETDATE()) ≥ 3) THEN csddd_status = 'NON_COMPLIANT' AND generate escalation alert
+- **Expected Result**: Non-compliant Tier-1 suppliers shown in red on CSDDD dashboard; automated email sent to SLP team with supplier name, last assessment date, and days until compliance breach
+- **Example**: Supplier with LIFNR 1001234, annual spend €4.2M, last assessment 2022-03-15 → assessment is 4+ years old → NON_COMPLIANT → alert to SLP team
+- **Exception**: New suppliers onboarded within the past 6 months have a 180-day grace period before assessment is mandatory (CSDDD_GRACE_PERIOD flag in dim_supplier)
+- **Required Evidence**: Ariba SLP assessment record with date and assessor; document retention log confirming 5-year storage per CSDDD Art. 23; SLP team confirmation email
 
-| Attribute | Specification |
-|-----------|--------------|
-| Volume | Minimum 5,000 labelled examples per class (40,000+ total) |
-| Sources | Reuters, Bloomberg (licensed), NGO reports, SEC/EDGAR filings, court records |
-| Labelling | Dual-annotator agreement required; Cohen's Kappa ≥ 0.80 |
-| Language | English only (per CLAUDE.md language policy) |
-| Date range | 5 years minimum for temporal coverage |
-| Balance | Oversample minority classes (SANCTIONS_ALERT typically rare) |
+### Rule 4: Single-Source Critical Item Risk
 
-**Feature Engineering**
+- **Rule Name**: SINGLE_SOURCE_CRITICAL_RISK
+- **Description**: Open PO lines for ABC-A classified items from a single active supplier with lead time > 60 days and no safety stock coverage are classified as HIGH supply risk
+- **Logic Condition**: IF dim_material.abc_class = 'A' AND COUNT(DISTINCT vendor_id) per material = 1 AND avg_lead_time_days > 60 AND safety_stock_qty = 0 AND open_quantity > 0 THEN risk_level = 'HIGH'
+- **Expected Result**: HIGH-risk PO lines appear on Open Orders Risk dashboard with red flag; alert to Category Manager and Supply Planning
+- **Example**: Material 1000567 (A-class electronic component), sole supplier LIFNR 2001234, lead time 90 days, safety stock = 0, open PO quantity 5,000 units due in 45 days
+- **Exception**: Items with confirmed production allocation from supplier (po_confirmation_status = 'CONFIRMED') downgrade from HIGH to MEDIUM risk
+- **Required Evidence**: ABC classification report from inventory module; lead time data from MARC table (WEBAZ field); safety stock from MRP data (MINBE in MARC)
 
-1. Text preprocessing: lowercase, remove HTML tags, normalise Unicode,
-   truncate to 512 tokens (DistilBERT maximum).
-2. Entity linking: use spaCy NER to extract organisation names. Map to vendor
-   master using fuzzy string matching (rapidfuzz library, MIT licence).
-   Only score articles where confidence of supplier mention ≥ 0.85.
-3. Temporal features: days since article publication (recent articles weighted
-   higher in risk score aggregation).
-4. Source credibility weight: Reuters/AP = 1.0, specialised trade press = 0.8,
-   social media = 0.4 (use with caution).
+### Rule 5: Soft Delete on PO Lines
 
-**Model Training Procedure**
+- **Rule Name**: PO_SOFT_DELETE_ONLY
+- **Description**: Purchase order lines must never be physically deleted from the analytics data warehouse; cancellation must be reflected via deletion_flag = 1 and po_status = 'CANCELLED'
+- **Logic Condition**: When EKPO.LOEKZ = 'L' is detected in delta load, set deletion_flag = 1 and po_status = 'CANCELLED' on the existing fact_po_line record; do NOT delete the row from Azure SQL
+- **Expected Result**: Cancelled POs remain in fact_po_line with deletion_flag = 1; excluded from active spend and open order calculations; retained for audit trail and spend history
+- **Exception**: Test POs created in SAP QAS (quality assurance system) system — these are excluded entirely during initial load by filtering on system ID; they are never loaded into production Azure SQL
+- **Required Evidence**: Row count comparison before and after delta load showing existing PO rows updated (not deleted); Azure SQL audit log confirming no DELETE statements executed on fact_po_line
 
-1. Split dataset: 70% train, 15% validation, 15% test. Stratify by label combination.
-2. Tokenise with `AutoTokenizer.from_pretrained("distilbert-base-uncased")`.
-3. Define model: `AutoModelForSequenceClassification` with `num_labels=8`,
-   `problem_type="multi_label_classification"`.
-4. Loss function: `BCEWithLogitsLoss` (binary cross-entropy per label).
-5. Optimizer: AdamW, learning rate 2e-5, weight decay 0.01.
-6. Training: 5 epochs, batch size 32, linear warmup for first 10% of steps.
-7. Checkpoint best model on validation macro-F1.
-8. Apply label-specific probability thresholds (tuned on validation set to
-   maximise F1 per class — higher-stakes classes like SANCTIONS_ALERT use
-   threshold 0.45 to favour recall over precision).
+### Rule 6: 3-Way Match Mandatory for GR-Based POs
 
-**Hyperparameter Tuning**
-
-Use Optuna (MIT licence) for hyperparameter search:
-- Learning rate: log-uniform [1e-5, 5e-5]
-- Batch size: {16, 32}
-- Warmup ratio: uniform [0.05, 0.20]
-- Max epochs: {3, 5, 7}
-
-Run 50 trials. Select based on macro-F1 on validation set.
-
-**Validation Metrics & Thresholds**
-
-| Metric | Minimum Threshold | Target |
-|--------|------------------|--------|
-| Macro-F1 | 0.75 | ≥ 0.85 |
-| SANCTIONS_ALERT Recall | 0.90 | ≥ 0.95 |
-| Precision (all) | 0.70 | ≥ 0.80 |
-| False Positive Rate | < 0.15 | < 0.08 |
-
-**Deployment to Production**
-
-1. Serialise model with `model.save_pretrained()` and tokeniser with
-   `tokenizer.save_pretrained()`. Store in MLflow Model Registry.
-2. Serve via BentoML (Apache-2.0): expose REST endpoint
-   `POST /api/v1/supplier-risk/classify` accepting `{text: str, supplier_id: str}`.
-3. Input validation: reject requests with text < 20 tokens or > 600 tokens.
-4. Batch inference: news feed ingestion runs every 4 hours via Apache Airflow DAG.
-   Batch up to 10,000 articles per run.
-5. Output persisted to risk event store. High-confidence alerts (top label > 0.80)
-   trigger real-time notification via webhook to Ariba Supplier Lifecycle.
-
-**Monitoring & Drift Detection**
-
-1. Log all predictions with timestamps, article IDs, and confidence scores.
-2. Weekly: compute production macro-F1 on a sample of 200 human-reviewed
-   predictions. Alert if macro-F1 drops below 0.72 (5-point deterioration from
-   baseline).
-3. Monthly: run concept drift test (population stability index — PSI) on the
-   input text embedding distribution. PSI > 0.25 triggers retraining flag.
-4. Monitor false positive rate via buyer feedback: add "Was this alert useful?"
-   button in the risk dashboard. Track thumbs-down rate; alert if > 25%.
-
-**Retraining Cadence**
-
-- Scheduled retraining: quarterly, incorporating 3 months of new labelled data.
-- Event-triggered retraining: when PSI > 0.25 or macro-F1 < 0.72 on production
-  monitoring.
-- Emergency retraining: after a major geopolitical event (e.g., new sanctions
-  regime) — within 5 business days, with priority labelling of event-related articles.
+- **Rule Name**: THREE_WAY_MATCH_GR_POS
+- **Description**: All PO lines with WEPOS = 'X' (goods receipt indicator active) must complete 3-way match (PO → GR → Invoice) before invoice is released for payment
+- **Logic Condition**: Invoice for WEPOS='X' PO items flagged as MATCH_EXCEPTION if invoice_quantity > gr_quantity OR invoice_unit_price > po_unit_price * 1.05 (5% tolerance)
+- **Expected Result**: Matched invoices proceed to payment; exceptions routed to buyer for review and approval within 5 business days
+- **Example**: Invoice for PO 4500099001, item 10, for 100 units at €50 each; GR posted for only 80 units → exception flagged; buyer contacts supplier to hold invoice pending remaining GR
+- **Exception**: Service POs (PSTYP = 'D') use 2-way match (PO → Invoice); no GR required
+- **Required Evidence**: SAP MRBR report (blocked invoice list) vs. Power BI match exception count; Finance AP team sign-off on reconciliation
 
 ---
 
-### ML Model 2: Spend Categorisation (XGBoost / LightGBM)
+## 10. KPIs and Formulas
 
-**Business Problem Solved**
+### KPI 1: Purchase Order On-Time Delivery Rate (PO OTD)
 
-Manually classifying invoices and PO line items to UNSPSC codes is expensive and
-inconsistent. Auto-classification at ≥90% accuracy with a human-review queue for
-the remaining 10% reduces classification cost by 80% and enables real-time spend
-visibility.
+- **KPI Name**: PO On-Time Delivery Rate
+- **Objective**: Measure the percentage of PO lines where goods receipt date ≤ committed delivery date, indicating supplier delivery reliability at the purchase order level
+- **Formula**:
+  ```dax
+  PO_OTD_Rate =
+  DIVIDE(
+    COUNTROWS(FILTER(fact_po_line, fact_po_line[is_overdue] = 0 && fact_po_line[po_status] = "DELIVERED")),
+    COUNTROWS(FILTER(fact_po_line, fact_po_line[po_status] = "DELIVERED")),
+    0
+  )
+  ```
+  SQL equivalent: `COUNT(CASE WHEN gr_date <= scheduled_delivery_date THEN 1 END) / COUNT(*) WHERE po_status = 'DELIVERED'`
+- **Data Source**: fact_po_line joined to fact_gr_receipt (first GR posting date per PO item)
+- **Calculation Level**: Supplier, commodity, plant, company code, fiscal period
+- **Frequency**: Daily refresh; reported weekly to Category Management, monthly to CPO
+- **Owner**: Procurement Operations Manager
+- **Interpretation**: Measures delivery punctuality against committed dates; excludes open and cancelled POs; counts first GR date vs. earliest scheduled delivery date
+- **Thresholds**: Green ≥ 95% | Yellow 90–94% | Red < 90%
+- **Traffic Light**: Green = world-class; Yellow = improvement required; Red = escalation to Supplier Performance team
+- **Recommended Action**: Red suppliers: initiate formal supplier performance improvement plan (PIP) within 10 business days; root cause analysis (carrier delay vs. production delay vs. incorrect EINDT in SAP)
+- **Validation vs Source**: Cross-validate monthly PO OTD from Power BI against ME2M report exported from SAP; tolerance ±0.5 percentage points
 
-**Model Architecture**
+### KPI 2: Spend Under Management (SUM) Rate
 
-Two-stage classification:
-- Stage 1: LightGBM classifier for UNSPSC Level 2 (family) — fast, high accuracy
-- Stage 2: XGBoost classifier for UNSPSC Level 4 (commodity) within the predicted family
+- **KPI Name**: Spend Under Management Rate
+- **Objective**: Quantify the percentage of total addressable spend routed through approved procurement channels (PO-based or catalogue), indicating procurement compliance and control effectiveness
+- **Formula**:
+  ```dax
+  SUM_Rate =
+  DIVIDE(
+    SUMX(FILTER(fact_po_line, fact_po_line[spend_channel] = "MANAGED"), fact_po_line[net_value_eur]),
+    SUM(fact_po_line[net_value_eur]) + [Maverick_Spend_EUR],
+    0
+  )
+  ```
+  Where Maverick_Spend_EUR = sum of invoice amounts with no PO reference, sourced from AP invoice table
+- **Data Source**: fact_po_line (managed spend) + fact_ap_invoice (total AP spend including maverick)
+- **Calculation Level**: Company code, cost center, GL account, fiscal period
+- **Frequency**: Monthly; trend reported quarterly to CFO
+- **Owner**: CPO / Head of Procurement Governance
+- **Interpretation**: SUM rate of 90% means 90 cents of every €1 spent is controlled through procurement channels; the remaining 10% is maverick or uncontrolled
+- **Thresholds**: Green ≥ 90% | Yellow 80–89% | Red < 80%
+- **Traffic Light**: Target is ≥ 90%; below 80% indicates systemic procurement bypass that requires process controls or system enforcement (SAP SRM mandatory PO requirement)
+- **Recommended Action**: For Red cost centers: enforce mandatory PO policy via SAP FI blocking of non-PO invoices; review with Finance Controller; training for cost center owners
+- **Validation vs Source**: Total managed spend in Power BI must reconcile to SAP ME2N total PO value within ±1%; maverick spend must reconcile to SAP MRBR non-PO invoices
 
-**Training Data Requirements**
+### KPI 3: Open Order Overdue Value
 
-| Attribute | Specification |
-|-----------|--------------|
-| Volume | 100,000+ labelled invoice line items (description → UNSPSC L4) |
-| Sources | 3 years of SAP EKPO/MARA data with validated UNSPSC codes |
-| Quality | Exclude records with manually overridden or corrected UNSPSC codes <6 months ago |
-| Coverage | Minimum 200 examples per UNSPSC L4 code in scope |
+- **KPI Name**: Open Order Overdue Value (EUR)
+- **Objective**: Quantify the total EUR value of purchase orders that are past their committed delivery date and have not been fully received, representing immediate supply chain risk
+- **Formula**:
+  ```dax
+  Overdue_Open_Value_EUR =
+  SUMX(
+    FILTER(fact_po_line,
+      fact_po_line[is_overdue] = 1 &&
+      fact_po_line[po_status] IN {"OPEN", "PARTIALLY_DELIVERED"} &&
+      fact_po_line[deletion_flag] = 0
+    ),
+    fact_po_line[open_value_eur]
+  )
+  ```
+- **Data Source**: fact_po_line
+- **Calculation Level**: Supplier, commodity, plant, buyer, company code
+- **Frequency**: Daily; alert triggered when total overdue value > €500,000 for a single commodity or supplier
+- **Owner**: Procurement Operations / Category Managers
+- **Interpretation**: Every euro in this KPI represents committed spend with no delivery; high values indicate supply risk, potential production stoppages, or unreliable suppliers
+- **Thresholds**: Green < €1M total | Yellow €1M–€5M | Red > €5M (thresholds adjustable by category)
+- **Traffic Light**: Red threshold triggers automatic escalation to Supply Chain Risk committee
+- **Recommended Action**: Contact top-5 overdue suppliers within 24 hours; evaluate expediting options (air freight); activate alternative suppliers if lead time for recovery > 30 days
+- **Validation vs Source**: Sum of open_value_eur in Power BI must reconcile to ME2M report "PO Value Not Yet Delivered" field in SAP ±€10,000
 
-**Feature Engineering**
+### KPI 4: UFLPA Compliance Coverage Rate
 
-1. Text features from line item description: TF-IDF (top 5,000 n-gram features,
-   n=1,2,3) using scikit-learn `TfidfVectorizer`.
-2. Vendor features: vendor UNSPSC category codes (one-hot or multi-hot), vendor
-   country, vendor Kraljic segment.
-3. Numerical features: unit price, quantity, UOM code (GS1 code as integer),
-   PO document type.
-4. Context features: business unit, plant, GL account (existing, even if wrong —
-   it carries signal), cost centre.
-5. Feature scaling: not needed for tree-based models, but normalise for any
-   neural network layer.
+- **KPI Name**: UFLPA Compliance Coverage Rate
+- **Objective**: Ensure 100% screening of active suppliers against the UFLPA entity list and track clearance documentation completion for flagged suppliers
+- **Formula**:
+  ```dax
+  UFLPA_Coverage_Rate =
+  DIVIDE(
+    COUNTROWS(FILTER(dim_supplier,
+      dim_supplier[is_active] = 1 &&
+      dim_supplier[uflpa_screening_date] >= DATE(YEAR(TODAY()), 1, 1)
+    )),
+    COUNTROWS(FILTER(dim_supplier, dim_supplier[is_active] = 1)),
+    0
+  )
 
-**Model Training Procedure**
+  UFLPA_Clearance_Rate =
+  DIVIDE(
+    COUNTROWS(FILTER(dim_supplier,
+      dim_supplier[uflpa_flag] = 1 &&
+      dim_supplier[uflpa_clearance_doc] <> BLANK()
+    )),
+    COUNTROWS(FILTER(dim_supplier, dim_supplier[uflpa_flag] = 1)),
+    0
+  )
+  ```
+- **Data Source**: dim_supplier, fact_compliance_assessment
+- **Calculation Level**: Supplier, country, commodity category
+- **Frequency**: Weekly screening refresh; monthly reporting to General Counsel and CPO
+- **Owner**: Global Trade Compliance Manager
+- **Interpretation**: Coverage must be 100%; clearance rate for flagged suppliers must reach 100% before any new POs are issued; gaps represent legal and reputational exposure
+- **Thresholds**: Coverage: Green = 100% | Yellow 95–99% | Red < 95%. Clearance (for flagged): Green = 100% | Yellow 80–99% | Red < 80%
+- **Traffic Light**: Any Red on either metric triggers legal escalation
+- **Recommended Action**: Uncovered suppliers: run immediate screening; flagged without clearance: suspend new PO issuance within 5 business days pending clearance document receipt
+- **Validation vs Source**: Supplier count in Power BI vs. SAP LFA1 active vendor count (SPERR ≠ 'X') within ±5 records; UFLPA flag count vs. Trade Compliance manual list
 
-1. Split: 70/15/15 train/validation/test stratified by UNSPSC L4 code.
-2. Train LightGBM Stage 1 (L2 classification):
-   - `lgb.LGBMClassifier(num_leaves=127, learning_rate=0.05, n_estimators=500,
-     objective='multiclass', metric='multi_logloss')`
-   - Early stopping on validation log-loss with patience=50.
-3. Generate L2 predictions as additional features for Stage 2.
-4. Train XGBoost Stage 2 (L4 classification, within predicted L2):
-   - `xgb.XGBClassifier(max_depth=8, learning_rate=0.05, n_estimators=500,
-     objective='multi:softprob', eval_metric='mlogloss')`
-5. Calibrate probabilities using `CalibratedClassifierCV` (isotonic regression)
-   for reliable confidence scores.
-6. Set confidence threshold: if max probability < 0.70, route to human review queue
-   instead of auto-accepting.
+### KPI 5: PO Approval SLA Compliance Rate
 
-**Hyperparameter Tuning**
+- **KPI Name**: PO Approval SLA Compliance Rate
+- **Objective**: Measure the percentage of purchase orders that received required approvals within the defined SLA window, indicating procurement process efficiency and internal control health
+- **Formula**:
+  ```dax
+  Approval_SLA_Rate =
+  DIVIDE(
+    COUNTROWS(FILTER(fact_po_line,
+      fact_po_line[approval_sla_breached] = 0 &&
+      fact_po_line[requires_approval] = 1
+    )),
+    COUNTROWS(FILTER(fact_po_line, fact_po_line[requires_approval] = 1)),
+    0
+  )
+  ```
+- **Data Source**: fact_po_line (requires_approval, approval_sla_breached flags derived from EKKO.FRGKE and approval workflow timestamps)
+- **Calculation Level**: Purchasing group, approver, company code, PO value bucket
+- **Frequency**: Daily
+- **Owner**: Head of Procurement Operations
+- **Interpretation**: SLA breaches delay supplier confirmation, increase overdue risk, and indicate approver bottlenecks (holiday coverage gaps, understaffing)
+- **Thresholds**: Green ≥ 95% | Yellow 85–94% | Red < 85%
+- **Traffic Light**: Red triggers review of approval delegation rules in SAP
+- **Recommended Action**: Top breaching approvers receive weekly SLA report; sustained Red → review delegation authority settings and add backup approvers
+- **Validation vs Source**: SAP workflow transaction SWI1 approval log vs. Power BI approval timestamps; reconcile breach count ±2%
 
-Optuna with 100 trials for each stage. Key search space:
-- LightGBM: num_leaves [31, 255], min_child_samples [10, 100], subsample [0.6, 1.0]
-- XGBoost: max_depth [4, 12], subsample [0.6, 1.0], colsample_bytree [0.5, 1.0]
+### KPI 6: CSDDD Tier-1 Assessment Coverage
 
-**Validation Metrics**
-
-| Metric | Threshold |
-|--------|-----------|
-| Top-1 accuracy (L4) | ≥ 85% |
-| Top-3 accuracy (L4) | ≥ 95% |
-| Auto-acceptance rate | ≥ 80% (confidence ≥ 0.70) |
-| Human review queue | ≤ 20% of volume |
-
-**Deployment**
-
-1. Batch inference: run nightly on all new PO lines and invoice lines posted that day.
-2. Write UNSPSC prediction + confidence to EKPO custom field ZZ_UNSPSC and ZZ_CONF.
-3. Route low-confidence items to SAP workflow task assigned to category manager.
-4. Category manager approves/corrects → feedback stored and used in quarterly
-   retraining.
-
----
-
-### ML Model 3: Fraud Detection (Isolation Forest)
-
-**Business Problem Solved**
-
-Invoice fraud (duplicate invoices, fictitious vendors, inflated amounts, split
-invoicing to avoid approval thresholds) costs companies 0.5–5% of revenue. An
-unsupervised anomaly detection model flags suspicious patterns without requiring
-labelled fraud examples (which are scarce and biased).
-
-**Model Architecture**
-
-Isolation Forest (Liu et al., 2008) — ensemble of random isolation trees.
-Anomaly score ∈ [-1, +1]: scores near -1 = anomaly; scores near +1 = normal.
-
-**Training Data Requirements**
-
-- 24 months of invoice-level data (RBKP + RSEG tables in SAP)
-- Features: vendor, invoice amount, invoice date, PO reference, GR reference,
-  bank account, payment terms, payment amount, days between invoice and GR
-
-**Feature Engineering**
-
-1. Invoice amount deviation: `amount / vendor_12m_median_invoice_amount`
-2. Timing anomalies: days between GR date and invoice date (flag if > 90 or < 0)
-3. Round number flag: `amount % 1000 == 0` (round numbers are a fraud signal)
-4. Duplicate detection features: same vendor + same amount within 30 days (count)
-5. Threshold proximity: `amount / approval_threshold` — values in [0.85, 0.99]
-   indicate potential split-invoice to avoid approval (Benford's Law extension)
-6. Benford's Law first-digit distribution: compute χ² statistic for vendor's
-   invoice amount first-digit distribution vs Benford expected distribution.
-   High χ² = suspicious distribution.
-7. Velocity features: invoices per day from this vendor (rolling 7-day average),
-   deviation from vendor's historical mean velocity.
-
-**Model Training Procedure**
-
-1. Train IsolationForest on 18 months of "clean" historical data (exclude any
-   known fraud cases if labelled):
-   `IsolationForest(n_estimators=200, contamination=0.01, random_state=42)`
-2. Tune `contamination` parameter: start at 1% (expected fraud rate), adjust based
-   on precision of flagged cases after human review in first 90 days.
-3. Save model with joblib. Retrain monthly on rolling 18-month window.
-4. Threshold: flag if anomaly_score < -0.3 (tune empirically).
-
-**Validation**
-
-- Precision@100 on analyst-reviewed cases: target ≥ 40% (i.e., ≥ 40 of top-100
-  flagged invoices are confirmed suspicious by AP team).
-- Recall on known historical fraud cases: ≥ 80%.
-
-**Deployment**
-
-1. Inference: run on every invoice batch (3× per day in MIRO posting run).
-2. High-risk flags (score < -0.5): automatic payment hold; route to AP Manager.
-3. Medium-risk flags (score -0.5 to -0.3): add to daily review queue.
-4. All flags logged in fraud audit trail with feature contributions
-   (SHAP values computed using the `shap` library, MIT licence).
-
----
-
-### ML Model 4: Commodity Price Forecasting (Prophet)
-
-**Business Problem Solved**
-
-Procurement teams need a 3–12 month forward view on commodity prices (steel, copper,
-aluminium, polypropylene, energy) to time purchasing decisions, hedge exposure, and
-set realistic budgets. Prophet (Taylor & Letham, 2018) handles multiple seasonalities,
-holiday effects, and changepoints — common in commodity markets.
-
-**Model Architecture**
-
-Facebook Prophet (MIT licence):
-
-    y(t) = trend(t) + seasonality(t) + holidays(t) + ε(t)
-    trend: piecewise linear or logistic growth
-    seasonality: Fourier series (annual, monthly)
-
-**Training Data Requirements**
-
-- Minimum 5 years of monthly average price data per commodity
-- Sources: LME (metals), Platts (energy), ICIS (chemicals), World Bank Commodity Data
-- All prices in EUR/USD with FX normalisation
-
-**Step-by-Step Training**
-
-1. Download historical price series via API or manual export. Validate: no gaps
-   > 3 months; impute short gaps with linear interpolation.
-2. Format for Prophet: DataFrame with columns `ds` (date, monthly frequency) and
-   `y` (price in EUR).
-3. Define changepoints: major market events (COVID-19 March 2020, Ukraine invasion
-   February 2022) as known changepoints via `changepoints` parameter.
-4. Add regressors: USD/EUR exchange rate, relevant demand index (e.g., Chinese PMI
-   for base metals), energy price as regressor for energy-intensive commodities.
-5. Fit: `model = Prophet(changepoint_prior_scale=0.3, seasonality_prior_scale=10)`
-6. Generate forecast: `future = model.make_future_dataframe(periods=12, freq='M')`
-7. Validate: walk-forward cross-validation using `cross_validation(model, horizon='90 days',
-   period='90 days', initial='365 days')`. Compute MAPE, MAE, RMSE.
-
-**Validation Thresholds**
-
-| Commodity | Acceptable MAPE (12-month horizon) |
-|-----------|-----------------------------------|
-| LME Copper | ≤ 18% |
-| LME Aluminium | ≤ 15% |
-| Brent Crude | ≤ 25% |
-| Polypropylene | ≤ 20% |
-
-**Deployment**
-
-1. Run monthly (1st business day). Produce 12-month forecast with 80% and 95%
-   prediction intervals.
-2. Publish to procurement dashboard: price trend chart with forecast band.
-3. Trigger alerts: if forecast for next quarter is > 10% above current contract
-   price, notify category manager to consider forward-buying or hedging.
-4. Integrate with budget process: provide commodity price assumptions for annual
-   budget submission (September each year).
+- **KPI Name**: CSDDD Tier-1 Supplier Assessment Coverage
+- **Objective**: Track the percentage of Tier-1 suppliers (annual spend ≥€1M) with a valid, current (≤3 years old) CSDDD Art. 7 human rights and environmental risk assessment
+- **Formula**:
+  ```dax
+  CSDDD_Coverage =
+  DIVIDE(
+    COUNTROWS(FILTER(dim_supplier,
+      dim_supplier[csddd_tier] = "TIER1" &&
+      dim_supplier[csddd_status] = "COMPLIANT" &&
+      DATEDIFF(dim_supplier[csddd_assessment_date], TODAY(), YEAR) < 3
+    )),
+    COUNTROWS(FILTER(dim_supplier, dim_supplier[csddd_tier] = "TIER1")),
+    0
+  )
+  ```
+- **Data Source**: dim_supplier, fact_compliance_assessment
+- **Calculation Level**: Company, region, commodity category
+- **Frequency**: Monthly; annual regulatory reporting
+- **Owner**: Head of Sustainability & Compliance / CPO
+- **Interpretation**: EU CSDDD enforcement begins 2027; companies must demonstrate systematic assessment of all Tier-1 suppliers; gap now = compliance risk at enforcement date
+- **Thresholds**: Green ≥ 90% | Yellow 70–89% | Red < 70% (2026 target); Green = 100% (2027 mandatory)
+- **Traffic Light**: Red = material regulatory risk; requires immediate program acceleration
+- **Recommended Action**: Prioritize assessments by spend value; use Ariba SLP assessment questionnaire; engage third-party ESG assessment provider for complex suppliers
+- **Validation vs Source**: Ariba SLP portal Tier-1 supplier count vs. Power BI CSDDD dashboard supplier count; reconcile monthly
 
 ---
 
-### ML Model 5: PO Approval Prediction (LightGBM)
+## 11. Analytical Logic
 
-**Business Problem Solved**
+### PO Risk Scoring
 
-Predicts whether a purchase order will be approved, approved with changes, or rejected
-before submission. Buyers can proactively correct likely rejections, reducing cycle time
-by 20–30% and improving first-time-right approval rates.
-
-**Model Architecture**
-
-LightGBM multi-class classifier (3 classes: APPROVED / APPROVED_WITH_CHANGES / REJECTED)
-
-**Features**
-
-- PO amount vs DoA limit for the submitter (ratio)
-- Supplier rating (current scorecard score)
-- Category (UNSPSC L2 — one-hot encoded)
-- Budget availability (% of budget consumed YTD at time of submission)
-- Time of year (month, fiscal quarter)
-- Requestor seniority (approver level)
-- Time since last approved PO from same requestor
-- Number of line items
-- Presence of supporting documentation (binary flag)
-- Contract reference available (binary flag)
-- Preferred / approved / conditional supplier flag
-
-**Training Data**
-
-- 3 years of PO approval workflow history from Ariba
-- Minimum 1,000 examples of each outcome class
-- Exclude emergency POs and system-generated release orders (not representative)
-
-**Training & Deployment**
-
-1. Standard LightGBM training with 5-fold stratified cross-validation.
-2. SHAP explainability: compute SHAP values for each prediction.
-3. Deploy as a pre-submission check in Ariba: when a buyer clicks "Submit for
-   Approval," the model runs in < 200ms and displays:
-   - Predicted outcome with confidence
-   - Top-3 factors influencing the prediction (from SHAP)
-   - Suggested remediation if REJECTED is predicted (e.g., "Add contract reference")
-4. Do not block submission — this is advisory only. Buyers retain authority.
-5. Monitor: track predicted vs actual approval outcomes weekly. Alert if accuracy
-   drops below 75%.
-
----
-
-## Phase 5: Integration & Automation (Weeks 53–72)
-
-### SAP S/4HANA Integration Points
-
-| Integration | Method | Direction | Frequency |
-|-------------|--------|-----------|-----------|
-| Vendor master sync | SAP MDG → S/4HANA IDOC | Outbound | Real-time on change |
-| PO output to supplier | S/4HANA → Ariba Network (cXML) | Outbound | On PO release |
-| GR confirmation | Ariba Network → S/4HANA IDOC | Inbound | On supplier ASN |
-| Invoice from supplier | Ariba Network → S/4HANA MIRO | Inbound | On supplier submission |
-| Scorecard data pull | S/4HANA API → Python ML pipeline | Outbound | Monthly batch |
-| Price conditions update | Python → S/4HANA BAPI_CONTRACT_CHANGE | Inbound | Monthly (index-linked) |
-| Spend data to lake | S/4HANA → data lake (EKKO/EKPO extract) | Outbound | Nightly |
-| Anomaly alerts | ML service → Ariba workflow | Inbound | Real-time |
-
-### EDI / EDIFACT Messages
-
-| Message | EDIFACT Type | Direction | Trigger |
-|---------|-------------|-----------|---------|
-| Purchase Order | ORDERS D.01B | Outbound | PO release in SAP |
-| Order Acknowledgement | ORDRSP | Inbound | Supplier confirms |
-| Advance Shipping Notice | DESADV | Inbound | Supplier ships |
-| Invoice | INVOIC | Inbound | Supplier invoices |
-| Remittance Advice | REMADV | Outbound | Payment run F110 |
-| Goods Receipt Confirmation | RECADV | Outbound | MIGO goods receipt |
-
-All EDI messages routed through the EDI gateway (OpenText/Seeburger). Fallback:
-PDF e-mail for non-EDI-capable suppliers (target: all top-200 suppliers EDI-enabled
-by end of Phase 5).
-
-### API Design
-
-Base URL: `https://api.internal.company.com/procurement/v1`
+Each open PO line receives a composite Risk Score (0–100) computed as:
 
 ```
-GET  /purchase-orders?status=OPEN&vendor={vendorId}
-POST /purchase-orders
-GET  /purchase-orders/{poId}
-PUT  /purchase-orders/{poId}/approve
-PUT  /purchase-orders/{poId}/reject
+risk_score = (w1 * overdue_score) + (w2 * value_score) + (w3 * source_risk_score) + (w4 * compliance_score)
 
-GET  /vendors?category={unspsc}&country={iso2}
-POST /vendors/onboard
-GET  /vendors/{vendorId}/scorecard
+where:
+  w1 = 0.35 (overdue weight)
+  w2 = 0.25 (value weight)
+  w3 = 0.25 (single-source weight)
+  w4 = 0.15 (compliance weight)
 
-POST /sourcing/rfq
-GET  /sourcing/rfq/{rfqId}/bids
-POST /sourcing/auctions
+overdue_score:
+  0 days overdue = 0
+  1-7 days = 25
+  8-30 days = 50
+  31-60 days = 75
+  >60 days = 100
 
-POST /spend-analysis/classify   ← ML spend categorisation
-POST /risk/classify-news        ← ML NLP risk classification
-GET  /commodities/{code}/forecast ← Prophet price forecast
+value_score:
+  < €10K = 10
+  €10K–€100K = 30
+  €100K–€500K = 60
+  €500K–€2M = 80
+  > €2M = 100
+
+source_risk_score:
+  Multiple approved sources = 0
+  Single approved source, alt identified = 40
+  Single approved source, no alt = 80
+  Unapproved source = 100
+
+compliance_score:
+  UFLPA clearance complete, CSDDD compliant = 0
+  Minor compliance gap = 30
+  UFLPA flag active without clearance = 80
+  Multiple compliance failures = 100
 ```
 
-All endpoints: OAuth 2.0 (client credentials flow), TLS 1.3, rate-limited to 1,000
-requests/minute per client. Response format: JSON with `data`, `meta`, `errors` envelope.
+POs with risk_score ≥ 70 are classified HIGH; 40–69 MEDIUM; < 40 LOW.
+
+### Spend Segmentation
+
+Apply Pareto analysis to spend data:
+- **Tier A** (top 20% of suppliers by spend = ~80% of value): Strategic focus, CSDDD Tier-1, quarterly reviews
+- **Tier B** (next 30% of suppliers = ~15% of value): Leverage category, semi-annual reviews
+- **Tier C** (remaining 50% of suppliers = ~5% of value): Transactional, automated management
+
+Apply commodity-level spend clustering using Python K-means (k=5) on dimensions: annual spend EUR, number of suppliers, price volatility index, criticality score. Output feeds Kraljic matrix positioning.
+
+### Alert Priority Logic
+
+Power Automate alerts are tiered:
+- **P1 — Immediate** (within 2 hours): UFLPA-flagged supplier with new PO > €50K; PO approval SLA breach > 72 hours; overdue critical-item PO (ABC-A) > 30 days
+- **P2 — Same Day**: New overdue PO line (days_overdue = 1); CSDDD assessment expiring within 60 days; price variance > 10% on PO vs. contract
+- **P3 — Weekly Digest**: Spend Under Management rate below Yellow threshold; approval SLA trending Yellow; supplier with decreasing delivery score for 3 consecutive months
 
 ---
 
-## Phase 6: Continuous Improvement & Centre of Excellence
+## 12. Validations and Controls
 
-### CoE Structure
+### Validation 1: PO Line Row Count Reconciliation
 
-The Procurement CoE operates as a shared service embedded in the CPO organisation:
+- **Validation Name**: EKPO_ROW_COUNT_RECONCILIATION
+- **Field or Table Validated**: fact_po_line row count vs. SAP EKPO
+- **Validation Rule**: COUNT(*) in fact_po_line (excluding test POs and cancelled lines) must equal COUNT(*) in SAP EKPO for the same date range and filter criteria ±0.1%
+- **Validation Method**: Automated Python script in Azure Data Factory post-load activity; pulls EKPO count via SAP RFC function module; compares to Azure SQL count; logs result to audit table
+- **Expected Result**: Variance ≤ 0.1% of total row count; zero variance for current fiscal year
+- **Action if Fails**: Stop downstream Power BI refresh; alert data engineering team; hold report publication until reconciled; investigate missing or duplicate records
+- **Verifiable Evidence**: Azure Data Factory pipeline run log showing row count comparison; audit_reconciliation table in Azure SQL with timestamp, source count, target count, variance
 
-**CoE Director**: reports to CPO, owns the digital procurement roadmap.
+### Validation 2: Spend Value Reconciliation
 
-**Capability Towers**:
-1. Category Excellence: category strategy templates, market intelligence, benchmarking
-2. Process & Technology: SAP/Ariba configuration, new feature rollout, STP rate
-3. Analytics & ML: model maintenance, new model development, KPI reporting
-4. Supplier Development: scorecard governance, development plans, disqualification
-5. Compliance & Risk: UFLPA, CSDDD, REACH, sanctions, ESG reporting
+- **Validation Name**: SPEND_EUR_RECONCILIATION
+- **Field or Table Validated**: fact_po_line.net_value_eur SUM vs. SAP ME2N report
+- **Validation Rule**: Total SUM(net_value_eur) in Power BI for any given fiscal period must match SAP ME2N "Net Order Value" (converted to EUR) ±1%
+- **Validation Method**: Monthly manual reconciliation by Procurement Controller; SAP ME2N exported to Excel; compared to Power BI KPI card value
+- **Expected Result**: Variance ≤ 1% for any fiscal period
+- **Action if Fails**: Investigate FX rate discrepancies (most common cause); recheck LOEKZ filter; rerun currency conversion with corrected ECB rates
+- **Verifiable Evidence**: Signed reconciliation worksheet (Excel) stored in SharePoint: Procurement Analytics / Monthly Reconciliation / [YYYY-MM]
 
-**Governance Model**
+### Validation 3: Supplier Count Completeness
 
-- Monthly Procurement Operations Review: CoE Director + all Category Managers
-  Review: savings delivery, STP rate, exception queue, model performance
-- Quarterly Supplier Review Board: CPO + top-20 strategic suppliers (joint review
-  of scorecard trends, development plans, and innovation pipeline)
-- Annual Category Strategy Review: full spend re-segmentation, Kraljic re-assessment,
-  supplier rationalisation targets for next fiscal year
-- Semi-annual Model Review: data science team presents model performance metrics,
-  drift statistics, and retaining outcomes to CPO and CIO
+- **Validation Name**: SUPPLIER_MASTER_COMPLETENESS
+- **Field or Table Validated**: dim_supplier row count vs. SAP LFA1
+- **Validation Rule**: All active vendors in SAP LFA1 with at least one PO in the past 24 months and SPERR ≠ 'X' must appear in dim_supplier
+- **Validation Method**: Automated script comparing SAP LFA1 active vendor count to dim_supplier is_active=1 count; tolerance ±10 records (accounts for new vendors created same day as extract)
+- **Expected Result**: 100% of active vendors with recent PO activity present in dim_supplier
+- **Action if Fails**: Identify missing LIFNR values; check ETL join logic on LFA1/LFB1; rerun vendor master extract
+- **Verifiable Evidence**: vendor_completeness_check table in Azure SQL showing missing LIFNRs; data engineer sign-off
 
-### Model Refresh Cadence
+### Validation 4: FX Rate Coverage
 
-| Model | Scheduled Retrain | Event-Triggered |
-|-------|------------------|-----------------|
-| DistilBERT risk classification | Quarterly | New sanctions regime |
-| Spend categorisation | Semi-annual | New UNSPSC version release |
-| Isolation Forest fraud | Monthly (rolling window) | >20% alert precision drop |
-| Prophet commodity | Monthly | Major market disruption |
-| PO approval LightGBM | Quarterly | DoA policy change |
-| EOQ parameters | Monthly (demand) / Annual (cost rates) | >20% demand shift |
+- **Validation Name**: FX_RATE_DAILY_COVERAGE
+- **Field or Table Validated**: dim_fx_rate completeness for all 40 country currencies
+- **Validation Rule**: For every business day in the reporting period, dim_fx_rate must contain a rate for all 40 currencies used by active company codes; no NULL EUR_RATE values
+- **Validation Method**: Automated check in Azure Data Factory: for each business day, count distinct CURRENCY values in dim_fx_rate; alert if count < 40 for any business day
+- **Expected Result**: 40 currencies present for every business day; weekend/holiday rates copied from prior business day
+- **Action if Fails**: Trigger fallback ECB API retry; if ECB rate unavailable after 3 retries, use Bloomberg rate from Finance Treasury (manual upload to Azure SQL); block currency conversion until resolved
+- **Verifiable Evidence**: dim_fx_rate audit log; Azure Data Factory pipeline monitoring dashboard screenshot
 
----
+### Validation 5: UFLPA Screening Completeness
 
-## Technology Stack & Architecture
-
-### Architecture Overview
-
-```
-Data Sources          Integration Layer        Platform              Consumers
-──────────────────    ────────────────────     ──────────────────    ──────────
-SAP S/4HANA     ─→                            Data Lake             SAC Dashboard
-SAP Ariba       ─→   SAP Business Network  →  (Apache Iceberg)  →  Power BI
-Supplier EDI    ─→   EDI Gateway           →  dbt Transforms    →  ML APIs
-News feeds      ─→   Airflow DAGs          →  MLflow Registry   →  Ariba Workflows
-Market indices  ─→   REST APIs             →  BentoML Serving   →  SAP S/4HANA
-```
-
-### Technology Justification
-
-| Component | Technology | Licence | Justification |
-|-----------|-----------|---------|---------------|
-| Data lake format | Apache Iceberg | Apache-2.0 | ACID, time-travel, schema evolution |
-| Orchestration | Apache Airflow | Apache-2.0 | Mature, SAP connector ecosystem |
-| Transform | dbt-core | Apache-2.0 | SQL-first, version-controlled lineage |
-| ML platform | MLflow | Apache-2.0 | Experiment tracking, model registry |
-| Model serving | BentoML | Apache-2.0 | OSI-licensed, containerised |
-| NLP | HuggingFace Transformers | Apache-2.0 | Best-in-class, DistilBERT available |
-| Gradient boosting | LightGBM + XGBoost | MIT + Apache-2.0 | Speed and accuracy at scale |
-| Forecasting | Prophet | MIT | Handles seasonality and changepoints |
-| Graph analysis | NetworkX | BSD-3 | Python-native, no licence cost |
-| Message queue | Apache Kafka | Apache-2.0 | High-throughput event streaming |
+- **Validation Name**: UFLPA_SCREENING_100PCT
+- **Field or Table Validated**: dim_supplier.uflpa_screening_date
+- **Validation Rule**: All active suppliers (is_active=1) must have uflpa_screening_date within the current calendar year; any supplier with NULL or outdated screening date triggers alert
+- **Validation Method**: Weekly automated SQL query: SELECT COUNT(*) FROM dim_supplier WHERE is_active=1 AND (uflpa_screening_date IS NULL OR uflpa_screening_date < DATEADD(year,-1,GETDATE())); count must = 0
+- **Expected Result**: Zero suppliers with missing or outdated UFLPA screening
+- **Action if Fails**: Run immediate screening for unscreened suppliers via Python UFLPA script; notify Trade Compliance Manager; suspend new PO issuance to unscreened suppliers until complete
+- **Verifiable Evidence**: uflpa_screening_log table; Trade Compliance Manager sign-off email
 
 ---
 
-## Change Management & Training
+## 13. Required Evidence
 
-### Stakeholder Groups & Approach
+The following evidence items must be collected, reviewed, and signed off before the analytics solution is considered production-ready:
 
-| Group | Size | Key Concern | Engagement Strategy |
-|-------|------|-------------|---------------------|
-| CPO & leadership | 5 | ROI, risk | Monthly steering; quarterly wins roadshow |
-| Category managers | 50 | Job change | Co-design workshops; elevated strategic role |
-| Buyers | 100 | Automation replacing jobs | Re-skill to analytical roles; clear career path |
-| Requisitioners | 2,000 | System complexity | Self-service catalog; simplified UX; helpdesk |
-| AP team | 80 | Workload shift | Automation reduces exceptions; re-deploy to value-add |
-| Suppliers (top 200) | 200 | Scorecard pressure | Transparent criteria; development support |
-| IT | 30 | Integration risk | Architecture forums; joint test team |
-| Internal Audit | 10 | Control adequacy | SoD controls documented; audit trail complete |
-
-### Communication Plan
-
-- **Week 0**: Programme launch announcement from CPO via all-hands video
-- **Week 8**: AS-IS findings shared with all stakeholders (transparency builds trust)
-- **Week 20**: First dashboard demo — show spend visibility in action
-- **Week 36**: Go-live countdown communication series (4 weekly newsletters)
-- **Week 37**: Go-live day communications (site managers, help desk activation)
-- **Week 52**: 6-month review: savings delivered, STP rate, lessons learned
-- **Ongoing**: Monthly "Procurement Pulse" newsletter from CoE
+1. **Row Count Reconciliation Report**: Signed comparison of SAP EKPO row count vs. fact_po_line row count for a full fiscal year, signed by Procurement Data Engineer and Procurement Controller
+2. **Spend Value Reconciliation Report**: Month-by-month comparison of SAP ME2N totals vs. Power BI spend KPIs for the past 12 months, signed by Finance Controller
+3. **UFLPA Screening Log**: Complete audit trail of CBP entity list fuzzy match runs, including all match confidence scores ≥70%, signed by Global Trade Compliance Manager
+4. **CSDDD Tier-1 Supplier List**: Approved list of CSDDD Tier-1 suppliers (≥€1M annual spend) with current assessment status, signed by Head of Sustainability
+5. **FX Rate Source Confirmation**: Written confirmation from Finance Treasury that ECB rates used in Power BI match SAP TCURR table rates, with monthly reconciliation tolerance documented
+6. **Power BI UAT Sign-off**: User Acceptance Testing sign-off from at least 3 Category Managers and 1 Procurement Director, confirming KPI values match their manual calculations
+7. **Data Governance Approval**: Data Classification and Ownership sign-off confirming Azure SQL database contains no PII beyond business contact names, compliant with GDPR Art. 6 and company data policy
+8. **SAP Authorization Concept**: Documentation confirming Azure Data Factory service account has minimum required SAP authorizations (read-only on EKKO, EKPO, EKET, MSEG, LFA1, LFB1) without access to HR or FI documents
+9. **Power Automate Alert Testing Evidence**: Screenshots of test alert runs for each P1/P2 alert scenario, confirming correct recipients and message content
+10. **Dashboard Screenshots**: Production Power BI screenshots with real data (data masked for external sharing) showing all 5 report pages functioning correctly
 
 ---
 
-## KPIs & Success Metrics
+## 14. Dashboard / Report Design
 
-| KPI | Baseline | Year 1 Target | Year 2 Target | Measurement Method |
-|-----|----------|--------------|--------------|-------------------|
-| STP Rate (% POs auto-posted) | 35% | 65% | 80% | SAP workflow stats |
-| PO Cycle Time (days) | 8.5 days | 4 days | 2.5 days | PR creation to PO issue date |
-| Contract Coverage (% spend) | 58% | 75% | 85% | Contracted PO value / total PO value |
-| Maverick Spend % | 22% | 12% | 8% | Off-contract PO value / total |
-| Invoice Exception Rate | 18% | 8% | 4% | Exceptions / total invoices |
-| Duplicate Invoice Rate | 0.8% | 0.2% | 0.1% | Duplicate invoices / total |
-| Supplier OTD | 87% | 91% | 95% | GR date vs PO delivery date |
-| Cost Savings (% addressable spend) | 1.2% | 3.0% | 4.5% | Savings tracker vs baseline |
-| Spend Classification Accuracy | 71% | 88% | 93% | Sample audit vs ML auto-class |
-| Fraud Alerts (Precision@100) | N/A | 35% | 50% | AP team review of flags |
-| Commodity Forecast MAPE | N/A | ≤ 20% | ≤ 15% | Walk-forward validation |
-| Supplier Scorecard Coverage | 40% | 80% | 95% | Suppliers scored / total active |
+### Power BI Solution Structure
+
+The Procurement Analytics Power BI solution consists of 5 report pages accessed via a shared workspace with Row-Level Security (RLS) enforced by purchasing organization and company code.
+
+### Page 1: Executive Procurement Overview
+
+**Purpose**: CPO and senior leadership summary — one-page view of procurement health  
+**Visuals**:
+- KPI Cards (top row): Total PO Value (EUR), Spend Under Management %, PO OTD Rate, Open Overdue Value, CSDDD Coverage Rate
+- Line Chart: Monthly spend trend (rolling 24 months) vs. budget line
+- Donut Chart: Spend by commodity category (top 10 + other)
+- Bar Chart: Top 10 suppliers by PO value with OTD indicator (green/yellow/red dot)
+- Gauge: SUM rate vs. 90% target
+- Map Visual (Azure Maps): Spend bubble map by supplier country with UFLPA country heat overlay
+
+**Filters/Slicers**: Fiscal Year, Fiscal Period, Company Code (multi-select), Commodity Category  
+**Drill-down**: Click supplier bar → drill to Supplier Detail page; click overdue value → drill to PO Follow-up page  
+**Refresh**: Daily at 06:00 UTC; refresh timestamp displayed on page
+
+### Page 2: PO Follow-up and Open Orders
+
+**Purpose**: Operational daily management tool for buyers and procurement operations  
+**Visuals**:
+- Table: Open PO lines with columns (PO Number, Supplier, Material, Commodity, Plant, PO Quantity, Open Quantity, Open Value EUR, Scheduled Delivery Date, Days Overdue, Risk Score, Risk Level). Conditional formatting: Red rows for HIGH risk, Yellow for MEDIUM.
+- Bar Chart: Overdue PO value by supplier (top 15)
+- Bar Chart: Overdue PO count by days overdue bucket (1-7, 8-30, 31-60, >60)
+- KPI Cards: Total Open Value, Total Overdue Value, % Overdue, Avg Days Overdue
+- Scatter Plot: Supplier OTD rate (x-axis) vs. Open PO Value (y-axis) — bubble size = PO count; color = risk level
+
+**Filters/Slicers**: Risk Level, Days Overdue Range, Buyer/Purchasing Group, Commodity, Plant, Company Code  
+**Drill-down**: Click PO number → tooltip showing full PO details, last GR date, supplier contact  
+**Export**: Export to Excel button for buyer action lists
+
+### Page 3: Spend Analysis
+
+**Purpose**: Category management spend intelligence and maverick spend monitoring  
+**Visuals**:
+- Treemap: Spend by Commodity L1 → L2 → L3 hierarchy (drill-down enabled)
+- Stacked Bar: Managed vs. Maverick spend by cost center (top 20 cost centers)
+- Line Chart: Price variance trend by commodity (monthly average price variance %)
+- Table: Top 50 suppliers by spend with year-over-year comparison
+- Waterfall Chart: Spend change analysis (volume effect vs. price effect vs. mix effect)
+- Bar Chart: New supplier spend vs. incumbent supplier spend (sourcing effectiveness)
+
+**Filters/Slicers**: Fiscal Year (current + prior 2), Commodity, Company Code, Country, Supplier Tier  
+**Drill-down**: Click commodity → supplier list; click supplier → PO line details
+
+### Page 4: Supplier Compliance Dashboard
+
+**Purpose**: UFLPA and CSDDD compliance monitoring for Trade Compliance and Legal teams  
+**Visuals**:
+- Status Matrix: Grid of active suppliers (rows) vs. compliance frameworks (columns: UFLPA, CSDDD, ISO28000, REACH); color-coded cells (Green/Yellow/Red)
+- KPI Cards: UFLPA Coverage %, UFLPA Flagged Count, CSDDD Tier-1 Coverage %, Days Until CSDDD Enforcement (2027 countdown)
+- Bar Chart: CSDDD assessment status by commodity category (Compliant / Non-Compliant / Pending / Not Assessed)
+- Timeline: Upcoming CSDDD assessment renewal dates (next 90 days)
+- Map: UFLPA-flagged supplier locations (country of manufacturing)
+- Table: UFLPA-flagged suppliers with open PO value, clearance document status, days since flagged
+
+**Filters/Slicers**: Framework (UFLPA / CSDDD / ISO28000), Compliance Status, Country, Commodity, Tier  
+**Alerts**: Red banner displayed on page when any Tier-1 supplier is NON_COMPLIANT
+
+### Page 5: PO Approval and Process Health
+
+**Purpose**: Internal controls monitoring for Procurement Governance and Internal Audit  
+**Visuals**:
+- KPI Cards: Approval SLA Compliance Rate, Avg Approval Cycle Time (hours), POs Pending > SLA, 3-Way Match Rate
+- Bar Chart: SLA breach count by approver (anonymized for general users; full names for audit users with elevated RLS)
+- Funnel: PO cycle stages — Requisition → PO Created → Released → Confirmed → GR Posted → Invoice Paid — with avg cycle time per stage
+- Table: POs currently pending approval beyond SLA with escalation status
+- Line Chart: Weekly 3-way match rate trend vs. target
+
+**Filters/Slicers**: PO Value Bucket, Company Code, Purchasing Group, Approval Level  
+**RLS**: Approver names visible only to Procurement Director and Internal Audit roles
 
 ---
 
-## Risk & Mitigation
+## 15. Use Cases
 
-| Risk | Probability | Impact | Mitigation |
-|------|-------------|--------|------------|
-| Data quality too poor for ML models | High | High | Phase 0 data audit; remediation sprint before ML training |
-| Supplier resistance to Ariba Network | Medium | High | Dedicated supplier enablement team; phased onboarding |
-| SAP integration delays (IDOC/BAPI errors) | Medium | High | Dedicated SAP integration consultant; mock environment testing |
-| Change resistance from buyers (job fear) | High | Medium | Re-skilling programme; communicate elevated role |
-| DistilBERT false positives damage supplier relationships | Medium | High | Human review gate before supplier notification |
-| Commodity forecast accuracy insufficient for hedging | Medium | Medium | Use as directional guidance only; combine with trader expert judgement |
-| Isolation Forest high false-positive rate | Medium | Medium | Tune contamination parameter; 2-tier alert system |
-| GDPR: processing supplier personal data in ML models | Low | High | DPA with all data processors; anonymise personal data in training sets |
-| Budget overrun on implementation | Medium | Medium | Fixed-price contracts for Phase 0–2; CoE internalised from Phase 3 |
-| DoA matrix not aligned across 40 countries | High | Medium | Standardise globally with local legal approval process |
+### Use Case 1: Critical Component Supply Disruption Alert
+
+**Scenario**: Production planning team identifies that a key electronic component (Material 1000567, ABC-A classification) has only 5 days of safety stock remaining. The open PO for 10,000 units is 15 days overdue from a single-source supplier in Taiwan.
+
+**Analysis Steps**:
+1. Open PO Follow-up page; filter by Material 1000567 and Risk Level = HIGH
+2. Identify PO 4500088991 — open quantity 10,000 units, 15 days overdue, supplier "Taiwan Electronics Ltd" (LIFNR 1000890)
+3. Review supplier OTD history on scatter plot: 78% OTD for past 12 months (Yellow threshold)
+4. Check compliance dashboard: UFLPA coverage complete (no flag); CSDDD compliant
+5. Drill to supplier contact details; initiate escalation call
+6. Evaluate air freight cost vs. production stoppage cost in spend analysis page
+
+**Decision**: Approve air freight expedite for 2,000 units (priority shipment); maintain sea freight for remaining 8,000 units. Category Manager to initiate secondary source qualification within 90 days.
+
+### Use Case 2: Maverick Spend Investigation — Finance Cost Center
+
+**Scenario**: CFO reports that IT Finance cost center CC-4501 has exceeded its indirect budget by 18% for Q1. Procurement governance audit finds low SUM rate for this cost center.
+
+**Analysis Steps**:
+1. Open Spend Analysis page; filter by cost center CC-4501 and fiscal period Q1 current year
+2. Managed vs. Maverick chart shows 62% managed spend (Red threshold) — €820,000 maverick spend
+3. Drill to maverick spend detail: 5 invoices from software vendor "CloudSoft GmbH" totaling €620,000 with no PO reference
+4. Cross-check: CloudSoft GmbH is an approved vendor (not UFLPA/CSDDD flagged) but invoices bypassed procurement
+5. Root cause: IT Director signed contracts directly without routing through procurement; invoices submitted by vendor directly to AP
+
+**Decision**: Finance Controller rejects 2 pending CloudSoft invoices until POs are retroactively created and approved. IT Director notified of mandatory PO policy. Procurement governance team adds cost center CC-4501 to enhanced monitoring for 6 months. SAP MM configured to block non-PO invoices for GL account range used by software subscriptions.
+
+### Use Case 3: UFLPA Pre-Shipment Compliance Check
+
+**Scenario**: Trade Compliance team receives US CBP notification that a textile shipment is being held at Los Angeles port due to UFLPA reasonable cause determination. The shipment references PO 4500099123.
+
+**Analysis Steps**:
+1. Open Compliance Dashboard; search supplier by PO number 4500099123
+2. Identify supplier "Xinjiang Apparel Manufacturing Co." — uflpa_flag = 1 (set 3 months ago via fuzzy match), uflpa_clearance_doc = NULL
+3. Verify: PO was created 4 months ago; UFLPA flag was set 3 months ago; PO was not blocked because Power Automate alert was dismissed without action (P2 alert, not P1)
+4. Total open exposure: 3 additional POs from this supplier totaling €1.8M (not yet shipped)
+
+**Decision**: Immediate suspension of all POs to this supplier. Trade Compliance team engages CBP broker to prepare rebuttal documentation. CPO notified. Category Manager tasked with identifying alternative approved supplier within 30 days. Alert logic updated to escalate UFLPA-flagged POs to P1 regardless of value.
 
 ---
 
-## Implementation Timeline
+## 16. Recommended Actions
 
-| Phase | Weeks | Key Deliverables | Owner |
-|-------|-------|-----------------|-------|
-| Phase 0: AS-IS Assessment | 1–8 | Stakeholder map, data quality audit, KPI baseline, gap analysis report | External consultant + CoE Director |
-| Phase 1: Foundation | 9–20 | Master data model, SAP configuration, data migration, user roles | SAP consultants + IT |
-| Phase 2: Standardisation | 21–36 | SOPs, dashboards, training, go-live | CoE + Category Managers |
-| Phase 3: Math Models | 37–44 | EOQ deployed, TCO template, scorecard model live | Data Engineering + CoE Analytics |
-| Phase 4: ML/AI Pipeline | 45–60 | All 5 ML models trained, validated, and in production | Data Science team |
-| Phase 5: Integration | 53–72 | Full EDI coverage top-200 suppliers, all APIs live, event-driven workflows | IT + SAP + Data Engineering |
-| Phase 6: CoE | 73+ | CoE operational, governance cadence, continuous improvement | CoE Director (permanent) |
-
-Note: Phases 3, 4, and 5 overlap intentionally. Math model deployment (Phase 3)
-can begin while Phase 2 training is completing. ML model development (Phase 4) can
-begin in parallel with Phase 3.
+| Result / Condition | Recommended Action | Owner | Timeline |
+|---|---|---|---|
+| PO OTD < 90% for supplier (Red) | Issue formal Performance Improvement Notice; initiate monthly review meeting | Category Manager | Within 10 business days |
+| Open overdue value > €5M | Escalate to Supply Chain Risk Committee; evaluate alternative sourcing | CPO / Supply Chain Director | Within 24 hours |
+| UFLPA flag active, no clearance doc, new PO | Block PO release in SAP; contact Trade Compliance for clearance process | Trade Compliance Manager | Immediate (same day) |
+| CSDDD Tier-1 supplier assessment expired | Issue assessment questionnaire via Ariba SLP; engage third-party ESG auditor if self-assessment refused | SLP Team / Head of Sustainability | Within 30 days of expiry |
+| SUM rate < 80% for cost center (Red) | Enforce mandatory PO policy via SAP MM; retrain cost center owner | Procurement Governance + Finance Controller | Within 30 days |
+| PO approval SLA breach > 72 hours | Escalate to approver's manager; activate delegation of authority for backup approver | Head of Procurement Operations | Within 24 hours of breach |
+| Price variance > 10% vs. contract | Issue price dispute to supplier; review contract conditions record in SAP | Category Manager / Legal | Within 5 business days |
+| 3-way match rate < 85% | Review PO quantity accuracy; training for buyers on GR posting timeliness | Procurement Operations | Monthly review |
+| Single-source critical item, lead time > 90 days | Initiate dual-source qualification; consider safety stock increase | Category Manager + Supply Planning | Within 60 days |
+| Supplier CSDDD status NON_COMPLIANT | Suspend new contract renewals; engage supplier in remediation plan; escalate to CPO if no progress in 60 days | Head of Sustainability + Legal | Within 30 days of identification |
 
 ---
 
-## References
+## 17. Test Cases
 
-### Standards & Regulations
-- GS1 General Specifications v23.0 — GTIN, GLN, SSCC, UOM codes
-- ISO 28000:2022 — Supply Chain Security Management Systems
-- ISO 9001:2015 §8.4 — Control of externally provided processes, products and services
-- Incoterms® 2020 — ICC Publication 723E
-- UN/EDIFACT D.01B — ORDERS, INVOIC, DESADV, RECADV, REMADV message standards
-- EU Directive 2024/1760 (CSDDD) — Corporate Sustainability Due Diligence
-- US Pub.L. 117-78 (UFLPA) — Uyghur Forced Labor Prevention Act
-- APQC Open Standards Benchmarking — Procurement Process Framework
-- SCOR Digital Standard (ASCM, 2019) — Source process model
+### TC-001: Overdue PO Calculation Accuracy
 
-### Academic & Industry Sources
-- Chopra, S. & Meindl, P. (2016). *Supply Chain Management*, 6th ed. Pearson.
-- Ballou, R.H. (2004). *Business Logistics/Supply Chain Management*, 5th ed. Pearson.
-- Harris, F.W. (1913). "How Many Parts to Make at Once." *Factory: The Magazine of Management* 10(2):135–136.
-- Sanh, V., et al. (2019). "DistilBERT, a distilled version of BERT." arXiv:1910.01108.
-- Liu, F.T., Ting, K.M., & Zhou, Z.H. (2008). "Isolation Forest." *ICDM 2008.*
-- Taylor, S.J., & Letham, B. (2018). "Forecasting at scale." *The American Statistician* 72(1):37–45.
-- Jap, S.D. (2002). "Online reverse auctions: Issues, themes, and prospects for the future." *Journal of the Academy of Marketing Science* 30(4):506–525.
-- APICS Dictionary, 16th ed. (ASCM, 2024).
-- ICC Incoterms® 2020. International Chamber of Commerce, Publication 723E.
-- UNSPSC Codeset v26.0 — United Nations Standard Products and Services Code.
-- ECB Statistical Data Warehouse — Euro foreign exchange reference rates (free, SDMX API).
-- World Bank Commodity Markets — monthly commodity price data (open access).
-- Chen, T., & Guestrin, C. (2016). "XGBoost: A Scalable Tree Boosting System." *KDD 2016.*
-- Ke, G., et al. (2017). "LightGBM: A Highly Efficient Gradient Boosting Decision Tree." *NeurIPS 2017.*
+- **Test ID**: TC-001
+- **Scenario**: Verify that is_overdue flag and days_overdue calculation are correct for PO lines past their scheduled delivery date
+- **Input Data**: PO 4500099999, Item 10, scheduled_delivery_date = 2026-06-01, gr_quantity = 0, po_quantity = 100, po_status = 'OPEN', load_date = 2026-06-22
+- **Expected Result**: is_overdue = 1, days_overdue = 21, po_status = 'OPEN', open_value_eur = 100 * net_price_eur
+- **Result to Avoid**: is_overdue = 0 (incorrect — would miss a real overdue order); days_overdue = NULL or negative
+- **Required Validation**: SQL SELECT on fact_po_line for this PO confirms is_overdue=1 and days_overdue=21; confirm in Power BI PO Follow-up page table
+- **Evidence**: Screenshot of Power BI table row for PO 4500099999; SQL query result exported to Excel
+
+### TC-002: Currency Conversion EUR Calculation
+
+- **Test ID**: TC-002
+- **Scenario**: Verify EUR conversion for a PO in USD correctly applies the ECB rate for the PO creation date
+- **Input Data**: PO 4500088001, net_value_loc = 100,000 USD, currency = 'USD', po_date = 2026-06-15; ECB EUR/USD rate on 2026-06-15 = 1.0780 (USD per EUR)
+- **Expected Result**: net_value_eur = 100,000 / 1.0780 = 92,764.38 EUR (rounded to 2 decimal places)
+- **Result to Avoid**: net_value_eur = 100,000 (no conversion applied); net_value_eur using today's rate instead of PO date rate
+- **Required Validation**: Check dim_fx_rate for USD on 2026-06-15; verify net_value_eur in fact_po_line matches manual calculation ±€0.01
+- **Evidence**: dim_fx_rate query result; fact_po_line query result; Finance sign-off on FX rate used
+
+### TC-003: UFLPA Fuzzy Match Threshold
+
+- **Test ID**: TC-003
+- **Scenario**: Verify that fuzzy matching correctly flags suppliers above the 85% confidence threshold and creates manual review flags for 70-84% matches
+- **Input Data**: CBP Entity "Xinjiang Textile Manufacturing Co. Ltd"; SAP Vendor "Xinjiang Textile Manufacturing Company" (should match >85%); SAP Vendor "Xinjiang Apparel Corp" (should score 70-84%); SAP Vendor "Shanghai Electronics Ltd" (should score <70%)
+- **Expected Result**: Vendor 1 → uflpa_flag=1, match_score≥85; Vendor 2 → uflpa_flag=0, manual_review_required=1, match_score 70-84; Vendor 3 → uflpa_flag=0, manual_review_required=0
+- **Result to Avoid**: False negative (Vendor 1 not flagged); false positive (Vendor 3 flagged); NULL scores for any comparison
+- **Required Validation**: Run Python UFLPA script against test dataset; review uflpa_match log table; Trade Compliance Manager reviews Vendor 2 manually
+- **Evidence**: Python script output CSV with match scores; uflpa_match log table screenshot; Trade Compliance Manager review email
+
+### TC-004: Soft Delete Retention
+
+- **Test ID**: TC-004
+- **Scenario**: Verify that a cancelled PO line (LOEKZ set to 'L' in SAP) is updated to deletion_flag=1 in Azure SQL but the row is NOT deleted
+- **Input Data**: PO 4500077001 Item 10, currently in fact_po_line with deletion_flag=0; simulate SAP delta showing LOEKZ='L' for this item
+- **Expected Result**: Row remains in fact_po_line with deletion_flag=1, po_status='CANCELLED'; row count in fact_po_line unchanged
+- **Result to Avoid**: Row physically deleted from fact_po_line (audit trail lost); deletion_flag remains 0 after delta load
+- **Required Validation**: COUNT(*) from fact_po_line before and after delta load (counts must be equal); SELECT on specific PO item confirming deletion_flag=1
+- **Evidence**: Azure SQL audit log confirming no DELETE DML executed; SQL query results before/after showing flag update only
+
+### TC-005: CSDDD Non-Compliant Alert Trigger
+
+- **Test ID**: TC-005
+- **Scenario**: Verify that a Tier-1 supplier with an expired CSDDD assessment (> 3 years old) triggers the compliance alert and appears as NON_COMPLIANT in the dashboard
+- **Input Data**: dim_supplier row: csddd_tier='TIER1', csddd_assessment_date='2022-06-01', csddd_status='COMPLIANT' (as-was); current date = 2026-06-22 (assessment is 4 years old)
+- **Expected Result**: csddd_status updated to 'NON_COMPLIANT' in nightly ETL run; supplier appears in Red on CSDDD dashboard; Power Automate alert sent to SLP Team
+- **Result to Avoid**: csddd_status remains 'COMPLIANT' despite expired assessment; no alert sent; supplier not highlighted in dashboard
+- **Required Validation**: Check dim_supplier after ETL run for this LIFNR; verify Power BI CSDDD page shows this supplier in red; check Power Automate run history for alert execution
+- **Evidence**: dim_supplier query before/after ETL; Power BI screenshot; Power Automate flow run log with recipient confirmation
+
+---
+
+## 18. Risks and Mitigations
+
+| Risk | Probability | Impact | Preventive Control | Corrective Control |
+|---|---|---|---|---|
+| SAP data extraction failure (ADF pipeline) | Medium | High | Daily pipeline health monitoring with Azure Monitor alerts; retry logic (3 attempts with 15-min backoff) | Manual SAP ME2M report export as fallback; notify users of data staleness via Power BI banner |
+| FX rate API downtime (ECB) | Low | Medium | Fallback to prior business day rate automatically; Finance backup Bloomberg rate file | Manual rate upload to dim_fx_rate by Finance Treasury within 4 hours |
+| UFLPA entity list false positive (reputation risk) | Medium | High | 85% confidence threshold with manual review for 70-84% matches; Trade Compliance sign-off required | Vendor dispute process; re-screening within 5 business days; legal review for high-spend suppliers |
+| Power BI RLS misconfiguration (data leak) | Low | Critical | RLS unit tested with each user role; annual RLS audit by IT Security | Immediate workspace take-down; IT Security incident response; user notification per GDPR breach requirements |
+| Vendor master data quality (duplicate LIFNRs) | High | Medium | Automated deduplication check in ETL; parent_vendor_id mapping for same legal entity | Data cleansing sprint; SAP vendor merge (MK06) for confirmed duplicates; MDM governance process |
+| CSDDD assessment data incomplete in Ariba | High | High | SLP team trained on mandatory fields; Ariba form validation rules enforced | Manual data entry fallback via SharePoint list; SLP team chased weekly until 100% complete |
+| Azure SQL performance degradation (large data volumes) | Medium | Medium | Fact table partitioning by fiscal year; indexed views for common aggregations; Premium tier with 500 DTU | Scale up to Business Critical tier temporarily; optimize slow queries; add columnstore indexes |
+| GDPR compliance risk (supplier contact data in Power BI) | Low | High | PII review of all fields loaded to Azure SQL; limit to business contacts only; data retention policy enforced | Remove PII fields immediately; notify DPO; conduct DPIA review |
+
+---
+
+## 19. Implementation Checklist
+
+1. Confirm SAP S/4HANA system access for Azure Data Factory service account (read-only RFC user) — signed off by SAP Basis team
+2. Configure Azure Data Factory pipelines for EKKO, EKPO, EKET, MSEG, LFA1, LFB1, LFM1 extraction with incremental delta load logic
+3. Build Azure SQL star schema (fact_po_line, fact_gr_receipt, fact_compliance_assessment, dim_supplier, dim_material, dim_date, dim_company_code, dim_plant, dim_purchasing_org, dim_commodity, dim_fx_rate)
+4. Implement MATKL → UNSPSC commodity mapping table; achieve ≥95% mapping coverage by PO value; residual unmapped items assigned for manual classification
+5. Configure ECB FX rate daily extract pipeline; test fallback mechanism for weekends and API downtime
+6. Develop and test Python UFLPA fuzzy matching script; set 85% threshold; build uflpa_match audit log table; test against CBP entity list current version
+7. Set up Ariba SLP API connection via Azure API Management; implement rate limit handling and exponential backoff; schedule daily pull at 02:00 UTC
+8. Build LIFNR ↔ Ariba ANID cross-reference table; coordinate with Ariba admin for ANID extraction; handle unmatched records
+9. Implement PO risk scoring logic in Azure SQL computed columns or Python ETL step; validate risk_score distribution against Category Manager expert judgment
+10. Build Power BI data model with star schema relationships; configure RLS roles (Global, Company Code, Purchasing Organization); test RLS with 5 user profiles
+11. Develop all 5 Power BI report pages (Executive Overview, PO Follow-up, Spend Analysis, Compliance Dashboard, Process Health); apply company brand template
+12. Configure all KPI DAX measures; validate each KPI against SAP source system (ME2N, ME2M reports); sign off with Finance Controller
+13. Build Power Automate flows for P1, P2, P3 alerts; test each alert scenario with real data; confirm recipient lists with Category Management and Trade Compliance
+14. Conduct User Acceptance Testing (UAT) with 3 Category Managers, 1 Procurement Director, 1 Trade Compliance Manager, 1 Finance Controller
+15. Resolve all UAT defects (Severity 1 and 2 must be zero before go-live)
+16. Configure Power BI workspace data refresh schedule (daily 06:00 UTC); confirm Azure SQL firewall rules allow Power BI service IP ranges
+17. Publish Power BI solution to production workspace; distribute access per authorization matrix
+18. Train end users: 2-hour training session for buyers (PO Follow-up + Spend Analysis); 1-hour session for Compliance team (Compliance Dashboard); 30-min executive briefing
+19. Complete documentation: data dictionary finalized, ETL design document signed, data lineage diagram approved
+20. Hypercare support period: 4 weeks post go-live with data engineer on-call for pipeline issues; weekly check-in with key users
+
+---
+
+## 20. Validation Checklist
+
+1. Confirm fact_po_line row count matches SAP EKPO count for at least 3 fiscal periods (tolerance ±0.1%)
+2. Confirm total SUM(net_value_eur) in Power BI matches SAP ME2N value for current fiscal year (tolerance ±1%)
+3. Confirm all 40 company code currencies have FX rates in dim_fx_rate for each business day in the past 12 months
+4. Confirm UFLPA screening coverage = 100% for all active suppliers (no NULL screening dates)
+5. Confirm CSDDD Tier-1 supplier list has been agreed and signed off by Head of Sustainability and Legal Counsel
+6. Confirm all 6 KPI DAX formulas produce results that reconcile to SAP source reports (ME2N, ME2M, MRBR) within stated tolerances
+7. Confirm Power BI RLS restricts user access correctly: test with 3 users from different purchasing organizations; verify each sees only their authorized data
+8. Confirm all 5 Power Automate alert flows trigger correctly in UAT: test each with synthetic trigger data; confirm email delivery within defined SLA (P1 ≤ 2 hours)
+9. Confirm soft delete logic is working: cancel a test PO in SAP QAS; run ETL; verify deletion_flag=1 and row count unchanged in Azure SQL
+10. Confirm 3-year historical data load is complete: spot-check 10 POs per fiscal year for 2023, 2024, 2025; verify accuracy of all fields
+11. Confirm commodity UNSPSC mapping coverage ≥ 95% by PO value; residual unmapped items documented and assigned for manual classification
+12. Confirm dim_supplier is_active flag correctly excludes blocked vendors (SAP LFM1.SPERM = 'X'); verify with 5 known blocked vendors
+13. Confirm days_overdue = 0 for non-overdue POs and correctly computed positive integer for overdue POs (test with 10 known overdue POs from SAP ME2M)
+14. Confirm Power BI report refresh completes within 30 minutes for full dataset load; performance test with simulated peak usage (20 concurrent users)
+15. Confirm all evidence documents (reconciliation reports, sign-offs, UAT results) are filed in SharePoint audit folder before go-live approval
+
+---
+
+## 21. Pending Information to Confirm
+
+1. **SAP Company Code List**: Confirm the complete list of all 40 active company codes (BUKRS) to be included in scope; Finance must confirm which codes are dormant or in wind-down
+2. **PO Approval Threshold by Country**: Confirm whether €5,000 / €50,000 / €500,000 approval thresholds are uniform across all 40 countries or vary by entity (local delegation of authority policies may differ)
+3. **CSDDD Tier-1 Spend Threshold**: Confirm whether the €1M per legal entity annual spend threshold for CSDDD Tier-1 classification is correct or if the business uses a different grouping (e.g., €1M at group level consolidated across entities)
+4. **Ariba ANID Cross-Reference Table**: Confirm availability of LIFNR ↔ Ariba ANID mapping table from Ariba admin team; if not maintained, confirm process for manual creation
+5. **Maverick Spend Data Source**: Confirm which SAP table or report is the authoritative source for non-PO invoices (AP invoices without PO reference) — RBKP/RSEG or a custom Z-table maintained by Finance
+6. **UFLPA Screening Frequency**: Confirm with Trade Compliance whether annual screening is sufficient or if quarterly re-screening of flagged suppliers is required
+7. **Power Automate Alert Recipients**: Confirm named recipients (email addresses and distribution lists) for each P1, P2, P3 alert type by commodity category and country
+8. **Historical Load Period**: Confirm whether 3-year history (2023–2025) is the agreed scope or whether a longer period (5 years) is required for trend analysis and CSDDD document retention
+9. **Data Retention Policy**: Confirm with IT Security and Legal the agreed data retention period for Azure SQL (proposed: 7 years aligned with UK Modern Slavery Act and CSDDD Art. 23 minimum 5 years)
+10. **Price Variance Tolerance**: Confirm with Finance Controller whether 5% price variance tolerance for PO-vs-contract comparison is the agreed threshold or if it varies by commodity (e.g., commodities with volatile spot pricing may need 10-15%)
+11. **Azure SQL Tier Confirmation**: Confirm with IT Infrastructure that Azure SQL Premium 500 DTU is pre-approved and provisioned; confirm backup and DR configuration
+12. **Power BI Licensing**: Confirm all end users have Power BI Pro or Premium Per User license; estimated 50 report users + 5 admin users
+
+---
+
+## 22. Implementation Roadmap
+
+| Week | Activity | Deliverable | Owner | Status |
+|---|---|---|---|---|
+| Week 1 | SAP access provisioning; ADF environment setup; commodity mapping table build | ADF service account active; Azure SQL schema created; 95% UNSPSC mapping achieved | Data Engineer + Procurement Ops | Not Started |
+| Week 2 | EKKO/EKPO/EKET extraction pipelines; historical 3-year load; row count reconciliation | fact_po_line populated with 3 years of data; reconciliation report signed | Data Engineer | Not Started |
+| Week 3 | MSEG (GR) extraction; GR quantities aggregated to PO line; overdue flags derived | fact_gr_receipt populated; is_overdue and days_overdue computed and validated | Data Engineer | Not Started |
+| Week 4 | LFA1/LFB1 vendor master load; Ariba API connection; LIFNR-ANID mapping | dim_supplier populated; Ariba data merged; ANID cross-reference confirmed | Data Engineer + Ariba Admin | Not Started |
+| Week 5 | UFLPA fuzzy matching Python script; CBP entity list integration; UFLPA audit log | uflpa_flag set for all active suppliers; 100% screening coverage achieved; Trade Compliance sign-off | Data Engineer + Trade Compliance | Not Started |
+| Week 6 | CSDDD assessment data from Ariba SLP; fact_compliance_assessment load; CSDDD logic | fact_compliance_assessment populated; Tier-1 list confirmed; CSDDD status derived | SLP Team + Data Engineer | Not Started |
+| Week 7 | ECB FX rate pipeline; currency conversion logic; spend value reconciliation | dim_fx_rate complete for 3 years; net_value_eur populated; Finance reconciliation signed | Data Engineer + Finance Controller | Not Started |
+| Week 8 | Power BI data model build; star schema relationships; RLS configuration | Power BI dataset published to dev workspace; RLS tested with 3 roles | BI Developer | Not Started |
+| Week 9 | Power BI Page 1 (Executive Overview) + Page 2 (PO Follow-up) build; KPI DAX measures | Pages 1-2 complete with all visuals and KPIs; validated against SAP ME2N/ME2M | BI Developer | Not Started |
+| Week 10 | Power BI Page 3 (Spend Analysis) + Page 4 (Compliance Dashboard) + Page 5 (Process Health) | Pages 3-5 complete; all 6 KPIs reconciled to source; company branding applied | BI Developer | Not Started |
+| Week 11 | Power Automate alert flows (P1, P2, P3); test all alert scenarios | All alert flows active and tested; recipient lists confirmed; test run logs saved | BI Developer + Procurement Ops | Not Started |
+| Week 12 | User Acceptance Testing (UAT) with Category Managers, Trade Compliance, Finance | Signed UAT sign-off from all 6 testers; defect log with zero S1/S2 open items | All stakeholders | Not Started |
+| Week 13 | UAT defect resolution; final reconciliation reports; documentation completion | All defects resolved; data dictionary finalized; go-live approval from CPO | Data Engineer + BI Developer | Not Started |
+| Week 14 | Production go-live; user training sessions; hypercare begins | Solution live in production workspace; 50 users trained; hypercare schedule active | Project Manager + Data Engineer | Not Started |
+| Week 15–18 | Hypercare: weekly pipeline monitoring; user feedback; performance tuning | Weekly hypercare report; performance within SLA (refresh < 30 min); zero P1 incidents | Data Engineer + BI Developer | Not Started |
+| Week 19 | Post-implementation review; lessons learned; Phase 2 scope definition | PIR document signed; Phase 2 scope (Tier-2 CSDDD, predictive overdue model) approved by CPO | Project Manager + CPO | Not Started |

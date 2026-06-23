@@ -731,6 +731,50 @@ Service_Level_Gap = Actual_Fill_Rate - Planned_Fill_Rate  (in percentage points)
 - Actual Fill Rate from Order-to-Delivery fulfillment data (SD module OTIF/Fill Rate)
 - Target: Service Level Gap within +/- 1 percentage point
 
+### KPI-08: Order Entry Accuracy Rate (S&OP Demand Signal)
+
+At the S&OP level, order entry accuracy tracks the fidelity of customer demand signals feeding the monthly consensus demand plan. Errors in order entry (wrong customer, incorrect material, mismatched quantities) distort the demand baseline used at the Demand Review and Executive S&OP gates, causing revenue plan vs. actual variances that are actually data quality issues — not true demand changes.
+
+```
+Order Entry Accuracy Rate — S&OP (%) =
+    Orders feeding the consensus plan with zero data corrections
+    ─────────────────────────────────────────────────────────── × 100
+              Total orders in the planning period
+```
+
+**SQL (PostgreSQL):**
+
+```sql
+-- Order entry accuracy by business unit and S&OP planning period
+SELECT
+    DATE_TRUNC('month', o.order_date)                    AS sop_month,
+    o.sales_org,
+    o.business_unit,
+    COUNT(DISTINCT o.order_id)                           AS total_orders,
+    COUNT(DISTINCT o.order_id)
+        FILTER (WHERE o.amendment_count = 0
+                  AND o.data_correction_flag = FALSE)    AS clean_orders,
+    ROUND(
+        COUNT(DISTINCT o.order_id)
+            FILTER (WHERE o.amendment_count = 0
+                      AND o.data_correction_flag = FALSE)::numeric
+        / NULLIF(COUNT(DISTINCT o.order_id), 0) * 100,
+    2)                                                   AS entry_accuracy_pct,
+    -- Impact on revenue plan: value of corrected orders
+    SUM(CASE WHEN o.data_correction_flag THEN o.net_value_eur ELSE 0 END)
+                                                         AS corrected_order_value_eur
+FROM fact_orders o
+WHERE o.order_date >= DATE_TRUNC('month', CURRENT_DATE) - INTERVAL '6 months'
+  AND o.order_status <> 'CANCELLED'
+GROUP BY 1, 2, 3
+ORDER BY 1 DESC, entry_accuracy_pct ASC;
+```
+
+- **Target**: ≥ 98% overall; failure cascades into Forecast Bias and Plan vs. Actual variances
+- **Frequency**: Monthly (Demand Review gate); week-1 flash available
+- **Owner**: Demand Management / S&OP Process Owner
+- **S&OP gate use**: If entry accuracy < 96%, the Demand Review chair must flag the baseline as unreliable and apply a data-quality adjustment factor before consensus
+
 ---
 
 ## 11. Analytical Logic

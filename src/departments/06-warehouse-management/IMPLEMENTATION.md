@@ -847,6 +847,49 @@ GROUP BY warehouse_code;
 
 **Target:** < 0.5%. Alert: > 1% for any supplier or carrier triggers NCR (Non-Conformance Report).
 
+### KPI-09: Order Entry Accuracy Rate (Inbound)
+
+Measures the percentage of inbound purchase orders and transfer orders received at the warehouse that were entered into the WMS (SAP EWM / LE-WM) without requiring header or line corrections before goods receipt posting. Errors in order entry — wrong supplier, incorrect EAN/GTIN, mismatched UOM, or wrong storage location — block goods receipt posting and inflate dock-to-stock time.
+
+```
+Order Entry Accuracy Rate — Inbound (%) =
+    Inbound orders received with zero WMS entry corrections
+    ──────────────────────────────────────────────────────── × 100
+              Total inbound orders received
+```
+
+**SQL (PostgreSQL):**
+
+```sql
+-- Inbound order entry accuracy by supplier and week
+SELECT
+    DATE_TRUNC('week', gr.goods_receipt_date)            AS week,
+    gr.lifnr                                             AS vendor_id,
+    COUNT(DISTINCT gr.mblnr)                             AS total_gr_documents,
+    COUNT(DISTINCT gr.mblnr)
+        FILTER (WHERE gr.entry_correction_count = 0)     AS clean_entries,
+    ROUND(
+        COUNT(DISTINCT gr.mblnr) FILTER (WHERE gr.entry_correction_count = 0)::numeric
+        / NULLIF(COUNT(DISTINCT gr.mblnr), 0) * 100,
+    2)                                                   AS entry_accuracy_pct,
+    AVG(gr.dock_to_stock_hours)                          AS avg_dock_to_stock_hours
+FROM fact_goods_receipt gr
+WHERE gr.goods_receipt_date >= CURRENT_DATE - INTERVAL '90 days'
+  AND gr.movement_type IN ('101', '501')                 -- GR against PO / free GR
+GROUP BY 1, 2
+ORDER BY 1 DESC, entry_accuracy_pct ASC;
+```
+
+| Source | Entry Type | Target Accuracy | Impact of Failure |
+|--------|-----------|----------------|-------------------|
+| EDI ASN (856/DESADV) | Auto-match | ≥ 99.5% | Dock-to-stock delay > 2h |
+| Manual PO receipt (MIGO) | CSR entry | ≥ 97.0% | QI block, recount required |
+| Transfer order (STO) | System-to-system | ≥ 99.8% | Inventory discrepancy |
+
+- **Frequency**: Daily; escalate weekly to Receiving Supervisor
+- **Owner**: Warehouse Operations / WMS team
+- **Alert threshold**: Entry accuracy < 95% for any supplier in a rolling 5-day window
+
 ---
 
 ## 11. Analytical Logic

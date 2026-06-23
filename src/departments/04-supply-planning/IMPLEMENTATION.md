@@ -378,6 +378,43 @@ Star schema (PostgreSQL → Apache Superset):
 - **Recommended Action**: Red → capacity/material root cause.
 - **Validation vs Source**: qty sums vs SAP.
 
+### KPI-Supply-08: Order Entry Accuracy Rate (Supply Signal)
+
+In supply planning, order entry accuracy measures the integrity of demand signals entering the planning system — specifically, the percentage of customer sales orders and replenishment orders that are correctly transmitted from the Order Management module (SAP SD) to the planning engine (SAP IBP / MRP) without requiring manual planner correction. Erroneous order entry corrupts the demand signal, inflates safety stock calculations, and triggers unnecessary planned orders.
+
+```
+Order Entry Accuracy Rate — Supply Signal (%) =
+    Demand signals received by planning engine without correction
+    ─────────────────────────────────────────────────────────── × 100
+                 Total demand signals received
+```
+
+**SQL (PostgreSQL):**
+
+```sql
+-- Order entry accuracy as seen by the supply planning layer
+SELECT
+    DATE_TRUNC('week', d.signal_date)                    AS week,
+    d.signal_type,                                        -- SALES_ORDER | REPLENISHMENT | FORECAST_ADJ
+    d.plant,
+    COUNT(*)                                             AS total_signals,
+    COUNT(*) FILTER (WHERE d.planner_correction_flag = FALSE) AS clean_signals,
+    ROUND(
+        COUNT(*) FILTER (WHERE d.planner_correction_flag = FALSE)::numeric
+        / NULLIF(COUNT(*), 0) * 100,
+    2)                                                   AS signal_accuracy_pct,
+    SUM(d.qty_corrected_abs)                             AS total_qty_corrected_units
+FROM fact_demand_signal d
+WHERE d.signal_date >= CURRENT_DATE - INTERVAL '13 weeks'
+GROUP BY 1, 2, 3
+ORDER BY 1 DESC, signal_accuracy_pct ASC;
+```
+
+- **Target**: ≥ 99% for EDI-sourced signals; ≥ 97% for manually entered orders
+- **Frequency**: Weekly; included in Supply Review gate scorecard
+- **Owner**: Supply Planning / Demand Management
+- **Linkage**: Low order entry accuracy → increase safety stock buffer temporarily (Method 4 safety stock with inflated σ_D) until root cause resolved
+
 ---
 
 ## 11. Analytical Logic

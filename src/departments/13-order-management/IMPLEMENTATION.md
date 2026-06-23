@@ -625,6 +625,65 @@ Customer Complaint Rate (%) =
 - Target: < 1%
 - Frequency: Weekly; rolling 4-week average
 
+### 10.9 Order Entry Accuracy Rate
+
+Measures the percentage of customer orders entered into the system (SAP SD VA01/EDI ORDERS) without requiring correction, amendment, or re-entry due to data errors. A low rate signals process failures in order capture — wrong pricing, incorrect ship-to, invalid material numbers, or mismatched UOM — which propagate downstream into ATP errors, invoice discrepancies, and customer chargebacks.
+
+```
+Order Entry Accuracy Rate (%) =
+    Orders entered without post-entry amendment
+    ─────────────────────────────────────────── × 100
+              Total orders entered
+```
+
+**Amendment definition**: any change to order header or line fields (price, quantity, material, ship-to, delivery date) made after the order status reached CONFIRMED and within the same business day as entry. Changes driven by the customer after confirmation are excluded (tracked separately as Customer Change Rate).
+
+**SQL (PostgreSQL):**
+
+```sql
+-- Order Entry Accuracy Rate by channel and month
+SELECT
+    DATE_TRUNC('month', o.order_confirmed_date)          AS month,
+    o.channel,                                            -- EDI | MANUAL | PORTAL
+    COUNT(DISTINCT o.order_id)                           AS total_orders_entered,
+    COUNT(DISTINCT o.order_id)
+        FILTER (WHERE o.amendment_count = 0)             AS orders_entered_clean,
+    ROUND(
+        COUNT(DISTINCT o.order_id) FILTER (WHERE o.amendment_count = 0)::numeric
+        / NULLIF(COUNT(DISTINCT o.order_id), 0) * 100,
+    2)                                                   AS order_entry_accuracy_pct
+FROM fact_orders o
+WHERE o.order_status <> 'CANCELLED'
+  AND o.order_confirmed_date IS NOT NULL
+GROUP BY 1, 2
+ORDER BY 1 DESC, 3 DESC;
+```
+
+**Order Entry Cycle Time (T_entry) — companion metric:**
+
+```sql
+-- Average order entry cycle time in working hours, split by channel
+SELECT
+    o.channel,
+    ROUND(AVG(o.t_entry_hours), 2)                      AS avg_entry_hours,
+    PERCENTILE_CONT(0.9) WITHIN GROUP (ORDER BY o.t_entry_hours) AS p90_entry_hours,
+    COUNT(*)                                             AS order_count
+FROM fact_o2c_cycle o
+WHERE o.order_confirmed_date >= CURRENT_DATE - INTERVAL '90 days'
+GROUP BY o.channel
+ORDER BY avg_entry_hours DESC;
+```
+
+| Channel | Target Accuracy | Target T_entry | World-class |
+|---------|----------------|---------------|-------------|
+| EDI (ORDERS 850/EDIFACT) | ≥ 99.5% | < 2 working hours | 99.8% |
+| Customer Portal (self-service) | ≥ 98.0% | < 1 working hour | 99.0% |
+| Manual (CSR entry) | ≥ 96.0% | < 4 working hours | 98.0% |
+
+- **Frequency**: Daily (operational); monthly trend by channel
+- **Owner**: Order Management / Customer Service
+- **Alert threshold**: Drop of > 2 percentage points in any 5-day rolling window triggers root-cause review
+
 ---
 
 ## 11. Analytical Logic

@@ -82,7 +82,7 @@ Each `WarehouseLocation` carries: `maxWeightKg`, `maxVolumeCbm`, `temperatureZon
 
 ---
 
-## Modelos Matemáticos Aplicados
+## Applied Mathematical Models
 
 ### 1. FEFO — First Expired First Out
 
@@ -205,9 +205,9 @@ Productivity_shift = Lines_picked_in_shift / Hours_worked
 
 ---
 
-## Modelos de Machine Learning Recomendados
+## Recommended Machine Learning Models
 
-### 1. Algoritmos Genéticos para Slotting Optimization
+### 1. Genetic Algorithms for Slotting Optimization
 
 **Problem:** Optimal slot assignment for thousands of SKUs is an NP-hard combinatorial optimization problem — CPOI and velocity alone are heuristics.
 
@@ -232,7 +232,7 @@ Generations: 500–1,000; population: 200
 
 ---
 
-### 2. Deep Reinforcement Learning para Routing de Picking
+### 2. Deep Reinforcement Learning for Picking Routing
 
 **Problem:** Pick routes are planned statically at wave release; warehouse occupancy and pick priorities change dynamically during the shift.
 
@@ -252,7 +252,7 @@ Terminal: all picks completed → episode ends
 
 ---
 
-### 3. Computer Vision para Inventory Cycle Counting
+### 3. Computer Vision for Inventory Cycle Counting
 
 **Problem:** Manual cycle counting is labor-intensive, infrequent, and error-prone. Physical count discrepancies are discovered too late.
 
@@ -271,7 +271,7 @@ Terminal: all picks completed → episode ends
 
 ---
 
-### 4. Demand Clustering para Dynamic Slotting
+### 4. Demand Clustering for Dynamic Slotting
 
 **Problem:** Items frequently ordered together should be stored adjacent to minimize multi-zone picks — CPOI alone ignores co-occurrence patterns.
 
@@ -290,7 +290,7 @@ Assign clusters to physical zones to minimize inter-zone picks
 
 ---
 
-### 5. LSTM para Predicción de Workload por Turno
+### 5. LSTM for Shift Workload Prediction
 
 **Problem:** Overstaffing wastes labor; understaffing causes late shipments. Need shift-level inbound/outbound volume forecast.
 

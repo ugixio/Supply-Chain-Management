@@ -98,7 +98,7 @@ Central aggregate for all incoming quality inspections.
 
 ---
 
-## Modelos Matemáticos Aplicados
+## Applied Mathematical Models
 
 ### 1. AQL Sampling — ISO 2859-1
 
@@ -243,9 +243,9 @@ RTY reveals the hidden factory — the rework and sorting occurring at each proc
 
 ---
 
-## Modelos de Machine Learning Recomendados
+## Recommended Machine Learning Models
 
-### 1. Computer Vision / CNN para Inspección Visual Automatizada
+### 1. Computer Vision / CNN for Automated Visual Inspection
 
 **Problem:** Manual visual inspection is the most expensive and least consistent inspection method — inspector fatigue causes 10–30% miss rate after 2 hours.
 
@@ -264,7 +264,7 @@ RTY reveals the hidden factory — the rework and sorting occurring at each proc
 
 ---
 
-### 2. Gaussian Process para Control Estadístico de Procesos
+### 2. Gaussian Process for Statistical Process Control
 
 **Problem:** Traditional SPC (Shewhart control charts) assumes stationarity and independence — both violated in modern automated production with drift and autocorrelation.
 
@@ -280,7 +280,7 @@ RTY reveals the hidden factory — the rework and sorting occurring at each proc
 
 ---
 
-### 3. One-Class SVM / Autoencoder para Pre-Screening de Lotes
+### 3. One-Class SVM / Autoencoder for Lot Pre-Screening
 
 **Problem:** AQL sampling has inherent statistical risk (producer's risk α, consumer's risk β). High-risk lots from known underperforming suppliers should receive intensified inspection before AQL sampling.
 
@@ -295,7 +295,7 @@ RTY reveals the hidden factory — the rework and sorting occurring at each proc
 
 ---
 
-### 4. Random Forest para Root Cause Analysis
+### 4. Random Forest for Root Cause Analysis
 
 **Problem:** When defect rates spike, root cause analysis (RCA) traditionally relies on fishbone diagrams and manual data review — slow and subjective.
 
@@ -311,7 +311,7 @@ RTY reveals the hidden factory — the rework and sorting occurring at each proc
 
 ---
 
-### 5. LSTM para Predicción de Calidad en Proceso (In-Process Quality)
+### 5. LSTM for In-Process Quality Prediction (In-Process Quality)
 
 **Problem:** Inspection at end-of-line discovers defects too late — rework cost is 10× prevention cost. In-process sensors can predict quality outcomes.
 

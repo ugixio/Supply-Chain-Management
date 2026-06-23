@@ -109,7 +109,7 @@ DRAFT → BOOKED → IN_TRANSIT → CUSTOMS_HOLD → DELIVERED
 
 ---
 
-## Modelos Matemáticos Aplicados
+## Applied Mathematical Models
 
 ### 1. OTD — On-Time Delivery
 
@@ -235,9 +235,9 @@ VAT (EU import):
 
 ---
 
-## Modelos de Machine Learning Recomendados
+## Recommended Machine Learning Models
 
-### 1. Graph Neural Networks para VRP Dinámico (VRPTW)
+### 1. Graph Neural Networks for Dynamic VRP (VRPTW)
 
 **Problem:** Clarke-Wright is a greedy heuristic — poor performance for Vehicle Routing with Time Windows (VRPTW) and dynamic order insertions.
 
@@ -255,7 +255,7 @@ VAT (EU import):
 
 ---
 
-### 2. LSTM para Predicción de ETD (Estimated Time of Delivery)
+### 2. LSTM for ETD Prediction (Estimated Time of Delivery)
 
 **Problem:** Carrier-provided ETD is often unreliable; port congestion, weather, and customs delays are predictable from historical data.
 
@@ -275,7 +275,7 @@ VAT (EU import):
 
 ---
 
-### 3. Random Forest para Clasificación de Riesgo Aduanero
+### 3. Random Forest for Customs Risk Classification
 
 **Problem:** Customs authorities hold a small % of shipments for physical examination — but which ones? Predicting this enables pre-clearance action.
 
@@ -294,7 +294,7 @@ VAT (EU import):
 
 ---
 
-### 4. Reinforcement Learning para Modal Split Optimization
+### 4. Reinforcement Learning for Modal Split Optimization
 
 **Problem:** Choosing road vs. rail vs. sea vs. air for each shipment involves trade-offs between cost, lead time, and CO₂ budget that change dynamically.
 
@@ -312,7 +312,7 @@ Reward r_t = −(freight_cost × cost_weight + transit_time_penalty × urgency_w
 
 ---
 
-### 5. Computer Vision via Satellite para Monitoreo de Congestión Portuaria
+### 5. Satellite Computer Vision for Port Congestion Monitoring
 
 **Problem:** Port congestion (e.g., LA/Long Beach, Rotterdam, Shanghai) causes 5–30 day delays — but the signal appears in carrier data 7–14 days after onset. Satellite imagery detects it first.
 

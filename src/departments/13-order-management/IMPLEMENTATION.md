@@ -707,6 +707,114 @@ ORDER BY avg_entry_hours DESC;
 - **Owner**: Order Management / Customer Service
 - **Alert threshold**: Drop of > 2 percentage points in any 5-day rolling window triggers root-cause review
 
+#### 10.9.1 Most Precise & Verifiable Calculation — Customer Open Orders (First-Pass Field-Match)
+
+The amendment-count method above is the *operational* proxy. The **most precise and fully
+verifiable** measure of order entry quality for customer **open orders** is the **First-Pass
+Field-Match Order Entry Accuracy**, computed at **order-line grain** (the SCOR-correct grain
+for order accuracy) by reconciling every entered line against the **authoritative customer PO
+of record** (the inbound EDI 850 / EDIFACT ORDERS message, or the signed customer PO image).
+It is verifiable because each controlled field is independently auditable against two
+immutable evidence sources:
+
+1. **Golden source** — the customer PO of record (EDI 850 payload archived in the integration
+   layer, or scanned PO document linked to the sales order).
+2. **Change-document audit trail** — SAP `CDHDR`/`CDPOS` change documents on tables `VBAK`/`VBAP`,
+   which record every post-entry field change with user, timestamp, old value, and new value.
+
+**Grain:** one customer open-order line. An *open order line* is any line where
+`order_status NOT IN ('DELIVERED_COMPLETE','INVOICED','CLOSED','CANCELLED','REJECTED')`
+and `open_quantity > 0`.
+
+**Controlled fields (the eight that define a correct line):** Sold-to party, Ship-to party,
+Material number, Order quantity, Unit of Measure (UoM), Net unit price, Requested delivery
+date, and Customer PO reference. A line is *first-pass correct* only if **all eight** entered
+values equal the customer PO of record **and** carry **zero** pre-confirmation change-document
+entries on those fields.
+
+```
+First-Pass Order Entry Accuracy (%) =
+    Open-order lines where ALL 8 controlled fields match the customer PO of record
+    AND have zero pre-confirmation amendments on those fields
+    ──────────────────────────────────────────────────────────────────────────── × 100
+                    Total open-order lines entered in the period
+```
+
+**SQL (PostgreSQL) — fully auditable, line-level:**
+
+```sql
+-- First-Pass Field-Match Order Entry Accuracy for customer open orders.
+-- fact_order_line  : entered sales order lines (from VBAP + VBAK)
+-- ref_customer_po  : authoritative PO of record (parsed EDI 850 / scanned PO)
+-- fact_order_change: one row per pre-confirmation field change (from CDPOS/CDHDR)
+WITH controlled AS (
+    SELECT
+        l.order_id,
+        l.order_line_id,
+        l.channel,
+        -- Field-level match flags vs. the customer PO of record (1 = matches)
+        (l.sold_to_id        IS NOT DISTINCT FROM p.sold_to_id)::int        AS m_sold_to,
+        (l.ship_to_id        IS NOT DISTINCT FROM p.ship_to_id)::int        AS m_ship_to,
+        (l.material_id       IS NOT DISTINCT FROM p.material_id)::int       AS m_material,
+        (l.order_qty         IS NOT DISTINCT FROM p.order_qty)::int         AS m_qty,
+        (l.uom               IS NOT DISTINCT FROM p.uom)::int               AS m_uom,
+        (l.net_unit_price_cents IS NOT DISTINCT FROM p.net_unit_price_cents)::int AS m_price,
+        (l.requested_del_date IS NOT DISTINCT FROM p.requested_del_date)::int AS m_reqdate,
+        (l.customer_po_ref   IS NOT DISTINCT FROM p.customer_po_ref)::int   AS m_po_ref,
+        -- Pre-confirmation amendments on controlled fields (0 = clean entry)
+        COALESCE(c.preconf_change_count, 0)                                 AS preconf_changes
+    FROM fact_order_line l
+    JOIN ref_customer_po p
+      ON p.order_id = l.order_id AND p.order_line_id = l.order_line_id
+    LEFT JOIN (
+        SELECT order_id, order_line_id, COUNT(*) AS preconf_change_count
+        FROM fact_order_change
+        WHERE changed_before_confirmation = TRUE
+          AND field_name IN ('SOLD_TO','SHIP_TO','MATERIAL','ORDER_QTY','UOM',
+                             'NET_PRICE','REQ_DEL_DATE','CUSTOMER_PO_REF')
+        GROUP BY order_id, order_line_id
+    ) c ON c.order_id = l.order_id AND c.order_line_id = l.order_line_id
+    WHERE l.order_status NOT IN
+            ('DELIVERED_COMPLETE','INVOICED','CLOSED','CANCELLED','REJECTED')
+      AND l.open_quantity > 0                       -- open order lines only
+)
+SELECT
+    channel,
+    COUNT(*)                                              AS open_lines_entered,
+    SUM( CASE
+           WHEN (m_sold_to + m_ship_to + m_material + m_qty + m_uom
+                 + m_price + m_reqdate + m_po_ref) = 8        -- all 8 fields match
+            AND preconf_changes = 0                          -- zero amendments
+           THEN 1 ELSE 0
+         END )                                          AS first_pass_correct_lines,
+    ROUND(
+        SUM( CASE
+               WHEN (m_sold_to + m_ship_to + m_material + m_qty + m_uom
+                     + m_price + m_reqdate + m_po_ref) = 8
+                AND preconf_changes = 0
+               THEN 1 ELSE 0 END )::numeric
+        / NULLIF(COUNT(*), 0) * 100,
+    3)                                                  AS first_pass_entry_accuracy_pct
+FROM controlled
+GROUP BY channel
+ORDER BY first_pass_entry_accuracy_pct ASC;
+```
+
+**Why this is the precise and verifiable choice:**
+
+| Property | How it is satisfied |
+|----------|--------------------|
+| **Precise** | Line-level grain (not order-level); all-or-nothing across 8 explicit fields — no partial credit, matching the SCOR Perfect-Order "all components = 1" rule applied to entry |
+| **Verifiable** | Every flag reconciles to two immutable sources: the customer PO of record (EDI 850 / scanned PO) and the SAP change-document trail (CDHDR/CDPOS) — both independently auditable in a financial/EDI audit |
+| **Open-order scoped** | Denominator restricted to lines still open (`open_quantity > 0`, not yet delivered/invoiced/closed/cancelled), so it measures the live, actionable order book |
+| **Reproducible** | Pure deterministic SQL over immutable evidence tables — re-running on the same period yields the identical result (no model, no sampling) |
+
+- **First-pass field-match targets:** EDI ≥ 99.5% · Portal ≥ 98.0% · Manual ≥ 96.0% (same as §10.9)
+- **Audit cadence:** monthly reconciliation sample of 30 lines per channel re-checked by hand
+  against the archived PO image to validate the automated flags (zero tolerance for flag error)
+- **Field-defect Pareto:** rank `m_*` failures to find the dominant error field (typically price
+  or requested delivery date) and target the root cause
+
 ---
 
 ## 11. Analytical Logic

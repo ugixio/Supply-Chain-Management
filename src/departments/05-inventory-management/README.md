@@ -100,9 +100,9 @@ Key fields: `idempotencyKey` (UUID) prevents duplicate processing on retry. `pro
 
 ---
 
-## Modelos Matemáticos Aplicados
+## Applied Mathematical Models
 
-### 1. Proyección de Stock por Event Sourcing
+### 1. Stock Projection via Event Sourcing
 
 Current balance is derived entirely from the event log — there is no mutable balance field:
 
@@ -121,7 +121,7 @@ Replaying the entire event log to any point in time guarantees a complete audit 
 
 ---
 
-### 2. ABC por Valor (Pareto 80/20)
+### 2. ABC by Value (Pareto 80/20)
 
 Rank all active SKUs by **Annual Consumption Value**:
 
@@ -141,7 +141,7 @@ C-class:  Cumulative_Value_% > 95%   (~50% of SKUs)
 
 ---
 
-### 3. XYZ por Coeficiente de Variación
+### 3. XYZ by Coefficient of Variation
 
 Classify SKUs by demand predictability over a rolling 12-month window:
 
@@ -195,7 +195,7 @@ DIO measures how many days of COGS are tied up in inventory. Lower is better for
 
 ---
 
-### 6. Contabilidad de Doble Entrada para Movimientos de Inventario
+### 6. Double-Entry Accounting for Inventory Movements
 
 Every `StockMovement` record generates an immutable GL journal entry per **GAAP / IFRS IAS 2**:
 
@@ -223,9 +223,9 @@ All amounts in integer cents (`Money.amount: number`). No floating-point arithme
 
 ---
 
-## Modelos de Machine Learning Recomendados
+## Recommended Machine Learning Models
 
-### 1. CNN + LSTM para Clasificación ABC-XYZ Dinámica
+### 1. CNN + LSTM for Dynamic ABC-XYZ Classification
 
 **Problem:** Static ABC-XYZ classification done quarterly misses mid-quarter demand shifts (promotions, seasonality, new product launches).
 
@@ -253,7 +253,7 @@ model = Sequential([
 
 ---
 
-### 2. Isolation Forest para Detección de Shrinkage Anómalo
+### 2. Isolation Forest for Anomalous Shrinkage Detection
 
 **Problem:** Shrinkage (theft, damage, counting errors) is detected only at periodic physical counts — often months late.
 
@@ -268,7 +268,7 @@ model = Sequential([
 
 ---
 
-### 3. Autoencoder para Detección de Stock Obsoleto
+### 3. Autoencoder for Obsolete Stock Detection
 
 **Problem:** Dead stock (zero movement >90 days) consumes warehouse space and ties up capital; often not caught until year-end.
 
@@ -284,7 +284,7 @@ model = Sequential([
 
 ---
 
-### 4. Gradient Boosting para Predicción de Stockout
+### 4. Gradient Boosting for Stockout Prediction
 
 **Problem:** Stockouts cause lost sales, emergency procurement, and customer dissatisfaction. Need 7/14/30-day early warning.
 
@@ -305,7 +305,7 @@ model = Sequential([
 
 ---
 
-### 5. Reinforcement Learning para Política de Reabastecimiento Dinámica
+### 5. Reinforcement Learning for Dynamic Replenishment Policy
 
 **Problem:** Fixed (s, S) reorder policies cannot adapt to changing demand patterns and supply variability.
 

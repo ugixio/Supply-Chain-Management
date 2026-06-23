@@ -57,9 +57,11 @@ can position itself proactively, minimizing stockouts and excess inventory.
 
 ### References
 - Holt, C.C. (1957) — Exponentially weighted moving averages
-- Winters, P.R. (1960) — Triple exponential smoothing
+- Winters, P.R. (1960) — "Forecasting Sales by Exponentially Weighted Moving Averages", *Management Science* 6(3)
+- Hyndman, R.J. & Athanasopoulos, G. (2021) — *Forecasting: Principles and Practice* (3rd ed., OTexts) https://otexts.com/fpp3/
 - Chopra & Meindl Ch.7 "Demand Forecasting in a Supply Chain"
 - Ballou Ch.8 — Demand forecasting methods
+- APICS/ASCM Supply Chain Dictionary (17th ed., 2024) — *forecast*, *demand management*, *order backlog*
 - APICS CPIM 9.0 — Fundamentals of Demand Management
 
 ## Applied Mathematical Models
@@ -77,6 +79,12 @@ can position itself proactively, minimizing stockouts and excess inventory.
 6. **EOQ — Economic Order Quantity (Harris 1913)** — Q* = √(2×D×S/H). D=annual demand, S=ordering cost, H=holding cost per unit per year. Minimizes total inventory cost.
 
 7. **MAE, MAPE, RMSE** — MAE=Σ|A-F|/n. MAPE=Σ|A-F|/A × 100/n. RMSE=√(Σ(A-F)²/n). Always compute all three for algorithm selection.
+
+8. **Projected Order Intake** — The authoritative forward-looking measure of orders expected to be received. Combines firm open-order backlog (SAP VBAP) with the statistical demand forecast (Holt-Winters): `Projected Intake = Open Order Value (firm) + ŷₜ₊ₕ × avg_net_price − backlog due to ship`. This is the answer to "how much are we going to receive?" — not the backlog (past) and not the forecast alone (future), but both together. Ref: APICS/ASCM Dictionary — *demand forecast*, *order backlog*; Chopra & Meindl Ch. 7.
+
+9. **Backtesting (Walk-Forward Holdout)** — Mandatory verification step for any forecast. Hold out the last h periods (typically 12 for m=12), fit the model on training data only, project h periods, compute MAPE/WMAPE/RMSE/Bias vs holdout actuals. A model is only deployable when backtest MAPE is within threshold and |Bias| ≈ 0. Without backtesting, a projection is an unvalidated estimate. Ref: Hyndman & Athanasopoulos, *Forecasting: Principles and Practice* (3rd ed., OTexts 2021) §5.8.
+
+10. **Backlog Identity (Audit Control)** — `Ending Backlog = Beginning Backlog + Order Intake − Shipments`. This accounting identity must hold to the cent each period. If it does not, there is a data error (duplicate, gap, or SAP mismatch). It is the supply-chain equivalent of a bank reconciliation. Ref: APICS/ASCM Dictionary — *backlog*; ASC 606 / IFRS 15 revenue recognition.
 
 ## Recommended Machine Learning Models
 

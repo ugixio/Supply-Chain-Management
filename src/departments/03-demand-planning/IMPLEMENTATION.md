@@ -352,6 +352,174 @@ Star schema (PostgreSQL → Apache Superset materialized SQL views):
 - **Recommended Action**: align actual SS to Method 4 ±tolerance.
 - **Validation vs Source**: recompute z from service level.
 
+### KPI: Projected Order Intake
+
+> **Standard / Source:** APICS/ASCM Supply Chain Dictionary (17th ed., 2024) — *demand
+> forecast*, *order backlog*; Chopra & Meindl, *Supply Chain Management* (6th ed., 2016)
+> Ch. 7 "Demand Forecasting in a Supply Chain"; Hyndman & Athanasopoulos,
+> *Forecasting: Principles and Practice* (3rd ed., OTexts 2021) — ETS/Holt-Winters.
+>
+> Projected Order Intake is the authoritative forward-looking measure of orders expected
+> to be received in a future period. It combines the **firm open-order backlog** (already
+> in SAP SD — certain) with the **statistical demand forecast** (estimated — Holt-Winters
+> or ARIMA) to give the total expected commercial intake for each planning period.
+
+```
+Projected Order Intake (period t+h) =
+    Open Order Value (firm backlog in SAP, not yet shipped)
+  + Demand Forecast ŷₜ₊ₕ × weighted-average net price
+  − Backlog portion scheduled to ship within period t+h
+```
+
+#### Core Forecast Formula: Holt-Winters Triple Exponential Smoothing (Additive)
+
+The canonical supply-chain standard for demand with **trend + seasonality**
+(Winters, 1960; APICS CPIM; Chopra & Meindl Ch. 7):
+
+```
+Level:      ℓₜ = α · (yₜ − sₜ₋ₘ)        + (1 − α) · (ℓₜ₋₁ + bₜ₋₁)
+Trend:      bₜ = β · (ℓₜ − ℓₜ₋₁)         + (1 − β) · bₜ₋₁
+Seasonal:   sₜ = γ · (yₜ − ℓₜ₋₁ − bₜ₋₁)  + (1 − γ) · sₜ₋ₘ
+
+Forecast:   ŷₜ₊ₕ = ℓₜ + h · bₜ + sₜ₊ₕ₋ₘ   ← projected orders h periods ahead
+```
+
+| Parameter | Meaning | Range |
+|---|---|---|
+| `yₜ` | Actual orders received in period t | — |
+| `ℓₜ` | Smoothed level (base demand) | — |
+| `bₜ` | Trend (growth per period) | — |
+| `sₜ` | Seasonal factor | — |
+| `m` | Season length (12 = annual monthly) | 4, 12, 52 |
+| `α, β, γ` | Smoothing weights — **optimised** via MLE minimising SSE | 0–1 |
+| `h` | Forecast horizon (periods ahead) | 1–18 |
+| `ŷₜ₊ₕ` | **Projected order quantity** | target |
+
+**Model selection rule** (Hyndman & Athanasopoulos, FPP3 Ch. 8):
+
+| Demand pattern | Method | Params |
+|---|---|---|
+| Stable, no trend/season | SES | α |
+| Trending, no season | Holt (double ES) | α, β |
+| Trend + seasonality ⭐ most common | **Holt-Winters** | α, β, γ, m |
+| Complex autocorrelation | SARIMA | p,d,q,P,D,Q,m |
+
+**Minimum data requirement:** ≥ 2 complete seasonal cycles (≥ 24 months for
+m=12) before running Holt-Winters. Below that threshold use SES or Holt.
+
+#### Python Implementation (statsmodels — OSI BSD-3)
+
+```python
+# demand_forecast.py
+import pandas as pd
+import numpy as np
+from statsmodels.tsa.holtwinters import ExponentialSmoothing
+
+# ts: monthly order value time series indexed by period
+modelo = ExponentialSmoothing(
+    ts,
+    trend="add",          # additive trend
+    seasonal="add",       # additive seasonality
+    seasonal_periods=12   # annual cycle
+).fit(optimized=True)     # statsmodels optimises α, β, γ via MLE
+
+forecast = modelo.forecast(6)   # project 6 months ahead
+```
+
+#### Backtesting — Mandatory Verification Step
+
+A forecast is only **verifiable** when validated against held-out actual data
+(Hyndman & Athanasopoulos, FPP3 §5.8 — "Evaluating forecast accuracy").
+Without backtesting, a projection is an unvalidated estimate.
+
+```
+Backtesting procedure (walk-forward / holdout method):
+
+  Full history:  [────────── TRAIN (n−h periods) ──────────][── HOLDOUT (h) ──]
+                  use to fit model                           "hide" and compare
+
+  1. Hold out last h periods (typically 12 months for m=12).
+  2. Fit Holt-Winters on training set only.
+  3. Forecast h periods.
+  4. Compare forecast vs holdout actuals → compute MAPE, WMAPE, RMSE, Bias.
+  5. If MAPE < threshold and |Bias| ≈ 0 → model is deployable.
+```
+
+```python
+# Backtesting
+h_holdout   = 12
+ts_train    = ts.iloc[:-h_holdout]
+ts_test     = ts.iloc[-h_holdout:]
+
+model_bt    = ExponentialSmoothing(
+    ts_train, trend="add", seasonal="add", seasonal_periods=12
+).fit(optimized=True)
+fc_bt       = model_bt.forecast(h_holdout)
+
+errors      = ts_test - fc_bt
+MAPE        = (errors.abs() / ts_test).mean() * 100
+WMAPE       = errors.abs().sum() / ts_test.sum() * 100
+RMSE        = np.sqrt((errors**2).mean())
+BIAS        = errors.mean()
+# FVA vs naive 3-month moving average
+naive       = pd.Series(ts_train.rolling(3).mean().iloc[-1], index=ts_test.index)
+FVA         = (naive - ts_test).abs().mean() / ts_test.mean() * 100 - MAPE
+```
+
+#### SQL: Projected Order Intake (PostgreSQL)
+
+```sql
+-- Combines firm SAP backlog + statistical forecast per planning period.
+-- fact_open_orders : live open order lines from SAP VBAP (open_qty, net_price_cents)
+-- fact_forecast    : Holt-Winters output loaded by Python pipeline
+SELECT
+    f.forecast_period_month                          AS period,
+    f.product_family,
+    -- Firm component: backlog already booked in SAP
+    COALESCE(SUM(o.open_qty * o.net_unit_cents), 0) AS firm_backlog_cents,
+    -- Statistical component: Holt-Winters projection × weighted avg price
+    ROUND(f.forecast_qty * f.avg_net_price_cents)   AS forecast_value_cents,
+    -- Total projected intake
+    COALESCE(SUM(o.open_qty * o.net_unit_cents), 0)
+        + ROUND(f.forecast_qty * f.avg_net_price_cents) AS projected_intake_cents,
+    f.mape_backtest_pct,          -- model reliability flag
+    f.bias_backtest               -- over/under-forecast indicator
+FROM fact_forecast f
+LEFT JOIN fact_open_orders o
+       ON o.product_family = f.product_family
+      AND DATE_TRUNC('month', o.scheduled_ship_date) = f.forecast_period_month
+WHERE f.forecast_period_month BETWEEN CURRENT_DATE
+                                  AND CURRENT_DATE + INTERVAL '6 months'
+GROUP BY f.forecast_period_month, f.product_family,
+         f.forecast_qty, f.avg_net_price_cents,
+         f.mape_backtest_pct, f.bias_backtest
+ORDER BY 1, 2;
+```
+
+#### Backlog Identity — Audit Cross-Check
+
+The standard audit control that makes the forecast **verifiable**:
+
+```sql
+-- If this does not equal zero, there is a data error (duplicate, gap, or SAP mismatch)
+SELECT
+    period,
+    beginning_backlog_cents + order_intake_cents - shipments_cents
+        AS calculated_ending_backlog_cents,
+    ending_backlog_cents                            AS reported_ending_backlog_cents,
+    (beginning_backlog_cents + order_intake_cents - shipments_cents)
+        - ending_backlog_cents                      AS discrepancy_cents  -- must = 0
+FROM monthly_backlog_summary;
+```
+
+- **Formula source:** APICS/ASCM Dictionary — *backlog*, *order intake*; standard
+  accounting identity used in revenue recognition (ASC 606 / IFRS 15).
+- **Frequency:** monthly; tolerance = 0 (exact to the cent).
+- **Owner:** Demand Planning / Finance Controlling.
+- **Backtest MAPE targets:** A-items < 15% | B-items < 25% | C-items < 40%.
+- **Bias target:** |Bias| < 5% of mean demand; persistent bias → model de-bias or
+  planner coaching.
+
 ---
 
 ## 11. Analytical Logic

@@ -232,6 +232,7 @@ End-to-end supply chain digital twin that simulates the full impact of what-if s
 | Gap Resolution Rate | `Gaps resolved in Pre-S&OP / Total gaps × 100` | ≥ 80 % | < 60 % |
 | S&OP Cycle Adherence | `Steps completed on schedule / 5 steps × 100` | 100 % | Any step missed |
 | Executive S&OP Attendance | Key stakeholders present | 100 % C-suite | < 80 % |
+| Order Entry Accuracy — Demand Baseline (SCOR RL.2.3) | `Orders entered without data correction / Total orders × 100` | ≥ 98 % | < 96 % |
 
 ---
 

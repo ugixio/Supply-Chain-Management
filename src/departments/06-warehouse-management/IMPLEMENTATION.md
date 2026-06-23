@@ -849,6 +849,11 @@ GROUP BY warehouse_code;
 
 ### KPI-09: Order Entry Accuracy Rate (Inbound)
 
+> **Standard / Source:** ASCM/APICS SCOR Digital Standard — Documentation Accuracy (RL.2.3),
+> a component of Perfect Order Fulfillment (RL.1.1). At inbound, this is the warehouse-side
+> leading indicator of RL.2.3: receiving documentation (ASN/DESADV, GR) entered complete and
+> accurate. Reference: ASCM SCOR Digital Standard (2020); APICS Dictionary 16th Ed.
+
 Measures the percentage of inbound purchase orders and transfer orders received at the warehouse that were entered into the WMS (SAP EWM / LE-WM) without requiring header or line corrections before goods receipt posting. Errors in order entry — wrong supplier, incorrect EAN/GTIN, mismatched UOM, or wrong storage location — block goods receipt posting and inflate dock-to-stock time.
 
 ```

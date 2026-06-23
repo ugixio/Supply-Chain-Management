@@ -627,7 +627,30 @@ Customer Complaint Rate (%) =
 
 ### 10.9 Order Entry Accuracy Rate
 
-Measures the percentage of customer orders entered into the system (SAP SD VA01/EDI ORDERS) without requiring correction, amendment, or re-entry due to data errors. A low rate signals process failures in order capture — wrong pricing, incorrect ship-to, invalid material numbers, or mismatched UOM — which propagate downstream into ATP errors, invoice discrepancies, and customer chargebacks.
+> **Standard / Source — ASCM/APICS SCOR Digital Standard (SCOR-DS), Reliability attribute.**
+> Order Entry Accuracy is the leading (order-capture) indicator of the SCOR metric
+> **Documentation Accuracy (RL.2.3)**, which is one of the four mandatory components of
+> **Perfect Order Fulfillment (RL.1.1)** — the canonical, authoritative supply-chain
+> measure of order correctness. An order is counted "perfect" only when **all four** SCOR
+> Level-2 components are satisfied:
+>
+> | SCOR ID | Component | Meaning |
+> |---------|-----------|---------|
+> | RL.2.1 | % of Orders Delivered In Full | All lines & quantities delivered |
+> | RL.2.2 | Delivery Performance to Customer Commit Date | On-time vs. committed date |
+> | RL.2.3 | Documentation Accuracy | Shipping (RL.3.50), Payment (RL.3.45) & Compliance (RL.3.31) docs complete and accurate |
+> | RL.2.4 | Perfect Condition | Delivered damage-free, correct, accepted |
+>
+> **Canonical formula (SCOR-DS RL.1.1):**
+> `Perfect Order Fulfillment (%) = (Total Perfect Orders / Total Number of Orders) × 100`
+> where an order is perfect only if `RL.2.1 = RL.2.2 = RL.2.3 = RL.2.4 = 1`.
+>
+> Order Entry Accuracy below operationalises **RL.2.3** at the point of capture — catching
+> the documentation/data errors *before* they propagate downstream.
+>
+> Reference: ASCM SCOR Digital Standard (2020); APICS Dictionary, 16th Ed. — "Perfect Order".
+
+Measures the percentage of customer orders entered into the system (SAP SD VA01/EDI ORDERS) without requiring correction, amendment, or re-entry due to data errors. A low rate signals process failures in order capture — wrong pricing, incorrect ship-to, invalid material numbers, or mismatched UOM — which propagate downstream into RL.2.3 documentation failures, ATP errors, invoice discrepancies, and customer chargebacks.
 
 ```
 Order Entry Accuracy Rate (%) =

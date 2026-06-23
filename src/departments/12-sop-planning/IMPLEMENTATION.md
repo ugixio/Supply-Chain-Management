@@ -733,6 +733,11 @@ Service_Level_Gap = Actual_Fill_Rate - Planned_Fill_Rate  (in percentage points)
 
 ### KPI-08: Order Entry Accuracy Rate (S&OP Demand Signal)
 
+> **Standard / Source:** ASCM/APICS SCOR Digital Standard — Documentation Accuracy (RL.2.3),
+> a component of Perfect Order Fulfillment (RL.1.1). At S&OP, order entry accuracy is the
+> data-quality gate on the order history feeding the consensus demand baseline. Reference:
+> ASCM SCOR Digital Standard (2020); APICS Dictionary 16th Ed. — "Perfect Order".
+
 At the S&OP level, order entry accuracy tracks the fidelity of customer demand signals feeding the monthly consensus demand plan. Errors in order entry (wrong customer, incorrect material, mismatched quantities) distort the demand baseline used at the Demand Review and Executive S&OP gates, causing revenue plan vs. actual variances that are actually data quality issues — not true demand changes.
 
 ```

@@ -380,6 +380,11 @@ Star schema (PostgreSQL → Apache Superset):
 
 ### KPI-Supply-08: Order Entry Accuracy Rate (Supply Signal)
 
+> **Standard / Source:** ASCM/APICS SCOR Digital Standard — Documentation Accuracy (RL.2.3),
+> a component of Perfect Order Fulfillment (RL.1.1). In planning, order entry accuracy is the
+> upstream data-quality gate on the demand signal feeding RL.1.1. Reference: ASCM SCOR Digital
+> Standard (2020); APICS Dictionary 16th Ed. — "Perfect Order".
+
 In supply planning, order entry accuracy measures the integrity of demand signals entering the planning system — specifically, the percentage of customer sales orders and replenishment orders that are correctly transmitted from the Order Management module (SAP SD) to the planning engine (SAP IBP / MRP) without requiring manual planner correction. Erroneous order entry corrupts the demand signal, inflates safety stock calculations, and triggers unnecessary planned orders.
 
 ```

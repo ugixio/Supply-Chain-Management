@@ -20,6 +20,7 @@ GS1 **SSCC** (Serial Shipping Container Code) labels are generated at pallet bui
 | **FEFO Compliance %** | Picks following FEFO sequence / Total lot picks | 100% (pharma/food — zero tolerance) |
 | **Dock-to-Stock Time** | Time from truck arrival to putaway complete (hours) | < 4 hours (ambient); < 2 hours (cold chain) |
 | **Labor Cost per Shipment** | Total warehouse labor cost / Outbound shipments | Benchmark varies by sector |
+| **Order Entry Accuracy — Inbound** (SCOR RL.2.3) | Inbound orders received with zero WMS entry corrections / Total inbound orders × 100 | ≥ 99.5% (EDI ASN); ≥ 97% (manual GR) |
 
 ---
 

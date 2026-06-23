@@ -120,6 +120,27 @@ World-class target: POR ≥ 95 %
 Ref: Chopra & Meindl, Supply Chain Management 6th Ed., Ch. 3
 ```
 
+### 4.2b Order Entry Accuracy (SCOR-DS RL.2.3 — leading indicator)
+
+```
+Order Entry Accuracy% = (Orders entered without post-entry amendment / Total orders entered) × 100
+
+Standard: ASCM/APICS SCOR Digital Standard — Documentation Accuracy (RL.2.3),
+          a mandatory component of Perfect Order Fulfillment (RL.1.1):
+
+  Perfect Order Fulfillment% = (Total Perfect Orders / Total Orders) × 100
+  Order is "perfect" only if ALL four Level-2 components = 1:
+    RL.2.1 % Orders Delivered In Full
+    RL.2.2 Delivery Performance to Customer Commit Date
+    RL.2.3 Documentation Accuracy  ← order entry operationalises this at capture
+    RL.2.4 Perfect Condition
+
+Channel targets: EDI ≥ 99.5 % | Portal ≥ 98.0 % | Manual (CSR) ≥ 96.0 %
+Ref: ASCM SCOR Digital Standard (2020); APICS Dictionary 16th Ed. — "Perfect Order"
+```
+
+Full implementation (SQL, T_entry companion, alert thresholds): see `IMPLEMENTATION.md` §10.9.
+
 ### 4.3 ATP — Available to Promise
 
 ```
@@ -236,7 +257,7 @@ Reward : fulfilled_revenue − penalty_for_OTIF_fail − cost_of_customer_churn
 | **OTIF %** | `OTIF orders / Total orders × 100` | ≥ 98 % (Walmart standard) | < 95 % |
 | **Perfect Order Rate** | `OTD% × InFull% × DamageFree% × InvoiceAcc%` | ≥ 95 % | < 90 % |
 | **Order Fill Rate** | `Units shipped complete / Units ordered × 100` | ≥ 99 % | < 97 % |
-| **Order Accuracy Rate** | `Orders without error / Total orders × 100` | ≥ 99.5 % | < 99 % |
+| **Order Entry Accuracy** (SCOR RL.2.3) | `Orders entered without amendment / Total entered × 100` | ≥ 99.5 % (EDI) | < 99 % |
 | **Order Cycle Time** | `Shipment departure − Order receipt` | ≤ 48 h (B2B) | > 72 h |
 | **Backorder Rate** | `Backorder lines / Total lines × 100` | < 2 % | > 5 % |
 | **ATP Accuracy** | `Deliveries on ATP-promised date / Total × 100` | ≥ 97 % | < 93 % |

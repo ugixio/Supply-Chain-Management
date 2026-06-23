@@ -24,6 +24,7 @@ material availability, production capacity, and customer service objectives.
 | Material Availability Rate | ≥ 98% |
 | Lead Time Achievement | ≥ 95% |
 | Setup Time Efficiency | Varies by industry |
+| Order Entry Accuracy — Demand Signal (SCOR RL.2.3) | ≥ 99% (EDI); ≥ 97% (manual) |
 
 ### Simplified MRP Process
 ```

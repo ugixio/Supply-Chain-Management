@@ -40,10 +40,16 @@ relations:
 - **SCM-R7:** CSDDD due-diligence documents are retained ≥ 5 years from assessment date
   (Art. 23).
 
-## Data conventions (ADR-0006)
+## Data conventions (ADR-0006; SCM-R8 rewritten by ADR-0019)
 
-- **SCM-R8:** Money is integer cents (`Money.amount: number`, integer). Floats never
-  hold monetary values.
+- **SCM-R8:** Money is **arbitrary-precision Decimal** (`decimal.js` in TS,
+  `decimal.Decimal` in Python, `NUMERIC(19,4)` in Postgres, **string** across gRPC).
+  Float arithmetic never touches a monetary value. Rounding is **explicit and banker's
+  (`ROUND_HALF_EVEN`)**, applied only at defined boundaries (persistence, display,
+  allocation remainder) — never implicitly mid-calculation. *(Was "integer cents" under
+  ADR-0006; rewritten by ADR-0019. The ID is retained; department citations by ID stay
+  valid. Migration is backlog — until it lands, `Money.amount: number` remains in code and
+  this rule states the target, so a reviewer treats new float-money paths as violations.)*
 - **SCM-R9:** Dates are ISO 8601 (`YYYY-MM-DD`); timestamps are UTC (`ISOTimestamp`).
 - **SCM-R10:** Quantity units use GS1 UOM codes (`UOM` constant, `shared/types.ts`).
 - **SCM-R11:** SKU codes are immutable once created; lifecycle is expressed via status

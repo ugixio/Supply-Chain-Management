@@ -52,6 +52,7 @@ relations:
 - ADR-0023 — Repository is a monorepo with **Clean-Architecture layers as packages** (`domain`/`application`/`infrastructure`/`shared`), each organized by department inside; the modular-monolith boundary lives at the NestJS app (one module per department). (proposed)
 - ADR-0024 — Stage A serves the knowledge graph from a **Postgres read model rebuilt one-way from `docs/`**; `docs/` stays the single source of truth, the projection is disposable and never hand-edited. (proposed)
 - ADR-0025 — GraphQL is **code-first** (NestJS decorators generate the SDL); the schema is a build artifact, not a hand-maintained file. (proposed)
+- ADR-0026 — The wiki front end is a **node-graph of octagons**: SCM core centre, 14 departments as a connected circuit, CPT sub-nodes on expand; LED-cyan stroke on transparent fill; node click opens a right sidebar. (proposed)
 
 ---
 
@@ -401,6 +402,52 @@ every fork's status ambiguous).
       spec, golden tests, or codegen). **Concept nodes (ADR-0015) now make each
       divergence visible** — the first census already surfaced the service-level
       z-score tables (`CPT-0003`); they do not resolve it.
+
+---
+
+## ADR-0026 — The wiki front end is an octagon node-graph
+
+**Status:** Proposed
+**Extends:** ADR-0017, ADR-0015
+
+**Context:** Stage A's front end (Next.js) visualizes the governed knowledge graph. The
+owner specified the visual language: Supply Chain Management at the centre, the 14
+departments arranged around it as a connected circuit, each department expanding into its
+concept sub-nodes (the `CPT-*` catalogue); every node an **octagon** drawn as an outline
+only — no fill — with **LED cyan** strokes on a transparent/dark background, as if the
+nodes were glowing cores; a click on any node opens a **right-hand sidebar** with that
+node's detail.
+
+**Decision:** The front end is a three-tier node-graph:
+- **Core node** — "Supply Chain Management", centre.
+- **Department nodes** — the 14 departments, placed radially and connected to the core and
+  to each other as a circuit (edges follow the SCOR-DS process flow where one exists).
+- **Concept sub-nodes** — a department expands to reveal its `CPT-*` nodes; these are the
+  leaves the sidebar renders in full (formula, units, worked example, links).
+
+Visual spec (the seed for a future `50-engineering/frontend/` token set):
+- Octagon geometry, **stroke only**, no background fill; stroke = LED cyan
+  (`#22d3ee`-family), with a soft outer glow; page background transparent over a dark base.
+- Interaction states — idle / hover (brighter stroke + glow) / selected (filled stroke
+  weight, persistent glow) / dimmed (non-neighbours fade when one node is focused).
+- **Sidebar** slides in from the right; renders the selected node's content from the
+  GraphQL read model (ADR-0024/0025); closes without losing graph state.
+- **Accessibility:** the graph is keyboard-navigable (tab/arrows between nodes, Enter to
+  open), every node has an accessible name and role, focus states meet WCAG contrast, and
+  the cyan-on-dark palette is checked for contrast (the glow is decorative, never the only
+  affordance). A reduced-motion setting disables the glow pulse. Light and dark themes both
+  supported (the transparent-fill octagon reads on both).
+
+**Consequences:** (+) a distinctive, legible entry surface that mirrors the graph the
+gates already validate — the visual is a view of real governed data, not a mock. (−) an
+outline-glow aesthetic needs care to stay accessible (contrast, motion, keyboard); the
+a11y clauses above are load-bearing, not optional. (−) radial circuit layout for 14 + N
+nodes needs a real layout strategy (force-directed or fixed radial) — a P4 design task.
+
+**Alternatives considered:** *Conventional sidebar tree / list* — accessible and trivial,
+but discards the graph structure that is the point. *Filled cards* — easier contrast but
+not the specified visual language. The octagon-outline node-graph is the owner's explicit
+choice; this ADR fixes its accessibility floor so the aesthetic cannot regress usability.
 
 ---
 

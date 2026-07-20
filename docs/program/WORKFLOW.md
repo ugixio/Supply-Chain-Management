@@ -56,8 +56,14 @@ mirror-coverage bar) · duplicated formulas across TS/Python with one past diver
   and merge the branch.
 - ⬜ **U3 · orchestrator** — Dedup pass: `CLAUDE.md` §Critical Business Rules /
   §Code Standards cite SCM-R1..R13 instead of restating (SSOT).
-- ⬜ **U4 · WHAT lane** — Per-department `rule.md` × 14: extract each department's
+- ✅ **U4 · WHAT lane** — Per-department `rule.md` × 14: extract each department's
   invariants from its code/README into its reserved family (PRC, SUP, DMD, …).
+  **Landed 2026-07-20 (branch `feat/per-department-rules`):** all 14 `rule.md` created
+  under `docs/40-contexts/NN-<dept>/`, invariants extracted from real domain code (throw
+  guards, state machines, thresholds), inherited `SCM-R*` referenced never restated;
+  id-registry §1 families moved to LIVE; 40-contexts map marked done; doc gates green.
+  Branch also cherry-picks the rule-ID regex fix (`fix/verify-rule-id-regex`) it depends
+  on. **Surfaced follow-ups → U13, and U7 (each new rule ID still needs its test).**
 - ✅ **U5 · human** — LICENSE file + license decision (open decision; note the AGPL
   dependency flag in ADR-0002).
   **Resolved 2026-07-19: MIT (ADR-0014)** — LICENSE file committed matching the
@@ -96,6 +102,10 @@ mirror-coverage bar) · duplicated formulas across TS/Python with one past diver
   a submitted notification (currently conservative: required ⇒ not yet compliant).
 - ⬜ **U12 · HOW lane** — eslint 9 flat config (`eslint.config.mjs`) + wire `lint` into
   `make verify-full` (QA warnings-as-errors bar).
+- ⬜ **U13 · HOW lane** — Enforce LOG-R3 in code: `Shipment` types `hazmatClass` as
+  optional and does not reject an `isHazmat` line missing its IMDG/ADR class, UN number,
+  proper shipping name or packing group, though the README mandates it. Add the guard +
+  its test (surfaced by U4 while writing `40-contexts/07-logistics-transportation/rule.md`).
 
 ### Phase 1 — Product evolution (owner-defined)
 - ⬜ Resolve the open decisions in `10-decisions/README.md` (runtime/persistence, API

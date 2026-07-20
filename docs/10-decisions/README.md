@@ -1,6 +1,6 @@
 ---
 id: index-adr
-title: "Architecture Decision Records (ADR-0001..0013)"
+title: "Architecture Decision Records (ADR-0001..0014)"
 type: adr
 owner: orchestrator
 status: active
@@ -40,6 +40,7 @@ relations:
 - ADR-0011 — Conventional Commits, SemVer annotated tags, main always green. (proposed)
 - ADR-0012 — Context economics + executable gates: verify fast/full (G1–G7+G9), exemplar-unit rule, known-pitfalls feedback, evaluation protocol, risk/improvement registers, communication contract. (proposed)
 - ADR-0013 — npm is the single package manager; `package-lock.json` is the only lockfile. (proposed)
+- ADR-0014 — The repository is licensed MIT (LICENSE file matches `package.json`). (accepted)
 
 ---
 
@@ -333,6 +334,31 @@ its packaging.
 no current need); yarn (same, plus version-family fragmentation); leaving it open (the
 reproducibility gap already bit — see improvement register #2).
 
+## ADR-0014 — The repository is licensed MIT
+
+**Status:** Accepted
+**Extends:** ADR-0002
+
+**Context:** `package.json` has declared `"license": "MIT"` since the repo's creation,
+but no LICENSE file existed — the declaration was legally ineffective (open decision
+"Repository LICENSE file"; backlog U5). The owner instructed adding the license file.
+
+**Decision:** A standard MIT LICENSE file (copyright ugixio) is committed at the repo
+root, matching the existing `package.json` declaration.
+
+**Consequences:**
+- (+) The declared license is now effective; contributions and reuse have clear terms.
+- (−) MIT permits proprietary reuse by third parties — accepted (it was already the
+  declared intent).
+- ADR-0002's note stands: `ultralytics` (AGPL-3.0, Python requirements) imposes no
+  obligation on this open-source distribution, but any future proprietary/commercial
+  distribution must re-evaluate AGPL obligations in a superseding ADR.
+
+**Alternatives considered:** Apache-2.0 (adds an explicit patent grant, but contradicts
+the long-standing MIT declaration and no patent concern was raised); leaving it absent
+(the gap already existed and blocked nothing except legal clarity — rejected as it makes
+every fork's status ambiguous).
+
 ---
 
 ## Open decisions (starter backlog — each answer becomes an ADR)
@@ -342,9 +368,8 @@ reproducibility gap already bit — see improvement register #2).
       this domain logic, and against what store?
 - [ ] **API/product surface.** Library? Service? UI? Nothing is recorded.
 - [x] **Package manager + lockfile.** → **ADR-0013** (npm + `package-lock.json`).
-- [ ] **Repository LICENSE file.** `package.json` declares MIT but no LICENSE file
-      exists; if commercial distribution is intended, revisit (and the AGPL note in
-      ADR-0002).
+- [x] **Repository LICENSE file.** → **ADR-0014** (MIT, matching `package.json`; the
+      AGPL note in ADR-0002 re-applies only on future commercial distribution).
 - [x] **CI + verify green-gate.** → **ADR-0012** (`make verify` / `make verify-full`,
       doc gates G1–G7+G9, CI workflow). Still pending inside it: eslint flat config
       (lint) and the pytest gate (U7) — tracked in `program/WORKFLOW.md`.

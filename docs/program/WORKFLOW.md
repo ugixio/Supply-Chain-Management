@@ -58,8 +58,11 @@ mirror-coverage bar) · duplicated formulas across TS/Python with one past diver
   §Code Standards cite SCM-R1..R13 instead of restating (SSOT).
 - ⬜ **U4 · WHAT lane** — Per-department `rule.md` × 14: extract each department's
   invariants from its code/README into its reserved family (PRC, SUP, DMD, …).
-- ⬜ **U5 · human** — LICENSE file + license decision (open decision; note the AGPL
+- ✅ **U5 · human** — LICENSE file + license decision (open decision; note the AGPL
   dependency flag in ADR-0002).
+  **Resolved 2026-07-19: MIT (ADR-0014)** — LICENSE file committed matching the
+  `package.json` declaration; owner instructed. AGPL re-evaluation stays conditional on
+  commercial distribution.
 - ✅ **U6 · HOW lane** — Reproducibility & gates: package-manager ADR + committed
   lockfile; `verify` script (typecheck + lint + jest + pytest + doc gates G1..G4 to
   start); CI.

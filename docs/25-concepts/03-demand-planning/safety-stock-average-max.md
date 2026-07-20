@@ -60,8 +60,8 @@ demand and lead time with no probability weighting at all.
 
 ## Implementations
 
-- TS: [`safetyStockAverageMax`](../../../src/departments/03-demand-planning/algorithms/SafetyStock.ts)
-- PY: [`safety_stock_average_max`](../../../python/03_demand_planning/safety_stock.py)
+- TS: [`safetyStockAverageMax`](../../../packages/domain/src/03-demand-planning/algorithms/SafetyStock.ts)
+- PY: [`safety_stock_average_max`](../../../services/calc/03_demand_planning/safety_stock.py)
 
 ## Governing rules
 

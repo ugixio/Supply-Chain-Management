@@ -67,7 +67,7 @@ Raise sensitivity by lowering `z_threshold`, or pre-clean with a robust estimato
 
 ## Implementations
 
-- PY: [`detect_demand_anomalies`](../../../python/03_demand_planning/demand_sensing.py)
+- PY: [`detect_demand_anomalies`](../../../services/calc/03_demand_planning/demand_sensing.py)
 
 ## Governing rules
 

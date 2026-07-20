@@ -62,10 +62,10 @@ relations:
 
 ## Implementations
 
-- PY: [`wmape`](../../../python/03_demand_planning/forecasting.py)
-- PY: [`smape`](../../../python/03_demand_planning/forecasting.py)
-- PY: [`theil_u`](../../../python/03_demand_planning/forecasting.py)
-- PY: [`accuracy_suite`](../../../python/03_demand_planning/forecasting.py)
+- PY: [`wmape`](../../../services/calc/03_demand_planning/forecasting.py)
+- PY: [`smape`](../../../services/calc/03_demand_planning/forecasting.py)
+- PY: [`theil_u`](../../../services/calc/03_demand_planning/forecasting.py)
+- PY: [`accuracy_suite`](../../../services/calc/03_demand_planning/forecasting.py)
 
 > **Coverage gap:** no TypeScript implementations — the TS layer can only report the
 > three basic metrics of CPT-0008.

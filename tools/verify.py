@@ -67,7 +67,7 @@ BACKTICKED = re.compile(r"`([A-Za-z_][A-Za-z0-9_]*)`")
 # Public calculation symbols, by language.
 TS_EXPORT = re.compile(r"^export function (\w+)", re.M)
 PY_DEF = re.compile(r"^def (\w+)", re.M)
-DEPT_NUMBER = re.compile(r"^(?:src/departments|python)/(\d{2})[-_]")
+DEPT_NUMBER = re.compile(r"^(?:packages/domain/src|services/calc)/(\d{2})[-_]")
 
 
 def section_body(text: str, heading: str) -> str:
@@ -124,12 +124,16 @@ def public_symbols(tracked):
 
 def is_allowlisted(path: str) -> bool:
     """Knowledge-architecture §3 — this repo's instantiated allowlist."""
-    if path in ("CLAUDE.md", "README.md", "python/README.md",
-                "docs/standards/REGULATORY_FRAMEWORK.md"):
+    if path in ("CLAUDE.md", "README.md", "services/calc/README.md",
+                "proto/README.md", "docs/standards/REGULATORY_FRAMEWORK.md"):
         return True
     if path.startswith(".claude/") or path.startswith(".github/"):
         return True
-    if re.fullmatch(r"src/departments/[^/]+/(README|IMPLEMENTATION)\.md", path):
+    # Component docs live next to the code they document (ADR-0023 monorepo layout).
+    if re.fullmatch(r"packages/domain/src/[^/]+/(README|IMPLEMENTATION)\.md", path):
+        return True
+    # App/package/service scaffolds may carry their own README (framework convention).
+    if re.fullmatch(r"(apps|packages|services)/[^/]+/README\.md", path):
         return True
     return False
 

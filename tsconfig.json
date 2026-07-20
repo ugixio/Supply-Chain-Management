@@ -1,21 +1,24 @@
 {
+  "//": "Root typecheck config (tsc --noEmit). Per-package build configs land with the Turbo pipeline (ADR-0022/0023).",
   "compilerOptions": {
     "target": "ES2022",
     "module": "commonjs",
     "lib": ["ES2022"],
-    "outDir": "./dist",
-    "rootDir": "./src",
+    "noEmit": true,
+    "paths": {
+      "@scm/shared": ["./packages/shared/src/index.ts"],
+      "@scm/shared/*": ["./packages/shared/src/*"],
+      "@scm/domain": ["./packages/domain/src/index.ts"],
+      "@scm/domain/*": ["./packages/domain/src/*"]
+    },
     "strict": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
-    "declaration": true,
-    "declarationMap": true,
-    "sourceMap": true,
     "experimentalDecorators": true,
     "emitDecoratorMetadata": true,
     "resolveJsonModule": true
   },
-  "include": ["src/**/*"],
+  "include": ["packages/*/src/**/*"],
   "exclude": ["node_modules", "dist", "tests"]
 }

@@ -52,7 +52,7 @@ Continuing CPT-0006 (`demand = [0, 5, 0, 0, 7]`, `alpha = 0.1`):
 
 ## Implementations
 
-- PY: [`sba_croston`](../../../python/03_demand_planning/forecasting.py)
+- PY: [`sba_croston`](../../../services/calc/03_demand_planning/forecasting.py)
 
 > **Coverage gap:** no TypeScript implementation (inherited from CPT-0006).
 

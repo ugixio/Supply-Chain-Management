@@ -51,8 +51,8 @@ relations:
 
 ## Implementations
 
-- TS: [`simpleMovingAverage`](../../../src/departments/03-demand-planning/algorithms/Forecasting.ts)
-- PY: [`simple_moving_average`](../../../python/03_demand_planning/forecasting.py)
+- TS: [`simpleMovingAverage`](../../../packages/domain/src/03-demand-planning/algorithms/Forecasting.ts)
+- PY: [`simple_moving_average`](../../../services/calc/03_demand_planning/forecasting.py)
 
 ## Governing rules
 

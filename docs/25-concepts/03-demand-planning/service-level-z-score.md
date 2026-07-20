@@ -29,7 +29,7 @@ where Φ⁻¹ is the inverse standard normal CDF.
 ## Three definitions exist in this repo
 
 The department's business-context document
-([IMPLEMENTATION.md](../../../src/departments/03-demand-planning/IMPLEMENTATION.md) §10,
+([IMPLEMENTATION.md](../../../packages/domain/src/03-demand-planning/IMPLEMENTATION.md) §10,
 "KPI: Safety Stock (Method 3 & 4)") specifies the **exact quantile function**:
 
     z = scipy.stats.norm.ppf(target_service_level)
@@ -95,8 +95,8 @@ At 92% the gap widens: TS reads a tabulated 1.410 while Python interpolates to 1
 
 ## Implementations
 
-- TS: [`getZScore`](../../../src/departments/03-demand-planning/algorithms/SafetyStock.ts)
-- PY: [`get_z_score`](../../../python/03_demand_planning/safety_stock.py)
+- TS: [`getZScore`](../../../packages/domain/src/03-demand-planning/algorithms/SafetyStock.ts)
+- PY: [`get_z_score`](../../../services/calc/03_demand_planning/safety_stock.py)
 
 ## Related
 

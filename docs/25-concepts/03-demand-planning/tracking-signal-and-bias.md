@@ -73,8 +73,8 @@ mean error already shows a clear directional lean.
 
 ## Implementations
 
-- PY: [`tracking_signal`](../../../python/03_demand_planning/forecasting.py)
-- PY: [`forecast_bias`](../../../python/03_demand_planning/forecasting.py)
+- PY: [`tracking_signal`](../../../services/calc/03_demand_planning/forecasting.py)
+- PY: [`forecast_bias`](../../../services/calc/03_demand_planning/forecasting.py)
 
 > **Coverage gap:** no TypeScript implementation — bias monitoring is Python-only.
 

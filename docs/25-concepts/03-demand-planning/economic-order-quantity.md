@@ -67,8 +67,8 @@ costs balance, as the derivation requires.
 
 ## Implementations
 
-- TS: [`economicOrderQuantity`](../../../src/departments/03-demand-planning/algorithms/SafetyStock.ts)
-- PY: [`economic_order_quantity`](../../../python/03_demand_planning/safety_stock.py)
+- TS: [`economicOrderQuantity`](../../../packages/domain/src/03-demand-planning/algorithms/SafetyStock.ts)
+- PY: [`economic_order_quantity`](../../../services/calc/03_demand_planning/safety_stock.py)
 
 ## Governing rules
 

@@ -59,8 +59,8 @@ The √LT arises because the variances of LT independent daily demands add:
 
 ## Implementations
 
-- TS: [`safetyStockStatistical`](../../../src/departments/03-demand-planning/algorithms/SafetyStock.ts)
-- PY: [`safety_stock_statistical`](../../../python/03_demand_planning/safety_stock.py)
+- TS: [`safetyStockStatistical`](../../../packages/domain/src/03-demand-planning/algorithms/SafetyStock.ts)
+- PY: [`safety_stock_statistical`](../../../services/calc/03_demand_planning/safety_stock.py)
 
 ## Governing rules
 

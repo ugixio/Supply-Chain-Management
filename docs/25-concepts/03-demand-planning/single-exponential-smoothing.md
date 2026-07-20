@@ -55,8 +55,8 @@ Expanding the recursion shows the geometric decay: the weight on A_{t−k} is α
 
 ## Implementations
 
-- TS: [`singleExponentialSmoothing`](../../../src/departments/03-demand-planning/algorithms/Forecasting.ts)
-- PY: [`single_exponential_smoothing`](../../../python/03_demand_planning/forecasting.py)
+- TS: [`singleExponentialSmoothing`](../../../packages/domain/src/03-demand-planning/algorithms/Forecasting.ts)
+- PY: [`single_exponential_smoothing`](../../../services/calc/03_demand_planning/forecasting.py)
 
 ## Governing rules
 

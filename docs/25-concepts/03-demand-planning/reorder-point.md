@@ -57,8 +57,8 @@ When the inventory position drops to 643, place an order of EOQ size.
 
 ## Implementations
 
-- TS: [`reorderPoint`](../../../src/departments/03-demand-planning/algorithms/SafetyStock.ts)
-- PY: [`reorder_point`](../../../python/03_demand_planning/safety_stock.py)
+- TS: [`reorderPoint`](../../../packages/domain/src/03-demand-planning/algorithms/SafetyStock.ts)
+- PY: [`reorder_point`](../../../services/calc/03_demand_planning/safety_stock.py)
 
 ## Governing rules
 

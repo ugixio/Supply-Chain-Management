@@ -63,8 +63,8 @@ With DSO = 52 days and DPO = 40 days, the cash-to-cash cycle is 45.6 + 52 − 40
 
 ## Implementations
 
-- TS: [`daysInventoryOutstanding`](../../../src/departments/03-demand-planning/algorithms/SafetyStock.ts)
-- PY: [`days_inventory_outstanding`](../../../python/03_demand_planning/safety_stock.py)
+- TS: [`daysInventoryOutstanding`](../../../packages/domain/src/03-demand-planning/algorithms/SafetyStock.ts)
+- PY: [`days_inventory_outstanding`](../../../services/calc/03_demand_planning/safety_stock.py)
 
 > Also implemented in `python/11_finance_controlling/` — the finance department owns the
 > cash-cycle treatment. Cataloguing that copy is part of the 11 rollout; the duplication

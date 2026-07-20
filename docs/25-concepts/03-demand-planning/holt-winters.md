@@ -58,8 +58,8 @@ seasonal indices in order — so `forecast[0]` reflects the same month position 
 
 ## Implementations
 
-- TS: [`holtWinters`](../../../src/departments/03-demand-planning/algorithms/Forecasting.ts)
-- PY: [`holt_winters`](../../../python/03_demand_planning/forecasting.py)
+- TS: [`holtWinters`](../../../packages/domain/src/03-demand-planning/algorithms/Forecasting.ts)
+- PY: [`holt_winters`](../../../services/calc/03_demand_planning/forecasting.py)
 
 > **Cross-language note:** the TypeScript version is a hand-rolled additive recursion; the
 > Python version delegates to `statsmodels.tsa.holtwinters.ExponentialSmoothing`. They are

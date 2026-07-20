@@ -74,8 +74,8 @@ this exact input because they test different lengths (full series vs train split
 
 ## Implementations
 
-- TS: [`selectAlgorithm`](../../../src/departments/03-demand-planning/algorithms/Forecasting.ts)
-- PY: [`select_algorithm`](../../../python/03_demand_planning/forecasting.py)
+- TS: [`selectAlgorithm`](../../../packages/domain/src/03-demand-planning/algorithms/Forecasting.ts)
+- PY: [`select_algorithm`](../../../services/calc/03_demand_planning/forecasting.py)
 
 ## Governing rules
 

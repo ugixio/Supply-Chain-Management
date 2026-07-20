@@ -199,7 +199,24 @@ mirror-coverage bar) · duplicated formulas across TS/Python with one past diver
   only through application ports; boundary linter fails violations), and a frontend-UX ADR
   for the octagon node-graph (octagon shape, LED-cyan stroke, transparent fill, right
   sidebar, interaction states, a11y, light/dark).
-- ⬜ **P2 · HOW lane** — Monorepo skeleton per **ADR-0022/0023**, without breaking `src/`:
+- 🟦 **P2 · HOW lane** — Monorepo restructure per **ADR-0022/0023**. **Landed
+  2026-07-20 (structure + wiring, verify-full green):** `git mv src/departments →
+  packages/domain/src`, `src/shared → packages/shared/src`, `python → services/calc`; old
+  top-level barrel removed; `@scm/shared` / `@scm/domain` path aliases (tsconfig `paths` +
+  jest `moduleNameMapper`) so typecheck (0 errors) and jest (40/40) resolve without pnpm
+  linking; 61 domain imports + 4 test imports rewritten; concept-node links, `verify.py`
+  (`is_allowlisted`, `DEPT_NUMBER`) and the knowledge-architecture allowlist repointed;
+  scaffolds for `apps/{web,api}`, `packages/{application,infrastructure}`, `proto/` with
+  READMEs; `pnpm-workspace.yaml`, `turbo.json`, `@scm/{domain,shared}` package.json.
+  **Deliberately NOT done (activation sub-step, next controlled run):** `pnpm install` +
+  migrate `package-lock.json → pnpm-lock.yaml`, move root deps into per-package manifests,
+  switch CI to `pnpm install --frozen-lockfile`, wire `make verify-full` to `turbo run`.
+  Held back so the currently-green npm/tsc/jest toolchain is not disturbed mid-turn.
+  **NOT done (deferred, own decision):** the `07_order_management` vs `13_order_management`
+  merge — the two `order_metrics.py` files **differ**, so it needs a domain call, not a
+  mechanical move (stays U11/risk #4; both preserved under `services/calc/` for now).
+  **Superseded plan text below is retained for history:**
+- ⬜ **P2 (original plan) · HOW lane** — Monorepo skeleton per **ADR-0022/0023**, without breaking `src/`:
   **pnpm workspaces + Turborepo** (`pnpm-workspace.yaml`, migrate `package-lock.json` →
   `pnpm-lock.yaml`, CI → `pnpm install --frozen-lockfile`, `make verify-full` delegates to
   `turbo run`). Layout: `apps/web` · `apps/api` · `packages/{domain,application,infrastructure,shared}`

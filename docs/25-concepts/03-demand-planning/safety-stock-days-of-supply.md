@@ -61,8 +61,8 @@ Same SKU, same data, two different buffers — because they are two different me
 
 ## Implementations
 
-- TS: [`safetyStockByDays`](../../../src/departments/03-demand-planning/algorithms/SafetyStock.ts)
-- PY: [`safety_stock_days`](../../../python/03_demand_planning/safety_stock.py)
+- TS: [`safetyStockByDays`](../../../packages/domain/src/03-demand-planning/algorithms/SafetyStock.ts)
+- PY: [`safety_stock_days`](../../../services/calc/03_demand_planning/safety_stock.py)
 
 ## Governing rules
 

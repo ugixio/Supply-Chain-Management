@@ -59,8 +59,8 @@ COGS = $6,000,000/year (600,000,000 cents), average inventory = $750,000 (75,000
 
 ## Implementations
 
-- TS: [`inventoryTurnoverRatio`](../../../src/departments/03-demand-planning/algorithms/SafetyStock.ts)
-- PY: [`inventory_turnover_ratio`](../../../python/03_demand_planning/safety_stock.py)
+- TS: [`inventoryTurnoverRatio`](../../../packages/domain/src/03-demand-planning/algorithms/SafetyStock.ts)
+- PY: [`inventory_turnover_ratio`](../../../services/calc/03_demand_planning/safety_stock.py)
 
 ## Governing rules
 

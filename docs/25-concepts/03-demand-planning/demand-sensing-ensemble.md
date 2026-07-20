@@ -64,13 +64,13 @@ LightGBM 12.1%, Prophet 14.8%, Holt-Winters 18.3% → LightGBM selected. Blendin
 
 ## Implementations
 
-- PY: [`build_features`](../../../python/03_demand_planning/demand_sensing.py)
-- PY: [`train_lightgbm_demand_model`](../../../python/03_demand_planning/demand_sensing.py)
-- PY: [`predict_lightgbm`](../../../python/03_demand_planning/demand_sensing.py)
-- PY: [`train_prophet_demand_model`](../../../python/03_demand_planning/demand_sensing.py)
-- PY: [`predict_prophet`](../../../python/03_demand_planning/demand_sensing.py)
-- PY: [`select_best_model`](../../../python/03_demand_planning/demand_sensing.py)
-- PY: [`ensemble_forecast`](../../../python/03_demand_planning/demand_sensing.py)
+- PY: [`build_features`](../../../services/calc/03_demand_planning/demand_sensing.py)
+- PY: [`train_lightgbm_demand_model`](../../../services/calc/03_demand_planning/demand_sensing.py)
+- PY: [`predict_lightgbm`](../../../services/calc/03_demand_planning/demand_sensing.py)
+- PY: [`train_prophet_demand_model`](../../../services/calc/03_demand_planning/demand_sensing.py)
+- PY: [`predict_prophet`](../../../services/calc/03_demand_planning/demand_sensing.py)
+- PY: [`select_best_model`](../../../services/calc/03_demand_planning/demand_sensing.py)
+- PY: [`ensemble_forecast`](../../../services/calc/03_demand_planning/demand_sensing.py)
 
 ## Governing rules
 

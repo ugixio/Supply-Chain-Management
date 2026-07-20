@@ -67,8 +67,8 @@ Against CPT-0014's 99 units on the same SKU: ignoring σ_LT would have under-buf
 
 ## Implementations
 
-- TS: [`safetyStockCombined`](../../../src/departments/03-demand-planning/algorithms/SafetyStock.ts)
-- PY: [`safety_stock_combined`](../../../python/03_demand_planning/safety_stock.py)
+- TS: [`safetyStockCombined`](../../../packages/domain/src/03-demand-planning/algorithms/SafetyStock.ts)
+- PY: [`safety_stock_combined`](../../../services/calc/03_demand_planning/safety_stock.py)
 
 ## Governing rules
 

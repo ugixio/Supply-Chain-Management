@@ -75,9 +75,9 @@ principled alternative, when the data volume supports it.
 
 ## Implementations
 
-- PY: [`make_dataset`](../../../python/03_demand_planning/deep_forecast.py)
-- PY: [`train_forecaster`](../../../python/03_demand_planning/deep_forecast.py)
-- PY: [`predict_quantiles`](../../../python/03_demand_planning/deep_forecast.py)
+- PY: [`make_dataset`](../../../services/calc/03_demand_planning/deep_forecast.py)
+- PY: [`train_forecaster`](../../../services/calc/03_demand_planning/deep_forecast.py)
+- PY: [`predict_quantiles`](../../../services/calc/03_demand_planning/deep_forecast.py)
 
 ## Governing rules
 

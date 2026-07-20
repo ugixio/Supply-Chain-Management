@@ -56,8 +56,8 @@ relations:
 
 ## Implementations
 
-- TS: [`holtsLinearMethod`](../../../src/departments/03-demand-planning/algorithms/Forecasting.ts)
-- PY: [`holts_linear_method`](../../../python/03_demand_planning/forecasting.py)
+- TS: [`holtsLinearMethod`](../../../packages/domain/src/03-demand-planning/algorithms/Forecasting.ts)
+- PY: [`holts_linear_method`](../../../services/calc/03_demand_planning/forecasting.py)
 
 ## Governing rules
 

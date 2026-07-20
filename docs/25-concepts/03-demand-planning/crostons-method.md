@@ -65,7 +65,7 @@ Otherwise both estimates carry forward unchanged. The forecast is:
 
 ## Implementations
 
-- PY: [`croston`](../../../python/03_demand_planning/forecasting.py)
+- PY: [`croston`](../../../services/calc/03_demand_planning/forecasting.py)
 
 > **Coverage gap:** no TypeScript implementation. Intermittent demand is therefore
 > unavailable to the TS domain layer — recorded as a follow-up in `program/WORKFLOW.md`.

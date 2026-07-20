@@ -64,10 +64,10 @@ Both land in X here; a series with CV near 0.10 would not.
 
 ## Implementations
 
-- TS: [`coefficientOfVariation`](../../../src/departments/03-demand-planning/algorithms/SafetyStock.ts)
-- TS: [`classifyXYZ`](../../../src/departments/03-demand-planning/algorithms/SafetyStock.ts)
-- PY: [`coefficient_of_variation`](../../../python/03_demand_planning/safety_stock.py)
-- PY: [`classify_xyz`](../../../python/03_demand_planning/safety_stock.py)
+- TS: [`coefficientOfVariation`](../../../packages/domain/src/03-demand-planning/algorithms/SafetyStock.ts)
+- TS: [`classifyXYZ`](../../../packages/domain/src/03-demand-planning/algorithms/SafetyStock.ts)
+- PY: [`coefficient_of_variation`](../../../services/calc/03_demand_planning/safety_stock.py)
+- PY: [`classify_xyz`](../../../services/calc/03_demand_planning/safety_stock.py)
 
 ## Governing rules
 

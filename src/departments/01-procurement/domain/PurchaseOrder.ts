@@ -18,7 +18,7 @@ import { v4 as uuidv4 } from 'uuid';
 import {
   Money, Quantity, DocumentStatus, UOMCode, Incoterm,
   ISODate, ISOTimestamp, nowUTC, toISODate, money, addMoney, multiplyMoney
-} from '../../shared/types';
+} from '../../../shared/types';
 
 export const PO_APPROVAL_THRESHOLD_CENTS = 5_000_00; // $5,000 USD default
 

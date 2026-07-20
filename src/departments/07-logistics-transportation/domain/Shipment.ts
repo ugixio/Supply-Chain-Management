@@ -21,7 +21,7 @@
 import { v4 as uuidv4 } from 'uuid';
 import {
   Incoterm, Address, ISODate, ISOTimestamp, nowUTC, Quantity
-} from '../../shared/types';
+} from '../../../shared/types';
 
 export type TransportMode = 'ROAD' | 'SEA' | 'AIR' | 'RAIL' | 'MULTIMODAL' | 'COURIER';
 

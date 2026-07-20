@@ -8,7 +8,7 @@ import {
   DeliveryMetrics,
   QualityMetrics,
   CommercialMetrics,
-} from '../../src/supplier-management/domain/SupplierScorecard';
+} from '../../src/departments/02-supplier-management/domain/SupplierScorecard';
 
 const perfectDelivery: DeliveryMetrics = {
   totalDeliveries: 100,

@@ -19,7 +19,7 @@
  *  - EUR-Lex: https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:02006R1907-20140410
  */
 
-import { ISODate, ISOTimestamp, nowUTC } from '../../shared/types';
+import { ISODate, ISOTimestamp, nowUTC } from '../../../shared/types';
 
 // Substance of Very High Concern classifications (Art.57 REACH)
 export type SVHCCategory =
@@ -89,7 +89,7 @@ export function assessREACHCompliance(
   );
 
   const isCompliant = !hasRestrictedSubstances &&
-    (!echaNotificationRequired || input.isCompliant);
+    !echaNotificationRequired; // conservative: a required-but-unrecorded ECHA notification is not yet compliant (see WORKFLOW follow-up)
 
   const notes: string[] = [];
   if (containsSVHCAboveThreshold) {

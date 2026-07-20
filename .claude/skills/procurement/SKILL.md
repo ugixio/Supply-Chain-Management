@@ -223,3 +223,11 @@ type POEvent =
 - APICS/ASCM Supply Chain Dictionary, 17th ed. (2024) — *purchase order*, *three-way match*, *spend analysis*
 - ISO 28000:2022 — Security management systems for the supply chain
 - UN/EDIFACT D.96A — ORDERS, ORDRSP, INVOIC message standards
+
+## Known pitfalls (wrong → right)
+
+<!-- Fed by orchestrator corrections (docs/program/operating-model.md §4.7). Read before writing. -->
+
+- Reading the approval threshold as "above" (`>`) → **SCM-R2 is "at or above" (`>=`)**: a
+  PO totaling exactly `PO_APPROVAL_THRESHOLD_CENTS` enters `PENDING_APPROVAL`, never
+  auto-approves. The boundary test in `tests/unit/purchaseorder.test.ts` pins this.

@@ -19,7 +19,7 @@ import { v4 as uuidv4 } from 'uuid';
 import {
   ItemStatus, UOMCode, Money, Quantity, GTIN,
   ISOTimestamp, ISODate, nowUTC
-} from '../../shared/types';
+} from '../../../shared/types';
 
 // ABC inventory classification (Pareto analysis)
 // A: ~80% of value in ~20% of SKUs → tight control

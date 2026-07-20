@@ -21,7 +21,7 @@
  *  - Baker McKenzie CSDDD FAQ (2024)
  */
 
-import { ISODate, ISOTimestamp, nowUTC } from '../../shared/types';
+import { ISODate, ISOTimestamp, nowUTC } from '../../../shared/types';
 
 export type CSDDDPhase = 'PHASE_1_2027' | 'PHASE_2_2028' | 'PHASE_3_2029' | 'OUT_OF_SCOPE';
 

@@ -22,7 +22,7 @@
  */
 
 import { v4 as uuidv4 } from 'uuid';
-import { ISODate, ISOTimestamp, nowUTC } from '../../shared/types';
+import { ISODate, ISOTimestamp, nowUTC } from '../../../shared/types';
 
 // ─── Raw delivery metrics (from ERP goods receipt records) ───────────────────
 export type DeliveryMetrics = {
@@ -108,7 +108,7 @@ export function calculateKPIs(
     ? 0
     : (quality.defectiveUnits / quality.totalUnitsReceived) * 1_000_000;
   const dpmo = ppm; // simplified: 1 defect opportunity per unit
-  const ncrRate = pct(quality.totalDeliveries - quality.ncrCount, quality.totalDeliveries ?? 1);
+  const ncrRate = pct(delivery.totalDeliveries - quality.ncrCount, delivery.totalDeliveries);
 
   const invoiceAccuracy = pct(commercial.accurateInvoices, commercial.totalInvoices);
   const poVariancePct = commercial.totalPOValue === 0

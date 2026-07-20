@@ -15,7 +15,7 @@ import {
   inventoryTurnoverRatio,
   daysInventoryOutstanding,
   getZScore,
-} from '../../src/demand-planning/algorithms/SafetyStock';
+} from '../../src/departments/03-demand-planning/algorithms/SafetyStock';
 
 describe('Safety Stock — Days on Hand method', () => {
   it('calculates safety stock correctly', () => {

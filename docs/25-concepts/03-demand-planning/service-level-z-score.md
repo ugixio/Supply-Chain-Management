@@ -50,10 +50,11 @@ in 1-point steps) so interpolation barely matters, while Python's sparse table (
 overstates z by up to **1.57%** — Φ⁻¹ is convex here, and a chord above a convex curve
 always overshoots.
 
-Which of the three is canonical is an owner decision (U15); this node records the
-discrepancy, it does not resolve it. `scipy` is already a dependency, so the spec's
-approach is free on the Python side; TypeScript would need an inverse-normal
-approximation (Acklam or Moro) — the standard library has none.
+**Resolved (ADR-0028):** the canonical z is the **exact** Φ⁻¹ — Python
+`scipy.stats.norm.ppf` (already a dependency), TypeScript an Acklam rational approximation
+(error < 1.15e-9). Both lookup tables are retired; golden vectors assert TS ≈ PY to 1e-6.
+The code migration is a tracked follow-up (it shifts asserted safety-stock values and the
+Python side needs a runnable env).
 
 ## Assumptions and limits
 
@@ -67,20 +68,18 @@ approximation (Acklam or Moro) — the standard library has none.
 - **Does not apply when:** SL ≤ 0 or ≥ 1 — Python raises; TypeScript throws only when the
   value falls outside the table's interpolation range.
 
-## Cross-language divergence (open)
+## Cross-language divergence (resolved by ADR-0028 — historical detail)
 
-Beyond disagreeing with the spec, the two implementations disagree with each other:
+Before ADR-0028 the two implementations disagreed with each other and the spec:
 
 1. **Scale.** TS takes `95`; Python takes `0.95`. Passing `0.95` to the TS function is
    out of table range; passing `95` to Python raises.
-2. **Precision.** TS rounds to 2 decimals (95% → 1.65), Python to 3 (1.645). At σ_D·√LT =
-   1000 units this is a **5-unit** difference in safety stock per SKU — small per line,
-   systematic across a portfolio, and always in the direction of *more* stock.
-3. **Granularity.** The TS table carries 91–94% and 96%; the Python table jumps 90 → 95.
-   At 92% they return 1.410 vs 1.427 — a **1.22%** difference in safety stock from the
-   same target.
+2. **Precision.** TS rounded to 2 decimals (95% → 1.65), Python to 3 (1.645) — a
+   systematic over-stock bias across a portfolio.
+3. **Granularity.** TS tabulated 91–94% and 96%; Python jumped 90 → 95, so at 92% they
+   returned 1.410 vs 1.427 (1.22% apart).
 
-Recorded in `program/WORKFLOW.md` under U15 (feeding the U8 golden-vector mechanism).
+The U8 golden vectors enforce the resolved canonical going forward.
 
 ## Worked example
 

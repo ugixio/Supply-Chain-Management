@@ -94,7 +94,8 @@ mirror-coverage bar) · duplicated formulas across TS/Python with one past diver
 - ⬜ **U10 · human** — Review & ratify ADR-0012 (context economics + gates) and ADR-0013
   (npm + lockfile) together with U2; ratifying ADR-0012 includes declaring the exemplar
   department (candidate: `01-procurement`).
-- ⬜ **U11 · WHAT lane** — Domain dedup & modeling follow-ups surfaced by the toolchain
+- 🟦 **U11 · WHAT lane** — **order-management numbering collision RESOLVED by ADR-0029** (dir dissolved → dept 13 namespace; census fixed). Remaining: fine split of 3 agility/VaR fns → dept 10, blocked on a Python env. Rest of U11 below stands.
+- ⬜ **U11b · WHAT lane** — Domain dedup & modeling follow-ups surfaced by the toolchain
   repair: `Shipment.ts` redefines `TransportMode`/`TrackingEvent` already owned by
   `TransportLane.ts`/`TrackingEvent.ts` (aliased in the barrel for now — unify);
   `python/07_order_management/` vs `python/13_order_management/` numbering collision
@@ -119,7 +120,8 @@ mirror-coverage bar) · duplicated formulas across TS/Python with one past diver
   09 (25) · 11 (24) · 05 (22) · 07 (22) · 13 (20) · 14 (13) · 04 (12) · 12 (8);
   **335 symbols outstanding**. Flip each to `enforced` in `25-concepts/_index.md` as it
   completes. Run `python3 tools/verify.py` for the live census.
-- ⬜ **U15 · WHAT lane** — Cross-language divergences surfaced by U4's concept nodes. These
+- 🟦 **U15 · WHAT lane** — **z-score RESOLVED by ADR-0028** (canonical = exact inverse-normal). Remaining items 2–7 below stand.
+- ⬜ **U15b · WHAT lane** — Cross-language divergences surfaced by U4's concept nodes. These
   are **findings, not fixes**: each needs an owner decision on which side is canonical
   (feeds U8's golden-vector mechanism).
   1. **Service-level z-scores (CPT-0003)** — TS takes **percent** (`95`), Python takes a
@@ -190,9 +192,9 @@ mirror-coverage bar) · duplicated formulas across TS/Python with one past diver
 > Staged full-stack app. **Only Stage A (wiki) is authorized to start.** Every task gated
 > on `make verify-full`; the domain in `src/departments` is preserved, not rewritten.
 
-- ⬜ **P0 · human** — Ratify ADR-0017..0021 (product, Clean Arch, Decimal money, gRPC,
-  context mapping). ADR-0019 supersedes the ADR-0006 money clause and rewrites SCM-R8 —
-  ratifying it authorizes the money migration (P5).
+- ✅ **P0 · human** — Ratify the product decisions. **Done 2026-07-20:** owner authorized
+  proceeding on all proposed ADRs; **ADR-0010..0029 are Accepted (owner-authorized)**. This
+  authorizes the money migration (P5, ADR-0019) and the agent layer (ADR-0027).
 - ⬜ **P1 · orchestrator** — Materialize the reserved `docs/50-engineering/` tier: `_index`,
   an `ENG-*` rule family (layering rules per ADR-0023 — dependency direction
   `apps → infrastructure → application → domain`, `domain` imports nothing, cross-department

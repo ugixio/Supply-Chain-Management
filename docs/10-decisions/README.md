@@ -1,6 +1,6 @@
 ---
 id: index-adr
-title: "Architecture Decision Records (ADR-0001..0014)"
+title: "Architecture Decision Records (ADR-0001..0029)"
 type: adr
 owner: orchestrator
 status: active
@@ -18,6 +18,11 @@ relations:
 > `Accepted (retroactive)` · `Superseded by ADR-XXXX` · `Deprecated`.
 > ADR-0001..0009 are **retroactive**: they record decisions this repo had already made
 > (evidence cited); the owner should review and ratify them.
+>
+> **Ratification log — 2026-07-20:** the owner authorized proceeding on all proposed
+> decisions; **ADR-0010..0027 are Accepted (owner-authorized 2026-07-20)**. ADR-0028/0029
+> (below) are accepted under the same authorization. Retroactive 0001..0009 stand as the
+> repo's de-facto record.
 
 ---
 
@@ -36,24 +41,26 @@ relations:
 - ADR-0007 — Soft-delete for financial records; idempotent inventory transactions. (retroactive)
 - ADR-0008 — Named standards/regulations (SCOR, ISO 28000, CSDDD, UFLPA, REACH…) are first-class product features. (retroactive)
 - ADR-0009 — Jest for TS, pytest for Python. (retroactive)
-- ADR-0010 — The ugixio context skeleton governs knowledge (tiers, SSOT, append-only ADRs). (proposed)
-- ADR-0011 — Conventional Commits, SemVer annotated tags, main always green. (proposed)
-- ADR-0012 — Context economics + executable gates: verify fast/full (G1–G7+G9), exemplar-unit rule, known-pitfalls feedback, evaluation protocol, risk/improvement registers, communication contract. (proposed)
+- ADR-0010 — The ugixio context skeleton governs knowledge (tiers, SSOT, append-only ADRs). (accepted 2026-07-20)
+- ADR-0011 — Conventional Commits, SemVer annotated tags, main always green. (accepted 2026-07-20)
+- ADR-0012 — Context economics + executable gates: verify fast/full (G1–G7+G9), exemplar-unit rule, known-pitfalls feedback, evaluation protocol, risk/improvement registers, communication contract. (accepted 2026-07-20)
 - ADR-0013 — npm is the single package manager; `package-lock.json` is the only lockfile. (**superseded by ADR-0022**)
 - ADR-0014 — The repository is licensed MIT (LICENSE file matches `package.json`). (accepted)
-- ADR-0015 — A concept-node layer (`docs/25-concepts/`, type `concept`, family `CPT`) makes every SCM calculation individually citable; gate G10 enforces symbol-link accuracy and reports coverage. (proposed)
-- ADR-0016 — Department `IMPLEMENTATION.md` files are **business context, not target architecture**: their SAP/Superset stack is non-normative; their rules, KPIs and formulas are extracted into governed nodes and the originals archived. (proposed)
-- ADR-0017 — The product is a full-stack app (Next.js · NestJS/GraphQL · PostgreSQL · Python), staged **wiki-of-concepts first**, transactional SCM later; the existing `src/departments` domain is preserved as the core. (proposed)
-- ADR-0018 — Backend follows **Clean Architecture** (entities → use-cases → interface-adapters → frameworks), deployed as a **modular monolith** with one module per department. (proposed)
-- ADR-0019 — Money becomes **arbitrary-precision Decimal** end-to-end (`decimal.js` / `decimal.Decimal` / `NUMERIC(19,4)`); **supersedes the integer-cent clause of ADR-0006 and rewrites SCM-R8**. (proposed)
-- ADR-0020 — The Python calculation core is a separate service reached over **gRPC** with a protobuf contract; decimals cross the wire as strings to preserve precision. (proposed)
-- ADR-0021 — The Context Engineering layer the enterprise prompt asks for is **already instantiated** by the docs/ tier tree, gates and program area; it is mapped and gap-filled, never rebuilt in parallel. (proposed)
-- ADR-0022 — **pnpm + Turborepo** is the monorepo toolchain; **supersedes ADR-0013** (npm). pnpm workspaces manage dependencies, Turbo orchestrates and caches tasks. (proposed)
-- ADR-0023 — Repository is a monorepo with **Clean-Architecture layers as packages** (`domain`/`application`/`infrastructure`/`shared`), each organized by department inside; the modular-monolith boundary lives at the NestJS app (one module per department). (proposed)
-- ADR-0024 — Stage A serves the knowledge graph from a **Postgres read model rebuilt one-way from `docs/`**; `docs/` stays the single source of truth, the projection is disposable and never hand-edited. (proposed)
-- ADR-0025 — GraphQL is **code-first** (NestJS decorators generate the SDL); the schema is a build artifact, not a hand-maintained file. (proposed)
-- ADR-0026 — The wiki front end is a **node-graph of octagons**: SCM core centre, 14 departments as a connected circuit, CPT sub-nodes on expand; LED-cyan stroke on transparent fill; node click opens a right sidebar. (proposed)
-- ADR-0027 — The **agent layer is formalized** (resolves the open "Agent lanes" decision): 7 least-privilege subagent profiles (`.claude/agents/`) over WHAT/HOW/SPECIALTY lanes + 7 technology/practice skills; the main session is the orchestrator; agents reference the governance, never restate it. (proposed)
+- ADR-0015 — A concept-node layer (`docs/25-concepts/`, type `concept`, family `CPT`) makes every SCM calculation individually citable; gate G10 enforces symbol-link accuracy and reports coverage. (accepted 2026-07-20)
+- ADR-0016 — Department `IMPLEMENTATION.md` files are **business context, not target architecture**: their SAP/Superset stack is non-normative; their rules, KPIs and formulas are extracted into governed nodes and the originals archived. (accepted 2026-07-20)
+- ADR-0017 — The product is a full-stack app (Next.js · NestJS/GraphQL · PostgreSQL · Python), staged **wiki-of-concepts first**, transactional SCM later; the existing `src/departments` domain is preserved as the core. (accepted 2026-07-20)
+- ADR-0018 — Backend follows **Clean Architecture** (entities → use-cases → interface-adapters → frameworks), deployed as a **modular monolith** with one module per department. (accepted 2026-07-20)
+- ADR-0019 — Money becomes **arbitrary-precision Decimal** end-to-end (`decimal.js` / `decimal.Decimal` / `NUMERIC(19,4)`); **supersedes the integer-cent clause of ADR-0006 and rewrites SCM-R8**. (accepted 2026-07-20)
+- ADR-0020 — The Python calculation core is a separate service reached over **gRPC** with a protobuf contract; decimals cross the wire as strings to preserve precision. (accepted 2026-07-20)
+- ADR-0021 — The Context Engineering layer the enterprise prompt asks for is **already instantiated** by the docs/ tier tree, gates and program area; it is mapped and gap-filled, never rebuilt in parallel. (accepted 2026-07-20)
+- ADR-0022 — **pnpm + Turborepo** is the monorepo toolchain; **supersedes ADR-0013** (npm). pnpm workspaces manage dependencies, Turbo orchestrates and caches tasks. (accepted 2026-07-20)
+- ADR-0023 — Repository is a monorepo with **Clean-Architecture layers as packages** (`domain`/`application`/`infrastructure`/`shared`), each organized by department inside; the modular-monolith boundary lives at the NestJS app (one module per department). (accepted 2026-07-20)
+- ADR-0024 — Stage A serves the knowledge graph from a **Postgres read model rebuilt one-way from `docs/`**; `docs/` stays the single source of truth, the projection is disposable and never hand-edited. (accepted 2026-07-20)
+- ADR-0025 — GraphQL is **code-first** (NestJS decorators generate the SDL); the schema is a build artifact, not a hand-maintained file. (accepted 2026-07-20)
+- ADR-0026 — The wiki front end is a **node-graph of octagons**: SCM core centre, 14 departments as a connected circuit, CPT sub-nodes on expand; LED-cyan stroke on transparent fill; node click opens a right sidebar. (accepted 2026-07-20)
+- ADR-0027 — The **agent layer is formalized** (resolves the open "Agent lanes" decision): 7 least-privilege subagent profiles (`.claude/agents/`) over WHAT/HOW/SPECIALTY lanes + 7 technology/practice skills; the main session is the orchestrator; agents reference the governance, never restate it. (accepted 2026-07-20)
+- ADR-0028 — The **canonical service-level z-score is the exact inverse-normal** Φ⁻¹ (Python `scipy.stats.norm.ppf`; TypeScript a high-accuracy rational approximation). Resolves U15; the lookup tables are retired. (accepted 2026-07-20)
+- ADR-0029 — The misplaced `07_order_management` calc dir is dissolved: perfect-order metrics belong to dept 13, SCOR-agility + VaR to dept 10. Resolves the numbering collision (U11/risk #4). (accepted 2026-07-20)
 
 ---
 
@@ -243,7 +250,7 @@ resolved by this ADR.
 
 ## ADR-0010 — Adopt the ugixio context skeleton (knowledge architecture + governance)
 
-**Status:** Proposed (accepted when this branch merges)
+**Status:** Accepted (owner-authorized 2026-07-20)
 
 **Context:** The repo had strong domain knowledge but no decision log, no stable rule
 IDs, no tiered knowledge tree, no workflow/backlog, and knowledge lived scattered
@@ -264,7 +271,7 @@ discipline on every new doc; a dedup pass on `CLAUDE.md` is now owed (WORKFLOW U
 
 ## ADR-0011 — Git discipline: Conventional Commits, SemVer tags, main always green
 
-**Status:** Proposed
+**Status:** Accepted (owner-authorized 2026-07-20)
 
 **Context:** History mixes styles (`feat(wave-d): …` vs `Add … files`). No tags exist;
 `package.json` says 1.0.0 with no tagged release. No branch protection convention is
@@ -281,7 +288,7 @@ every contributor (including AI sessions).
 
 ## ADR-0012 — Context economics + executable gates (skeleton v0.2 mechanisms)
 
-**Status:** Proposed
+**Status:** Accepted (owner-authorized 2026-07-20)
 **Extends:** ADR-0010
 
 **Context:** The adoption (ADR-0010) landed the knowledge structure but left its
@@ -407,9 +414,96 @@ every fork's status ambiguous).
 
 ---
 
+## ADR-0029 — Dissolve the misplaced order-management calc directory
+
+**Status:** Accepted (owner-authorized 2026-07-20)
+**Extends:** ADR-0004
+**Resolves:** U11 / risk register #4
+
+**Context:** `services/calc/07_order_management/` is triply wrong: numbered 07 (which is
+logistics-transportation), named order-management (dept 13), and its contents mix two
+concerns — `perfect_order_index` / `poi_gap_analysis` / `PerfectOrderResult` (order
+metrics, SCOR RL) and `upside_supply_flexibility` / `downside_supply_adaptability` /
+`overall_value_at_risk` (SCOR Agility AG.1/AG.2 + Value-at-Risk — risk, dept 10). The
+census (G10 `DEPT_NUMBER`) miscounts all six symbols under dept 07. Nothing imports the
+module (verified) and there are no name collisions with the destinations.
+
+**Decision:** The directory is dissolved and its symbols return to the departments that own
+their concepts:
+- **Perfect-order metrics → dept 13** (`13_order_management`).
+- **SCOR-agility + VaR → dept 10** (`10_risk_management`).
+
+**Execution note (environment constraint):** this repo's local environment has no
+numpy/scipy, so Python cannot be executed here and a surgical 3-way function split cannot
+be pytest-verified in place. The **collision is fixed now** by relocating the whole module
+into the correct department namespace (a git mv, which the doc-gate census verifies);
+the finer split of the three agility/VaR functions into dept 10 is a **tracked refinement**
+(U11 stays open at that granularity, now blocked only on a Python environment), not a
+silent omission.
+
+**Consequences:** (+) the numbering collision that skewed the census is gone; the symbols
+count under a correct department. (+) nothing broke — no importers, no collisions. (−) until
+the refinement lands, three risk/agility functions sit in the order-management module;
+recorded, not hidden. (−) pytest verification of the moved module awaits a Python env (risk
+#1/#6 — the standing Python-toolchain gap).
+
+**Alternatives considered:** *Surgical 3-way split now* — correct taxonomy but ships
+untested Python across three files in an environment that cannot run it; rejected as
+unverifiable. *Leave it* — rejected: the census miscount is a live defect and the owner
+asked to resolve it.
+
+---
+
+## ADR-0028 — Canonical service-level z-score is the exact inverse-normal
+
+**Status:** Accepted (owner-authorized 2026-07-20)
+**Extends:** ADR-0001, ADR-0016
+**Resolves:** U15
+
+**Context:** Three definitions of the service-level z-score coexist (recorded in CPT-0003):
+the department business-context document specifies `z = scipy.stats.norm.ppf(SL)` (the
+exact inverse standard-normal CDF); the Python implementation uses an 8-point lookup table
++ linear interpolation; the TypeScript implementation uses a different, coarser table. They
+disagree — Python overshoots the exact value by up to +1.57% at interpolated service levels
+(convexity of Φ⁻¹). z feeds safety stock across demand-planning, inventory and finance, so
+the divergence is cross-department.
+
+**Decision:** The **canonical z-score is the exact inverse standard-normal CDF** Φ⁻¹(SL),
+the value the business-context document already specifies (ADR-0016 makes its *formulas*
+authoritative even though its *stack* is not):
+- **Python:** `scipy.stats.norm.ppf(service_level)` — `scipy` is already a declared
+  dependency; the lookup table + `np.interp` are retired.
+- **TypeScript:** a high-accuracy rational approximation of Φ⁻¹ (Acklam's algorithm,
+  absolute error < 1.15e-9 over the open interval) — the standard library has no inverse
+  normal; the lookup table is retired.
+- **Consistency:** the shared golden vectors (U8) assert TS ≈ Python to a tolerance of
+  1e-6 (both approximate the same exact function; the residual is far below one unit of
+  safety stock).
+- **Scale:** service level is a fraction in (0,1) everywhere (Python's convention); the TS
+  percent input is normalized at the boundary.
+
+**Execution note (environment constraint):** the decision is recorded now; the code change
+(TS `getZScore` → Acklam, Python `get_z_score` → `norm.ppf`, updated safety-stock test
+expectations, golden vectors) is a **bounded follow-up** (P-lane), because it shifts
+existing asserted safety-stock values (e.g. 1.65 → 1.6449) and the Python side cannot be
+run/verified in this environment. CPT-0003 is updated to state the resolved canonical.
+
+**Consequences:** (+) one exact, defensible definition; the cross-department divergence has
+an answer; no third variant survives. (+) exactness at every service level, not just the
+tabulated ones. (−) a code migration touching both languages + tests (tracked); slightly
+different safety-stock numbers than today (more correct). (−) TS gains a small numerical
+routine (Acklam) to maintain — justified: the alternative is an inexact table.
+
+**Alternatives considered:** *Standardize on one shared lookup table* — simpler but keeps a
+tabulated approximation with interpolation error; rejected in favour of the exact function
+the spec already names. *Keep tables, just align them* — rejected: still inexact, and it
+preserves two maintenance points instead of one formula.
+
+---
+
 ## ADR-0027 — The agent layer is formalized (WHAT/HOW/SPECIALTY, least privilege)
 
-**Status:** Proposed
+**Status:** Accepted (owner-authorized 2026-07-20)
 **Extends:** ADR-0010, ADR-0012, ADR-0018, ADR-0021
 **Resolves:** open decision "Agent lanes"
 
@@ -478,7 +572,7 @@ weaker than an independent critic (the separation is the point).
 
 ## ADR-0026 — The wiki front end is an octagon node-graph
 
-**Status:** Proposed
+**Status:** Accepted (owner-authorized 2026-07-20)
 **Extends:** ADR-0017, ADR-0015
 
 **Context:** Stage A's front end (Next.js) visualizes the governed knowledge graph. The
@@ -524,7 +618,7 @@ choice; this ADR fixes its accessibility floor so the aesthetic cannot regress u
 
 ## ADR-0025 — GraphQL is code-first
 
-**Status:** Proposed
+**Status:** Accepted (owner-authorized 2026-07-20)
 **Extends:** ADR-0018
 
 **Context:** `apps/api` (NestJS) exposes the domain and, in Stage A, the knowledge graph
@@ -550,7 +644,7 @@ TS, reintroducing exactly the two-places-to-sync problem the estate keeps elimin
 
 ## ADR-0024 — The knowledge graph is served from a one-way Postgres read model
 
-**Status:** Proposed
+**Status:** Accepted (owner-authorized 2026-07-20)
 **Extends:** ADR-0015, ADR-0017
 
 **Context:** Stage A (ADR-0017) is a read-only wiki over the governed knowledge graph
@@ -584,7 +678,7 @@ rejected outright.
 
 ## ADR-0023 — Monorepo structure: Clean-Architecture layers as packages
 
-**Status:** Proposed
+**Status:** Accepted (owner-authorized 2026-07-20)
 **Extends:** ADR-0018, ADR-0022
 
 **Context:** ADR-0018 chose Clean Architecture as a modular monolith. Two organizing axes
@@ -634,7 +728,7 @@ dependency rule.
 
 ## ADR-0022 — pnpm + Turborepo is the monorepo toolchain
 
-**Status:** Proposed
+**Status:** Accepted (owner-authorized 2026-07-20)
 **Supersedes:** ADR-0013
 **Extends:** ADR-0017
 
@@ -663,7 +757,7 @@ superseding ADR-0013; its reproducibility requirement is preserved.
 
 ## ADR-0021 — Context Engineering is mapped onto the existing tree, not rebuilt
 
-**Status:** Proposed
+**Status:** Accepted (owner-authorized 2026-07-20)
 **Extends:** ADR-0010, ADR-0012
 
 **Context:** An enterprise "Context Engineering integration" prompt asked for ~30 context
@@ -701,7 +795,7 @@ and the SSOT principle; would immediately drift from `docs/`.
 
 ## ADR-0020 — The Python calculation core is a gRPC service
 
-**Status:** Proposed
+**Status:** Accepted (owner-authorized 2026-07-20)
 **Extends:** ADR-0001, ADR-0019
 
 **Context:** ADR-0001 puts all math in Python; the app is TypeScript (NestJS). The two must
@@ -728,7 +822,7 @@ rejected: forecloses the interactive-calculator stage of ADR-0017.
 
 ## ADR-0019 — Money is arbitrary-precision Decimal end-to-end
 
-**Status:** Proposed
+**Status:** Accepted (owner-authorized 2026-07-20)
 **Supersedes (in part):** ADR-0006 (its integer-cent Money clause only)
 **Rewrites:** SCM-R8
 
@@ -772,7 +866,7 @@ removed. Decimal-everywhere is the single-source-of-truth choice.
 
 ## ADR-0018 — Clean Architecture as a modular monolith
 
-**Status:** Proposed
+**Status:** Accepted (owner-authorized 2026-07-20)
 **Extends:** ADR-0004, ADR-0005
 
 **Context:** The repo is a domain library — only `domain/` layers exist, no application,
@@ -809,7 +903,7 @@ monolith is the reversible middle.
 
 ## ADR-0017 — The product is a staged full-stack SCM application
 
-**Status:** Proposed
+**Status:** Accepted (owner-authorized 2026-07-20)
 **Extends:** ADR-0004
 
 **Context:** The repo has been a domain/analytics library. The owner's target is a
@@ -847,7 +941,7 @@ grow into Stages B/C, and re-implements the graph the gates already validate.
 
 ## ADR-0016 — Department IMPLEMENTATION.md files are business context, not target architecture
 
-**Status:** Proposed
+**Status:** Accepted (owner-authorized 2026-07-20)
 **Extends:** ADR-0002, ADR-0010, ADR-0015
 
 **Context:** The 14 `src/departments/*/IMPLEMENTATION.md` files total **128,240 words** —
@@ -914,7 +1008,7 @@ none reconciled, the authoritative-by-intent one unimplemented.
 
 ## ADR-0015 — A concept-node layer makes every SCM calculation individually citable
 
-**Status:** Proposed
+**Status:** Accepted (owner-authorized 2026-07-20)
 **Extends:** ADR-0004, ADR-0010, ADR-0012
 
 **Context:** The estate implements roughly 250 public Python functions and 350 TypeScript

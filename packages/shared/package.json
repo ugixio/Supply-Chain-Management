@@ -4,9 +4,5 @@
   "description": "Cross-cutting SCM types and event infrastructure (Money, UOM, Incoterms, Event Store).",
   "license": "MIT",
   "main": "src/index.ts",
-  "types": "src/index.ts",
-  "dependencies": {
-    "decimal.js": "^10.4.3",
-    "uuid": "^9.0.0"
-  }
+  "types": "src/index.ts"
 }

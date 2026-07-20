@@ -2,21 +2,14 @@
   "name": "supply-chain-management",
   "version": "1.0.0",
   "description": "Enterprise Supply Chain Management System — SCOR-DS aligned, ISO 28000:2022 compliant",
-  "main": "dist/index.js",
+  "private": true,
   "scripts": {
-    "build": "tsc",
-    "dev": "ts-node src/index.ts",
+    "typecheck": "tsc --noEmit",
     "test": "jest --runInBand",
     "test:unit": "jest tests/unit",
     "test:integration": "jest tests/integration",
-    "lint": "eslint src --ext .ts",
-    "typecheck": "tsc --noEmit"
-  },
-  "dependencies": {
-    "uuid": "^9.0.0",
-    "decimal.js": "^10.4.3",
-    "date-fns": "^3.6.0",
-    "zod": "^3.23.8"
+    "lint": "eslint packages --ext .ts",
+    "build": "turbo run build"
   },
   "devDependencies": {
     "@types/node": "^20.14.0",
@@ -28,7 +21,8 @@
     "ts-node": "^10.9.2",
     "eslint": "^9.4.0",
     "@typescript-eslint/eslint-plugin": "^8.0.0",
-    "@typescript-eslint/parser": "^8.0.0"
+    "@typescript-eslint/parser": "^8.0.0",
+    "turbo": "^2.1.0"
   },
   "keywords": [
     "supply-chain",

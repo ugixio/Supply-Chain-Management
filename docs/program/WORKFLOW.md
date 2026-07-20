@@ -208,10 +208,16 @@ mirror-coverage bar) · duplicated formulas across TS/Python with one past diver
   (`is_allowlisted`, `DEPT_NUMBER`) and the knowledge-architecture allowlist repointed;
   scaffolds for `apps/{web,api}`, `packages/{application,infrastructure}`, `proto/` with
   READMEs; `pnpm-workspace.yaml`, `turbo.json`, `@scm/{domain,shared}` package.json.
-  **Deliberately NOT done (activation sub-step, next controlled run):** `pnpm install` +
-  migrate `package-lock.json → pnpm-lock.yaml`, move root deps into per-package manifests,
-  switch CI to `pnpm install --frozen-lockfile`, wire `make verify-full` to `turbo run`.
-  Held back so the currently-green npm/tsc/jest toolchain is not disturbed mid-turn.
+  **Activation sub-step — LANDED 2026-07-20 (verify-full green under pnpm):** `pnpm
+  install` run, **`package-lock.json` → `pnpm-lock.yaml`** migrated, root manifest reduced
+  to dev-tooling + `turbo` (unused `date-fns`/`zod`/`decimal.js` dropped — YAGNI;
+  `decimal.js` returns to `@scm/shared` at P5), honest per-package manifests
+  (`@scm/domain` → `uuid` + `@scm/shared` workspace:*; `@scm/shared` → none external),
+  `Makefile` switched to `pnpm -s exec`, **CI switched to `pnpm/action-setup@v4` +
+  `pnpm install --frozen-lockfile`**, `.turbo/` git-ignored. `turbo run build` is wired in
+  the root `build` script but not yet in the gate (no per-package build configs exist until
+  apps land — P3+); typecheck/jest still run once at root over all packages, which is
+  correct for the current surface.
   **NOT done (deferred, own decision):** the `07_order_management` vs `13_order_management`
   merge — the two `order_metrics.py` files **differ**, so it needs a domain call, not a
   mechanical move (stays U11/risk #4; both preserved under `services/calc/` for now).

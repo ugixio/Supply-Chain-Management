@@ -34,7 +34,9 @@ RELATION_TYPES = {
 REQUIRED_FIELDS = ("id", "title", "type", "owner", "status", "since", "updated")
 ID_PATTERN = re.compile(r"^[a-z0-9]+(-[a-z0-9]+)*$")
 DATE_PATTERN = re.compile(r"^\d{4}-\d{2}-\d{2}$")
-RULE_ID_DEF = re.compile(r"^\s*-\s*\*{0,2}([A-Z]{2,4}-R\d+)\*{0,2}\s*[:—]")
+# Definitions end in a colon; inherited references use an em-dash (templates/rule.md)
+# and must NOT count as definitions, or G3 would flag false duplicates.
+RULE_ID_DEF = re.compile(r"^\s*-\s*\*{0,2}([A-Z]{2,4}-R\d+)\*{0,2}\s*:")
 ADR_HEADING = re.compile(r"^##\s+ADR-(\d{4})\b", re.M)
 
 # The apex: the root contract has no front-matter but is a valid relation target.

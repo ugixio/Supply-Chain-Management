@@ -250,6 +250,20 @@ mirror-coverage bar) · duplicated formulas across TS/Python with one past diver
   to durable event-sourced Postgres (`EventStore` → adapter over an event table, ADR-0005
   realized), use-case ring, auth/RBAC, audit. Not scheduled.
 
+- ✅ **P1a · orchestrator** — Agent layer formalized (ADR-0027; resolves the open
+  "Agent lanes" decision). **Landed 2026-07-20:** 7 least-privilege agent profiles in
+  `.claude/agents/` (architect, domain-knowledge, backend-/frontend-/data-/calc-engineer,
+  quality-reviewer) + 7 technology/practice skills in `.claude/skills/`
+  (engineering-standards, clean-architecture, nestjs-graphql, nextjs-frontend,
+  postgresql-data, python-precision-grpc, testing-quality) + `.claude/agents/README.md`
+  index. Profiles reference the governance (never restate it), declare least-privilege
+  tools (quality-reviewer read-only), and encode the repo's proven protocols
+  (`evaluation.md`, `operating-model.md` §4). Main session stays the orchestrator.
+  `operating-model.md` §1 layer 2 + §2 updated; open decision closed. `.claude/**` is
+  allowlisted (ungated) — the "references, never restates" rule keeps the gated docs the
+  source. **Note:** the frontend-UX `ENG-*`/`50-engineering/frontend` tokens and the
+  boundary linter (ENG-R1 enforcement) are still P1 proper.
+
 ### Phase 1 — Product evolution (owner-defined)
 - ⬜ Resolve the open decisions in `10-decisions/README.md` (runtime/persistence, API
   surface, versioning) — they gate any application layer built on these domains.

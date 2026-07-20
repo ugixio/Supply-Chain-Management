@@ -53,6 +53,7 @@ relations:
 - ADR-0024 — Stage A serves the knowledge graph from a **Postgres read model rebuilt one-way from `docs/`**; `docs/` stays the single source of truth, the projection is disposable and never hand-edited. (proposed)
 - ADR-0025 — GraphQL is **code-first** (NestJS decorators generate the SDL); the schema is a build artifact, not a hand-maintained file. (proposed)
 - ADR-0026 — The wiki front end is a **node-graph of octagons**: SCM core centre, 14 departments as a connected circuit, CPT sub-nodes on expand; LED-cyan stroke on transparent fill; node click opens a right sidebar. (proposed)
+- ADR-0027 — The **agent layer is formalized** (resolves the open "Agent lanes" decision): 7 least-privilege subagent profiles (`.claude/agents/`) over WHAT/HOW/SPECIALTY lanes + 7 technology/practice skills; the main session is the orchestrator; agents reference the governance, never restate it. (proposed)
 
 ---
 
@@ -395,13 +396,83 @@ every fork's status ambiguous).
       doc gates G1–G7+G9, CI workflow). Still pending inside it: eslint flat config
       (lint) and the pytest gate (U7) — tracked in `program/WORKFLOW.md`.
 - [ ] **Versioning scheme.** First annotated tag; what 1.0.0 means (ADR-0011 pending).
-- [ ] **Agent lanes.** Formalize WHAT/HOW/SPECIALTY lanes and profiles
-      (`program/operating-model.md`) or keep single-orchestrator mode.
+- [x] **Agent lanes.** ~~Formalize WHAT/HOW/SPECIALTY lanes and profiles or keep
+      single-orchestrator mode.~~ **Resolved by ADR-0027** (2026-07-20): formalized — 7
+      least-privilege agent profiles + 7 technology skills; main session orchestrates.
 - [ ] **Cross-language consistency policy.** TS and Python implement overlapping formulas
       (e.g. risk bands — see fix `a12c114`); decide the single-source mechanism (shared
       spec, golden tests, or codegen). **Concept nodes (ADR-0015) now make each
       divergence visible** — the first census already surfaced the service-level
       z-score tables (`CPT-0003`); they do not resolve it.
+
+---
+
+## ADR-0027 — The agent layer is formalized (WHAT/HOW/SPECIALTY, least privilege)
+
+**Status:** Proposed
+**Extends:** ADR-0010, ADR-0012, ADR-0018, ADR-0021
+**Resolves:** open decision "Agent lanes"
+
+**Context:** The operating model (ADR-0010, `operating-model.md` §1) reserves a second
+knowledge layer — the **agent profile** — as "not yet formalized", and the lanes
+(WHAT/HOW/SPECIALTY, §2) are a "default pending the owner's decision". The product is now a
+multi-technology build (Next.js · NestJS/GraphQL · PostgreSQL · Python/gRPC), and the owner
+asked for a real, justified set of agents that understand the full context, carry the
+technology skills, and work together. Building this must not create a second knowledge root
+(ADR-0021) nor restate the protocols the repo already owns (`evaluation.md`,
+`operating-model.md` §4).
+
+**Decision:** Formalize the agent layer as **7 subagent profiles** in `.claude/agents/`
+(allowlisted tooling) plus **7 technology/practice skills** in `.claude/skills/` (parallel
+to the 15 domain skills, which stay the WHAT-lane area layer). The **main Claude Code
+session is the orchestrator** — it decomposes, assigns and gates; there is no orchestrator
+agent (that would duplicate the coordinating thread).
+
+Every profile follows `templates/agent.md` and obeys three non-negotiables:
+1. **References, never restates.** A profile cites `CLAUDE.md`, the ADR index, the relevant
+   `rule.md`/`CPT` nodes, `evaluation.md` (reasoning protocol, decision ladder) and
+   `operating-model.md` §4 (communication contract). It copies none of them.
+2. **Least privilege (secure-by-default, PoLP).** Each agent declares the narrowest tool
+   set for its job. The critic (quality-reviewer) has **no write access** — the
+   generator/critic separation is deliberate.
+3. **Lane boundary.** Each agent names, explicitly, the work it never does (the other
+   lanes'), per the template's "What I NEVER do".
+
+Roster (each justified by a distinct lane role or technology surface — per-node
+justification, knowledge-architecture §1):
+
+| Agent | Lane | Owns | Never |
+|---|---|---|---|
+| `architect` | WHAT/plan | ADRs, specs, decomposition, design | writes app code |
+| `domain-knowledge` | WHAT | `docs/25-concepts` (CPT), `rule.md`, extraction (ADR-0016) | writes app code / invents business rules from thin air |
+| `backend-engineer` | HOW | `apps/api`, `packages/{application,infrastructure}` (NestJS, code-first GraphQL, Clean Arch) | changes the domain ring / frontend |
+| `frontend-engineer` | HOW | `apps/web` (Next.js, the octagon graph, a11y) | backend/domain logic |
+| `data-engineer` | HOW | Postgres schema, migrations, the read-model ingester (ADR-0024) | business rules / UI |
+| `calc-engineer` | HOW/SPECIALTY | `services/calc` (Python, Decimal precision, gRPC/proto) | TS domain / business-rule decisions |
+| `quality-reviewer` | verify | gates, `evaluation.md` self-review, security, cross-language golden vectors | writes/edits code (read-only critic) |
+
+The reasoning techniques encoded across the profiles are the **proven** ones, and they are
+the repo's existing protocols made explicit for agents: read-before-write (context loading,
+`operating-model.md` §1), plan⇄context check (ADR-0010), plan→act→verify with a gate after
+every layer (ADR-0012), test-first with a test per rule ID (SCM-R13), decision ladder
+(`evaluation.md` §2), generator/critic separation (quality-reviewer), grounding/citation
+(conversation is never the source of truth), explicit-uncertainty reporting
+(`operating-model.md` §4), and known-pitfalls memory (§4.7).
+
+**Consequences:** (+) parallelizable, role-scoped work with hard boundaries; each agent
+loads a small, correct context instead of the whole repo; the critic is independent of the
+author. (+) the technology skills give every HOW agent the stack's best practices without
+copying them into each profile. (−) a roster to maintain as the stack evolves; mitigated by
+`templates/agent.md` and by keeping practice in skills (one home), identity in profiles. (−)
+agent profiles are `.claude/` tooling (allowlisted, ungated) — drift risk; mitigated by the
+"references, never restates" rule so the gated docs stay the source.
+
+**Alternatives considered:** *Keep single-orchestrator mode* — simplest, but forfeits
+parallelism and the critic-separation benefit the owner explicitly asked for. *One agent per
+department (14+)* — rejected: the 15 domain skills already carry department specificity;
+agents are role/technology-scoped and load the relevant domain skill, avoiding 14× profile
+duplication. *Fold review into each engineer* — rejected: self-review by the author is
+weaker than an independent critic (the separation is the point).
 
 ---
 

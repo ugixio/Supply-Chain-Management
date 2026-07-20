@@ -23,7 +23,8 @@ relations:
 │  GLOBAL RULES     →  CLAUDE.md + the decision INDEX          │
 │                      (full ADR text on demand — ADR-0012)    │
 ├──────────────────────────────────────────────────────────────┤
-│  AGENT PROFILE    →  (not yet formalized — templates/agent.md)│
+│  AGENT PROFILE    →  .claude/agents/*.md (ADR-0027) + the      │
+│                      technology skills in .claude/skills/*     │
 ├──────────────────────────────────────────────────────────────┤
 │  AREA SKILL       →  .claude/skills/<dept>/SKILL.md          │
 │                      + src/departments/<dept>/README.md      │
@@ -53,8 +54,12 @@ never fabricated samples.
 | **HOW** | implements | `src/`, `python/`, tests, git | invent rules; skip the spec |
 | **SPECIALTY** | augments | heavy ML/optimization models by contract | decide business rules alone |
 
-Until lanes are activated, the single Claude Code session plays all three **sequentially
-per task**, still obeying each lane's "never does" column.
+**Lanes are now activated (ADR-0027).** The lanes are realized as 7 least-privilege agent
+profiles in `.claude/agents/` drawing on 7 technology/practice skills in `.claude/skills/`
+(alongside the 15 domain skills). The **main session orchestrates** — decomposes, assigns,
+gates — and may run a task itself when spawning an agent is not worth the cold-start cost.
+Each agent still obeys its "never does" column; the mapping of agents to lanes is in
+ADR-0027.
 
 ## 3. Per-unit flow
 

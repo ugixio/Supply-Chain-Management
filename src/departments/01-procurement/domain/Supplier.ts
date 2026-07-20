@@ -17,7 +17,7 @@
  */
 
 import { v4 as uuidv4 } from 'uuid';
-import { Address, EntityStatus, ISODate, ISOTimestamp, nowUTC } from '../../shared/types';
+import { Address, EntityStatus, ISODate, ISOTimestamp, nowUTC } from '../../../shared/types';
 
 // Kraljic Matrix quadrants — strategic procurement positioning
 export type KrajlicQuadrant =

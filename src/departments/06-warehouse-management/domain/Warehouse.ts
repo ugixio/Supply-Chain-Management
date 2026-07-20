@@ -23,7 +23,7 @@
  */
 
 import { v4 as uuidv4 } from 'uuid';
-import { Address, ISOTimestamp, nowUTC } from '../../shared/types';
+import { Address, ISOTimestamp, nowUTC } from '../../../shared/types';
 
 export type WarehouseType = 'DISTRIBUTION_CENTER' | 'MANUFACTURING_STORE' | 'BONDED' | 'CROSS_DOCK' | 'COLD_STORAGE' | 'HAZMAT';
 

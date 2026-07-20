@@ -11,7 +11,7 @@ import {
   meanAbsoluteError,
   meanAbsolutePercentageError,
   rootMeanSquaredError,
-} from '../../src/demand-planning/algorithms/Forecasting';
+} from '../../src/departments/03-demand-planning/algorithms/Forecasting';
 
 describe('Simple Moving Average', () => {
   const data = [10, 12, 13, 14, 15, 16];

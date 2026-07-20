@@ -10,7 +10,7 @@ import {
   cancelPurchaseOrder,
   calculatePOTotal,
   PO_APPROVAL_THRESHOLD_CENTS,
-} from '../../src/procurement/domain/PurchaseOrder';
+} from '../../src/departments/01-procurement/domain/PurchaseOrder';
 
 const baseLine = {
   sku: 'SKU-001',
@@ -91,8 +91,14 @@ describe('PurchaseOrder approval workflow', () => {
 });
 
 describe('PurchaseOrder lifecycle', () => {
-  it('can only be sent to supplier when APPROVED', () => {
+  it('enters PENDING_APPROVAL at exactly the threshold (SCM-R2: at or above)', () => {
+    // total 100 × $10 = $1,000 == threshold → requires approval, not auto-approved
     const po = createPurchaseOrder({ ...baseInput, approvalThresholdCents: 1_000_00 });
+    expect(po.status).toBe('PENDING_APPROVAL');
+  });
+
+  it('can only be sent to supplier when APPROVED', () => {
+    const po = createPurchaseOrder({ ...baseInput, approvalThresholdCents: 50_000_00 });
     expect(po.status).toBe('APPROVED');
     const sent = sendPurchaseOrderToSupplier(po);
     expect(sent.status).toBe('SENT_TO_SUPPLIER');

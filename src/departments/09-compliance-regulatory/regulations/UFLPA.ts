@@ -26,7 +26,7 @@
  *  - US State Department UFLPA Fact Sheet (2025)
  */
 
-import { ISODate, ISOTimestamp, nowUTC } from '../../shared/types';
+import { ISODate, ISOTimestamp, nowUTC } from '../../../shared/types';
 
 export const UFLPA_HIGH_RISK_REGIONS = [
   'CN-XJ',   // Xinjiang Uyghur Autonomous Region

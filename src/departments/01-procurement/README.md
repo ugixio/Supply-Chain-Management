@@ -71,7 +71,7 @@ Approval (workflow) → Supplier dispatch → Tracking → GRN
 
 4. **Price Escalation Formula** — Adjusted_Price = Base_Price × (1 + CPI_change × weight_material + PPI_change × weight_labor). Used in Contract.ts price escalation clause. Ref: APICS Dictionary.
 
-5. **PO Approval Threshold Rule** — if PO_total > PO_APPROVAL_THRESHOLD_CENTS → status = PENDING_APPROVAL. Binary decision rule to enforce internal controls (SOX compliance).
+5. **PO Approval Threshold Rule (SCM-R2)** — if PO_total ≥ PO_APPROVAL_THRESHOLD_CENTS (at or above) → status = PENDING_APPROVAL. Binary decision rule to enforce internal controls (SOX compliance).
 
 ## Recommended Machine Learning Models
 

@@ -14,19 +14,7 @@
     "sourceMap": true,
     "experimentalDecorators": true,
     "emitDecoratorMetadata": true,
-    "resolveJsonModule": true,
-    "paths": {
-      "@shared/*": ["src/shared/*"],
-      "@procurement/*": ["src/procurement/*"],
-      "@inventory/*": ["src/inventory/*"],
-      "@logistics/*": ["src/logistics/*"],
-      "@demand-planning/*": ["src/demand-planning/*"],
-      "@supplier-management/*": ["src/supplier-management/*"],
-      "@compliance/*": ["src/compliance/*"],
-      "@quality/*": ["src/quality/*"],
-      "@warehouse/*": ["src/warehouse/*"],
-      "@risk/*": ["src/risk/*"]
-    }
+    "resolveJsonModule": true
   },
   "include": ["src/**/*"],
   "exclude": ["node_modules", "dist", "tests"]

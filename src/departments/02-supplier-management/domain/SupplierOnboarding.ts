@@ -16,7 +16,7 @@
  */
 
 import { v4 as uuidv4 } from 'uuid';
-import { ISODate, ISOTimestamp, nowUTC } from '../../shared/types';
+import { ISODate, ISOTimestamp, nowUTC } from '../../../shared/types';
 
 // ─── Value types ──────────────────────────────────────────────────────────────
 

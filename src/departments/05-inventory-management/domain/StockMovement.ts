@@ -14,7 +14,7 @@
  */
 
 import { v4 as uuidv4 } from 'uuid';
-import { ISOTimestamp, LotNumber, SerialNumber, IdempotencyKey, nowUTC } from '../../shared/types';
+import { ISOTimestamp, LotNumber, SerialNumber, IdempotencyKey, nowUTC } from '../../../shared/types';
 
 export type MovementType =
   // Inbound

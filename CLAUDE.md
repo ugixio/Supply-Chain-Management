@@ -147,7 +147,7 @@ Supply-Chain-Management/
 
 ## Critical Business Rules
 1. **Never allow negative inventory** without `backorderAllowed = true`
-2. **POs above threshold** (`PO_APPROVAL_THRESHOLD_CENTS`, default $5,000) → `PENDING_APPROVAL`
+2. **POs at or above threshold** (`PO_APPROVAL_THRESHOLD_CENTS`, default $5,000; SCM-R2) → `PENDING_APPROVAL`
 3. **Soft-delete only** on POs, Invoices, Stock Movements, Shipments, Scorecards
 4. **All stock movements** generate a journal entry (debit/credit GL accounts)
 5. **Lot tracking** required for `storageCondition !== AMBIENT` or `reachSVHC = true`
@@ -283,3 +283,43 @@ Run tests: `npm test` | Unit only: `npm run test:unit`
 - GS1 General Specifications v23.0
 - SCOR Digital Standard (ASCM, 2019)
 - EU Directive 2024/1760 (CSDDD) | US Pub.L. 117-78 (UFLPA) | EU REACH 1907/2006
+
+---
+
+## Governance & Knowledge Architecture (adopted 2026-07-19, ADR-0010)
+
+> This file is the **development contract** (Tier 1): if anything conflicts with a
+> request, this file wins. The rest of the project's knowledge is governed by the tiered
+> tree under `docs/` — map: `docs/_index.md`.
+
+- **Decisions** → `docs/10-decisions/README.md`. ADR-0001..0009 record this repo's
+  existing de-facto decisions (retroactive); new decisions are appended there and are
+  never reverted without a superseding ADR. Open decisions are listed at the bottom of
+  that file.
+- **Stable rule IDs** → the Critical Business Rules and Code Standards above are now
+  also citable as **SCM-R1..R13** in `docs/30-foundation/scm-core/rule.md` (the stable-ID
+  home; a dedup pass is backlog item U3). Per-department rule families are reserved in
+  `docs/00-governance/id-registry.md`.
+- **Knowledge rules** → `docs/00-governance/knowledge-architecture.md` (single source of
+  truth; references, never copies; append-only decisions; conversation is never the
+  source of truth; allowlist for the knowledge that lives next to code — department
+  READMEs, IMPLEMENTATION playbooks, `.claude/skills`).
+- **Plan⇄context discipline** → any change that introduces or renames a product concept
+  lands in the model/ADR/rules FIRST, then in code.
+- **Backlog & operating model** → `docs/program/WORKFLOW.md` (ordered backlog with
+  statuses; unification follow-ups U2..U12) and `docs/program/operating-model.md`
+  (knowledge layers; the `.claude/skills` are the area-skill layer; §4 communication
+  contract). Task/spec/ADR/rule/manifest templates: `docs/program/templates/`.
+- **Gates (ADR-0012)** → `make verify` (FAST: doc gates G1–G7+G9 + typecheck + unit
+  tests — run after every layer) · `make verify-full` (the merge/CI gate). Load the
+  decision INDEX at the top of `docs/10-decisions/README.md`, not every ADR body.
+- **Before acting** → `docs/program/evaluation.md` (reasoning protocol, decision ladder,
+  self-review). Corrections land as Known-pitfalls entries in the department's SKILL.md
+  (operating-model §4.7). Risks → `docs/00-governance/risk-register.md`; structural
+  lessons → `docs/program/improvement-register.md`.
+
+**Definition of Done (every task):** `make verify-full` green (typecheck + tests + doc
+gates; pytest when Python is touched — U7) · touched rules (SCM-Rx / dept families) keep
+their tests · spec/model updated FIRST if a concept changed · knowledge placed per the
+architecture (no stray `.md`) · self-review run (`docs/program/evaluation.md` §3) ·
+commit message proposed (Conventional Commits, ADR-0011 proposed).

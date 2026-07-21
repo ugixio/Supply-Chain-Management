@@ -51,12 +51,12 @@ relations:
 
 | Prefix | Area | Owning doc | Highest allocated |
 |---|---|---|---|
-| CPT | Supply-chain concepts & calculations | `docs/25-concepts/` (per-node files) | CPT-0025 |
+| CPT | Supply-chain concepts & calculations | `docs/25-concepts/` (per-node files) | CPT-0035 |
 
-Allocated so far: **CPT-0001 … CPT-0025** — all in `docs/25-concepts/03-demand-planning/`
-(the exemplar department; remaining 13 departments are in `census` mode, see
-[25-concepts/_index.md](../25-concepts/_index.md)). CPT-0024/0025 are `draft`: specified
-in the department's business-context document but **not implemented** (ADR-0016).
+Allocated so far: **CPT-0001 … CPT-0035**. CPT-0001..0025 = dept 03 (demand-planning);
+**CPT-0026..0035 = dept 01 (procurement)** — both `enforced`. CPT-0024/0025 are `draft`
+(specified in the business-context document but not implemented, ADR-0016). Remaining 12
+departments are in `census` mode (see [25-concepts/_index.md](../25-concepts/_index.md)).
 
 ## 2. Rule-ID families — RESERVED (future areas)
 

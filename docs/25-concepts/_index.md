@@ -52,7 +52,7 @@ second kind of gap, and the U18 extraction is what finds them.
 | # | Department | Coverage |
 |---|---|---|
 | 03 | [03-demand-planning](03-demand-planning/_index.md) | enforced |
-| 01 | 01-procurement | census |
+| 01 | [01-procurement](01-procurement/_index.md) | enforced |
 | 02 | 02-supplier-management | census |
 | 04 | 04-supply-planning | census |
 | 05 | 05-inventory-management | census |

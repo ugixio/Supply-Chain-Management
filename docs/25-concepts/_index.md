@@ -64,7 +64,7 @@ second kind of gap, and the U18 extraction is what finds them.
 | 11 | [11-finance-controlling](11-finance-controlling/_index.md) | enforced |
 | 12 | 12-sop-planning | census |
 | 13 | [13-order-management](13-order-management/_index.md) | enforced |
-| 14 | 14-supplier-development | census |
+| 14 | [14-supplier-development](14-supplier-development/_index.md) | enforced |
 
 ## How to extend
 

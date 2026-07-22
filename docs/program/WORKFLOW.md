@@ -282,6 +282,35 @@ mirror-coverage bar) · duplicated formulas across TS/Python with one past diver
   source. **Note:** the frontend-UX `ENG-*`/`50-engineering/frontend` tokens and the
   boundary linter (ENG-R1 enforcement) are still P1 proper.
 
+### Phase W — Platform: Global Context + Workspace/Projects (ADR-0030/0031; Proposed, owner-gated)
+
+> Owner direction 2026-07-22: the SCM knowledge becomes a reusable **Global Context**
+> consumed by **Projects** in a **Workspace**; a future **Monitoring** connector adds
+> real-time dashboards + metrics. Recorded first as ADR-0030/0031 + product-statement
+> (plan⇄context, ADR-0010). **Nothing builds until the owner ratifies the assumptions.**
+
+- 🟦 **W0 · orchestrator** — Consolidate the direction into governance. **Landed
+  2026-07-22 (branch `claude/supply-chain-framework-m6r3g6`, restarted from the merged
+  default):** ADR-0030 (platform: Global Context + Workspace/Projects), ADR-0031
+  (monitoring connector, future), `20-product-model/product-statement.md` (materializes the
+  product statement the model index flagged MISSING), 6 glossary rows, id-registry ADR
+  allocation → 0031, decision-index one-liners (G9). Doc gates green.
+- ⬜ **W1 · human** — Ratify ADR-0030/0031 and resolve the three assumptions: **A1** context
+  scope (SCM-specific vs domain-agnostic engine), **A2** project relationship (reference +
+  overlay vs read-only vs versioned snapshot), **A3** monitoring source (external + internal
+  unified vs one). These gate the Stage-B/C build.
+- ⬜ **W2 · WHAT lane (blocks on W1)** — Model the platform bounded contexts: `workspace`
+  and `projects` concepts, their `rule.md` family (reserve a platform prefix in id-registry
+  §2 via the ratifying ADR), and how a project references global `CPT-*`/rule IDs + resolves
+  the overlay (A2). Concept nodes for any new platform calculations.
+- ⬜ **W3 · HOW lane (Stage B, blocks on W2)** — Build the workspace/projects bounded context:
+  Postgres schema for the mutable project data domain (separate from the ADR-0024 knowledge
+  read model), tenancy/auth, NestJS code-first GraphQL resolvers, project→context reference
+  resolution + overlay. Reads the knowledge read model, never writes it.
+- ⬜ **W4 · HOW lane (Stage C, future, ADR-0031)** — Monitoring connector: emit progress
+  events from the W3 data model; connectors (internal-first, then external dev tools);
+  delivery metrics as `CPT-*` nodes; dashboards. Deferred until W3 lands and A3 is ruled.
+
 ### Phase 1 — Product evolution (owner-defined)
 - ⬜ Resolve the open decisions in `10-decisions/README.md` (runtime/persistence, API
   surface, versioning) — they gate any application layer built on these domains.

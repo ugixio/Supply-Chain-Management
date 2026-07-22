@@ -77,7 +77,7 @@ CPT-0139..0146 = dept 04 (supply planning);
 ## 3. Decision (ADR) numbers
 
 - Format: `ADR-NNNN`, strictly increasing, allocated at proposal time.
-- Allocated: **ADR-0001 … ADR-0029** (see `docs/10-decisions/README.md`).
+- Allocated: **ADR-0001 … ADR-0031** (see `docs/10-decisions/README.md`).
   0001–0009 retroactive; 0010–0013 proposed at skeleton adoption; 0014 (MIT) accepted;
   0015 (concepts) / 0016 (business-context extraction) proposed; **0017–0021 proposed —
   the full-stack product decisions** (staging, Clean Architecture, Decimal money, gRPC
@@ -87,9 +87,13 @@ CPT-0139..0146 = dept 04 (supply planning);
   technology skills; resolves the open "Agent lanes" decision); **0028/0029 — domain
   resolutions** (canonical z-score = exact inverse-normal, resolves U15; order-management
   calc dir dissolved, resolves the U11 numbering collision). **All 0010..0029 ratified
-  Accepted (owner-authorized 2026-07-20).**
+  Accepted (owner-authorized 2026-07-20).** **0030/0031 — the platform direction**
+  (Global Context + Workspace/Projects; future Monitoring connector), owner direction
+  2026-07-22, **Proposed** — carry assumptions A1 (context scope), A2 (project overlay),
+  A3 (metric source) gated on owner ratification.
   Supersession chain: **ADR-0019** supersedes the ADR-0006 money clause and rewrites
-  SCM-R8; **ADR-0022** supersedes ADR-0013 (npm → pnpm).
+  SCM-R8; **ADR-0022** supersedes ADR-0013 (npm → pnpm). ADR-0030 **extends** (does not
+  supersede) ADR-0017's staging.
 
 ## 4. Department / module keys
 

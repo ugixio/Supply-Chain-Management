@@ -13,20 +13,20 @@ relations:
 # 20-product-model
 
 - **Belongs here:** the authoritative description of WHAT this product is.
-- **What the repo observably is today (recorded, pending the owner's product statement):**
-  an **enterprise SCM domain platform** — 14 SCOR-DS-aligned departments of executable
-  domain logic (TypeScript), mathematical/ML models (Python), per-department SQL schemas,
-  KPI frameworks and regulatory compliance logic, grounded in named standards (ADR-0008).
-  It has **no recorded runtime/API/UI decision yet** (open decisions,
-  `10-decisions/README.md`).
+- **What the product is (owner direction, 2026-07-22 — ADR-0030/0031, Proposed):** a
+  **platform** = a read-only, versioned **Global Context** (the SCM knowledge substrate +
+  wiki, `docs/` SSOT) consumed by **Projects** inside a **Workspace**, with a future
+  complementary **Monitoring** connector (real-time dashboards + metrics). The underlying
+  SCM estate — 14 SCOR-DS departments of TS domain logic + Python models + KPI/regulatory
+  logic (ADR-0008) — is the Global Context's content.
 - **Exists today:**
+  - [product-statement.md](product-statement.md) — the authoritative WHAT: layers, who it
+    serves, delivery form/staging, core concepts, invariants, open owner decisions.
   - [glossary.md](glossary.md) — the controlled vocabulary, seeded from the estate.
 - **MISSING (owner input needed):**
-  - `product-model.md` — the product statement: who it serves, the delivery form
-    (library / service / full ERP), and the growth path. Until it exists, `README.md` +
-    `CLAUDE.md` §Project Overview are the best available description (allowlisted homes).
-  - `context-map.md` — the SCOR-DS ↔ department map is currently in `README.md`
-    (referenced, not duplicated); promote it here when it needs to grow.
+  - `context-map.md` — the concept relationship map (Global Context ↔ Workspace ↔ Project
+    ↔ Monitoring) + the SCOR-DS ↔ department map currently in `README.md` (referenced, not
+    duplicated); promote it here when it needs to grow.
 - **Rule:** product concepts are DEFINED here and REFERENCED everywhere else. A change
   that introduces or renames a concept lands here FIRST (plan⇄context discipline,
   ADR-0010).

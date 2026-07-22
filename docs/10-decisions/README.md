@@ -61,6 +61,8 @@ relations:
 - ADR-0027 — The **agent layer is formalized** (resolves the open "Agent lanes" decision): 7 least-privilege subagent profiles (`.claude/agents/`) over WHAT/HOW/SPECIALTY lanes + 7 technology/practice skills; the main session is the orchestrator; agents reference the governance, never restate it. (accepted 2026-07-20)
 - ADR-0028 — The **canonical service-level z-score is the exact inverse-normal** Φ⁻¹ (Python `scipy.stats.norm.ppf`; TypeScript a high-accuracy rational approximation). Resolves U15; the lookup tables are retired. (accepted 2026-07-20)
 - ADR-0029 — The misplaced `07_order_management` calc dir is dissolved: perfect-order metrics belong to dept 13, SCOR-agility + VaR to dept 10. Resolves the numbering collision (U11/risk #4). (accepted 2026-07-20)
+- ADR-0030 — The product becomes a **platform**: the existing SCM knowledge is a read-only, versioned **Global Context** (wiki premise + `docs/` SSOT preserved) consumed by **Projects** inside a **Workspace**; projects reference global nodes by stable ID and never mutate them. Extends ADR-0017/0021/0024/0026. (**Proposed** — assumptions A1 scope, A2 overlay gated on owner)
+- ADR-0031 — A future, complementary **monitoring-connector** layer adds real-time project development/progress **Dashboards** and **Metrics** (metrics defined as `CPT-*` concept nodes); connectors unify external dev tools + internal project data, internal-first. Deferred/reserved. (**Proposed** — assumption A3 gated on owner)
 
 ---
 
@@ -1070,6 +1072,122 @@ source of truth for law.
   the divergences that matter are invisible from inside one language.
 - *Per-department concept families (`PRC-C*`, `DMD-C*`)* — rejected: forces a single
   owner onto genuinely shared concepts and renumbers when ownership moves.
+
+---
+
+---
+
+## ADR-0030 — The product is a platform: one Global Context + a Workspace of Projects that consume it
+
+**Status:** Proposed
+**Extends:** ADR-0017 (staged full-stack app), ADR-0021 (context-engineering layer already
+instantiated), ADR-0024 (one-way knowledge read model, `docs/` SSOT), ADR-0026 (octagon
+node-graph wiki), ADR-0018/0023 (Clean Architecture / monorepo).
+
+**Context:** To date the product (ADR-0017) is a single full-stack app that surfaces the SCM
+knowledge as a wiki (Stage A) and, later, transactional SCM. The owner has now set the
+direction (conversation, 2026-07-22): the SCM knowledge becomes a **reusable global context**,
+and the product grows a **workspace** layer in which **projects** are created that consume that
+context; the context keeps its own wiki information base. This reshapes the top-level product
+concept — from "an app" to "a platform: a shared knowledge context + many projects that draw on
+it" — so it is recorded before any build (ADR-0010 plan⇄context; §5 conversation is never the
+source of truth). Two forces are left open by the owner's statement and are carried as
+**assumptions the owner ratifies or overrides**, not silently absorbed (evaluation.md §1.3).
+
+**Decision:**
+- The **Global Context** is the estate's existing governed knowledge — the `docs/` tier tree,
+  the concept catalogue (`CPT-*`), and the rules (`SCM-R*` + department families) — exposed as a
+  **read-only, versioned substrate**. It keeps the wiki premise (ADR-0026 octagon node-graph)
+  and the SSOT invariant (ADR-0024: `docs/` is the single source of truth; the served graph is a
+  one-way projection, never hand-edited).
+- A **Workspace** is the top-level tenant space that contains **Projects**. A **Project** is a
+  unit of work that **references** the Global Context by stable ID and carries its own
+  transactional data in a **separate application-data domain**; a project **must not mutate** the
+  Global Context.
+- **[ASSUMPTION A1 — context scope, owner to confirm]:** the Global Context is **SCM-scoped** for
+  now. Generalizing to a **domain-agnostic** context engine (SCM as the first of many domains) is
+  **reserved** for a future ADR; nothing here blocks it and nothing builds toward it yet (no
+  speculative generalization — knowledge-architecture §founding principles).
+- **[ASSUMPTION A2 — project overlay, owner to confirm]:** a project may hold a **local overlay**
+  (project-scoped concepts and parameter/threshold overrides) that references but never rewrites
+  global nodes. Reads resolve as *global node, then project override*. This preserves the
+  knowledge SSOT while letting a project tune calculations to its situation.
+- **Architecture placement (ADR-0018/0023):** the workspace/project layer is a **new bounded
+  context** (`workspace` / `projects`), **outside the 14-department SCM taxonomy** — a platform
+  concern, not an SCM department. It reads the knowledge read model (ADR-0024) and owns its own
+  persistence, tenancy and lifecycle.
+- **Staging:** this **extends** ADR-0017 — Stage A (the wiki / Global Context) stands; the
+  workspace+projects layer is the next product stage on the same stack (Next.js · NestJS/GraphQL
+  · PostgreSQL). Real-time monitoring is deferred to ADR-0031.
+
+**Consequences:**
+- (+) The knowledge investment (154 concept nodes, rules, ADRs) becomes a reusable asset consumed
+  by many projects, not a single app's content.
+- (+) The knowledge SSOT is preserved — projects reference, never mutate; ADR-0024's one-way
+  projection still holds.
+- (+) Clean separation: immutable knowledge substrate vs mutable project data — different
+  persistence, different lifecycles.
+- (−) A new mutable application-data domain (workspace/projects) with its own schema, auth/tenancy
+  and lifecycle — real build scope beyond the read-only wiki.
+- (−) The overlay (A2) adds resolution complexity (global + project override) at every point a
+  project reads a rule or calculation.
+- (−) Two assumptions (A1, A2) are unresolved; the ADR stays **Proposed** until the owner rules.
+
+**Alternatives considered:**
+- *Keep a single app, no workspace layer* — rejected: the owner's direction is explicitly
+  multi-project reuse of a shared context.
+- *Projects fork/snapshot the whole context on create* — rejected (A2's sibling): it breaks the
+  one-way SSOT (each editable copy drifts), multiplies storage, and makes global corrections
+  un-propagatable. Preferred: reference + overlay, with an explicit future rebase if versioned
+  snapshots are ever required.
+- *Generalize to a domain-agnostic engine now* — rejected for now (A1): premature generalization
+  of a model with a single real domain, against "only justified nodes"; reserved for a future ADR.
+
+---
+
+## ADR-0031 — A monitoring-connector layer adds real-time project development metrics (future, complementary)
+
+**Status:** Proposed
+**Extends:** ADR-0030 (workspace/projects), ADR-0015 (concept-node catalogue), ADR-0025
+(code-first GraphQL), ADR-0002 (OSI-only).
+
+**Context:** Alongside the workspace/projects direction, the owner wants a future **connector**
+for **real-time monitoring of a project's development and progress** — dashboards and metric
+calculations that show, live, how a project under development advances. The owner framed it as
+**complementary** to the current objective, to be added later, but recorded now so the platform
+is designed with it in mind (plan⇄context).
+
+**Decision:**
+- A **Connector** ingests development/progress signals for a project; a **Monitoring** module
+  computes **Metrics** over them; **Dashboards** render them in near-real-time.
+- **[ASSUMPTION A3 — metric source, owner to confirm]:** the connector unifies **both** sources —
+  external development tools (GitHub/CI/issue-trackers) and the platform's own internal project
+  data — behind one metrics model. Delivery is **internal-project-data first** (dashboards over the
+  platform's own tasks/milestones/progress), with external connectors added incrementally.
+- Metrics reuse the estate's discipline: each progress/velocity metric is **defined as a concept
+  node** (`CPT-*`) with formula, units and worked example, so a delivery metric is as governed and
+  citable as a supply-chain KPI — one catalogue, not a parallel one.
+- **OSI-only (ADR-0002):** connectors and dashboard tooling must be OSI-licensed; no proprietary
+  observability SaaS as a hard dependency.
+- **Scope guard:** this layer is **deferred / reserved, not scheduled**. It is recorded so the
+  ADR-0030 project data model is designed to **emit the progress events** monitoring will consume,
+  avoiding a retrofit; no monitoring code is built until a dedicated task is scoped and this ADR is
+  ratified.
+
+**Consequences:**
+- (+) Recording it now lets the project data model emit progress events from day one.
+- (+) Metrics-as-concept-nodes keeps one calculation catalogue and one review discipline for SCM
+  KPIs and delivery metrics alike.
+- (−) Real-time ingestion + time-series storage + a dashboard UI is a substantial subsystem,
+  explicitly out of the near-term build.
+- (−) A3 (source unification) is unresolved; the ADR stays **Proposed**.
+
+**Alternatives considered:**
+- *Adopt an existing observability stack* — deferred: Grafana (AGPL) is OSI-admissible, Datadog is
+  not; the buy-vs-build call is left to the scoped task, but the metric *definitions* stay in the
+  concept catalogue regardless of the render tool.
+- *Treat progress metrics as ad-hoc queries* — rejected: it would create ungoverned calculations
+  outside the catalogue, exactly what ADR-0015 exists to prevent.
 
 ---
 

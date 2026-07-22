@@ -1,0 +1,72 @@
+---
+id: concept-stock-balance-projection
+title: "Stock Balance Projection — Event Replay (CPT-0113)"
+type: concept
+owner: orchestrator
+status: active
+since: 2026-07-22
+updated: 2026-07-22
+relations:
+  - { type: part-of, target: index-concepts-05-inventory-management }
+  - { type: governed-by, target: index-adr }
+---
+# Stock Balance Projection — Event Replay (CPT-0113)
+
+> Rebuilds the current stock level by replaying the immutable movement log — the read
+> model of the event-sourced inventory (ADR-0005): balance is derived, never stored.
+
+## Formula
+
+    balance = Σ inbound quantities − Σ outbound quantities   (replay in time order)
+    inbound: GOODS_RECEIPT, RETURN_FROM_CUSTOMER, TRANSFER_IN,
+             PRODUCTION_OUTPUT, INVENTORY_ADJUSTMENT_IN
+
+| Symbol | Meaning | Unit |
+|---|---|---|
+| movements/events | the immutable log entries | units, ISO timestamps |
+
+## Inputs and outputs
+
+- **PY:** events sorted by timestamp; **raises when any outbound would drive balance
+  negative** (SCM-R1 enforced during replay) and on unknown movement types.
+  Returns one float balance.
+- **TS:** projects a `Map` keyed `sku::warehouseId`; RESERVATION /
+  RESERVATION_RELEASE are ignored (reservations affect availability, not physical
+  balance); it does **not** guard negativity — negative balances surface for
+  investigation instead of throwing (recorded divergence, both defensible: the
+  writer-side guard vs the reader-side projection).
+
+## Assumptions and limits
+
+- Replay correctness depends on log immutability and idempotent writes
+  (SCM-R12) — a duplicated event silently doubles the balance; the idempotency key
+  belongs to the write path, not this projection.
+- PY sorts by ISO timestamp string — same-timestamp events keep list order; make
+  event ordering deterministic upstream (sequence numbers) for audit-grade replay.
+- Full-log replay is O(N) — a snapshot+delta strategy is the standard optimization
+  once logs grow (not implemented; P7 territory).
+- **Does not apply when:** computing *available-to-promise* — reservations matter
+  there (CPT-0085), not here.
+
+## Worked example
+
+Events: receipt +100, issue −30, transfer-in +20, issue −50 → balance **40**.
+A further issue −45 raises in PY (would be −5); TS would project −5 to the map.
+
+## Implementations
+
+- PY: [`project_stock_balance`](../../../services/calc/05_inventory_management/stock_balance.py)
+- TS: [`projectStockBalance`](../../../packages/domain/src/05-inventory-management/domain/StockMovement.ts)
+
+## Governing rules
+
+- **SCM-R1** — no negative stock without backorder authority; **SCM-R4** — every
+  movement journals; **SCM-R12** — idempotent transactions; ADR-0005 event sourcing.
+
+## Related
+
+- CPT-0118/0119 — valuation layers ride on the same movements.
+
+## References
+
+- Vernon, *Implementing Domain-Driven Design* (2013), Ch. 8 — event sourcing.

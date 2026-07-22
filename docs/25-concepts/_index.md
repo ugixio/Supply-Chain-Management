@@ -55,7 +55,7 @@ second kind of gap, and the U18 extraction is what finds them.
 | 01 | [01-procurement](01-procurement/_index.md) | enforced |
 | 02 | [02-supplier-management](02-supplier-management/_index.md) | enforced |
 | 04 | 04-supply-planning | census |
-| 05 | 05-inventory-management | census |
+| 05 | [05-inventory-management](05-inventory-management/_index.md) | enforced |
 | 06 | [06-warehouse-management](06-warehouse-management/_index.md) | enforced |
 | 07 | 07-logistics-transportation | census |
 | 08 | [08-quality-management](08-quality-management/_index.md) | enforced |

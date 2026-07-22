@@ -60,7 +60,7 @@ second kind of gap, and the U18 extraction is what finds them.
 | 07 | 07-logistics-transportation | census |
 | 08 | [08-quality-management](08-quality-management/_index.md) | enforced |
 | 09 | 09-compliance-regulatory | census |
-| 10 | 10-risk-management | census |
+| 10 | [10-risk-management](10-risk-management/_index.md) | enforced |
 | 11 | 11-finance-controlling | census |
 | 12 | 12-sop-planning | census |
 | 13 | 13-order-management | census |

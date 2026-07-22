@@ -51,14 +51,15 @@ relations:
 
 | Prefix | Area | Owning doc | Highest allocated |
 |---|---|---|---|
-| CPT | Supply-chain concepts & calculations | `docs/25-concepts/` (per-node files) | CPT-0092 |
+| CPT | Supply-chain concepts & calculations | `docs/25-concepts/` (per-node files) | CPT-0102 |
 
-Allocated so far: **CPT-0001 … CPT-0092**. CPT-0001..0025 = dept 03 (demand-planning);
+Allocated so far: **CPT-0001 … CPT-0102**. CPT-0001..0025 = dept 03 (demand-planning);
 CPT-0026..0035 = dept 01 (procurement); CPT-0036..0049 = dept 06 (warehouse management);
 CPT-0050..0059 = dept 08 (quality management);
 CPT-0060..0070 = dept 02 (supplier management);
 CPT-0071..0081 = dept 10 (risk management);
-**CPT-0082..0092 = dept 13 (order management)** — all seven `enforced`. CPT-0024/0025 are `draft` (specified in the
+CPT-0082..0092 = dept 13 (order management);
+**CPT-0093..0102 = dept 09 (compliance & regulatory)** — all eight `enforced`. CPT-0024/0025 are `draft` (specified in the
 business-context document but not implemented, ADR-0016). Remaining departments are in
 `census` mode (see [25-concepts/_index.md](../25-concepts/_index.md)).
 

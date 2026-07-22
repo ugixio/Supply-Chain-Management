@@ -21,7 +21,7 @@ import sys
 DOCS_DIR = "docs"
 
 TYPES = {
-    "governance", "adr", "product-model", "context-spec", "rule", "skill",
+    "governance", "adr", "product-model", "concept", "context-spec", "rule", "skill",
     "engineering", "operations", "program", "archive", "transient",
 }
 OWNERS = {"human", "orchestrator"}  # extend when agent lanes are formalized
@@ -51,18 +51,89 @@ PATH_BUDGETS = (
     ("docs/program/evaluation.md", 1200),
     ("docs/program/operating-model.md", 1200),
 )
-TYPE_BUDGETS = {"skill": 1500, "rule": 1000}
+TYPE_BUDGETS = {"skill": 1500, "rule": 1000, "concept": 700}
 ADR_INDEX_LINE = re.compile(r"^-\s+ADR-(\d{4})\s+—", re.M)
+
+# --- G10 — concept coverage (ADR-0015) ------------------------------------------------
+CONCEPTS_DIR = f"{DOCS_DIR}/25-concepts"
+# `- TS: [`symbolName`](relative/path.ts)` inside the `## Implementations` section.
+IMPL_BULLET = re.compile(
+    r"^\s*-\s*(TS|PY):\s*\[`([A-Za-z_][A-Za-z0-9_]*)`\]\(([^)\s]+)\)"
+)
+# Coverage table rows in the concepts index: `| 03 | ... | enforced |`
+COVERAGE_ROW = re.compile(r"^\|\s*(\d{2})\s*\|[^|]*\|\s*(enforced|census)\s*\|", re.M)
+EXCLUSION_HEADING = "## Not concepts (excluded from G10)"
+BACKTICKED = re.compile(r"`([A-Za-z_][A-Za-z0-9_]*)`")
+# Public calculation symbols, by language.
+TS_EXPORT = re.compile(r"^export function (\w+)", re.M)
+PY_DEF = re.compile(r"^def (\w+)", re.M)
+DEPT_NUMBER = re.compile(r"^(?:packages/domain/src|services/calc)/(\d{2})[-_]")
+
+
+def section_body(text: str, heading: str) -> str:
+    """The lines under `heading` up to the next same-or-higher-level heading."""
+    lines = text.splitlines()
+    try:
+        start = next(i for i, ln in enumerate(lines) if ln.strip() == heading)
+    except StopIteration:
+        return ""
+    out = []
+    for line in lines[start + 1:]:
+        if line.startswith("## "):
+            break
+        out.append(line)
+    return "\n".join(out)
+
+
+def defines_symbol(path: str, symbol: str) -> bool:
+    """True when `path` genuinely defines `symbol` (keeps the concept map from rotting)."""
+    try:
+        text = open(path, encoding="utf-8").read()
+    except OSError:
+        return False
+    if path.endswith(".ts"):
+        patterns = (rf"^export function {symbol}\b", rf"^export const {symbol}\b")
+    else:
+        patterns = (rf"^def {symbol}\b", rf"^{symbol}\s*=")
+    return any(re.search(p, text, re.M) for p in patterns)
+
+
+def public_symbols(tracked):
+    """Public calculation symbols per department number: {'03': {('TS', name), ...}}."""
+    found = {}
+    for path in tracked:
+        match = DEPT_NUMBER.match(path)
+        if not match:
+            continue
+        if path.endswith(".ts") and not path.endswith(".d.ts"):
+            lang, pattern = "TS", TS_EXPORT
+        elif path.endswith(".py") and not path.endswith("__init__.py"):
+            lang, pattern = "PY", PY_DEF
+        else:
+            continue
+        try:
+            text = open(path, encoding="utf-8").read()
+        except OSError:
+            continue
+        for name in pattern.findall(text):
+            if name.startswith("_"):
+                continue
+            found.setdefault(match.group(1), set()).add((lang, name))
+    return found
 
 
 def is_allowlisted(path: str) -> bool:
     """Knowledge-architecture §3 — this repo's instantiated allowlist."""
-    if path in ("CLAUDE.md", "README.md", "python/README.md",
-                "docs/standards/REGULATORY_FRAMEWORK.md"):
+    if path in ("CLAUDE.md", "README.md", "services/calc/README.md",
+                "proto/README.md", "docs/standards/REGULATORY_FRAMEWORK.md"):
         return True
     if path.startswith(".claude/") or path.startswith(".github/"):
         return True
-    if re.fullmatch(r"src/departments/[^/]+/(README|IMPLEMENTATION)\.md", path):
+    # Component docs live next to the code they document (ADR-0023 monorepo layout).
+    if re.fullmatch(r"packages/domain/src/[^/]+/(README|IMPLEMENTATION)\.md", path):
+        return True
+    # App/package/service scaffolds may carry their own README (framework convention).
+    if re.fullmatch(r"(apps|packages|services)/[^/]+/README\.md", path):
         return True
     return False
 
@@ -142,9 +213,10 @@ class Gates:
             "G3": "ID uniqueness", "G4": "link integrity", "G5": "no orphans",
             "G6": "authority acyclicity", "G7": "status & supersession",
             "G9": "context budget & disclosure",
+            "G10": "concept coverage & symbol links",
         }
         ok = True
-        for gate in sorted(names):
+        for gate in sorted(names, key=lambda name: int(name[1:])):
             issues = self.failures.get(gate, [])
             if issues:
                 ok = False
@@ -166,8 +238,9 @@ def tier_of(path: str, doc_type: str):
     top = parts[1]
     if top in ("00-governance", "program", "standards", "_source"):
         return None
-    tiers = {"10-decisions": 2, "20-product-model": 3, "30-foundation": 4,
-             "40-contexts": 4, "50-engineering": 6, "60-operations": 6}
+    tiers = {"10-decisions": 2, "20-product-model": 3, "25-concepts": 3,
+             "30-foundation": 4, "40-contexts": 4,
+             "50-engineering": 6, "60-operations": 6}
     tier = tiers.get(top)
     if tier is None:
         return None
@@ -366,6 +439,60 @@ def main() -> int:
                 if target_status not in ("active", "archived"):
                     gates.fail("G7", f"{path}: superseded-by '{target}' has status "
                                      f"'{target_status}' (needs active/archived)")
+
+    # G10 — concept coverage (ADR-0015): symbol links must resolve; enforced departments
+    # must have a concept node (or an explicit exclusion) for every public calculation.
+    covered, excluded = {}, {}
+    for path, (meta, text) in docs.items():
+        if meta.get("type") != "concept":
+            continue
+        dept = path.split("/")[2] if path.startswith(f"{CONCEPTS_DIR}/") else ""
+        number = dept[:2] if dept[:2].isdigit() else ""
+        if path.endswith("_index.md"):
+            for name in BACKTICKED.findall(section_body(text, EXCLUSION_HEADING)):
+                excluded.setdefault(number, set()).add(name)
+            continue
+        base = os.path.dirname(path)
+        for line in section_body(text, "## Implementations").splitlines():
+            bullet = IMPL_BULLET.match(line)
+            if not bullet:
+                if line.strip().startswith("-"):
+                    gates.fail("G10", f"{path}: unparseable Implementations bullet "
+                                      f"{line.strip()!r} (see templates/concept.md)")
+                continue
+            lang, symbol, link = bullet.groups()
+            target = os.path.normpath(os.path.join(base, link))
+            if not os.path.exists(target):
+                continue  # G4 already reports the broken link; do not double-report
+            if not defines_symbol(target, symbol):
+                gates.fail("G10", f"{path}: {target} does not define '{symbol}'")
+            covered.setdefault(number, set()).add((lang, symbol))
+
+    census = []
+    concepts_index = docs.get(f"{CONCEPTS_DIR}/_index.md")
+    if concepts_index:
+        symbols = public_symbols(tracked)
+        for number, status in COVERAGE_ROW.findall(concepts_index[1]):
+            known = symbols.get(number, set())
+            gap = sorted(
+                name for lang, name in known
+                if (lang, name) not in covered.get(number, set())
+                and name not in excluded.get(number, set())
+            )
+            if not known:
+                continue
+            if status == "enforced" and gap:
+                gates.fail("G10", f"department {number} is 'enforced' but {len(gap)} "
+                                  f"public symbols have no concept node: "
+                                  f"{', '.join(gap[:8])}"
+                                  f"{' …' if len(gap) > 8 else ''}")
+            elif gap:
+                census.append(f"  dept {number}: {len(known) - len(gap)}/{len(known)} "
+                              f"symbols documented ({len(gap)} to catalogue)")
+    if census:
+        print("INFO G10 census (departments in 'census' mode — reported, not failed):")
+        for line in census:
+            print(line)
 
     return gates.report(len(docs))
 

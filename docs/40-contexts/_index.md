@@ -22,20 +22,24 @@ relations:
 
 | # | Department | README | IMPL | SKILL | Python | rule.md (family) | specs |
 |---|---|---|---|---|---|---|---|
-| 01 | procurement | ✓ | ✓ | ✓ | ✓ | ⬜ (PRC) | ⬜ |
-| 02 | supplier-management | ✓ | ✓ | ✓ | ✓ | ⬜ (SUP) | ⬜ |
-| 03 | demand-planning | ✓ | ✓ | ✓ | ✓ | ⬜ (DMD) | ⬜ |
-| 04 | supply-planning | ✓ | ✓ | ✓ | ✓ | ⬜ (SPL) | ⬜ |
-| 05 | inventory-management | ✓ | ✓ | ✓ | ✓ | ⬜ (INV) | ⬜ |
-| 06 | warehouse-management | ✓ | ✓ | ✓ | ✓ | ⬜ (WHS) | ⬜ |
-| 07 | logistics-transportation | ✓ | ✓ | ✓ | ✓ | ⬜ (LOG) | ⬜ |
-| 08 | quality-management | ✓ | ✓ | ✓ | ✓ | ⬜ (QMS) | ⬜ |
-| 09 | compliance-regulatory | ✓ | ✓ | ✓ | ✓ | ⬜ (CMP) | ⬜ |
-| 10 | risk-management | ✓ | ✓ | ✓ | ✓ | ⬜ (RSK) | ⬜ |
-| 11 | finance-controlling | ✓ | ✓ | ✓ | ✓ | ⬜ (FIN) | ⬜ |
-| 12 | sop-planning | ✓ | ✓ | ✓ | ✓ | ⬜ (SOP) | ⬜ |
-| 13 | order-management | ✓ | ✓ | ✓ | ✓ | ⬜ (ORD) | ⬜ |
-| 14 | supplier-development | ✓ | ✓ | ✓ | ✓ | ⬜ (SDV) | ⬜ |
+| 01 | procurement | ✓ | ✓ | ✓ | ✓ | ✓ (PRC-R1..R8) | ⬜ |
+| 02 | supplier-management | ✓ | ✓ | ✓ | ✓ | ✓ (SUP-R1..R4) | ⬜ |
+| 03 | demand-planning | ✓ | ✓ | ✓ | ✓ | ✓ (DMD-R1..R4) | ⬜ |
+| 04 | supply-planning | ✓ | ✓ | ✓ | ✓ | ✓ (SPL-R1..R4) | ⬜ |
+| 05 | inventory-management | ✓ | ✓ | ✓ | ✓ | ✓ (INV-R1..R3) | ⬜ |
+| 06 | warehouse-management | ✓ | ✓ | ✓ | ✓ | ✓ (WHS-R1..R4) | ⬜ |
+| 07 | logistics-transportation | ✓ | ✓ | ✓ | ✓ | ✓ (LOG-R1..R3) | ⬜ |
+| 08 | quality-management | ✓ | ✓ | ✓ | ✓ | ✓ (QMS-R1..R4) | ⬜ |
+| 09 | compliance-regulatory | ✓ | ✓ | ✓ | ✓ | ✓ (CMP-R1..R3) | ⬜ |
+| 10 | risk-management | ✓ | ✓ | ✓ | ✓ | ✓ (RSK-R1..R4) | ⬜ |
+| 11 | finance-controlling | ✓ | ✓ | ✓ | ✓ | ✓ (FIN-R1..R3) | ⬜ |
+| 12 | sop-planning | ✓ | ✓ | ✓ | ✓ | ✓ (SOP-R1..R3) | ⬜ |
+| 13 | order-management | ✓ | ✓ | ✓ | ✓ | ✓ (ORD-R1..R4) | ⬜ |
+| 14 | supplier-development | ✓ | ✓ | ✓ | ✓ | ✓ (SDV-R1..R3) | ⬜ |
+
+> **rule.md × 14 landed at U4 (2026-07-20)**, each extracting the invariants its department's
+> code already enforces. `specs/` stay ⬜ — created per unit of work when a change is made
+> (not speculatively). Every rule ID needs a test (SCM-R13) — coverage is HOW-lane backlog (U7).
 
 - **Rules:**
   - A department `rule.md` is created from `docs/program/templates/rule.md` with its

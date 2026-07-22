@@ -1,0 +1,12 @@
+{
+  "name": "@scm/domain",
+  "version": "1.0.0",
+  "description": "SCM domain entities — 14 SCOR-DS departments. Framework-free (ENG-R2). The innermost Clean-Architecture ring.",
+  "license": "MIT",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "dependencies": {
+    "@scm/shared": "workspace:*",
+    "uuid": "^9.0.0"
+  }
+}

@@ -10,7 +10,7 @@ import {
   cancelPurchaseOrder,
   calculatePOTotal,
   PO_APPROVAL_THRESHOLD_CENTS,
-} from '../../src/departments/01-procurement/domain/PurchaseOrder';
+} from '@scm/domain/01-procurement/domain/PurchaseOrder';
 
 const baseLine = {
   sku: 'SKU-001',

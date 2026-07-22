@@ -310,9 +310,16 @@ Run tests: `npm test` | Unit only: `npm run test:unit`
   statuses; unification follow-ups U2..U12) and `docs/program/operating-model.md`
   (knowledge layers; the `.claude/skills` are the area-skill layer; §4 communication
   contract). Task/spec/ADR/rule/manifest templates: `docs/program/templates/`.
-- **Gates (ADR-0012)** → `make verify` (FAST: doc gates G1–G7+G9 + typecheck + unit
-  tests — run after every layer) · `make verify-full` (the merge/CI gate). Load the
-  decision INDEX at the top of `docs/10-decisions/README.md`, not every ADR body.
+- **Concepts (ADR-0015)** → `docs/25-concepts/` is the **calculation catalogue**: one node
+  per SCM concept/formula (`CPT-NNNN`), carrying the formula, units, assumptions, worked
+  example and verified links to the TS/Python that computes it. **Start here** to learn
+  what the system knows about a calculation — before reading code. Concept nodes define
+  *meaning*; `rule.md` states *law* and stays the SSOT for invariants.
+- **Gates (ADR-0012, ADR-0015)** → `make verify` (FAST: doc gates G1–G7+G9+G10 +
+  typecheck + unit tests — run after every layer) · `make verify-full` (the merge/CI
+  gate). G10 prints the live **coverage census**: which public calculation symbols still
+  lack a concept node. Load the decision INDEX at the top of
+  `docs/10-decisions/README.md`, not every ADR body.
 - **Before acting** → `docs/program/evaluation.md` (reasoning protocol, decision ladder,
   self-review). Corrections land as Known-pitfalls entries in the department's SKILL.md
   (operating-model §4.7). Risks → `docs/00-governance/risk-register.md`; structural

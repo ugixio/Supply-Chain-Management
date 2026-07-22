@@ -61,3 +61,5 @@ relations:
 | Project Overlay | A project's local layer of project-scoped concepts + parameter overrides referencing (never rewriting) global nodes; reads resolve global-then-override. | platform (ADR-0030) |
 | Connector | Ingests a project's development/progress signals (external dev tools and/or internal project data). | platform (ADR-0031) |
 | Delivery Metric | A progress/velocity calculation over project signals, defined as a `CPT-*` concept node. | platform (ADR-0031) |
+| Tech Branch | The technical discipline a Project belongs to (AI, ML, Data, Backend, Frontend, UI/UX, DevOps, …); open, materialized incrementally. | platform (ADR-0030) |
+| Prompt-Refinement Gate | A user prompt is improved first, then the improved prompt is executed; original + improved retained. Incoming-quality control on instructions. | platform (ADR-0032) |

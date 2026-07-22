@@ -61,8 +61,9 @@ relations:
 - ADR-0027 — The **agent layer is formalized** (resolves the open "Agent lanes" decision): 7 least-privilege subagent profiles (`.claude/agents/`) over WHAT/HOW/SPECIALTY lanes + 7 technology/practice skills; the main session is the orchestrator; agents reference the governance, never restate it. (accepted 2026-07-20)
 - ADR-0028 — The **canonical service-level z-score is the exact inverse-normal** Φ⁻¹ (Python `scipy.stats.norm.ppf`; TypeScript a high-accuracy rational approximation). Resolves U15; the lookup tables are retired. (accepted 2026-07-20)
 - ADR-0029 — The misplaced `07_order_management` calc dir is dissolved: perfect-order metrics belong to dept 13, SCOR-agility + VaR to dept 10. Resolves the numbering collision (U11/risk #4). (accepted 2026-07-20)
-- ADR-0030 — The product becomes a **platform**: the existing SCM knowledge is a read-only, versioned **Global Context** (wiki premise + `docs/` SSOT preserved) consumed by **Projects** inside a **Workspace**; projects reference global nodes by stable ID and never mutate them. Extends ADR-0017/0021/0024/0026. (**Proposed** — assumptions A1 scope, A2 overlay gated on owner)
-- ADR-0031 — A future, complementary **monitoring-connector** layer adds real-time project development/progress **Dashboards** and **Metrics** (metrics defined as `CPT-*` concept nodes); connectors unify external dev tools + internal project data, internal-first. Deferred/reserved. (**Proposed** — assumption A3 gated on owner)
+- ADR-0030 — The workspace is a **tech-company operating model**: SCM is the read-only versioned **Global Context** (operating discipline + engineering practice, wiki premise + `docs/` SSOT preserved) that governs a **portfolio of Projects spanning all tech branches**; projects reference global nodes by stable ID + a local overlay, never mutate them. Extends ADR-0017/0021/0024/0026/0008. (Accepted — owner-directed 2026-07-22; A1 = SCM-as-operating-context, A2 = reference+overlay)
+- ADR-0031 — A complementary **monitoring-connector** layer adds real-time project development/progress **Dashboards** and **Metrics** (metrics defined as `CPT-*` concept nodes); connectors unify external dev tools + internal project data, internal-first. Build deferred/reserved. (Accepted — owner-directed 2026-07-22; A3 = both, internal-first)
+- ADR-0032 — **Prompt-refinement gate:** a user prompt is first improved, then the improved prompt is executed — the company's incoming-quality control on instructions (SCM incoming-inspection analogue). (Accepted — owner-directed 2026-07-22)
 
 ---
 
@@ -1077,77 +1078,94 @@ source of truth for law.
 
 ---
 
-## ADR-0030 — The product is a platform: one Global Context + a Workspace of Projects that consume it
+## ADR-0030 — The workspace is a tech-company operating model: SCM is the Global Context governing a portfolio of multi-branch tech Projects
 
-**Status:** Proposed
+**Status:** Accepted (owner-directed 2026-07-22)
 **Extends:** ADR-0017 (staged full-stack app), ADR-0021 (context-engineering layer already
 instantiated), ADR-0024 (one-way knowledge read model, `docs/` SSOT), ADR-0026 (octagon
-node-graph wiki), ADR-0018/0023 (Clean Architecture / monorepo).
+node-graph wiki), ADR-0018/0023 (Clean Architecture / monorepo), ADR-0008 (named standards
+are first-class), and the `50-engineering` tier + `.claude/skills` practice layer.
 
-**Context:** To date the product (ADR-0017) is a single full-stack app that surfaces the SCM
-knowledge as a wiki (Stage A) and, later, transactional SCM. The owner has now set the
-direction (conversation, 2026-07-22): the SCM knowledge becomes a **reusable global context**,
-and the product grows a **workspace** layer in which **projects** are created that consume that
-context; the context keeps its own wiki information base. This reshapes the top-level product
-concept — from "an app" to "a platform: a shared knowledge context + many projects that draw on
-it" — so it is recorded before any build (ADR-0010 plan⇄context; §5 conversation is never the
-source of truth). Two forces are left open by the owner's statement and are carried as
-**assumptions the owner ratifies or overrides**, not silently absorbed (evaluation.md §1.3).
+**Context:** To date the estate (ADR-0017) is a full-stack app that surfaces the SCM knowledge
+as a wiki. The owner has now set the direction and resolved the gating questions
+(conversation, 2026-07-22). **This is not a commercial product; it is a project/workspace
+modeled as a technology company.** The insight: **supply-chain management is used as the
+operating discipline of the company itself** — the same plan → source → make → deliver →
+return → enable flow, its KPIs, quality control, risk and procurement logic, applied not to
+physical goods but to **the flow of technical work**. That operating discipline is the
+**Global Context** that plans, governs, produces, delivers and monitors a **portfolio of
+Projects**, where each project is a deliverable in **any branch of technology**. Recorded
+before any build (ADR-0010 plan⇄context; §5 conversation is never the source of truth).
 
 **Decision:**
-- The **Global Context** is the estate's existing governed knowledge — the `docs/` tier tree,
-  the concept catalogue (`CPT-*`), and the rules (`SCM-R*` + department families) — exposed as a
-  **read-only, versioned substrate**. It keeps the wiki premise (ADR-0026 octagon node-graph)
-  and the SSOT invariant (ADR-0024: `docs/` is the single source of truth; the served graph is a
-  one-way projection, never hand-edited).
-- A **Workspace** is the top-level tenant space that contains **Projects**. A **Project** is a
-  unit of work that **references** the Global Context by stable ID and carries its own
-  transactional data in a **separate application-data domain**; a project **must not mutate** the
-  Global Context.
-- **[ASSUMPTION A1 — context scope, owner to confirm]:** the Global Context is **SCM-scoped** for
-  now. Generalizing to a **domain-agnostic** context engine (SCM as the first of many domains) is
-  **reserved** for a future ADR; nothing here blocks it and nothing builds toward it yet (no
-  speculative generalization — knowledge-architecture §founding principles).
-- **[ASSUMPTION A2 — project overlay, owner to confirm]:** a project may hold a **local overlay**
-  (project-scoped concepts and parameter/threshold overrides) that references but never rewrites
-  global nodes. Reads resolve as *global node, then project override*. This preserves the
-  knowledge SSOT while letting a project tune calculations to its situation.
-- **Architecture placement (ADR-0018/0023):** the workspace/project layer is a **new bounded
-  context** (`workspace` / `projects`), **outside the 14-department SCM taxonomy** — a platform
-  concern, not an SCM department. It reads the knowledge read model (ADR-0024) and owns its own
-  persistence, tenancy and lifecycle.
-- **Staging:** this **extends** ADR-0017 — Stage A (the wiki / Global Context) stands; the
-  workspace+projects layer is the next product stage on the same stack (Next.js · NestJS/GraphQL
-  · PostgreSQL). Real-time monitoring is deferred to ADR-0031.
+- The **Global Context** is the company's operating context: (a) the SCM discipline — the 14
+  SCOR-DS departments, `CPT-*` concept catalogue and `SCM-R*`/department rules — reused as the
+  **operating system** for running work; plus (b) the **engineering & professional-practice
+  knowledge** already in the estate (`50-engineering` ENG-R* rules, and the `.claude/skills`
+  practice layer: clean-architecture, engineering-standards, testing-quality, nestjs-graphql,
+  nextjs-frontend, postgresql-data, python-precision-grpc). It is exposed as a **read-only,
+  versioned substrate** with the wiki front end (ADR-0026), keeping the one-way SSOT
+  (ADR-0024: `docs/` is the single source of truth; the served graph is a projection, never
+  hand-edited).
+- The Global Context's remit is **best practices, technical concepts, applied professionalism,
+  design, processes, organization and structure** (non-exhaustive) — the standards the company
+  applies to every project.
+- A **Workspace** is the company space that contains **Projects**. A **Project** is a unit of
+  technical work in some **tech branch** — non-exhaustive: AI, Machine Learning, Data Science,
+  Data Analysis, Data Engineering, software development, Backend, Frontend / web design,
+  UI/UX, Databases, DevOps, MLOps, Cloud & Infrastructure / SRE, Security, QA & testing,
+  Mobile, Systems / embedded, Product & Project management, Technical writing. A project
+  **references** the Global Context by stable ID and carries its own transactional data; it
+  **never mutates** the Global Context.
+- **A1 — context scope (RESOLVED, owner 2026-07-22):** the Global Context is **SCM-specific as
+  the operating discipline** (supply chain is the company's OS). The *projects it governs* span
+  all tech branches; that breadth lives in project data + per-branch practice knowledge, not in
+  a generalized domain engine. A **domain-agnostic** context engine stays **reserved** for a
+  future ADR — not built toward yet (no speculative generalization).
+- **A2 — project relationship (RESOLVED = reference + overlay, owner 2026-07-22):** a project
+  holds a **local overlay** (project-scoped concepts + parameter/threshold overrides) that
+  references but never rewrites global nodes. Reads resolve *global node, then project
+  override* — preserving the SSOT while letting each project tune practice to its branch.
+- **Architecture placement (ADR-0018/0023):** `workspace` / `projects` are **new bounded
+  contexts outside the 14-department SCM taxonomy** — company/platform concerns, not SCM
+  departments. Per-tech-branch practice knowledge is materialized **only as justified by a
+  build task** (no speculative directories/skills for every branch up front).
+- **Prompt-refinement operating rule:** every user prompt is first improved, then the improved
+  prompt is executed — recorded as a distinct decision in **ADR-0032** and treated as the
+  company's incoming-quality gate on instructions.
+- **Staging:** **extends** ADR-0017 — Stage A (wiki / Global Context) stands; Stage B is the
+  workspace+projects layer on the same stack (Next.js · NestJS/GraphQL · PostgreSQL · Python
+  calc); real-time monitoring is ADR-0031 (Stage C).
 
 **Consequences:**
-- (+) The knowledge investment (154 concept nodes, rules, ADRs) becomes a reusable asset consumed
-  by many projects, not a single app's content.
-- (+) The knowledge SSOT is preserved — projects reference, never mutate; ADR-0024's one-way
-  projection still holds.
-- (+) Clean separation: immutable knowledge substrate vs mutable project data — different
-  persistence, different lifecycles.
-- (−) A new mutable application-data domain (workspace/projects) with its own schema, auth/tenancy
-  and lifecycle — real build scope beyond the read-only wiki.
-- (−) The overlay (A2) adds resolution complexity (global + project override) at every point a
-  project reads a rule or calculation.
-- (−) Two assumptions (A1, A2) are unresolved; the ADR stays **Proposed** until the owner rules.
+- (+) The knowledge investment (154 concept nodes, rules, ADRs, engineering practice) becomes
+  the company's reusable operating context, not one app's content.
+- (+) A coherent metaphor: SCM's incoming inspection, quality control, risk, KPIs and S&OP map
+  directly onto governing technical delivery — the discipline transfers.
+- (+) SSOT preserved: projects reference, never mutate; ADR-0024's one-way projection holds.
+- (+) Breadth (all tech branches) is expressed as data + incrementally-materialized practice
+  knowledge, keeping the model bounded rather than speculative.
+- (−) A new mutable application-data domain (workspace/projects) with schema, auth/tenancy and
+  lifecycle — real build scope beyond the read-only wiki.
+- (−) The overlay (A2) adds global+override resolution complexity at every read.
+- (−) "All tech branches" is an open-ended remit; disciplined materialization (per justified
+  task) is the standing guard against scope sprawl.
 
 **Alternatives considered:**
-- *Keep a single app, no workspace layer* — rejected: the owner's direction is explicitly
-  multi-project reuse of a shared context.
-- *Projects fork/snapshot the whole context on create* — rejected (A2's sibling): it breaks the
-  one-way SSOT (each editable copy drifts), multiplies storage, and makes global corrections
-  un-propagatable. Preferred: reference + overlay, with an explicit future rebase if versioned
-  snapshots are ever required.
-- *Generalize to a domain-agnostic engine now* — rejected for now (A1): premature generalization
-  of a model with a single real domain, against "only justified nodes"; reserved for a future ADR.
+- *Treat it as a commercial SCM product* — rejected: the owner reframed it as an internal
+  project/workspace where SCM is the operating discipline, not the sold good.
+- *Generalize to a domain-agnostic engine now (A1 alt)* — rejected: premature generalization of
+  a model with one real operating domain; reserved for a future ADR.
+- *Projects fork/snapshot the whole context (A2 alt)* — rejected: breaks the one-way SSOT
+  (editable copies drift), multiplies storage, blocks global-correction propagation.
+- *Materialize a rule family + skill per tech branch now* — rejected: speculative; branches are
+  catalogued as they are actually built (knowledge-architecture "only justified nodes").
 
 ---
 
 ## ADR-0031 — A monitoring-connector layer adds real-time project development metrics (future, complementary)
 
-**Status:** Proposed
+**Status:** Accepted (owner-directed 2026-07-22 — A3 resolved = both sources, internal-first; build deferred)
 **Extends:** ADR-0030 (workspace/projects), ADR-0015 (concept-node catalogue), ADR-0025
 (code-first GraphQL), ADR-0002 (OSI-only).
 
@@ -1160,10 +1178,11 @@ is designed with it in mind (plan⇄context).
 **Decision:**
 - A **Connector** ingests development/progress signals for a project; a **Monitoring** module
   computes **Metrics** over them; **Dashboards** render them in near-real-time.
-- **[ASSUMPTION A3 — metric source, owner to confirm]:** the connector unifies **both** sources —
-  external development tools (GitHub/CI/issue-trackers) and the platform's own internal project
-  data — behind one metrics model. Delivery is **internal-project-data first** (dashboards over the
-  platform's own tasks/milestones/progress), with external connectors added incrementally.
+- **A3 — metric source (RESOLVED = both, internal-first, owner 2026-07-22):** the connector
+  unifies **both** sources — external development tools (GitHub/CI/issue-trackers) and the
+  platform's own internal project data — behind one metrics model. Delivery is
+  **internal-project-data first** (dashboards over the platform's own tasks/milestones/progress),
+  with external connectors added incrementally.
 - Metrics reuse the estate's discipline: each progress/velocity metric is **defined as a concept
   node** (`CPT-*`) with formula, units and worked example, so a delivery metric is as governed and
   citable as a supply-chain KPI — one catalogue, not a parallel one.
@@ -1188,6 +1207,56 @@ is designed with it in mind (plan⇄context).
   concept catalogue regardless of the render tool.
 - *Treat progress metrics as ad-hoc queries* — rejected: it would create ungoverned calculations
   outside the catalogue, exactly what ADR-0015 exists to prevent.
+
+---
+
+---
+
+## ADR-0032 — Prompt-refinement gate: improve a user prompt before executing it
+
+**Status:** Accepted (owner-directed 2026-07-22)
+**Extends:** ADR-0030 (the company operating context), ADR-0008 (SCM standards are first-class),
+ADR-0015 (governed nodes over ad-hoc behavior).
+
+**Context:** The owner added an operating rule (conversation, 2026-07-22): when a user submits a
+prompt, the system must **first improve/refine the prompt, then send the improved prompt** to
+the executing model/agent. In the tech-company operating metaphor (ADR-0030) this is the natural
+analogue of **incoming inspection / quality control** (dept 08) applied to the *instruction* as
+the raw material entering the flow — a bad instruction, like a defective input, is caught and
+corrected before it consumes downstream work.
+
+**Decision:**
+- Every user prompt passes a **Prompt-Refinement Gate** before execution: the raw prompt is
+  transformed into an **improved prompt** (clarified intent, resolved ambiguity, added missing
+  constraints/context, aligned to the Global Context's standards), and only the improved prompt
+  is executed. The original and the improved prompt are both retained (traceability, like an
+  inspection record).
+- It is an **operating rule of the Global Context** (ADR-0030), applied across all projects and
+  tech branches — not project-specific.
+- **[ASSUMPTION A4 — enforcement surface, owner to confirm]:** the gate is a **platform runtime
+  feature** (the app refines end-user prompts before dispatching them to a model). It also reads
+  as guidance for how agents work on this repo; the two are compatible, and the platform-runtime
+  reading is taken as primary. Owner may narrow it.
+- Its stable **rule ID and the refinement criteria** are materialized in the platform rule
+  family when the W2 task creates it (id-registry §2); the refinement quality metric, if
+  measured, is a `CPT-*` node (ADR-0015). Not built until Stage B (W3).
+
+**Consequences:**
+- (+) Higher-quality execution and fewer wasted downstream cycles — quality-at-the-source applied
+  to instructions.
+- (+) Metaphor coherence: the SCM incoming-inspection discipline governs the company's own inputs.
+- (+) Retaining original+improved prompts gives an auditable trail (and data for a
+  forecast-value-added-style "did refinement help?" metric later).
+- (−) Latency and cost of an extra refinement step on every prompt; must be fast and, ideally,
+  skippable for already-precise prompts.
+- (−) A refinement step can drift from user intent if over-eager — needs a visible diff / opt-out
+  so the user sees what changed (design constraint for W3).
+
+**Alternatives considered:**
+- *Refine only on request / low-confidence prompts* — reasonable optimization, folded into the
+  design as the "skippable for precise prompts" note rather than a separate decision.
+- *No refinement (execute prompts verbatim)* — rejected: the owner explicitly wants
+  quality-control on inputs; verbatim execution is the status quo being improved.
 
 ---
 

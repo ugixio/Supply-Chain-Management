@@ -13,12 +13,13 @@ relations:
 # 20-product-model
 
 - **Belongs here:** the authoritative description of WHAT this product is.
-- **What the product is (owner direction, 2026-07-22 — ADR-0030/0031, Proposed):** a
-  **platform** = a read-only, versioned **Global Context** (the SCM knowledge substrate +
-  wiki, `docs/` SSOT) consumed by **Projects** inside a **Workspace**, with a future
-  complementary **Monitoring** connector (real-time dashboards + metrics). The underlying
-  SCM estate — 14 SCOR-DS departments of TS domain logic + Python models + KPI/regulatory
-  logic (ADR-0008) — is the Global Context's content.
+- **What it is (owner direction, 2026-07-22 — ADR-0030/0031/0032, Accepted):** a
+  **project/workspace modeled as a technology company**, where **SCM is the operating
+  discipline** — a read-only versioned **Global Context** (SCM discipline + engineering
+  practice + standards, wiki front end, `docs/` SSOT) that governs a **portfolio of
+  Projects spanning all tech branches** (AI, ML, Data, Backend, Frontend, DevOps, …). Adds
+  a **prompt-refinement gate** (ADR-0032) and a future **Monitoring** connector (ADR-0031).
+  Not a commercial product. Full statement in `product-statement.md`.
 - **Exists today:**
   - [product-statement.md](product-statement.md) — the authoritative WHAT: layers, who it
     serves, delivery form/staging, core concepts, invariants, open owner decisions.

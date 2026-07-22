@@ -65,9 +65,10 @@ CPT-0113..0122 = dept 05 (inventory management);
 CPT-0123..0131 = dept 07 (logistics & transportation);
 CPT-0132..0138 = dept 14 (supplier development);
 CPT-0139..0146 = dept 04 (supply planning);
-**CPT-0147..0153 = dept 12 (S&OP planning)** — **all 14 departments `enforced`** (U14 complete). CPT-0024/0025 are `draft` (specified in the
-business-context document but not implemented, ADR-0016). Remaining departments are in
-`census` mode (see [25-concepts/_index.md](../25-concepts/_index.md)).
+**CPT-0147..0153 = dept 12 (S&OP planning)** — **all 14 departments `enforced`**
+(U14 rollout complete 2026-07-22; see
+[25-concepts/_index.md](../25-concepts/_index.md)). CPT-0024/0025 are `draft`
+(specified in the business-context document but not implemented, ADR-0016).
 
 ## 2. Rule-ID families — RESERVED (future areas)
 

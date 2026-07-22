@@ -1,0 +1,70 @@
+---
+id: concept-ppm-defect-rate
+title: "PPM Defect Rate (CPT-0051)"
+type: concept
+owner: orchestrator
+status: active
+since: 2026-07-22
+updated: 2026-07-22
+relations:
+  - { type: part-of, target: index-concepts-08-quality-management }
+  - { type: governed-by, target: index-adr }
+---
+# PPM Defect Rate (CPT-0051)
+
+> Defective units per million — the supplier-quality currency: automotive expects
+> < 500 PPM, food ≤ 1000 PPM (CLAUDE.md KPI bar).
+
+## Formula
+
+    PPM = defective_units / total_units × 1,000,000
+    variance_to_target = PPM − PPM_target      (positive = worse than target)
+    meeting_target = PPM ≤ PPM_target ∧ FPY ≥ FPY_target
+
+| Symbol | Meaning | Unit |
+|---|---|---|
+| defective_units | units rejected in the period | count |
+| total_units | units inspected/received | count |
+| PPM_target | contract/industry bar | PPM |
+
+## Inputs and outputs
+
+- **Inputs:** counts ≥ 0; `total_units = 0` → 0.0 (PY convention — no exposure means no
+  signal, not perfection; treat as "no data").
+- **Outputs:** PY PPM rounded 4 dp; TS `ppmVarianceToTarget` signed variance;
+  `isMeetingTarget` couples PPM **and** first-pass-yield targets — a supplier must pass
+  both.
+
+## Assumptions and limits
+
+- Counts *defective units* (a unit with 3 defects counts once) — contrast DPMO
+  (CPT-0052) which counts defects against opportunities.
+- PPM is meaningful only at volume: at 2,000 units received, one defect swings 500 PPM —
+  aggregate before acting (the scorecard, CPT-0060+, smooths this).
+- **Does not apply when:** defect opportunities per unit vary widely across a mixed
+  portfolio — use DPMO to normalize.
+
+## Worked example
+
+3 defective in 8,500 received → `3/8500 × 10⁶ = 352.94 PPM`; target 500 →
+variance −147.06 (good), meeting target if FPY bar also passes.
+
+## Implementations
+
+- PY: [`calculate_ppm`](../../../services/calc/08_quality_management/quality.py)
+- TS: [`ppmVarianceToTarget`](../../../packages/domain/src/08-quality-management/domain/QualityKPI.ts)
+- TS: [`isMeetingTarget`](../../../packages/domain/src/08-quality-management/domain/QualityKPI.ts)
+
+## Governing rules
+
+- Feeds the supplier scorecard quality group (SUP rules) and QMS KPI records
+  (soft-delete only, SCM-R3).
+
+## Related
+
+- CPT-0052 DPMO & sigma level — the opportunity-normalized cousin.
+- CPT-0055 FPY/RTY — the process-internal yield view.
+
+## References
+
+- AIAG — automotive PPM conventions; APICS/ASCM Dictionary, *parts per million*.

@@ -108,7 +108,7 @@ mirror-coverage bar) · duplicated formulas across TS/Python with one past diver
   proper shipping name or packing group, though the README mandates it. Add the guard +
   its test (surfaced by U4 while writing `40-contexts/07-logistics-transportation/rule.md`).
 
-- 🟦 **U14 · WHAT lane** — Concept-node catalogue rollout (ADR-0015). **Landed
+- ✅ **U14 · WHAT lane** — Concept-node catalogue rollout (ADR-0015). **Landed
   2026-07-20:** `docs/25-concepts/` tier, `type: concept` (Tier 3), family `CPT`,
   template, gate **G10** (verifies every `## Implementations` symbol link resolves to a
   real definition; reports/enforces coverage per department). **Exemplar
@@ -120,6 +120,22 @@ mirror-coverage bar) · duplicated formulas across TS/Python with one past diver
   09 (25) · 11 (24) · 05 (22) · 07 (22) · 13 (20) · 14 (13) · 04 (12) · 12 (8);
   **335 symbols outstanding**. Flip each to `enforced` in `25-concepts/_index.md` as it
   completes. Run `python3 tools/verify.py` for the live census.
+  **✅ ROLLOUT COMPLETE 2026-07-22 (branch `claude/supply-chain-framework-m6r3g6`):**
+  all 12 remaining departments catalogued in census order — CPT-0036..0153 (118 new
+  nodes across 06/08/02/10/13/09/11/05/07/14/04/12); every public calculation symbol
+  now has a concept node or an explicit exclusion; **all 14 departments `enforced`,
+  G10 census empty** (210 governed docs green). Regulatory facts were re-verified
+  against 2026 sources during cataloguing; **drift recorded on the nodes**: CSDDD
+  scope rewritten by Omnibus I (Directive (EU) 2026/470 — single >5,000-emp/€1.5B
+  band from 26 Jul 2029); CBAM Omnibus (Oct 2025 — 50 t de-minimis, certificate sales
+  from Feb 2027, 50% quarterly holding confirmed); EUDR delayed to 30 Dec 2026 with
+  the official May-2025 country benchmark contradicting the hardcoded list.
+  **Surfaced follow-ups → U15b grows:** per-department "Divergences surfaced" sections
+  in each `25-concepts/<NN>/_index.md` record ~30 new TS/PY divergences and fidelity
+  gaps (risk-matrix thresholds two levels apart; log-vs-linear PPM scoring; duplicate
+  CO₂ factor tables; three 3WM tolerance policies; turnover/DIO triplicated; EUDR
+  country list vs official benchmark; dock sizing ignoring `service_cv`; etc.) — each
+  needs an owner call, feeding U8 golden vectors.
 - 🟦 **U15 · WHAT lane** — **z-score RESOLVED by ADR-0028** (canonical = exact inverse-normal). Remaining items 2–7 below stand.
 - ⬜ **U15b · WHAT lane** — Cross-language divergences surfaced by U4's concept nodes. These
   are **findings, not fixes**: each needs an owner decision on which side is canonical

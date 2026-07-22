@@ -62,7 +62,7 @@ second kind of gap, and the U18 extraction is what finds them.
 | 09 | [09-compliance-regulatory](09-compliance-regulatory/_index.md) | enforced |
 | 10 | [10-risk-management](10-risk-management/_index.md) | enforced |
 | 11 | [11-finance-controlling](11-finance-controlling/_index.md) | enforced |
-| 12 | 12-sop-planning | census |
+| 12 | [12-sop-planning](12-sop-planning/_index.md) | enforced |
 | 13 | [13-order-management](13-order-management/_index.md) | enforced |
 | 14 | [14-supplier-development](14-supplier-development/_index.md) | enforced |
 

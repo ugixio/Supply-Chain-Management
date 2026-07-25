@@ -299,12 +299,17 @@ mirror-coverage bar) · duplicated formulas across TS/Python with one past diver
   ADR-0032 (prompt-refinement gate), `20-product-model/product-statement.md` +8 glossary rows,
   id-registry ADR→0032 + reserved platform family `PLT` (§2), decision-index one-liners (G9).
   Doc gates green.
-- ⬜ **W2 · WHAT lane** — Model the platform bounded contexts: `workspace`/`projects` concepts,
-  the `PLT-*` rule family (materialize the reserved prefix; **PLT-R1 = prompt-refinement gate,
-  ADR-0032**), the project→global reference + overlay resolution (A2), and the tech-branch
-  taxonomy as an *open, data-driven* set (not a directory-per-branch). Decide the platform
-  rule home (`40-contexts/…` vs a new platform tier). Concept nodes for any new platform
-  calculations (refinement-value metric, project-progress metrics).
+- 🟦 **W2 · WHAT lane** — Model the platform bounded contexts. **Landed 2026-07-22:** the
+  **Node Model** (`20-product-model/node-model.md`) — the workspace as a typed node+edge graph
+  with **Regions** (Global Context + one per Project), grounded in the C4 model / arc42 so a
+  developer can interpret every part; the **`PLT` rule family is now LIVE**
+  (`30-foundation/platform/rule.md`, id-registry §1): PLT-R1 prompt-refinement gate (ADR-0032),
+  PLT-R2 read-only project reference, PLT-R3 everything-connected (via G4/G5/G6), PLT-R4
+  node/edge typing, PLT-R5 one-branch-per-project; glossary +Node/Edge/Region; platform rule
+  home = `30-foundation/platform/` (cross-cutting axis above the 14 depts). Doc gates green.
+  **Still open in W2 (next):** the `workspace`/`projects` **concept nodes** + the tech-branch
+  taxonomy as an open data-driven set, and concept nodes for the refinement-value / project-
+  progress metrics (feed W3/W4).
 - ⬜ **W3 · HOW lane (Stage B)** — Build the workspace/projects bounded context: Postgres schema
   for the mutable project data domain (separate from the ADR-0024 knowledge read model),
   tenancy/auth, NestJS code-first GraphQL resolvers, project→context reference resolution +

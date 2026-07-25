@@ -43,6 +43,7 @@ relations:
 | ORD | 13-order-management | `docs/40-contexts/13-order-management/rule.md` | ORD-R4 |
 | SDV | 14-supplier-development | `docs/40-contexts/14-supplier-development/rule.md` | SDV-R3 |
 | ENG | Engineering (build-time, cross-cutting) | `docs/50-engineering/rule.md` | ENG-R7 |
+| PLT | Platform / workspace (above the 14 depts) | `docs/30-foundation/platform/rule.md` | PLT-R5 |
 
 ### Concept IDs — LIVE (ADR-0015)
 
@@ -72,15 +73,10 @@ CPT-0139..0146 = dept 04 (supply planning);
 
 ## 2. Rule-ID families — RESERVED (future areas)
 
-| Prefix | Area | Owning doc (when materialized) | Reserved by |
-|---|---|---|---|
-| PLT | Platform / company-operating rules (workspace, projects, project overlay, prompt-refinement gate) — **outside the 14-dept SCM taxonomy** | `docs/40-contexts/…` or a new platform tier, decided at W2 | ADR-0030/0032 |
-
-- **PLT** is reserved, **not yet LIVE**: materialized when the W2 task creates the platform
-  bounded-context rules (`workspace`/`projects`). The **prompt-refinement gate (ADR-0032)** is
-  the first reserved member → **PLT-R1** on materialization. No `PLT-*` ID is used inline until
-  then. A 15th SCM *department* (distinct from this platform family) would still append via its
-  own ADR.
+- **PLT — now LIVE** (materialized at W2, 2026-07-22, in `docs/30-foundation/platform/rule.md`;
+  see §1). PLT-R1 prompt-refinement gate (ADR-0032) · PLT-R2 read-only project reference ·
+  PLT-R3 everything-connected · PLT-R4 node/edge typing · PLT-R5 one-branch-per-project.
+- *(no other reserved families — a 15th SCM department appends via its own ADR)*
 
 ## 3. Decision (ADR) numbers
 

@@ -23,6 +23,9 @@ relations:
 - **Exists today:**
   - [product-statement.md](product-statement.md) — the authoritative WHAT: layers, who it
     serves, delivery form/staging, core concepts, invariants, open owner decisions.
+  - [node-model.md](node-model.md) — how the workspace is organized: a typed node+edge graph
+    with regions (Global Context + Projects), grounded in the C4 model / arc42 so a developer
+    can interpret every part; law in `30-foundation/platform/rule.md` (PLT-R*).
   - [glossary.md](glossary.md) — the controlled vocabulary, seeded from the estate.
 - **MISSING (owner input needed):**
   - `context-map.md` — the concept relationship map (Global Context ↔ Workspace ↔ Project

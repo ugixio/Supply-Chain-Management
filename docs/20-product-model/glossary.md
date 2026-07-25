@@ -63,3 +63,6 @@ relations:
 | Delivery Metric | A progress/velocity calculation over project signals, defined as a `CPT-*` concept node. | platform (ADR-0031) |
 | Tech Branch | The technical discipline a Project belongs to (AI, ML, Data, Backend, Frontend, UI/UX, DevOps, …); open, materialized incrementally. | platform (ADR-0030) |
 | Prompt-Refinement Gate | A user prompt is improved first, then the improved prompt is executed; original + improved retained. Incoming-quality control on instructions. | platform (ADR-0032) |
+| Node | Any addressable workspace unit with a stable `id` and declared `type` (concept, rule, ADR, …); the atom of the workspace graph. | platform (node-model) |
+| Edge | A typed relation between nodes (`part-of`/`governed-by`/`refines`/`depends-on`/`traces-to`/`supersedes`); authority edges point up the tier ladder. | platform (node-model) |
+| Region | A connected subgraph of the workspace: the Global Context region, or one Project region per project. | platform (node-model) |

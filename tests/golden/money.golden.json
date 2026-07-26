@@ -1,0 +1,73 @@
+{
+  "id": "golden-money-v1",
+  "purpose": "U8 cross-language golden vectors. ONE fixture file read by BOTH tests/unit/golden-money.test.ts (TypeScript) and services/calc/tests/test_golden_money.py (Python). Same inputs must produce the same outputs on both sides of the gRPC contract (ADR-0019 money, ADR-0020 wire). Prevents another a12c114-style silent divergence.",
+  "conventions": {
+    "money": "integer minor units (cents)",
+    "rounding": "ROUND_HALF_EVEN at every quantization boundary (ENG-R4 / SCM-R8)",
+    "factors": "given as STRINGS so the rate is exact in both languages (no binary float ingress)"
+  },
+  "multiply_cents": [
+    { "cents": 1999, "factor": "0.0825", "expected": 165, "why": "sales-tax rate; 164.9175 -> 165" },
+    { "cents": 5, "factor": "0.5", "expected": 2, "why": "tie 2.5 -> 2 (even); half-up would give 3" },
+    { "cents": 7, "factor": "0.5", "expected": 4, "why": "tie 3.5 -> 4 (even)" },
+    { "cents": -5, "factor": "0.5", "expected": -2, "why": "credit note; tie -2.5 -> -2 (even)" },
+    { "cents": 1299, "factor": "10.5", "expected": 13640, "why": "fractional quantity x unit price; 13639.5 -> 13640 (even)" },
+    { "cents": 70, "factor": "0.1", "expected": 7, "why": "classic float trap 70*0.1; must be exactly 7" },
+    { "cents": 1250, "factor": "100", "expected": 125000, "why": "PO line extension, whole quantity" }
+  ],
+  "divide_cents": [
+    { "cents": 5, "divisor": 2, "expected": 2, "why": "tie 2.5 -> 2 (even)" },
+    { "cents": 7, "divisor": 2, "expected": 4, "why": "tie 3.5 -> 4 (even)" },
+    { "cents": 100, "divisor": 3, "expected": 33, "why": "weighted-average unit cost" },
+    { "cents": 1000, "divisor": 8, "expected": 125, "why": "exact division" },
+    { "cents": 1172000, "divisor": 500, "expected": 2344, "why": "landed cost per unit (CPT-0111 worked example)" }
+  ],
+  "net_of_fee_cents": [
+    { "cents": 9000, "fee_pct": "15", "expected": 7650, "why": "restocking fee on a 9000c gross (CPT-0091 example)" },
+    { "cents": 5997, "fee_pct": "0", "expected": 5997, "why": "fault-based return: full refund, no fee" },
+    { "cents": 5, "fee_pct": "50", "expected": 2, "why": "tie 2.5 -> 2 (even); half-up would give 3" },
+    { "cents": 7, "fee_pct": "50", "expected": 4, "why": "tie 3.5 -> 4 (even)" },
+    { "cents": 3248, "fee_pct": "15", "expected": 2761, "why": "2760.8 -> 2761" }
+  ],
+  "allocate_cents": [
+    { "amount": 100, "weights": [1, 1, 1], "expected": [34, 33, 33], "why": "largest-remainder; parts sum EXACTLY to 100" },
+    { "amount": 1000, "weights": [3, 1], "expected": [750, 250], "why": "weighted split, exact" },
+    { "amount": 10, "weights": [1, 1, 1], "expected": [4, 3, 3], "why": "leftover unit goes to the first largest remainder" },
+    { "amount": -10, "weights": [1, 1, 1], "expected": [-3, -3, -4], "why": "credit allocation still sums to -10" },
+    { "amount": 1172000, "weights": [600000, 300000, 100000], "expected": [703200, 351600, 117200], "why": "landed-cost allocation BY_VALUE (CPT-0111)" }
+  ],
+  "refund_lines": [
+    {
+      "why": "canonical TWO-STEP quantization: gross line extension is a document-visible cent amount, then the fee applies to that stated gross (resolves the CPT-0091 TS/PY divergence)",
+      "lines": [{ "qty": 2, "unit_price_cents": 4500 }],
+      "fee_pct": "15",
+      "expected_by_line": [7650],
+      "expected_total": 7650,
+      "expected_fees": 1350
+    },
+    {
+      "why": "fault-based reason forces fee 0 (EU 2011/83/EU); multi-line",
+      "lines": [{ "qty": 3, "unit_price_cents": 1999 }, { "qty": 1, "unit_price_cents": 500 }],
+      "fee_pct": "0",
+      "expected_by_line": [5997, 500],
+      "expected_total": 6497,
+      "expected_fees": 0
+    },
+    {
+      "why": "TWO-STEP differs from one-step here: gross 3247.5 -> 3248 (even), then 3248*0.85 = 2760.8 -> 2761. A single round of 2.5*1299*0.85 would give 2760 — this vector pins the canonical structure",
+      "lines": [{ "qty": 2.5, "unit_price_cents": 1299 }],
+      "fee_pct": "15",
+      "expected_by_line": [2761],
+      "expected_total": 2761,
+      "expected_fees": 487
+    },
+    {
+      "why": "tie at the net step exercises half-even on both languages",
+      "lines": [{ "qty": 1, "unit_price_cents": 5 }, { "qty": 1, "unit_price_cents": 7 }],
+      "fee_pct": "50",
+      "expected_by_line": [2, 4],
+      "expected_total": 6,
+      "expected_fees": 6
+    }
+  ]
+}

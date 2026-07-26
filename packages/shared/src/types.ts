@@ -68,6 +68,16 @@ export function divideCents(cents: number, divisor: number): number {
   return new Decimal(cents).div(divisor).toDecimalPlaces(0, MONEY_ROUNDING).toNumber();
 }
 
+/**
+ * Amount net of a percentage deduction (a restocking fee, a discount), rounded
+ * ROUND_HALF_EVEN. The `1 − pct/100` factor is built in exact decimal so a rate like
+ * 15% never enters as a binary float. Mirrors PY `net_of_fee_cents`.
+ */
+export function netOfFeeCents(cents: number, feePct: Decimal.Value): number {
+  const factor = new Decimal(1).minus(new Decimal(feePct).div(100));
+  return multiplyCents(cents, factor);
+}
+
 export function multiplyMoney(m: Money, factor: Decimal.Value): Money {
   return { amount: multiplyCents(m.amount, factor), currency: m.currency };
 }

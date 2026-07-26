@@ -63,6 +63,11 @@ the misplaced `07_order_management` dir into this namespace.
 
 ## Divergences surfaced (for the backlog)
 
+- ✅ **RESOLVED 2026-07-22 (U8) — refund rounding (CPT-0091).** TS did one `Math.round`
+  (float, half-up); PY did two `round()` steps. Canonical = **two-step quantization with
+  ROUND_HALF_EVEN** (the gross line extension is document-visible, so it quantizes first;
+  the fee applies to that stated gross). Both sides converged and pinned by the golden
+  vectors in `tests/golden/money.golden.json`.
 - **Empty-population semantics** — `perfect_order_rate` (PY) raises on empty input;
   TS `calculatePerfectOrderRate` returns 0. Align (U8).
 - **Two on-time bases** — CPT-0082 measures promise compliance (confirmed-else-

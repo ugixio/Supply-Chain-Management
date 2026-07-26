@@ -89,8 +89,28 @@ mirror-coverage bar) · duplicated formulas across TS/Python with one past diver
   (CI-light `requirements-dev.txt` = pytest only). First Python module under test is the
   money core. **Next:** extend pytest to the calc models (needs a heavier CI lane or mocked
   deps — risk #6), and add a test per SCM-Rx / department rule.
-- ⬜ **U8 · HOW lane** — Cross-language consistency mechanism (golden test vectors shared
-  by TS and Python — see open decision; prevents another `a12c114`).
+- 🟦 **U8 · HOW lane** — Cross-language consistency mechanism (golden test vectors shared
+  by TS and Python — prevents another `a12c114`).
+  **MECHANISM LANDED 2026-07-22:** `tests/golden/money.golden.json` is **one fixture file
+  read by both languages** — `tests/unit/golden-money.test.ts` (Jest) and
+  `services/calc/tests/test_golden_money.py` (pytest). 26 money vectors (multiply/divide/
+  net-of-fee/allocate/refund) with a `why` on each; if TS and PY ever disagree, one suite
+  goes red. Both suites run in `make verify-full`.
+  **First divergence closed with it — refund rounding (CPT-0091, was U15b-class):** TS did
+  one `Math.round` (float, half-up), PY two `round()` steps. **Canonical = two-step
+  quantization, ROUND_HALF_EVEN at each step** (the gross line extension is
+  document-visible so it quantizes first; the fee applies to that stated gross —
+  e.g. `2.5 × 1299 @ 15%` → **2761**, not 2760). TS `calculateRefundCents` converged +
+  exported (now catalogued in CPT-0091 — G10 correctly demanded it); PY `refund_amount`
+  moved to exact `Decimal`. Concept node + dept-13 index updated.
+  **Finding recorded:** the numbered calc dirs (`13_order_management`) are not importable
+  packages and pull numpy/pandas, so a department function cannot be unit-tested in the
+  CI-light lane — the golden test asserts the canonical structure always and the
+  department implementation only when the full stack is present (`importorskip`).
+  Fix is packaging at P6 (risk #6).
+  **Next:** extend the fixture pattern to the remaining U15b divergences (service-level
+  z-scores, safety-stock variants, MAPE units, CV estimator, ABC break-points, HHI input
+  units, risk-matrix thresholds) — each becomes a vector set + a convergence decision.
 - ✅ **U9 · orchestrator** — Stamp front-matter on `docs/standards/REGULATORY_FRAMEWORK.md`
   (or keep grandfathered — record which).
   **Resolved 2026-07-19: keep grandfathered** (allowlisted in knowledge-architecture §3

@@ -15,7 +15,7 @@
  */
 
 import { v4 as uuidv4 } from 'uuid';
-import { ISOTimestamp, nowUTC } from '@scm/shared/types';
+import { ISOTimestamp, nowUTC, multiplyCents, netOfFeeCents } from '@scm/shared/types';
 
 export type ReturnReason =
   | 'DEFECTIVE'
@@ -106,15 +106,23 @@ function allLinesInspected(lines: RMALine[]): boolean {
 }
 
 /**
- * Calculates the refund total in integer cents.
- * refund = Σ( acceptedQty × unitCreditCents × (1 − restockingFeePct / 100) )
- * Math.round to stay in integer cents.
+ * Refund total in integer cents, using the **canonical two-step quantization**
+ * (CPT-0091; converged with Python `refund_amount` at U8):
+ *
+ *   gross_line = round_half_even(unitCreditCents × acceptedQty)   ← document-visible
+ *   net_line   = round_half_even(gross_line × (1 − restockingFeePct / 100))
+ *   refund     = Σ net_line
+ *
+ * Two steps, not one: the gross line extension appears on the credit note, so it must
+ * already be a whole-cent amount, and the restocking fee is computed on that stated
+ * gross. Both quantizations use ROUND_HALF_EVEN in exact decimal (ENG-R4 / ADR-0019) —
+ * this retires the previous single `Math.round` (float, half-up) which disagreed with
+ * Python on fractional quantities.
  */
-function calculateRefundCents(lines: RMALine[], restockingFeePct: number): number {
-  const factor = 1 - restockingFeePct / 100;
+export function calculateRefundCents(lines: RMALine[], restockingFeePct: number): number {
   return lines.reduce((sum, line) => {
-    const accepted = line.acceptedQty ?? 0;
-    return sum + Math.round(accepted * line.unitCreditCents * factor);
+    const grossLine = multiplyCents(line.unitCreditCents, line.acceptedQty ?? 0);
+    return sum + netOfFeeCents(grossLine, restockingFeePct);
   }, 0);
 }
 

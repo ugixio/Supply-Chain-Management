@@ -18,9 +18,14 @@ relations:
 ## Formula
 
     return_rate% = returns / total_orders × 100
-    refund_line  = round(qty × unit_price × (1 − fee%/100))
+
+    refund per line — CANONICAL TWO-STEP quantization (resolved at U8, 2026-07-22):
+      gross_line = round_half_even(unit_price × qty)          ← document-visible amount
+      net_line   = round_half_even(gross_line × (1 − fee%/100))
+      refund     = Σ net_line ·  fees = Σ gross_line − refund
       fee% = 0 for fault-based reasons (DEFECTIVE, DAMAGED_IN_TRANSIT, WRONG_ITEM,
              QUALITY_ISSUE, NEAR_EXPIRY); else per-line override or default 15%
+
     reverse_cost = shipment + inspection + disposition + refund
     as_pct_of_refund = reverse_cost / refund × 100
 
@@ -37,6 +42,12 @@ relations:
 
 ## Assumptions and limits
 
+- **Why two quantizations, not one:** the gross line extension appears on the credit
+  note, so it must already be a whole-cent amount; the restocking fee is then computed on
+  that *stated* gross. A single round of `qty × price × (1 − fee)` disagrees whenever the
+  gross is itself fractional — e.g. `2.5 × 1299` at 15%: two-step gives **2761**,
+  one-step 2760. Both languages now implement the two-step form with ROUND_HALF_EVEN and
+  are pinned by the U8 golden vectors (`tests/golden/money.golden.json`).
 - **Fault-based returns always refund in full** — the fee override is ignored for the
   five fault reasons, mirroring EU Consumer Rights Directive 2011/83/EU obligations;
   the 15% default applies to change-of-mind/excess only (and jurisdictions differ —
@@ -61,6 +72,11 @@ destroyed more value than it credited.
 - PY: [`return_rate`](../../../services/calc/13_order_management/order_metrics.py)
 - PY: [`refund_amount`](../../../services/calc/13_order_management/order_metrics.py)
 - PY: [`reverse_logistics_cost`](../../../services/calc/13_order_management/order_metrics.py)
+- TS: [`calculateRefundCents`](../../../packages/domain/src/13-order-management/domain/ReturnAuthorization.ts)
+
+> Cross-language agreement is enforced, not assumed: both symbols are pinned by the U8
+> golden vectors in `tests/golden/money.golden.json` (read by `tests/unit/golden-money.test.ts`
+> and `services/calc/tests/test_golden_money.py`).
 
 ## Governing rules
 

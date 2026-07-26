@@ -6,6 +6,7 @@ Ref: Chopra & Meindl Ch.3 & Ch.13, Walmart OTIF Policy 2018,
      SCOR-DS Return process (SR/DR), EU Consumer Rights Dir. 2011/83/EU
 """
 from dataclasses import dataclass
+from decimal import Decimal, ROUND_HALF_EVEN
 import numpy as np
 import pandas as pd
 from typing import Literal
@@ -333,8 +334,20 @@ def refund_amount(
         else:
             fee_pct = float(line.get("restocking_fee_pct", 15.0))
 
-        gross_cents = round(qty * unit_price_cents)
-        line_refund = round(gross_cents * (1.0 - fee_pct / 100.0))
+        # Canonical two-step quantization, ROUND_HALF_EVEN at each step (CPT-0091,
+        # converged with TS `calculateRefundCents` at U8 / ADR-0019). Exact Decimal —
+        # never binary float. Mirrors shared.types.multiply_cents / net_of_fee_cents;
+        # kept inline because `services/calc` is not yet an importable package (P6).
+        gross_cents = int(
+            (Decimal(unit_price_cents) * Decimal(str(qty))).quantize(
+                Decimal(1), rounding=ROUND_HALF_EVEN
+            )
+        )
+        line_refund = int(
+            (
+                Decimal(gross_cents) * (Decimal(1) - Decimal(str(fee_pct)) / Decimal(100))
+            ).quantize(Decimal(1), rounding=ROUND_HALF_EVEN)
+        )
 
         by_line.append(line_refund)
         total_gross += gross_cents

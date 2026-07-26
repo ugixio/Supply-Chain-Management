@@ -46,6 +46,12 @@ def divide_cents(cents: int, divisor: Union[int, float, Decimal]) -> int:
         raise ValueError(f"divide_cents divisor must be > 0, got {divisor}")
     return int((Decimal(cents) / _to_dec(divisor)).quantize(Decimal(1), rounding=MONEY_ROUNDING))
 
+def net_of_fee_cents(cents: int, fee_pct: Factor) -> int:
+    """Amount net of a percentage deduction (restocking fee, discount), ROUND_HALF_EVEN.
+    The `1 − pct/100` factor is built in exact Decimal. Mirrors TS `netOfFeeCents`."""
+    factor = Decimal(1) - _to_dec(fee_pct) / Decimal(100)
+    return multiply_cents(cents, factor)
+
 def allocate_cents(amount_cents: int, weights: list) -> list:
     """Split integer minor units across weights so the parts sum EXACTLY to the whole
     (largest-remainder method). Mirrors TS `allocateMoney`; sum-preserving, credits ok."""

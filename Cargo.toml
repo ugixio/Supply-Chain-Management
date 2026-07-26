@@ -1,0 +1,33 @@
+# Cargo workspace — the Rust core (ADR-0035, ENG-R10).
+#
+# The core owns business rules, invariants, state machines, lifecycle/identity, exact
+# arithmetic and the per-event hot path. No I/O framework enters these crates: transport
+# lives in adapter crates (`napi-rs` toward NestJS, `tonic` toward the Python tools).
+#
+# Crates are added one per migration slice (strangler — WORKFLOW Phase L), never as an
+# empty skeleton ahead of the work.
+
+[workspace]
+resolver = "3"
+members = ["crates/scm-money"]
+
+[workspace.package]
+edition = "2024"
+rust-version = "1.85"
+license = "MIT"
+publish = false
+
+[workspace.dependencies]
+# MIT — exact 96-bit fixed-point decimal. Chosen over `bigdecimal` because money here is
+# bounded minor units, and a fixed 96-bit mantissa is allocation-free on the hot path.
+rust_decimal = { version = "1", default-features = false, features = ["std"] }
+# MIT/Apache-2.0 — test-only, reads the shared golden fixture (U8).
+serde_json = "1"
+
+# Release profile for the artefact that will back `napi-rs`: optimize, and keep overflow
+# checks on — a silent wrap in money arithmetic is worse than a panic (ENG-R4).
+[profile.release]
+overflow-checks = true
+panic = "unwind"
+lto = "thin"
+codegen-units = 1

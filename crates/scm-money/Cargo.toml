@@ -1,0 +1,27 @@
+[package]
+name = "scm-money"
+version = "0.1.0"
+description = "Exact money arithmetic for the SCM core — integer minor units, ROUND_HALF_EVEN, sum-preserving allocation (ADR-0019/0035, SCM-R8, ENG-R4)."
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+rust_decimal.workspace = true
+
+[dev-dependencies]
+serde_json.workspace = true
+
+[lints.rust]
+unsafe_code = "forbid"
+
+[lints.clippy]
+# The core enforces financial invariants: a silent truncation, a float or an unchecked
+# unwrap is a defect, not a style preference (ENG-R10). Integer arithmetic here goes
+# through `checked_*` so an overflow surfaces as an error, never as a wrap.
+cast_possible_truncation = "deny"
+cast_precision_loss = "deny"
+float_arithmetic = "deny"
+unwrap_used = "deny"
+expect_used = "deny"

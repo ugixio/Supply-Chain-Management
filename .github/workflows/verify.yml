@@ -1,8 +1,12 @@
 # The green-gate in CI (ADR-0012): runs exactly what a developer runs locally.
-# Toolchain: pnpm workspaces + Turborepo (ADR-0022).
+# Toolchain: pnpm workspaces + Turborepo (ADR-0022) and a Cargo workspace (ADR-0035).
 # Python gate (U7): a CI-light requirements split installs only pytest; `make verify-full`
 # runs services/calc/tests (stdlib-only). The full ML stack in requirements.txt stays out
 # of CI (risk register #6 — numpy/torch/tensorflow are too heavy for the merge gate).
+# Rust gate (L2): the runner image already ships a stable toolchain, so no third-party
+# setup action is added; `rustup component add` covers clippy/rustfmt if they are absent.
+# The cargo registry and build output are cached — without it the merge gate pays a cold
+# dependency download on every run.
 name: verify
 
 on:
@@ -25,5 +29,14 @@ jobs:
         with:
           python-version: '3.11'
       - run: pip install -r requirements-dev.txt
+      - run: rustup component add clippy rustfmt
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: cargo-${{ runner.os }}-${{ hashFiles('Cargo.lock') }}
+          restore-keys: cargo-${{ runner.os }}-
       - run: pnpm install --frozen-lockfile
       - run: make verify-full

@@ -57,8 +57,10 @@ ADR_INDEX_LINE = re.compile(r"^-\s+ADR-(\d{4})\s+—", re.M)
 # --- G10 — concept coverage (ADR-0015) ------------------------------------------------
 CONCEPTS_DIR = f"{DOCS_DIR}/25-concepts"
 # `- TS: [`symbolName`](relative/path.ts)` inside the `## Implementations` section.
+# `RS` is the Rust core (ADR-0035): as departments migrate, their symbols must stay linked
+# from their concept node exactly as the TS and PY ones do (ENG-R10.7).
 IMPL_BULLET = re.compile(
-    r"^\s*-\s*(TS|PY):\s*\[`([A-Za-z_][A-Za-z0-9_]*)`\]\(([^)\s]+)\)"
+    r"^\s*-\s*(TS|PY|RS):\s*\[`([A-Za-z_][A-Za-z0-9_]*)`\]\(([^)\s]+)\)"
 )
 # Coverage table rows in the concepts index: `| 03 | ... | enforced |`
 COVERAGE_ROW = re.compile(r"^\|\s*(\d{2})\s*\|[^|]*\|\s*(enforced|census)\s*\|", re.M)
@@ -67,7 +69,13 @@ BACKTICKED = re.compile(r"`([A-Za-z_][A-Za-z0-9_]*)`")
 # Public calculation symbols, by language.
 TS_EXPORT = re.compile(r"^export function (\w+)", re.M)
 PY_DEF = re.compile(r"^def (\w+)", re.M)
-DEPT_NUMBER = re.compile(r"^(?:packages/domain/src|services/calc)/(\d{2})[-_]")
+RS_PUB_FN = re.compile(r"^pub fn (\w+)", re.M)
+# Department-scoped code, in any of the three languages. Rust department modules live at
+# `crates/<crate>/src/NN-<key>/` so the same numbering carries across the port (ADR-0035);
+# language-agnostic crates (the money core) are catalogued by their concept node instead.
+DEPT_NUMBER = re.compile(
+    r"^(?:packages/domain/src|services/calc|crates/[^/]+/src)/(\d{2})[-_]"
+)
 
 
 def section_body(text: str, heading: str) -> str:
@@ -93,6 +101,13 @@ def defines_symbol(path: str, symbol: str) -> bool:
         return False
     if path.endswith(".ts"):
         patterns = (rf"^export function {symbol}\b", rf"^export const {symbol}\b")
+    elif path.endswith(".rs"):
+        patterns = (
+            rf"^pub fn {symbol}\b",
+            rf"^pub const {symbol}\b",
+            rf"^pub struct {symbol}\b",
+            rf"^pub enum {symbol}\b",
+        )
     else:
         patterns = (rf"^def {symbol}\b", rf"^{symbol}\s*=")
     return any(re.search(p, text, re.M) for p in patterns)
@@ -109,6 +124,8 @@ def public_symbols(tracked):
             lang, pattern = "TS", TS_EXPORT
         elif path.endswith(".py") and not path.endswith("__init__.py"):
             lang, pattern = "PY", PY_DEF
+        elif path.endswith(".rs") and not path.endswith("/mod.rs"):
+            lang, pattern = "RS", RS_PUB_FN
         else:
             continue
         try:

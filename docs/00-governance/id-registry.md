@@ -52,9 +52,9 @@ relations:
 
 | Prefix | Area | Owning doc | Highest allocated |
 |---|---|---|---|
-| CPT | Supply-chain concepts & calculations | `docs/25-concepts/` (per-node files) | CPT-0153 |
+| CPT | Supply-chain concepts & calculations | `docs/25-concepts/` (per-node files) | CPT-0154 |
 
-Allocated so far: **CPT-0001 … CPT-0153**. CPT-0001..0025 = dept 03 (demand-planning);
+Allocated so far: **CPT-0001 … CPT-0154**. CPT-0001..0025 = dept 03 (demand-planning);
 CPT-0026..0035 = dept 01 (procurement); CPT-0036..0049 = dept 06 (warehouse management);
 CPT-0050..0059 = dept 08 (quality management);
 CPT-0060..0070 = dept 02 (supplier management);
@@ -70,6 +70,8 @@ CPT-0139..0146 = dept 04 (supply planning);
 (U14 rollout complete 2026-07-22; see
 [25-concepts/_index.md](../25-concepts/_index.md)). CPT-0024/0025 are `draft`
 (specified in the business-context document but not implemented, ADR-0016).
+**CPT-0154 = money quantization & sum-preserving allocation** (dept 11 catalogue; the
+cross-cutting primitive implemented in the Rust core — L2, ADR-0035).
 
 ## 2. Rule-ID families — RESERVED (future areas)
 

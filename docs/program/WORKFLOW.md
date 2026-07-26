@@ -408,16 +408,22 @@ mirror-coverage bar) · duplicated formulas across TS/Python with one past diver
   product-statement §3 rewritten (TypeScript is no longer a lane owner), id-registry
   (ADR→0036, ENG→R10). *The old L1 question — event-vs-telemetry and order of magnitude — is
   answered; no schema tuning is left blocked.*
-- ⬜ **L2 · WHAT+HOW** — **Rust core, slice 1: the money core** (the first port ADR-0035 names).
-  One `rust_decimal` implementation (exact, `ROUND_HALF_EVEN`, banker's rounding, sum-preserving
-  largest-remainder allocation) retiring **both** mirrored implementations from P5 slices 1/3
-  (`packages/shared` 107 lines + `services/calc/shared` 70 lines). Exposed to NestJS via
-  **napi-rs** (in-process — no network hop on the request path) and to the Python tools over the
-  **generated gRPC contract** with money as `string` (ENG-R5/R10.4). **Acceptance:
-  `tests/golden/money.golden.json` passes unchanged from a Rust reader** alongside the existing
-  Jest and pytest readers. Brings in: Cargo workspace in the monorepo, `cargo test` + `clippy -D
-  warnings` + cross-compilation in CI, and `tools/verify.py` learning `pub fn` symbols so **G10
-  keeps covering the catalogue** (ENG-R10.7). Concept nodes repointed in the same commit.
+- 🟦 **L2 · WHAT+HOW** — **Rust core, slice 1: the money core** (the first port ADR-0035 names).
+  **L2a landed 2026-07-26:** `crates/scm-money` — one `rust_decimal` implementation
+  (`ROUND_HALF_EVEN` quantization at boundaries only; `multiply_cents` · `divide_cents` ·
+  `net_of_fee_cents` · sum-preserving largest-remainder `allocate_cents` · `Money` with a
+  currency guard), typed `MoneyError` (overflow **reported, never wrapped**), `unsafe_code`
+  forbidden and clippy denying truncating casts, floats and `unwrap`. **Acceptance met:
+  `tests/golden/money.golden.json` passes unchanged from a third reader (`cargo test`)**
+  alongside Jest and pytest — 13 Rust tests. Toolchain landed: Cargo workspace, `make test-rs`
+  in the FAST gate + `make lint-rs` (fmt + `clippy -D warnings`) in the merge gate, cargo cache
+  in CI. `tools/verify.py` now parses `RS:` implementation bullets, resolves `pub fn`/`pub
+  const`/`pub struct`/`pub enum` and scans `crates/*/src/NN-*` for department coverage, so
+  **G10 protects the catalogue across the port** (ENG-R10.7). The primitives are catalogued as
+  **CPT-0154** with all twelve RS/TS/PY links verified.
+  **L2b remaining:** the **napi-rs** binding plus its cross-compilation matrix, `@scm/shared`
+  and `services/calc/shared` delegating to the core, then deleting the two mirrors (107 + 70
+  lines) once every call site is on the binding.
 - ⬜ **L3 · WHAT+HOW** — **Collapse the duplication as the core absorbs it** (the 49 concepts
   implemented twice — source of ~30 documented divergences). Two directions, one lane map:
   *(a)* the **703 lines of TypeScript mathematics** (`Forecasting.ts` 207, `SafetyStock.ts` 140,

@@ -377,6 +377,50 @@ mirror-coverage bar) · duplicated formulas across TS/Python with one past diver
   (AI/ML/Data/Backend/Frontend/DevOps/…): materialize a branch's standards/skills **only when a
   real project in that branch needs them** (no speculative pre-build — knowledge-architecture).
 
+### Phase L — Exclusive lanes & scale tier (ADR-0033/0034; owner-directed 2026-07-22)
+
+> The owner set **exclusive technology lanes** (ENG-R8) and the **best-option verification gate**
+> (ENG-R9), and adopted **Rust** (alongside Python in calculation), **ClickHouse**, **Docker** and
+> **Kubernetes**. Consequence: TypeScript leaves the calculation lane, the money core becomes a
+> single Rust implementation, and the ingestion path gets its own owner. Nothing is built before
+> its lane and its six ENG-R9 checks are stated.
+
+- ✅ **L0 · orchestrator** — Consolidate the direction into governance. **Landed 2026-07-22:**
+  ADR-0033 (exclusive lane map + communication rule + calculation split Rust/Python),
+  ADR-0034 (ClickHouse/Docker/Kubernetes; broker + cache still gated on measured volume),
+  **ENG-R8** (lanes) and **ENG-R9** (six-check best-option gate) in `50-engineering/rule.md`
+  with lane-trespassing anti-states, ENG-R9 wired into `evaluation.md` §1.5 so it runs *before*
+  code, product-statement §3 lane table, id-registry (ADR→0034, ENG→R9).
+- ⬜ **L1 · human** — Confirm the **volume order of magnitude** for monitoring (tens of projects /
+  thousands of events per day · hundreds / millions · thousands / high cardinality) and whether
+  the data is **development events** (commits, PRs, builds, task transitions — bursty) or
+  **continuous telemetry**. This decides the ClickHouse data model (sort keys, TTL, materialized
+  views) and whether the gated broker/cache are ever needed. Everything below can start without
+  it except the final schema tuning.
+- ⬜ **L2 · WHAT+HOW** — **Rust calculation lane, slice 1: the money core.** One `rust_decimal`
+  implementation (exact, ROUND_HALF_EVEN) exposed to TypeScript via **napi-rs** and to Python via
+  **PyO3**; retires the two mirrored implementations from P5 slices 1/3. The existing semantics +
+  the **U8 golden vectors become the acceptance tests for the port** (they must pass unchanged).
+  Cargo workspace + CI cross-compilation join the toolchain. Concept nodes repointed (G10).
+- ⬜ **L3 · WHAT+HOW** — **Dedup the 49 duplicated calculations per the lane map:** delete the
+  TypeScript mathematics (starting with the 703 lines in `Forecasting.ts`, `SafetyStock.ts`,
+  `SPCChart.ts`) so Python/Rust own it, and delete the Python duplicates of what are actually
+  *rules* (stock-balance guard, FEFO, risk matrix, three-way match, UFLPA/REACH/CSDDD, OTD).
+  Each removal updates its `CPT-*` node in the same commit (G10 enforces it). Blocks on P6 for
+  the paths the domain must still reach.
+- ⬜ **L4 · HOW** — **ClickHouse tier (ADR-0034).** Schema (`MergeTree`, sort key leading with
+  `project_id`, TTL retention), **ingest-time materialized views** for the rollups, batch inserts
+  only, **split-privilege users** (INSERT-only ingest vs SELECT-only queries with row/memory
+  quotas), TLS, rebuild-from-truth procedure + a drift check. Read path exclusively through
+  NestJS; delivery metrics documented as `CPT-*` nodes (ADR-0031/0015).
+- ⬜ **L5 · HOW** — **Rust ingestion workers** — the connector path (normalize → validate →
+  deduplicate → batch-insert). Owner of ingestion because NestJS may only serve the frontend and
+  Python's lane is mathematics (ADR-0033).
+- ⬜ **L6 · HOW** — **Docker** images for every service (non-root, minimal base, pinned digests,
+  no secrets in layers) + Compose for local composition. **Kubernetes** afterwards, once ≥2
+  long-running services exist: ClickHouse via an operator with persistent volumes, config/secrets,
+  network policy restricting the frontend to NestJS only.
+
 ### Phase 1 — Product evolution (owner-defined)
 - ⬜ Resolve the open decisions in `10-decisions/README.md` (runtime/persistence, API
   surface, versioning) — they gate any application layer built on these domains.

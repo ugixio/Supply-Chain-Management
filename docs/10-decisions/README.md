@@ -64,6 +64,8 @@ relations:
 - ADR-0030 — The workspace is a **tech-company operating model**: SCM is the read-only versioned **Global Context** (operating discipline + engineering practice, wiki premise + `docs/` SSOT preserved) that governs a **portfolio of Projects spanning all tech branches**; projects reference global nodes by stable ID + a local overlay, never mutate them. Extends ADR-0017/0021/0024/0026/0008. (Accepted — owner-directed 2026-07-22; A1 = SCM-as-operating-context, A2 = reference+overlay)
 - ADR-0031 — A complementary **monitoring-connector** layer adds real-time project development/progress **Dashboards** and **Metrics** (metrics defined as `CPT-*` concept nodes); connectors unify external dev tools + internal project data, internal-first. Build deferred/reserved. (Accepted — owner-directed 2026-07-22; A3 = both, internal-first)
 - ADR-0032 — **Prompt-refinement gate:** a user prompt is first improved, then the improved prompt is executed — the company's incoming-quality control on instructions (SCM incoming-inspection analogue). (Accepted — owner-directed 2026-07-22)
+- ADR-0033 — **Exclusive technology lanes:** every technology owns exactly one responsibility and **no other technology may enter it** — Next.js presentation only · **NestJS is the sole technology the frontend talks to** · TypeScript owns business rules and **leaves the calculation lane** · **Rust joins Python** in calculation (Rust: exact arithmetic, hot path, ingestion; Python: models, statistics, optimization, ML). Rewrites `ENG-R8`; moves the money core to a single Rust implementation. (Accepted — owner-directed 2026-07-22)
+- ADR-0034 — **Scale tier for monitoring:** **ClickHouse** owns analytics/time-series at scale (never the source of truth — rebuildable, one-way like ENG-R7) · **Docker** owns images · **Kubernetes** owns orchestration. Broker and cache stay gated on measured volume. (Accepted — owner-directed 2026-07-22)
 
 ---
 
@@ -1257,6 +1259,140 @@ corrected before it consumes downstream work.
   design as the "skippable for precise prompts" note rather than a separate decision.
 - *No refinement (execute prompts verbatim)* — rejected: the owner explicitly wants
   quality-control on inputs; verbatim execution is the status quo being improved.
+
+---
+
+---
+
+## ADR-0033 — Exclusive technology lanes: one responsibility per technology, no trespassing
+
+**Status:** Accepted (owner-directed 2026-07-22)
+**Extends / refines:** ADR-0001 (two-language split), ADR-0017/0018/0023 (staging, Clean
+Architecture, monorepo), ADR-0020 (gRPC contract), ADR-0025 (code-first GraphQL), ADR-0030
+(company operating model). **Rewrites the ENG-R8 slot** and narrows ADR-0001.
+
+**Context:** ADR-0001 split TypeScript (domain) from Python (analytics), but in practice both
+languages implemented the same calculations — measured: **49 of 154 concept nodes exist in both
+TS and Python**, which is the documented source of the ~30 cross-language divergences. The owner
+set a stricter principle (conversation, 2026-07-22): **each technology has one exclusive
+responsibility and no other technology may do its job**, even to save an implementation. Two
+consequences were directed explicitly: **only NestJS may communicate with the frontend**, and
+**TypeScript leaves the calculation lane** — Rust joins Python there so the two split
+calculation responsibilities between them. Recorded before code (ADR-0010 plan⇄context).
+
+**Decision — the lane map. Each row has exactly ONE owner; no other technology may perform it:**
+
+| Lane | Exclusive owner | Owns | Must never |
+|---|---|---|---|
+| Presentation | **Next.js** | UI, rendering, interaction, a11y, design tokens | Hold business rules or calculations; talk to anything except NestJS |
+| Frontend gateway | **NestJS + GraphQL** | **The only technology the frontend talks to**: resolvers, input validation, authN/authZ, subscriptions/SSE, orchestration of internal calls | Compute business results itself; be an ingestion firehose; act as a scheduler |
+| Business rules | **TypeScript (framework-free)** | Invariants, guards, state machines, lifecycle, identity | **Any mathematics or statistics** — it is out of the calculation lane |
+| Exact arithmetic · hot path · ingestion | **Rust** | The single money/Decimal core, per-event transforms, connector ingestion workers, deterministic high-throughput work | Model fitting, statistical inference, optimization solving |
+| Models · statistics · optimization · ML | **Python** | statsmodels/scipy/sklearn/prophet/ortools/simpy work: fitting, inference, solving, simulation, training | Serve the frontend; own the hot per-event path; do rollups the analytics store does at ingest |
+| Transactional state | **PostgreSQL** | OLTP, event store, knowledge read model (one-way from `docs/`) | Be a message queue or a high-volume time-series store |
+| Analytics at scale | **ClickHouse** (ADR-0034) | Columnar time-series, ingest-time aggregation, dashboard queries | Be a source of truth |
+| Images | **Docker** (ADR-0034) | Reproducible images, local composition | Encode environment secrets |
+| Orchestration | **Kubernetes** (ADR-0034) | Scheduling, scaling, config/secrets, network policy | Hold application logic |
+
+- **Communication rule (load-bearing):** the frontend has exactly one counterpart — NestJS.
+  Rust, Python, ClickHouse and PostgreSQL are reached **only** through it (Rust/Python over the
+  gRPC contract, ADR-0020; the stores through infrastructure adapters). No other technology
+  exposes an endpoint the browser may call.
+- **Calculation split inside the shared lane:** Rust takes work that is *exact, deterministic and
+  hot* (money arithmetic, per-event evaluation, streaming transforms); Python takes work whose
+  value is the *scientific library* (fitting, inference, optimization, ML, simulation). Neither
+  duplicates the other; the boundary is recorded per `CPT-*` node.
+- **Consequence for the money core (supersedes the P5 slice-1/3 shape):** money moves from two
+  mirrored implementations (TS + Python) to **one Rust implementation** exposed to TypeScript
+  (napi-rs) and Python (PyO3). The P5 work is not discarded — its semantics, ROUND_HALF_EVEN
+  decisions and the U8 golden vectors become the **specification and acceptance tests** for the
+  Rust port.
+- **Every technology is held to its own current best practices** — enforced as `ENG-R9`
+  (best-option verification gate) in `50-engineering/rule.md`.
+
+**Consequences:**
+- (+) The 49 duplicated calculations get a single owner each; the divergence class disappears
+  structurally rather than being detected after the fact.
+- (+) One money implementation instead of two mirrors, in a memory-safe language with exact
+  decimals — and TypeScript stops doing arithmetic it should not own.
+- (+) The ingestion path finally has a legitimate owner: since NestJS may only serve the
+  frontend and Python's lane is mathematics, Rust owns it. The rule created the clarity.
+- (+) A single frontend counterpart shrinks the attack surface to one audited gateway.
+- (−) **More technologies to build, operate and secure** (Rust toolchain and cross-compilation
+  join CI). This is the accepted price of the rule.
+- (−) A cross-language boundary appears inside calculation (Rust ↔ Python); the split must be
+  recorded per concept node or it becomes a grey zone.
+- (−) Work already landed (P5 money in TS/Python) is re-homed rather than reused as-is.
+
+**Alternatives considered:**
+- *Pragmatic shared lanes (let whoever is convenient compute)* — rejected by the owner: it is
+  exactly how the 49 duplicates appeared.
+- *All calculation in Python* — rejected: the interpreter and the GIL are wrong for the exact
+  hot path (per-event, per-write arithmetic).
+- *All calculation in Rust* — rejected: loses statsmodels/ortools/prophet/sklearn, which are the
+  reason Python is in the stack.
+- *Keep TypeScript in the calculation lane* — rejected by the owner directive; it is also what
+  made the duplication possible.
+
+---
+
+## ADR-0034 — Scale tier: ClickHouse for analytics, Docker for images, Kubernetes for orchestration
+
+**Status:** Accepted (owner-directed 2026-07-22)
+**Extends:** ADR-0031 (monitoring connector), ADR-0033 (exclusive lanes), ADR-0024 (one-way
+projection discipline), ADR-0002 (OSI-only).
+
+**Context:** The monitoring layer (ADR-0031) must observe **many projects at once with large data
+volumes**, in real time, without losing speed or security. Under ADR-0033 the existing
+technologies may not be stretched to absorb this: PostgreSQL may not become a high-volume
+time-series store or a queue, and NestJS may not become an ingestion firehose. The owner directed
+adopting **ClickHouse**, **Docker** and **Kubernetes**.
+
+**Decision:**
+- **ClickHouse** (Apache-2.0) owns analytics and time-series at scale: columnar storage,
+  **ingest-time aggregation via materialized views** (cost moves from query time to insert time),
+  and dashboard queries with high concurrency and multi-tenant fan-out.
+- **ClickHouse is never a source of truth.** It is **rebuildable** from the durable event record
+  (PostgreSQL event store / the connector stream) — the same one-way discipline ENG-R7 imposes on
+  the knowledge read model. Dropping and rebuilding it must always be safe.
+- **Write path:** only the **Rust ingestion workers** (ADR-0033) insert into ClickHouse, in
+  **batches** (row-by-row inserts are an anti-pattern there). **Read path:** only **NestJS**
+  queries it, and only NestJS serves the result to the frontend.
+- **Least privilege:** separate ClickHouse users — an **INSERT-only** identity for ingestion and a
+  **SELECT-only** identity for queries, the latter constrained by row/time/memory quotas so a
+  dashboard query cannot exhaust the cluster. TLS in transit. No direct browser access, ever.
+- **Docker** owns reproducible images and local composition; **Kubernetes** owns orchestration
+  (scheduling, scaling, config/secrets, network policy). ClickHouse is stateful: in Kubernetes it
+  requires persistent volumes and an operator rather than a plain Deployment.
+- **Deliberately still gated on measured volume (not adopted here):** the **event broker**
+  (NATS vs Kafka, both Apache-2.0) and the **cache** (Valkey, BSD-3). They are adopted only when
+  measurements show ingestion or fan-out that the Rust workers plus ClickHouse cannot absorb —
+  YAGNI as recorded in `engineering-standards`.
+- **Sequencing guard:** Kubernetes is justified once there are multiple long-running services to
+  orchestrate; Docker Compose covers the interim. Building the cluster before the services exist
+  is explicitly out of order.
+- **License note (ADR-0002):** ClickHouse, Docker Engine and Kubernetes are OSI-licensed
+  (Apache-2.0). Rejected on licensing grounds for this tier: **TimescaleDB** (its advanced
+  features are proprietary TSL — and it would also violate ADR-0033 by making PostgreSQL do the
+  analytics job) and **Redpanda** (BSL restricts managed-service use).
+
+**Consequences:**
+- (+) Dashboard queries stay sub-second at volume without touching the OLTP database.
+- (+) Rebuildability keeps the analytics store disposable — a corrupted or re-modelled ClickHouse
+  is a rebuild, never a data-loss incident.
+- (+) Split-privilege access and a single query gateway keep the attack surface small.
+- (−) A real operational surface arrives: a stateful cluster, volumes, an operator, backups,
+  upgrades — plus Kubernetes itself. Each is a new thing to patch and secure.
+- (−) Two stores must be kept coherent (PostgreSQL truth vs ClickHouse projection); a drift check
+  is required, analogous to the ingest drift guard planned for the knowledge read model.
+
+**Alternatives considered:**
+- *PostgreSQL alone (or with TimescaleDB)* — rejected: violates ADR-0033's lane rule, and
+  TimescaleDB's useful features are proprietary.
+- *A managed analytics service* — rejected: ADR-0002 self-hostable, modifiable OSI policy.
+- *Defer analytics entirely until volume is proven* — the honest minimal option, and it remains
+  correct for the **broker and cache** (still gated); the owner directed adopting ClickHouse now
+  so the monitoring data model is designed against its shape from the start rather than retrofitted.
 
 ---
 

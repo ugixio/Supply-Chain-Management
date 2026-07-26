@@ -42,7 +42,7 @@ relations:
 | SOP | 12-sop-planning | `docs/40-contexts/12-sop-planning/rule.md` | SOP-R3 |
 | ORD | 13-order-management | `docs/40-contexts/13-order-management/rule.md` | ORD-R4 |
 | SDV | 14-supplier-development | `docs/40-contexts/14-supplier-development/rule.md` | SDV-R3 |
-| ENG | Engineering (build-time, cross-cutting) | `docs/50-engineering/rule.md` | ENG-R7 |
+| ENG | Engineering (build-time, cross-cutting) | `docs/50-engineering/rule.md` | ENG-R9 |
 | PLT | Platform / workspace (above the 14 depts) | `docs/30-foundation/platform/rule.md` | PLT-R5 |
 
 ### Concept IDs — LIVE (ADR-0015)
@@ -81,7 +81,7 @@ CPT-0139..0146 = dept 04 (supply planning);
 ## 3. Decision (ADR) numbers
 
 - Format: `ADR-NNNN`, strictly increasing, allocated at proposal time.
-- Allocated: **ADR-0001 … ADR-0032** (see `docs/10-decisions/README.md`).
+- Allocated: **ADR-0001 … ADR-0034** (see `docs/10-decisions/README.md`).
   0001–0009 retroactive; 0010–0013 proposed at skeleton adoption; 0014 (MIT) accepted;
   0015 (concepts) / 0016 (business-context extraction) proposed; **0017–0021 proposed —
   the full-stack product decisions** (staging, Clean Architecture, Decimal money, gRPC

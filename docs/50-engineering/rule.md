@@ -56,12 +56,49 @@ relations:
 - The lockfile is `pnpm-lock.yaml`, the single source of resolved versions; CI installs
   with `--frozen-lockfile`.
 
+- **ENG-R8 — Exclusive technology lanes (ADR-0033):** every technology owns exactly **one**
+  responsibility and **no other technology may perform it**, not even to avoid a new
+  implementation. The lane map is normative (ADR-0033): Next.js presentation · **NestJS is the
+  sole technology the frontend communicates with** · framework-free TypeScript business rules
+  (and **no mathematics**) · Rust exact arithmetic, hot path and ingestion · Python models,
+  statistics, optimization, ML · PostgreSQL transactional truth · ClickHouse analytics at scale
+  (never truth) · Docker images · Kubernetes orchestration. A change that places work outside its
+  lane is rejected regardless of convenience.
+- **ENG-R9 — Best-option verification gate (owner directive 2026-07-22):** before code is written
+  or accepted **in any technology**, it is verified against all six of the following, and the
+  verification is stated at handoff:
+  1. **Lane** — the work sits in its owning technology (ENG-R8).
+  2. **Best practice** — it follows the *current* idiomatic practice of that technology, not a
+     pattern carried over from another one.
+  3. **Security** — input validated at the boundary, least privilege, no secrets in code, safe
+     defaults, nothing trusted from the client.
+  4. **Speed** — the complexity and the number of round trips suit the path (a hot path may not
+     acquire a network hop; see the in-process vs gRPC latency gap).
+  5. **Scalability** — it still holds at the project's target scale (many projects, large data
+     volumes — ADR-0034), or its limit is documented.
+  6. **License** — every dependency OSI, commercially usable and modifiable (ADR-0002).
+  A change that cannot answer these six is not merged. "It already works" is not an answer.
+
 ## Anti-states (the system must never allow)
 
 - A framework type leaking into `packages/domain` (violates ENG-R2).
 - A department reaching into another department's domain (ENG-R3).
 - A float holding money, or an implicit round mid-calculation (ENG-R4 / SCM-R8).
 - A hand-edited `schema.gql` or a hand-edited read-model row (ENG-R6 / ENG-R7).
+- **Lane trespassing (ENG-R8), specifically:**
+  - any technology other than NestJS answering the frontend, or the frontend calling anything else;
+  - business rules or calculations inside Next.js (also a security defect — client code is
+    bypassable);
+  - mathematics or statistics inside framework-free TypeScript;
+  - Python serving HTTP to the frontend, or owning the per-event hot path;
+  - Rust doing model fitting, statistical inference or optimization solving;
+  - PostgreSQL used as a message queue (`LISTEN/NOTIFY`, jobs table) or as a high-volume
+    time-series store;
+  - ClickHouse treated as a source of truth, written to row-by-row, or queried by anything other
+    than NestJS;
+  - NestJS acting as an ingestion firehose, a scheduler, or computing business results itself.
+- **Merging work whose six ENG-R9 checks were never stated** (lane, best practice, security,
+  speed, scalability, license).
 
 ## Inherited rules (referenced, not restated)
 

@@ -63,10 +63,29 @@ code quality · testing & QA discipline · security-by-default · data governanc
 DevOps practice · documentation & knowledge management · project/process organization &
 structure · professionalism & ways of working · KPIs & delivery metrics · risk & compliance.
 
-## 3. Delivery form
+## 3. Technology lanes (ADR-0033 — exclusive; ENG-R8)
+
+Every technology owns **one** responsibility and no other technology may perform it:
+
+| Lane | Exclusive owner |
+|---|---|
+| Presentation | **Next.js** (talks only to NestJS) |
+| Frontend gateway — **the only counterpart the frontend has** | **NestJS + GraphQL** |
+| Business rules, invariants, state machines (**no mathematics**) | **TypeScript**, framework-free |
+| Exact arithmetic · hot path · ingestion | **Rust** |
+| Models · statistics · optimization · ML | **Python** |
+| Transactional truth (OLTP, event store, knowledge read model) | **PostgreSQL** |
+| Analytics & time-series at scale (never truth) | **ClickHouse** (ADR-0034) |
+| Images · orchestration | **Docker** · **Kubernetes** (ADR-0034) |
+
+Every lane is held to its own current best practices, verified by the six **ENG-R9** checks
+(lane · best practice · security · speed · scalability · license) *before* code is written.
+
+## 4. Delivery form
 
 Full-stack web application on the recorded stack (Next.js · NestJS code-first GraphQL ·
-PostgreSQL · Python calc core over gRPC — ADR-0017/0020/0022/0025). Staged:
+PostgreSQL · ClickHouse · Rust + Python calc over gRPC — ADR-0017/0020/0022/0025/0033/0034).
+Staged:
 
 - **Stage A (exists / in build):** the Global Context wiki — octagon node-graph from the
   one-way Postgres read model of `docs/`.
@@ -77,7 +96,7 @@ PostgreSQL · Python calc core over gRPC — ADR-0017/0020/0022/0025). Staged:
 - **Stage C (future, complementary — ADR-0031):** the Monitoring connector — dashboards +
   metrics over project development; metrics defined as `CPT-*` nodes.
 
-## 4. Core concepts (defined here; referenced elsewhere)
+## 5. Core concepts (defined here; referenced elsewhere)
 
 | Concept | Definition | Authority |
 |---|---|---|
@@ -90,7 +109,7 @@ PostgreSQL · Python calc core over gRPC — ADR-0017/0020/0022/0025). Staged:
 | **Connector** | Ingests a project's development/progress signals (external dev tools and/or internal project data). | ADR-0031 |
 | **Delivery Metric** | A progress/velocity calculation over project signals, defined as a `CPT-*` concept node. | ADR-0031 |
 
-## 5. Invariants this statement commits to
+## 6. Invariants this statement commits to
 
 - **Knowledge SSOT is one-way (ADR-0024):** projects read the Global Context; never write it.
   Global corrections propagate; project tuning lives only in the overlay.
@@ -103,7 +122,7 @@ PostgreSQL · Python calc core over gRPC — ADR-0017/0020/0022/0025). Staged:
   the platform runtime (A4 — owner-confirmable).
 - **OSI-only (ADR-0002)** extends to connectors and dashboard tooling.
 
-## 6. Owner decisions — resolved 2026-07-22
+## 7. Owner decisions — resolved 2026-07-22
 
 - **A1 — context scope:** RESOLVED — **SCM-specific as the operating discipline**; the governed
   portfolio spans all tech branches (breadth in data + per-branch practice, not a generalized
@@ -113,7 +132,7 @@ PostgreSQL · Python calc core over gRPC — ADR-0017/0020/0022/0025). Staged:
 - **A4 — prompt-gate enforcement surface:** working default **platform runtime feature**;
   owner may narrow (ADR-0032).
 
-## 7. Still missing (owner input / future)
+## 8. Still missing (owner input / future)
 
 - `context-map.md` — the concept relationship map (Global Context ↔ Workspace ↔ Project ↔
   Monitoring; SCM-discipline ↔ tech-branch governance; SCOR-DS ↔ department map now in

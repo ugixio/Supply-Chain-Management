@@ -377,49 +377,72 @@ mirror-coverage bar) · duplicated formulas across TS/Python with one past diver
   (AI/ML/Data/Backend/Frontend/DevOps/…): materialize a branch's standards/skills **only when a
   real project in that branch needs them** (no speculative pre-build — knowledge-architecture).
 
-### Phase L — Exclusive lanes & scale tier (ADR-0033/0034; owner-directed 2026-07-22)
+### Phase L — Exclusive lanes, Rust core & scale tier (ADR-0033/0034/0035/0036; owner-directed 2026-07-22)
 
 > The owner set **exclusive technology lanes** (ENG-R8) and the **best-option verification gate**
-> (ENG-R9), and adopted **Rust** (alongside Python in calculation), **ClickHouse**, **Docker** and
-> **Kubernetes**. Consequence: TypeScript leaves the calculation lane, the money core becomes a
-> single Rust implementation, and the ingestion path gets its own owner. Nothing is built before
-> its lane and its six ENG-R9 checks are stated.
+> (ENG-R9), adopted **ClickHouse**, **Docker** and **Kubernetes** (ADR-0034), and then made the
+> load-bearing call: **Rust is the complete core and Python is the tools layer** (ADR-0035) —
+> TypeScript leaves the core entirely and survives only inside NestJS and Next.js. Monitoring
+> scale is fixed at **tens of thousands of continuous telemetry series for project supervision**
+> (ADR-0036).
+>
+> **Shape of the work.** L2–L3 are one **strangler migration**, not a rewrite: the Rust core grows
+> department by department behind unchanged public behaviour, each ported unit proves itself
+> against its existing tests **and** the U8 golden vectors before the TypeScript original is
+> deleted, and `main` stays green throughout (**ENG-R10.6**; no long-lived rewrite branch).
+> Nothing is built before its lane and its six ENG-R9 checks are stated.
 
-- ✅ **L0 · orchestrator** — Consolidate the direction into governance. **Landed 2026-07-22:**
-  ADR-0033 (exclusive lane map + communication rule + calculation split Rust/Python),
-  ADR-0034 (ClickHouse/Docker/Kubernetes; broker + cache still gated on measured volume),
-  **ENG-R8** (lanes) and **ENG-R9** (six-check best-option gate) in `50-engineering/rule.md`
-  with lane-trespassing anti-states, ENG-R9 wired into `evaluation.md` §1.5 so it runs *before*
-  code, product-statement §3 lane table, id-registry (ADR→0034, ENG→R9).
-- ⬜ **L1 · human** — Confirm the **volume order of magnitude** for monitoring (tens of projects /
-  thousands of events per day · hundreds / millions · thousands / high cardinality) and whether
-  the data is **development events** (commits, PRs, builds, task transitions — bursty) or
-  **continuous telemetry**. This decides the ClickHouse data model (sort keys, TTL, materialized
-  views) and whether the gated broker/cache are ever needed. Everything below can start without
-  it except the final schema tuning.
-- ⬜ **L2 · WHAT+HOW** — **Rust calculation lane, slice 1: the money core.** One `rust_decimal`
-  implementation (exact, ROUND_HALF_EVEN) exposed to TypeScript via **napi-rs** and to Python via
-  **PyO3**; retires the two mirrored implementations from P5 slices 1/3. The existing semantics +
-  the **U8 golden vectors become the acceptance tests for the port** (they must pass unchanged).
-  Cargo workspace + CI cross-compilation join the toolchain. Concept nodes repointed (G10).
-- ⬜ **L3 · WHAT+HOW** — **Dedup the 49 duplicated calculations per the lane map:** delete the
-  TypeScript mathematics (starting with the 703 lines in `Forecasting.ts`, `SafetyStock.ts`,
-  `SPCChart.ts`) so Python/Rust own it, and delete the Python duplicates of what are actually
-  *rules* (stock-balance guard, FEFO, risk matrix, three-way match, UFLPA/REACH/CSDDD, OTD).
-  Each removal updates its `CPT-*` node in the same commit (G10 enforces it). Blocks on P6 for
-  the paths the domain must still reach.
-- ⬜ **L4 · HOW** — **ClickHouse tier (ADR-0034).** Schema (`MergeTree`, sort key leading with
-  `project_id`, TTL retention), **ingest-time materialized views** for the rollups, batch inserts
-  only, **split-privilege users** (INSERT-only ingest vs SELECT-only queries with row/memory
-  quotas), TLS, rebuild-from-truth procedure + a drift check. Read path exclusively through
-  NestJS; delivery metrics documented as `CPT-*` nodes (ADR-0031/0015).
+- ✅ **L0 · orchestrator** — Consolidate the lane direction into governance. **Landed 2026-07-22:**
+  ADR-0033 (exclusive lane map + communication rule), ADR-0034 (ClickHouse/Docker/Kubernetes;
+  broker + cache still gated on measured volume), **ENG-R8** (lanes) and **ENG-R9** (six-check
+  best-option gate) in `50-engineering/rule.md` with lane-trespassing anti-states, ENG-R9 wired
+  into `evaluation.md` §1.5 so it runs *before* code, product-statement §3 lane table,
+  id-registry (ADR→0034, ENG→R9).
+- ✅ **L1 · orchestrator** — Consolidate the **core + telemetry** direction. **Resolved by the
+  owner (2026-07-22) and landed:** volume = **tens of thousands, telemetry only, for project
+  supervision** → **ADR-0036** (raw table + sort key `(project_id, metric, ts)`, monthly
+  partitions, `Delta`/`ZSTD` + `Gorilla` codecs, `LowCardinality` labels, `AggregatingMergeTree`
+  rollup cascade raw→1m→1h→1d, short raw TTL + long rollup retention, batched async inserts);
+  core = **Rust complete** → **ADR-0035** (supersedes ADR-0001's TS-domain clause, narrows
+  ADR-0033) plus **ENG-R10** (Rust core boundary), ENG-R1/R2 annotated as narrowed,
+  product-statement §3 rewritten (TypeScript is no longer a lane owner), id-registry
+  (ADR→0036, ENG→R10). *The old L1 question — event-vs-telemetry and order of magnitude — is
+  answered; no schema tuning is left blocked.*
+- ⬜ **L2 · WHAT+HOW** — **Rust core, slice 1: the money core** (the first port ADR-0035 names).
+  One `rust_decimal` implementation (exact, `ROUND_HALF_EVEN`, banker's rounding, sum-preserving
+  largest-remainder allocation) retiring **both** mirrored implementations from P5 slices 1/3
+  (`packages/shared` 107 lines + `services/calc/shared` 70 lines). Exposed to NestJS via
+  **napi-rs** (in-process — no network hop on the request path) and to the Python tools over the
+  **generated gRPC contract** with money as `string` (ENG-R5/R10.4). **Acceptance:
+  `tests/golden/money.golden.json` passes unchanged from a Rust reader** alongside the existing
+  Jest and pytest readers. Brings in: Cargo workspace in the monorepo, `cargo test` + `clippy -D
+  warnings` + cross-compilation in CI, and `tools/verify.py` learning `pub fn` symbols so **G10
+  keeps covering the catalogue** (ENG-R10.7). Concept nodes repointed in the same commit.
+- ⬜ **L3 · WHAT+HOW** — **Collapse the duplication as the core absorbs it** (the 49 concepts
+  implemented twice — source of ~30 documented divergences). Two directions, one lane map:
+  *(a)* the **703 lines of TypeScript mathematics** (`Forecasting.ts` 207, `SafetyStock.ts` 140,
+  `SPCChart.ts` 356) are **deleted, not ported** — mathematics is Python's lane; *(b)* the
+  **314 invariant guards** across the 14 departments are **ported into the Rust core** and their
+  Python duplicates deleted (stock-balance guard, FEFO, risk matrix, three-way match,
+  UFLPA/REACH/CSDDD, OTD). Department by department, each with its tests and golden vectors green
+  before deletion. Each removal updates its `CPT-*` node in the same commit (G10 enforces it).
+  Blocks on P6 for the paths the core must still reach.
+- ⬜ **L4 · HOW** — **ClickHouse telemetry tier (ADR-0034/0036).** The ADR-0036 schema exactly:
+  raw `MergeTree` on `(project_id, metric, ts)` partitioned `toYYYYMM(ts)`, per-column codecs,
+  the four-level `AggregatingMergeTree` rollup cascade as **ingest-time materialized views**,
+  raw TTL + rollup retention, **split-privilege users** (INSERT-only ingest vs SELECT-only queries
+  with row/memory/time quotas), TLS, rebuild-from-truth procedure + a drift check. Read path
+  exclusively through NestJS; every supervision metric documented as a `CPT-*` node
+  (ADR-0031/0015) matching the view that computes it.
 - ⬜ **L5 · HOW** — **Rust ingestion workers** — the connector path (normalize → validate →
-  deduplicate → batch-insert). Owner of ingestion because NestJS may only serve the frontend and
-  Python's lane is mathematics (ADR-0033).
+  deduplicate → **batch** insert; `async_insert` or client-side batching, never row-by-row).
+  Ingestion is core work (ADR-0035): NestJS may only serve the frontend and Python's lane is
+  mathematics. OpenTelemetry spans propagate from the gateway through the core (ADR-0035).
 - ⬜ **L6 · HOW** — **Docker** images for every service (non-root, minimal base, pinned digests,
-  no secrets in layers) + Compose for local composition. **Kubernetes** afterwards, once ≥2
-  long-running services exist: ClickHouse via an operator with persistent volumes, config/secrets,
-  network policy restricting the frontend to NestJS only.
+  no secrets in layers; multi-stage for the Rust core so only the artefact ships) + Compose for
+  local composition. **Kubernetes** afterwards, once ≥2 long-running services exist: ClickHouse
+  via an operator with persistent volumes, config/secrets, network policy restricting the frontend
+  to NestJS only.
 
 ### Phase 1 — Product evolution (owner-defined)
 - ⬜ Resolve the open decisions in `10-decisions/README.md` (runtime/persistence, API

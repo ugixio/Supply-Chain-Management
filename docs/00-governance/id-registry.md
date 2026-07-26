@@ -5,7 +5,7 @@ type: governance
 owner: orchestrator
 status: active
 since: 2026-07-19
-updated: 2026-07-19
+updated: 2026-07-26
 relations:
   - { type: part-of, target: index-governance }
   - { type: governed-by, target: knowledge-architecture }
@@ -42,7 +42,7 @@ relations:
 | SOP | 12-sop-planning | `docs/40-contexts/12-sop-planning/rule.md` | SOP-R3 |
 | ORD | 13-order-management | `docs/40-contexts/13-order-management/rule.md` | ORD-R4 |
 | SDV | 14-supplier-development | `docs/40-contexts/14-supplier-development/rule.md` | SDV-R3 |
-| ENG | Engineering (build-time, cross-cutting) | `docs/50-engineering/rule.md` | ENG-R9 |
+| ENG | Engineering (build-time, cross-cutting) | `docs/50-engineering/rule.md` | ENG-R10 |
 | PLT | Platform / workspace (above the 14 depts) | `docs/30-foundation/platform/rule.md` | PLT-R5 |
 
 ### Concept IDs — LIVE (ADR-0015)
@@ -81,7 +81,7 @@ CPT-0139..0146 = dept 04 (supply planning);
 ## 3. Decision (ADR) numbers
 
 - Format: `ADR-NNNN`, strictly increasing, allocated at proposal time.
-- Allocated: **ADR-0001 … ADR-0034** (see `docs/10-decisions/README.md`).
+- Allocated: **ADR-0001 … ADR-0036** (see `docs/10-decisions/README.md`).
   0001–0009 retroactive; 0010–0013 proposed at skeleton adoption; 0014 (MIT) accepted;
   0015 (concepts) / 0016 (business-context extraction) proposed; **0017–0021 proposed —
   the full-stack product decisions** (staging, Clean Architecture, Decimal money, gRPC
@@ -97,9 +97,17 @@ CPT-0139..0146 = dept 04 (supply planning);
   assumptions A1 (context scope = SCM-as-operating-context) and A2 (reference+overlay)
   resolved on ADR-0030; A3 (both sources, internal-first) on ADR-0031; A4 (prompt-gate
   enforcement surface) on ADR-0032 still owner-confirmable.
+  **0033/0034 — the lane & scale direction** (exclusive technology lanes; ClickHouse
+  analytics tier + Docker/Kubernetes), **Accepted (owner-directed 2026-07-22)**.
+  **0035/0036 — the core & telemetry direction** (Rust is the complete core with Python as
+  the tools layer; telemetry data model at tens-of-thousands scale), **Accepted
+  (owner-directed 2026-07-22)**.
   Supersession chain: **ADR-0019** supersedes the ADR-0006 money clause and rewrites
-  SCM-R8; **ADR-0022** supersedes ADR-0013 (npm → pnpm). ADR-0030 **extends** (does not
-  supersede) ADR-0017's staging.
+  SCM-R8; **ADR-0022** supersedes ADR-0013 (npm → pnpm); **ADR-0035** supersedes the
+  TypeScript-owns-domain-logic clause of **ADR-0001** and **narrows ADR-0033**'s
+  business-rules lane (owner: framework-free TypeScript → Rust), rewriting ENG-R1/ENG-R2 in
+  part via **ENG-R10**. ADR-0030 **extends** (does not supersede) ADR-0017's staging;
+  ADR-0036 **extends** ADR-0034/0031/0035.
 
 ## 4. Department / module keys
 

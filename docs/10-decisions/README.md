@@ -66,6 +66,8 @@ relations:
 - ADR-0032 — **Prompt-refinement gate:** a user prompt is first improved, then the improved prompt is executed — the company's incoming-quality control on instructions (SCM incoming-inspection analogue). (Accepted — owner-directed 2026-07-22)
 - ADR-0033 — **Exclusive technology lanes:** every technology owns exactly one responsibility and **no other technology may enter it** — Next.js presentation only · **NestJS is the sole technology the frontend talks to** · TypeScript owns business rules and **leaves the calculation lane** · **Rust joins Python** in calculation (Rust: exact arithmetic, hot path, ingestion; Python: models, statistics, optimization, ML). Rewrites `ENG-R8`; moves the money core to a single Rust implementation. (Accepted — owner-directed 2026-07-22)
 - ADR-0034 — **Scale tier for monitoring:** **ClickHouse** owns analytics/time-series at scale (never the source of truth — rebuildable, one-way like ENG-R7) · **Docker** owns images · **Kubernetes** owns orchestration. Broker and cache stay gated on measured volume. (Accepted — owner-directed 2026-07-22)
+- ADR-0035 — **Rust is the complete core; it replaces the TypeScript domain.** Business rules, invariants, state machines, exact arithmetic, the hot path and ingestion all move to Rust; **Python is the tools layer** (models, statistics, optimization, ML) reached over the schema-first gRPC contract; TypeScript survives **only inside NestJS and Next.js** as framework code, never as core logic. **Supersedes the TypeScript-domain clause of ADR-0001**, narrows ADR-0033. Migration is incremental (strangler), guarded by the U8 golden vectors. (Accepted — owner-directed 2026-07-22)
+- ADR-0036 — **Telemetry data model at tens-of-thousands scale:** continuous project-supervision telemetry in ClickHouse — `(project_id, metric, ts)` sort key, monthly partitions, `Delta`+`ZSTD` / `Gorilla` codecs, `LowCardinality` labels, `AggregatingMergeTree` rollup cascade (raw→1m→1h→1d), short raw TTL with long rollup retention, batched async inserts from the Rust ingester. Resolves the L1 volume question. (Accepted — owner-directed 2026-07-22)
 
 ---
 
@@ -1393,6 +1395,160 @@ adopting **ClickHouse**, **Docker** and **Kubernetes**.
 - *Defer analytics entirely until volume is proven* — the honest minimal option, and it remains
   correct for the **broker and cache** (still gated); the owner directed adopting ClickHouse now
   so the monitoring data model is designed against its shape from the start rather than retrofitted.
+
+---
+
+---
+
+## ADR-0035 — Rust is the complete core; Python is the tools layer; TypeScript leaves the core
+
+**Status:** Accepted (owner-directed 2026-07-22)
+**Supersedes:** the TypeScript-owns-domain-logic clause of **ADR-0001** (the two-language split
+becomes Rust core + Python tools). **Narrows:** ADR-0033 (the "business rules" lane changes owner
+from framework-free TypeScript to Rust). **Rewrites in part:** ENG-R1/ENG-R2 (see ENG-R10).
+**Depends on:** ADR-0020 (gRPC contract), ADR-0019 (exact decimal money), ADR-0002 (OSI-only).
+
+**Context:** ADR-0033 established exclusive lanes with framework-free TypeScript owning business
+rules and Rust owning exact arithmetic, the hot path and ingestion. The owner then directed a
+stronger arrangement (conversation, 2026-07-22): **Rust replaces TypeScript entirely as the
+core** — "que Rust sea el núcleo completo y Python las herramientas" — with the explicit
+requirement that Rust and Python **converge** on best practices, speed, security and
+scalability. The estate today holds **12,388 lines of TypeScript domain code** (14 departments,
+314 invariant guards) and **12,771 lines of Python** calculation code.
+
+**Decision:**
+- **The core is Rust.** It owns business rules, invariants, state machines, lifecycle and
+  identity; exact arithmetic (the single money/Decimal implementation); the per-event hot path;
+  and connector ingestion. No I/O framework enters it.
+- **Python is the tools layer.** Stateless model services: fitting, statistical inference,
+  optimization solving, simulation, ML — the work whose value is the scientific library
+  (statsmodels, scipy, sklearn, prophet, ortools, simpy). Python holds **no business rules** and
+  never serves the frontend.
+- **TypeScript survives only as framework code** — inside **NestJS** (the sole frontend gateway)
+  and **Next.js** (presentation). It carries no core logic, no business rules and no mathematics.
+  `packages/domain` and the domain half of `packages/shared` are retired into the Rust core.
+- **How the two converge (the owner's explicit requirement):**
+  1. **Schema-first contract.** The `.proto` files (`scm.calc.v1`, ADR-0020) are the single
+     source of the wire contract; **Rust types are generated with `prost`/`tonic` and Python
+     types with `grpcio-tools` from the same schema.** Hand-written DTOs on either side are a
+     defect. Money and rates cross as **strings** (ENG-R5).
+  2. **Call direction.** NestJS → Rust core; the **Rust core** orchestrates and calls Python
+     tools over gRPC when a model is needed. Python never calls the core; the gateway never
+     calls Python directly.
+  3. **Transport choice, justified.** Core↔Python is **gRPC**, not PyO3 embedding — isolation,
+     independent scaling of model workers, and the GIL stays out of the core process (decisive
+     at the telemetry scale of ADR-0036). NestJS↔core is **in-process via `napi-rs`**, because
+     a network hop between the gateway and the core buys nothing and costs latency on every
+     request; gRPC remains the escape hatch if the core ever needs independent scaling.
+  4. **One error taxonomy.** Rust `Result` with typed error enums and Python typed exceptions
+     both map to the **same gRPC status/error codes declared in the proto**, which NestJS maps to
+     GraphQL errors. No stringly-typed errors across the boundary.
+  5. **Shared correctness fixtures.** The U8 golden vectors (`tests/golden/*.json`) become the
+     **Rust↔Python** contract tests — the Rust suite reads the same file the Python suite does.
+     The fixtures are the acceptance criterion for every ported calculation.
+  6. **Distributed tracing.** OpenTelemetry context propagates NestJS → Rust → Python so one
+     request is traceable end to end; without it, a three-technology path is undebuggable at
+     scale.
+- **Migration is incremental (strangler), never a freeze.** The Rust core grows department by
+  department behind the same public behaviour; each ported unit must make its existing tests and
+  golden vectors pass **unchanged** before the TypeScript original is deleted. Order: money core
+  → the departments already dedup-targeted → the remaining rule sets. `main` stays green
+  throughout; no long-lived rewrite branch.
+- **Tooling consequences:** a Cargo workspace joins the monorepo; CI gains a Rust toolchain,
+  `cargo test`, `clippy` (warnings as errors) and cross-compilation for the `napi-rs` artefact;
+  `tools/verify.py` must learn Rust symbols (`pub fn`) and crate paths so **G10 keeps the concept
+  catalogue honest** across the port.
+
+**Consequences:**
+- (+) One core language for rules *and* arithmetic: the 49 duplicated calculations collapse to a
+  single owner, and the money mirrors become one implementation.
+- (+) Memory safety, exhaustive matching and compiler-forced error handling on the code that
+  enforces financial and compliance invariants — the strongest security posture available for
+  that surface.
+- (+) Predictable latency with no GC pauses on the hot path, and fearless concurrency for
+  ingestion at the ADR-0036 scale.
+- (+) Python keeps exactly what justifies it (the scientific ecosystem) and nothing else.
+- (−) **The largest change in the project: ~12,400 lines of working TypeScript are retired and
+  re-expressed in Rust, along with their 85 passing tests.** It produces no new user-facing
+  capability by itself. This is accepted deliberately by the owner.
+- (−) The concept catalogue's TypeScript implementation links must be repointed, and the gate
+  extended, or G10 silently stops protecting the catalogue.
+- (−) A compiled toolchain, cross-compilation matrix and native artefact enter CI and every
+  developer machine; build times rise.
+- (−) Two boundaries now exist inside what used to be one process (napi-rs and gRPC); both need
+  tracing and typed errors to stay debuggable.
+
+**Alternatives considered:**
+- *Keep framework-free TypeScript for rules (ADR-0033 as written)* — rejected by the owner
+  directive; it also leaves rules and arithmetic in different languages.
+- *Rust for new surface only, TypeScript rules left in place indefinitely* — rejected as an end
+  state, but **adopted as the migration path**: it is the strangler pattern, and it is why no
+  freeze is needed.
+- *Move rules into Python instead* — rejected earlier and again: interpreter and GIL are wrong
+  for per-write rule evaluation, and it would put rules in the tools lane.
+- *Big-bang rewrite on a long-lived branch* — rejected: it would park the estate's green state
+  for months and merge as one unreviewable change.
+
+---
+
+## ADR-0036 — Telemetry data model: continuous project-supervision telemetry at tens-of-thousands scale
+
+**Status:** Accepted (owner-directed 2026-07-22)
+**Extends:** ADR-0034 (ClickHouse tier), ADR-0031 (monitoring), ADR-0035 (Rust owns ingestion).
+**Resolves:** the L1 volume question in `program/WORKFLOW.md`.
+
+**Context:** The owner specified the monitoring workload (conversation, 2026-07-22): **tens of
+thousands**, **telemetry only, for project supervision** — i.e. continuous numeric series rather
+than bursty development events. That is a **high-cardinality, sustained-ingest** time-series
+workload, which fixes several ClickHouse design choices that were left open in ADR-0034.
+
+**Decision:**
+- **Shape.** One wide raw table of telemetry samples: `project_id`, `metric` (name), `ts`,
+  `value`, plus `LowCardinality(String)` label columns. No `Nullable` on hot columns (it costs a
+  second column and blocks some optimizations) — absence is encoded explicitly.
+- **Sort key `(project_id, metric, ts)`.** Supervision queries always scope to a project (and
+  usually a metric) before a time range, so the leading high-cardinality column is correct here
+  and prunes the most data. **Partition by `toYYYYMM(ts)`** — monthly parts keep the part count
+  manageable at tens of thousands of series; daily partitions would fragment it.
+- **Codecs, chosen per column type:** `ts` → `Delta` + `ZSTD`; float metrics → `Gorilla` or
+  `DoubleDelta` + `ZSTD`; labels → `LowCardinality`. Telemetry is highly regular, so these are
+  the difference between reasonable and ruinous storage.
+- **Rollup cascade with `AggregatingMergeTree`:** raw → **1 minute → 1 hour → 1 day**, built as
+  **ingest-time materialized views** so dashboard cost is paid on insert, not on query
+  (ADR-0034). Dashboards read the coarsest table that answers the question.
+- **Retention.** Short **TTL on raw** samples (weeks), long retention on rollups (months to
+  years). Supervision needs recent detail and historical trend, not historical detail.
+- **Write path.** The **Rust ingester** (ADR-0035) batches — client-side batches or
+  `async_insert` — never row-by-row. Batching is the single most important ingest decision in
+  ClickHouse.
+- **Read path.** Only NestJS queries, only through the SELECT-only identity, with row/memory/time
+  quotas so no dashboard can exhaust the cluster (ADR-0034 least privilege).
+- **Metrics are governed.** Every supervision metric is a `CPT-*` concept node (ADR-0015/0031)
+  whose definition matches the materialized view that computes it; a rollup without its node is
+  an ungoverned calculation.
+- **Still gated (unchanged).** The broker (NATS/Kafka) and cache (Valkey) enter only when
+  measurement shows the Rust ingester plus ClickHouse cannot absorb the rate — telemetry that is
+  batched directly usually does not need a broker until multiple independent consumers appear.
+
+**Consequences:**
+- (+) Sub-second dashboards over tens of thousands of series, because the aggregation already
+  happened at insert time.
+- (+) Storage stays proportionate: regular telemetry compresses extremely well with these codecs.
+- (+) The raw-TTL/rollup split bounds growth without losing the trend history supervision needs.
+- (−) The rollup cascade is schema that must be migrated carefully: changing a materialized view
+  requires a backfill plan, and ClickHouse will not do it implicitly.
+- (−) Choosing the sort key for project-scoped queries makes cross-project "top N metrics
+  everywhere" queries more expensive; those need their own projection or a separate view.
+- (−) The design assumes numeric telemetry; if bursty development events (commits, PRs, builds)
+  are added later, they belong in their own table with its own sort key, not in this one.
+
+**Alternatives considered:**
+- *PostgreSQL / TimescaleDB* — rejected in ADR-0034 on lane and licence grounds; at tens of
+  thousands of continuous series the row-store cost is also the wrong shape.
+- *Daily partitions and no rollups* — rejected: part explosion plus full scans at query time is
+  exactly the failure mode ClickHouse materialized views exist to avoid.
+- *Store only rollups, discard raw immediately* — rejected: incident investigation needs recent
+  raw detail; the short raw TTL is the compromise.
 
 ---
 

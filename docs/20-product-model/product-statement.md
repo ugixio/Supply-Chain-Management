@@ -5,7 +5,7 @@ type: product-model
 owner: orchestrator
 status: active
 since: 2026-07-22
-updated: 2026-07-22
+updated: 2026-07-26
 relations:
   - { type: part-of, target: index-product-model }
   - { type: governed-by, target: index-adr }
@@ -63,7 +63,7 @@ code quality · testing & QA discipline · security-by-default · data governanc
 DevOps practice · documentation & knowledge management · project/process organization &
 structure · professionalism & ways of working · KPIs & delivery metrics · risk & compliance.
 
-## 3. Technology lanes (ADR-0033 — exclusive; ENG-R8)
+## 3. Technology lanes (ADR-0033/0035 — exclusive; ENG-R8/R10)
 
 Every technology owns **one** responsibility and no other technology may perform it:
 
@@ -71,12 +71,22 @@ Every technology owns **one** responsibility and no other technology may perform
 |---|---|
 | Presentation | **Next.js** (talks only to NestJS) |
 | Frontend gateway — **the only counterpart the frontend has** | **NestJS + GraphQL** |
-| Business rules, invariants, state machines (**no mathematics**) | **TypeScript**, framework-free |
-| Exact arithmetic · hot path · ingestion | **Rust** |
-| Models · statistics · optimization · ML | **Python** |
+| **The core** — business rules, invariants, state machines, lifecycle/identity · exact arithmetic · hot path · ingestion | **Rust** (ADR-0035) |
+| Models · statistics · optimization · simulation · ML (**the tools layer**) | **Python** |
 | Transactional truth (OLTP, event store, knowledge read model) | **PostgreSQL** |
-| Analytics & time-series at scale (never truth) | **ClickHouse** (ADR-0034) |
+| Analytics & project telemetry at scale (never truth) | **ClickHouse** (ADR-0034/0036) |
 | Images · orchestration | **Docker** · **Kubernetes** (ADR-0034) |
+
+**TypeScript is not a lane owner (ADR-0035).** It survives only as *framework* code inside
+NestJS and Next.js: no business rules, no invariants, no mathematics. The former
+framework-free-TypeScript rules lane is retired into the Rust core, department by department
+(strangler migration — Phase L in `program/WORKFLOW.md`).
+
+**How the core and the tools converge** — one schema-first `.proto` contract generated on both
+sides (`prost`/`tonic` · `grpcio-tools`), money as strings; call direction NestJS → Rust core →
+Python tools, never reversed; `napi-rs` in-process at the gateway boundary and gRPC to the model
+workers; one error taxonomy declared in the proto; the U8 golden vectors as the cross-language
+acceptance tests; OpenTelemetry propagated end to end (ADR-0035).
 
 Every lane is held to its own current best practices, verified by the six **ENG-R9** checks
 (lane · best practice · security · speed · scalability · license) *before* code is written.
@@ -84,8 +94,8 @@ Every lane is held to its own current best practices, verified by the six **ENG-
 ## 4. Delivery form
 
 Full-stack web application on the recorded stack (Next.js · NestJS code-first GraphQL ·
-PostgreSQL · ClickHouse · Rust + Python calc over gRPC — ADR-0017/0020/0022/0025/0033/0034).
-Staged:
+PostgreSQL · ClickHouse · **Rust core** + Python tools over gRPC —
+ADR-0017/0020/0022/0025/0033/0034/0035/0036). Staged:
 
 - **Stage A (exists / in build):** the Global Context wiki — octagon node-graph from the
   one-way Postgres read model of `docs/`.
@@ -94,7 +104,11 @@ Staged:
   reading the knowledge read model and referencing global nodes by ID + overlay. Includes the
   **prompt-refinement gate** (ADR-0032).
 - **Stage C (future, complementary — ADR-0031):** the Monitoring connector — dashboards +
-  metrics over project development; metrics defined as `CPT-*` nodes.
+  metrics over project development; metrics defined as `CPT-*` nodes. Scale and data model are
+  fixed by **ADR-0036**: **tens of thousands of continuous telemetry series, for project
+  supervision** — ClickHouse raw table + `AggregatingMergeTree` rollup cascade
+  (raw → 1m → 1h → 1d), short raw TTL and long rollup retention, batched inserts from the Rust
+  ingester.
 
 ## 5. Core concepts (defined here; referenced elsewhere)
 

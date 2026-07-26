@@ -1,7 +1,8 @@
 # The green-gate in CI (ADR-0012): runs exactly what a developer runs locally.
 # Toolchain: pnpm workspaces + Turborepo (ADR-0022).
-# Python gate joins when U7 lands a pytest suite + a CI-light requirements split
-# (risk register #6 — the full ML stack is too heavy for CI).
+# Python gate (U7): a CI-light requirements split installs only pytest; `make verify-full`
+# runs services/calc/tests (stdlib-only). The full ML stack in requirements.txt stays out
+# of CI (risk register #6 — numpy/torch/tensorflow are too heavy for the merge gate).
 name: verify
 
 on:
@@ -20,5 +21,9 @@ jobs:
         with:
           node-version: 22
           cache: pnpm
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install -r requirements-dev.txt
       - run: pnpm install --frozen-lockfile
       - run: make verify-full

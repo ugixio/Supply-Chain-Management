@@ -1,0 +1,5 @@
+# CI-light dev dependencies (U7). Only what the enforced Python gate needs — the heavy
+# ML/OSI stack in requirements.txt is deliberately kept out of CI (risk register #6:
+# numpy/torch/tensorflow are too heavy and slow for the merge gate). `make test-py` runs
+# only services/calc/tests, which import stdlib + these.
+pytest>=8,<10

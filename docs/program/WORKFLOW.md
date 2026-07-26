@@ -82,8 +82,13 @@ mirror-coverage bar) · duplicated formulas across TS/Python with one past diver
   `ncrRate` using the wrong metrics group; REACH compliance reading an excluded input
   field — now conservative, see U11). Result: typecheck 0 errors, 40/40 tests green.
   **Still open inside U6 → follow-ups:** eslint flat config (U12) · pytest gate (U7).
-- ⬜ **U7 · HOW lane** — Test debt: Python test suite (SCM-R13 currently unmet); extend
+- 🟦 **U7 · HOW lane** — Test debt: Python test suite (SCM-R13 currently unmet); extend
   TS unit coverage beyond the 4 existing files; every SCM-Rx gets its test.
+  **Started 2026-07-22 (with P5 slice 3):** the pytest suite is now real and **enforced** —
+  `services/calc/tests/test_money.py` runs in `make verify-full` and CI via `make test-py`
+  (CI-light `requirements-dev.txt` = pytest only). First Python module under test is the
+  money core. **Next:** extend pytest to the calc models (needs a heavier CI lane or mocked
+  deps — risk #6), and add a test per SCM-Rx / department rule.
 - ⬜ **U8 · HOW lane** — Cross-language consistency mechanism (golden test vectors shared
   by TS and Python — see open decision; prevents another `a12c114`).
 - ✅ **U9 · orchestrator** — Stamp front-matter on `docs/standards/REGULATORY_FRAMEWORK.md`
@@ -280,8 +285,18 @@ mirror-coverage bar) · duplicated formulas across TS/Python with one past diver
   `ReturnAuthorization` refund (13) — its single-round structure diverges from Python
   `refund_amount`'s double-round (CPT-0091 divergence); resolve under U8/U15b. Upstream
   float *accumulation* in InventoryValuation `totalValueCents` (Σ qty×cost) noted for a
-  later slice. **Next:** slice 3 — Python `Decimal` context in `services/calc`; then U8
-  golden vectors prove TS == PY == SQL.
+  later slice.
+  **Slice 3 LANDED 2026-07-22:** the Python money core in `services/calc/shared/types.py`
+  (`multiply_cents` / `divide_cents` / `allocate_cents` / `money_subtract` + `MONEY_ROUNDING`)
+  using `decimal.Decimal` + ROUND_HALF_EVEN, **mirroring the TS core value-for-value** (float
+  factors go via `str()` to match decimal.js). `services/calc/tests/test_money.py` asserts the
+  **same inputs → same outputs as `money.test.ts`** (TS == PY confirmed) — the U8 seed. This
+  also **starts U7**: `make test-py` (pytest on `services/calc/tests`, stdlib-only) joins
+  `verify-full`; CI installs a CI-light `requirements-dev.txt` (pytest only; heavy ML stack
+  stays out, risk #6). verify-full green (TS 59 + PY 5).
+  **Next:** slice 4 — `NUMERIC` columns already exist in `schema.sql`; wire string-over-gRPC
+  when P6 lands. Slice 5 / **U8** — promote the mirrored money cases into shared golden-vector
+  fixtures and extend to the deferred `ReturnAuthorization` refund convergence (CPT-0091).
 - ⬜ **P6 · HOW lane (Stage B)** — Python gRPC calc service (`scm.calc.v1`), NestJS client;
   interactive calculator for the demand-planning concepts first (the `enforced` dept).
 - ⬜ **P7 · HOW lane (Stage C, planned)** — Clean-Architecture wiring of `src/departments`

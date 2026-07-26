@@ -47,12 +47,29 @@ export function subtractMoney(a: Money, b: Money): Money {
  * ROUND_HALF_EVEN — retiring the previous `Math.round(amount * factor)` float bug.
  * `factor` accepts a string ("0.0825") for an exact rate, avoiding float ingress.
  */
+/**
+ * Multiply integer minor units by a factor, returning whole minor units rounded
+ * ROUND_HALF_EVEN in exact decimal — the currency-agnostic core used by both
+ * `multiplyMoney` and domain call sites that work in raw cents. Retires
+ * `Math.round(cents * factor)` (float + half-up). `factor` accepts a string for an
+ * exact rate.
+ */
+export function multiplyCents(cents: number, factor: Decimal.Value): number {
+  return new Decimal(cents).times(factor).toDecimalPlaces(0, MONEY_ROUNDING).toNumber();
+}
+
+/**
+ * Divide integer minor units by a divisor, returning whole minor units rounded
+ * ROUND_HALF_EVEN in exact decimal (e.g. a weighted-average or per-unit cost).
+ * Retires `Math.round(total / n)`. Throws on a non-positive divisor.
+ */
+export function divideCents(cents: number, divisor: number): number {
+  if (!(divisor > 0)) throw new Error(`divideCents divisor must be > 0, got ${divisor}`);
+  return new Decimal(cents).div(divisor).toDecimalPlaces(0, MONEY_ROUNDING).toNumber();
+}
+
 export function multiplyMoney(m: Money, factor: Decimal.Value): Money {
-  const amount = new Decimal(m.amount)
-    .times(factor)
-    .toDecimalPlaces(0, MONEY_ROUNDING)
-    .toNumber();
-  return { amount, currency: m.currency };
+  return { amount: multiplyCents(m.amount, factor), currency: m.currency };
 }
 
 /**

@@ -9,6 +9,8 @@ import {
   addMoney,
   subtractMoney,
   multiplyMoney,
+  multiplyCents,
+  divideCents,
   allocateMoney,
 } from '@scm/shared';
 
@@ -49,6 +51,29 @@ describe('multiplyMoney — ROUND_HALF_EVEN, no float drift', () => {
   });
   it('handles negative amounts (credit notes) symmetrically', () => {
     expect(multiplyMoney(money(-5, 'USD'), 0.5).amount).toBe(-2); // HALF_EVEN toward even
+  });
+});
+
+describe('multiplyCents / divideCents — raw-cents Decimal core (domain call sites)', () => {
+  it('multiplyCents rounds a tax rate HALF_EVEN from an exact string', () => {
+    expect(multiplyCents(1999, '0.0825')).toBe(165); // 164.9175 -> 165
+  });
+  it('multiplyCents applies banker\'s rounding on ties', () => {
+    expect(multiplyCents(5, 0.5)).toBe(2); // 2.5 -> 2 (even)
+    expect(multiplyCents(7, 0.5)).toBe(4); // 3.5 -> 4 (even)
+  });
+  it('multiplyCents handles a fractional quantity (goods-receipt value)', () => {
+    expect(multiplyCents(1299, 10.5)).toBe(13640); // 13639.5 -> 13640 (even)
+  });
+  it('divideCents rounds HALF_EVEN, not half-up', () => {
+    expect(divideCents(5, 2)).toBe(2);  // 2.5 -> 2 (even), half-up would give 3
+    expect(divideCents(7, 2)).toBe(4);  // 3.5 -> 4 (even)
+    expect(divideCents(100, 3)).toBe(33); // 33.33 -> 33
+    expect(divideCents(1000, 8)).toBe(125); // exact
+  });
+  it('divideCents rejects a non-positive divisor', () => {
+    expect(() => divideCents(100, 0)).toThrow();
+    expect(() => divideCents(100, -2)).toThrow();
   });
 });
 

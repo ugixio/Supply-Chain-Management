@@ -269,8 +269,19 @@ mirror-coverage bar) · duplicated formulas across TS/Python with one past diver
   `MONEY_ROUNDING` constant; `tests/unit/money.test.ts` (14 cases: banker's rounding, exact
   string rates, no-float-drift, sum-preserving allocation incl. negatives). Non-breaking:
   `Money.amount` stays integer-cents this slice (type→Decimal is slice 2+). verify-full green
-  (54 tests). **Next:** slice 2 — migrate domain call sites (start with the exemplar dept,
-  `01-procurement`) off ad-hoc `Math.round` money math onto the shared core.
+  (54 tests).
+  **Slice 2 LANDED 2026-07-22:** added shared `multiplyCents` / `divideCents` (Decimal +
+  ROUND_HALF_EVEN; `multiplyMoney` now delegates to `multiplyCents`, DRY) and migrated the
+  **4 unambiguous scalar money sites** off `Math.round(...)` float math: GoodsReceipt
+  `totalReceivedValueCents` (01), LandedCost unit cost (11), InventoryValuation WAC (05),
+  RiskItem EAL (10). `PurchaseOrder.calculatePOTotal` was already correct (it routes through
+  the slice-1 `multiplyMoney`). +5 core tests (59 total), verify-full green.
+  **Deferred (needs a convergence decision, not a mechanical change):**
+  `ReturnAuthorization` refund (13) — its single-round structure diverges from Python
+  `refund_amount`'s double-round (CPT-0091 divergence); resolve under U8/U15b. Upstream
+  float *accumulation* in InventoryValuation `totalValueCents` (Σ qty×cost) noted for a
+  later slice. **Next:** slice 3 — Python `Decimal` context in `services/calc`; then U8
+  golden vectors prove TS == PY == SQL.
 - ⬜ **P6 · HOW lane (Stage B)** — Python gRPC calc service (`scm.calc.v1`), NestJS client;
   interactive calculator for the demand-planning concepts first (the `enforced` dept).
 - ⬜ **P7 · HOW lane (Stage C, planned)** — Clean-Architecture wiring of `src/departments`

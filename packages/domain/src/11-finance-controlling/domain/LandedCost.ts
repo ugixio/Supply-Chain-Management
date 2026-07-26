@@ -20,7 +20,7 @@
  */
 
 import { v4 as uuidv4 } from 'uuid';
-import { ISOTimestamp, nowUTC } from '@scm/shared/types';
+import { ISOTimestamp, nowUTC, divideCents } from '@scm/shared/types';
 
 export type LandedCostComponentType =
   | 'GOODS'              // ex-works / FOB goods value
@@ -99,7 +99,7 @@ function computeTotals(
     0,
   );
   const unitLandedCostCents =
-    quantity > 0 ? Math.round(totalLandedCostCents / quantity) : 0;
+    quantity > 0 ? divideCents(totalLandedCostCents, quantity) : 0;
   return { totalLandedCostCents, unitLandedCostCents };
 }
 

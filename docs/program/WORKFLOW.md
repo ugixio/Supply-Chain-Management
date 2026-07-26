@@ -424,7 +424,7 @@ mirror-coverage bar) · duplicated formulas across TS/Python with one past diver
   **L2b remaining:** the **napi-rs** binding plus its cross-compilation matrix, `@scm/shared`
   and `services/calc/shared` delegating to the core, then deleting the two mirrors (107 + 70
   lines) once every call site is on the binding.
-- ⬜ **L3 · WHAT+HOW** — **Collapse the duplication as the core absorbs it** (the 49 concepts
+- 🟦 **L3 · WHAT+HOW** — **Collapse the duplication as the core absorbs it** (the 49 concepts
   implemented twice — source of ~30 documented divergences). Two directions, one lane map:
   *(a)* the **703 lines of TypeScript mathematics** (`Forecasting.ts` 207, `SafetyStock.ts` 140,
   `SPCChart.ts` 356) are **deleted, not ported** — mathematics is Python's lane; *(b)* the
@@ -433,6 +433,16 @@ mirror-coverage bar) · duplicated formulas across TS/Python with one past diver
   UFLPA/REACH/CSDDD, OTD). Department by department, each with its tests and golden vectors green
   before deletion. Each removal updates its `CPT-*` node in the same commit (G10 enforces it).
   Blocks on P6 for the paths the core must still reach.
+  **L3a landed 2026-07-26 — the safety-stock family (140 lines):** the surviving lane was
+  covered *first* (`services/calc/tests/test_safety_stock.py`, 37 tests; `numpy` + `scipy`
+  joined the CI-light requirements so Python's mathematics is testable in the merge gate), the
+  **ADR-0028 z-score resolution landed** (`get_z_score` is now the exact `norm.ppf`; the coarse
+  lookup table is deleted), and only then were `algorithms/SafetyStock.ts`, its barrel export
+  and its 12 Jest tests removed. Ten `CPT-*` nodes repointed to the single owner in the same
+  commit. **Order matters and was corrected here:** deleting the duplicate first would have left
+  the surviving implementation with no CI coverage at all.
+  **L3a remaining:** `Forecasting.ts` (207 lines — needs `statsmodels` in CI-light first) and
+  `SPCChart.ts` (356 lines). **L3b** (the 314 rule guards → Rust core) starts after L2b.
 - ⬜ **L4 · HOW** — **ClickHouse telemetry tier (ADR-0034/0036).** The ADR-0036 schema exactly:
   raw `MergeTree` on `(project_id, metric, ts)` partitioned `toYYYYMM(ts)`, per-column codecs,
   the four-level `AggregatingMergeTree` rollup cascade as **ingest-time materialized views**,

@@ -22,8 +22,10 @@ export * from './01-procurement/domain/RFQ';
 export * from './02-supplier-management/domain/SupplierScorecard';
 
 // ── 03 Demand Planning & Forecasting ────────────────────────────────────────
+// SafetyStock.ts was deleted at L3a: safety stock, ROP, EOQ, CV/XYZ and the turnover
+// metrics are planning mathematics, and mathematics is Python's exclusive lane
+// (ENG-R8 / ADR-0033). The owner is services/calc/03_demand_planning/safety_stock.py.
 export * from './03-demand-planning/algorithms/Forecasting';
-export * from './03-demand-planning/algorithms/SafetyStock';
 
 // ── 04 Supply Planning & MRP ─────────────────────────────────────────────────
 export * from './04-supply-planning/domain/MaterialRequirement';

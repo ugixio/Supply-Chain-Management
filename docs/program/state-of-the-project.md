@@ -105,11 +105,17 @@ W2 (node model + PLT rules) · P5 slices 1/2 (Decimal core + four migrated sites
 tests in CI) · U8 (golden-vector mechanism + first divergence closed: refund = two-step
 quantization, `ROUND_HALF_EVEN`) · L0/L1 (ENG-R8/R9/R10 + ADR-0033..0036).
 
-**Next:** **L2 — the Rust money core.** Its acceptance criterion already exists:
-`tests/golden/money.golden.json` must pass unchanged from a Rust reader alongside the Jest and
-pytest readers. Then L3 (collapse the 49 duplicated calculations as the core absorbs them),
-L4 (ClickHouse per ADR-0036), L5 (Rust ingestion), L6 (Docker → Kubernetes) — with Track C (W3)
-pulled in as the workspace layer needs it.
+**Also landed:** **L2a** — `crates/scm-money`, the Rust money core, with the golden fixture
+passing unchanged from a third reader (`cargo test`) and G10 extended to Rust symbols. **L3a** —
+the safety-stock family collapsed to one owner: the surviving Python lane got 37 tests in CI
+(numpy + scipy joined the CI-light requirements), the ADR-0028 exact-Φ⁻¹ z-score landed, and
+only then were `SafetyStock.ts` and its 12 Jest tests deleted. Test totals rose through the
+deletion: **73 Jest + 68 pytest + 13 cargo**.
+
+**Next:** **L2b** (napi-rs binding, then retire the two money mirrors) · finish **L3a**
+(`Forecasting.ts` — needs `statsmodels` in CI-light; `SPCChart.ts`) · **L3b** (the 314 rule
+guards into the Rust core) · then L4 (ClickHouse per ADR-0036), L5 (Rust ingestion),
+L6 (Docker → Kubernetes) — with Track C (W3) pulled in as the workspace layer needs it.
 
 ## 6. New-technology decisions still pending (owner-gated, per the speed/security rule)
 

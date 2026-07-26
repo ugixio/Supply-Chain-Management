@@ -5,7 +5,7 @@ type: concept
 owner: orchestrator
 status: active
 since: 2026-07-20
-updated: 2026-07-20
+updated: 2026-07-26
 relations:
   - { type: part-of, target: index-concepts-demand-planning }
   - { type: governed-by, target: index-adr }
@@ -59,8 +59,11 @@ COGS = $6,000,000/year (600,000,000 cents), average inventory = $750,000 (75,000
 
 ## Implementations
 
-- TS: [`inventoryTurnoverRatio`](../../../packages/domain/src/03-demand-planning/algorithms/SafetyStock.ts)
 - PY: [`inventory_turnover_ratio`](../../../services/calc/03_demand_planning/safety_stock.py)
+
+TypeScript had a duplicate until L3a; it was **deleted, not ported** — planning
+mathematics is Python's exclusive lane (ENG-R8 / ADR-0033). Python is now the sole
+owner, covered by `services/calc/tests/test_safety_stock.py`.
 
 ## Governing rules
 

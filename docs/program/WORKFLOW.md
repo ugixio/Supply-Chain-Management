@@ -258,10 +258,19 @@ mirror-coverage bar) · duplicated formulas across TS/Python with one past diver
   SCM core node centre, 14 department nodes around it as a connected circuit, CPT sub-nodes
   on expand; click → right sidebar rendering the concept node (formula, worked example,
   links). Accessibility + light/dark.
-- ⬜ **P5 · WHAT+HOW (blocks on P0)** — Money → Decimal migration (ADR-0019): `Money` type,
-  `multiplyMoney`/allocation with `ROUND_HALF_EVEN`, Python `Decimal` context, `NUMERIC`
-  columns, string-over-gRPC. Golden vectors (U8) prove TS==PY==SQL. Retires the live
-  `Math.round(amount*factor)` precision bug.
+- 🟦 **P5 · WHAT+HOW** — Money → Decimal migration (ADR-0019). **Sliced (L/high-risk):**
+  (1) `@scm/shared` Decimal money core · (2) domain call-site migration by department ·
+  (3) Python `Decimal` context · (4) `NUMERIC` columns + string-over-gRPC · (5) golden
+  vectors (U8) prove TS==PY==SQL.
+  **Slice 1 LANDED 2026-07-22:** `decimal.js` added to `@scm/shared` (the ADR-0019-decided
+  lib); `multiplyMoney` rewritten to compute in exact Decimal and round **ROUND_HALF_EVEN**
+  (retires the live `Math.round(amount*factor)` float bug); added `subtractMoney` and
+  `allocateMoney` (largest-remainder, sum-preserving — no lost/invented minor units) +
+  `MONEY_ROUNDING` constant; `tests/unit/money.test.ts` (14 cases: banker's rounding, exact
+  string rates, no-float-drift, sum-preserving allocation incl. negatives). Non-breaking:
+  `Money.amount` stays integer-cents this slice (type→Decimal is slice 2+). verify-full green
+  (54 tests). **Next:** slice 2 — migrate domain call sites (start with the exemplar dept,
+  `01-procurement`) off ad-hoc `Math.round` money math onto the shared core.
 - ⬜ **P6 · HOW lane (Stage B)** — Python gRPC calc service (`scm.calc.v1`), NestJS client;
   interactive calculator for the demand-planning concepts first (the `enforced` dept).
 - ⬜ **P7 · HOW lane (Stage C, planned)** — Clean-Architecture wiring of `src/departments`

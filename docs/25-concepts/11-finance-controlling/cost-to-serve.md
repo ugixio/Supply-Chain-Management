@@ -54,6 +54,14 @@ Revenue 180,000¢; costs 6,000 + 9,500 + 4,200 + 26,000 + 7,800 = 53,500¢ →
 margin 126,500¢ = **70.3%**, profitable. A returns-heavy customer with 62,000¢
 returns instead flips to −2%.
 
+## Project-chosen inputs
+
+| Input | Why the project must choose it |
+|---|---|
+| The cost elements included | Two views with different elements give two margins under one name |
+| The allocation basis for each pooled cost | Activity-based allocation is only as good as its driver choice |
+| Whether product COGS is in scope | A customer can be fulfilment-profitable and product-unprofitable |
+
 ## Governing rules
 
 - **FIN-R6** — an apportionment across customers or lines sums exactly to the cost apportioned;

@@ -48,6 +48,13 @@ published figure. Perishables and electronics run
 Average inventory 4.0M at 25% → **1.0M/year** — the budget line that safety-stock
 increases must justify against service gains.
 
+## Project-chosen inputs
+
+| Input | Why the project must choose it |
+|---|---|
+| The carrying rate, and every term in it | Cost of capital, storage, handling, insurance, shrinkage and obsolescence — each is the project's own figure |
+| Whether obsolescence risk is included | It dominates the rate for short-life goods and is negligible for commodities |
+
 ## Governing rules
 
 - **FIN-R*/INV-R*** — the rate is a governed parameter, not per-analyst.

@@ -67,6 +67,14 @@ refund = round(9,000 × 0.85) = 7,650¢; fees withheld 1,350¢.
 Reverse cost: 800 + 300 + 250 + 7,650 = 9,000¢ → 117.6% of the refund — this return
 destroyed more value than it credited.
 
+## Project-chosen inputs
+
+| Input | Why the project must choose it |
+|---|---|
+| The restocking fee, if any | A commercial policy, constrained by consumer law in some jurisdictions |
+| Which costs are charged to the return | Inbound freight, inspection, refurbishment and write-down are each a scope decision |
+| The disposition rule | Restock, refurbish, liquidate or scrap — the economics differ by an order of magnitude |
+
 ## Governing rules
 
 - **SCM-R14** — integer-cent money (Decimal at P5); **SCM-R3** — return records

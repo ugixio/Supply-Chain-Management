@@ -68,6 +68,14 @@ whole pack or pallet quantity
 Check: 12,000/448 ≈ 27 orders/year; ordering cost ≈ $1,340, holding ≈ $1,344 — the two
 costs balance, as the derivation requires.
 
+## Project-chosen inputs
+
+| Input | Why the project must choose it |
+|---|---|
+| The ordering cost per order | Rarely measured directly; the figure a project uses is an allocation decision |
+| The inventory carrying rate | Cost of capital plus storage, handling and obsolescence — every term is the project's |
+| Whether EOQ is the sizing method at all | Periodic order quantity and dynamic lot-sizing are legitimate alternatives (CPT-0142..0144) |
+
 ## Governing rules
 
 - **SCM-R14** — exact money, quantized only at defined boundaries.

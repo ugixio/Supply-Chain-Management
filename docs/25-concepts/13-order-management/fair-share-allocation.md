@@ -50,11 +50,25 @@ relations:
 
 ## Worked example
 
-Available 100; requests A=80, B=30, C=10 (Σ=120).
-PRO_RATA: A 66.7, B 25, C 8.3. FAIR_SHARE: ratio 100/120 = 0.833 → C's share 8.3 < 10?
-No — C requested 10, share 8.33 < 10 ⇒ C not auto-filled; no request below its share ⇒
-all get ratio: A 66.7, B 25, C 8.3 (equals pro-rata here). With C=5: C filled 5, then
-95/110 ratio for A, B → A 69.1, B 25.9.
+Available 100; requests A = 80, B = 30, C = 10 (Σ = 120), so the fill ratio is 100/120 = 0.833.
+
+**Pro-rata** gives every order the same fraction: A 66.7, B 25, C 8.3.
+
+**Small-order protection** first fills any request that is *already* below its pro-rata share, then
+re-rates the rest. Here C asks for 10 and its share is 8.3 — it is not below, so nothing changes and
+the result equals pro-rata. Had C asked for **5**, it would be filled in full, leaving 95 across
+requests of 110 → A 69.1, B 25.9.
+
+Both allocations conserve the 100 available (ORD-R5); they differ only in who absorbs the shortfall.
+Note the fractional shares: units are indivisible, so the rounding remainder needs a stated owner.
+
+## Project-chosen inputs
+
+| Input | Why the project must choose it |
+|---|---|
+| The fairness definition | Pro-rata, priority-ordered and minimum-viable-quantity are each fair by a different standard |
+| The minimum useful allocation | A share too small to ship helps nobody and still consumes stock |
+| Rounding direction on the shares | The total must still conserve (ORD-R5), so the remainder needs an owner |
 
 ## Governing rules
 

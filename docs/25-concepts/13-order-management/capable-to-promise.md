@@ -53,6 +53,14 @@ Request 120 by 07-30. ATP covers 120 first on 08-04 (too late). Lead time 6 days
 today 07-20 → production date 07-26 ≤ 07-30 → **CTP promise 07-26**, shortfall vs
 stock 20.
 
+## Project-chosen inputs
+
+| Input | Why the project must choose it |
+|---|---|
+| Which supply the promise may draw on | On-hand, scheduled receipts, and capacity yet to be scheduled are progressively less certain |
+| The allocation policy between competing orders | First-come, priority, or fair-share are all legitimate |
+| What happens when nothing can be promised | Backorder, partial promise, or refusal |
+
 ## Governing rules
 
 - **ORD-R5** — allocation conserves: a promise made from capacity already promised elsewhere is

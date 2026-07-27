@@ -55,6 +55,14 @@ A → wave 1 (7L,50U). B: 7+5 = 12 > 10 ⇒ opens wave 2 (5L,40U). C: wave 1 giv
 wave 2 gives (9L,70U) ✓. D: wave 1 fits lines (10L) but 50+60 = 110 > 100; wave 2 gives
 12 lines ⇒ opens wave 3. Result: `[A] [B,C] [D]` — 3 waves.
 
+## Project-chosen inputs
+
+| Input | Why the project must choose it |
+|---|---|
+| The wave objective | Minimizing travel, meeting cut-off times and balancing labour pull in different directions |
+| Wave size and release cadence | Larger waves batch better and delay the first shipment |
+| The constraints treated as hard | A carrier cut-off is usually hard; a dock assignment usually is not |
+
 ## Governing rules
 
 - **WHS-R5** — a wave's picked quantities equal the sum of its task completions.

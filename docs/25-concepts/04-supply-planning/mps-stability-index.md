@@ -48,8 +48,17 @@ relations:
 ## Worked example
 
 Original [100, 100, 100, 100]; revised [100, 60, 140, 100] →
-churn = 40 + 40 = 80 → `SI = 1 − 80/400 = 0.80` — below the 0.85 bar; find the
-driver before the shop floor does.
+churn = 40 + 40 = 80 → `SI = 1 − 80/400 = **0.80**`. A fifth of the plan moved, and note that the
+*total* did not change at all — the churn is pure re-timing, which is exactly the kind of change a
+capacity plan absorbs and a shop floor does not. Whether 0.80 is acceptable is the project's bar.
+
+## Project-chosen inputs
+
+| Input | Why the project must choose it |
+|---|---|
+| The fence structure — frozen, firm, free | How far out the plan may not change is a capacity and lead-time decision, not a standard |
+| Who may authorize a change inside a fence | A fence nobody enforces is a comment |
+| The measurement window | Churn measured over a quarter and over a week are different claims |
 
 ## Governing rules
 

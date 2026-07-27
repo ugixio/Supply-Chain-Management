@@ -49,6 +49,14 @@ SS 93, EOQ 721 (the CPT-0120 example) → `target = 93 + 360.5 = 453.5 units` �
 at 200/week demand ≈ 2.3 weeks of supply; multiply by unit cost for the
 working-capital plan (CPT-0104).
 
+## Project-chosen inputs
+
+| Input | Why the project must choose it |
+|---|---|
+| The target itself | It follows from service commitments and cost of capital, both project decisions |
+| The aggregation level | A family-level target met in total can hide every SKU missing it |
+| What a breach obliges | A target with no consequence is a forecast of itself |
+
 ## Governing rules
 
 - **SOP-R4** — the inventory target belongs to the same single plan as the demand and supply

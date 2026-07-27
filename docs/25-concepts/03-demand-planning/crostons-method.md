@@ -63,6 +63,13 @@ Otherwise both estimates carry forward unchanged. The forecast is:
 - t=4: z = 0.1·7 + 0.9·5 = **5.2**; p = 0.1·3 + 0.9·2 = **2.1**
 - forecast = 5.2 / 2.1 = **2.476** units/period
 
+## Project-chosen inputs
+
+| Input | Why the project must choose it |
+|---|---|
+| The smoothing constant | It trades responsiveness against stability for both the size and the interval series |
+| The accuracy measure used to judge it | Percentage error is undefined on the zeros this method exists for (DMD-R6) |
+
 ## Governing rules
 
 - **DMD-R6** — percentage error is undefined where the actual is zero, which is precisely the case

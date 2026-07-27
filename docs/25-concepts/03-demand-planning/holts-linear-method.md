@@ -54,6 +54,13 @@ relations:
 - t=1: level = 0.3·110 + 0.7·(100+10) = **110.0**; trend = 0.1·(110−100) + 0.9·10 = **10.0**
 - forecast = [110 + 1·10, 110 + 2·10] = **[120.0, 130.0]**
 
+## Project-chosen inputs
+
+| Input | Why the project must choose it |
+|---|---|
+| α and β | Level and trend smoothing; no standard fixes them |
+| Whether the trend is damped | An undamped linear trend extrapolates without limit, which is the main risk at long horizons |
+
 ## Governing rules
 
 - **DMD-R9** — horizon and bucket are stated, and they matter more here than for a level-only

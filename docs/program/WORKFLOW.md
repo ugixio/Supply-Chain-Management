@@ -598,6 +598,24 @@ mirror-coverage bar) · duplicated formulas across TS/Python with one past diver
   DMD-R9 on horizon and bucket, and Holt-Winters' two-season requirement as arithmetic).
   **The scripted-edit lesson paid for the fourth time:** four replacements left dangling tails
   because the original line continued onto the next. Caught by reading the diff, fixed by hand.
+- 🟩 **C1c · WHAT — the questions a project must answer, named (2026-07-27).** Every node that
+  leaves a value to the project now carries a **Project-chosen inputs** table: **58 of 154**, up from
+  9. The rest are pure identities (conservation, a sum, a ratio of two given quantities) and
+  correctly have no free parameter — the section is omitted rather than filled with "none".
+  Measured by cue phrase rather than guessed: 49 nodes said "the project must choose this" in prose
+  while giving the reader nothing to scan.
+  **A recurring second row nobody thinks of:** the *population, period or basis*. Two teams
+  computing the same formula over different denominators disagree while both being right — labour
+  productivity per paid/present/on-task hour, PPM over received/inspected/shipped units, OTD against
+  requested/promised/confirmed dates, LTIFR per 200,000 or 1,000,000 hours (a factor of five).
+  **Three more surviving targets, found only because the table forced the question:** MPS stability
+  "below the 0.85 bar", a PPM target of 500, and `PO_APPROVAL_THRESHOLD_CENTS = 500,000` still shown
+  as *the* worked example while the prose above it said the threshold was project-chosen. Showing
+  the invented number is how it gets copied.
+  **And two more stale z-values:** `z = 1.65` from the lookup table ADR-0028 retired, in the
+  Average-Max and combined-variability examples. Correcting the combined example changed its
+  conclusion (93 units of under-buffering, not 95).
+  `templates/concept.md` aligned to the table form so new nodes inherit it.
 - ⬜ **C5 · WHAT** — Re-check `docs/standards/REGULATORY_FRAMEWORK.md` against current law; it is
   now one of the most load-bearing documents in the repository.
 

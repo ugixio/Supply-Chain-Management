@@ -57,6 +57,14 @@ re-deriving it, provided the stamp is never applied to an open order.
 POR = 89%. Factor rates (92%, ~96%, ~97%) multiplied would predict ≈ 85.7% — the
 gap is failure correlation.
 
+## Project-chosen inputs
+
+| Input | Why the project must choose it |
+|---|---|
+| Which elements count as "perfect" | SCOR names four; folding documentation accuracy into invoice accuracy gives a different, higher rate |
+| The on-time basis for the OTIF element | Requested, promised or confirmed date (CPT-0082) |
+| What counts as a damage or quality claim | A claim raised, or a claim upheld — the two differ by every disputed claim |
+
 ## Governing rules
 
 - **ORD-R6** — a perfect-order measure is the **conjunction** of its elements, so it is at most its

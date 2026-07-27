@@ -56,9 +56,17 @@ D̄ = 50, D_max = 80 units/day; LT_avg = 7, LT_max = 10 days:
 
     ss = (80 × 10) − (50 × 7) = 800 − 350 = 450 units
 
-Compare CPT-0014 on the same SKU (σ_D = 20, 95%): ⌈1.65 × 20 × √7⌉ = **88 units**. The
-Average-Max buffer is 5× larger — the price of covering the joint worst case of both
-demand and lead time with no probability weighting at all.
+Compare the statistical form on the same SKU (σ_D = 20, service level 95% → z = 1.6449):
+⌈1.6449 × 20 × √7⌉ = **88 units**. The Average-Max buffer is roughly **5× larger** — the price of
+covering the joint worst case of both demand and lead time with no probability weighting at all.
+That is not a mistake in either method: it is what "no probability weighting" costs.
+
+## Project-chosen inputs
+
+| Input | Why the project must choose it |
+|---|---|
+| What counts as "maximum" | An observed peak, a percentile, or a planning assumption — each gives a different buffer |
+| The observation window | A longer window raises the maximum and so raises the buffer, indefinitely |
 
 ## Governing rules
 

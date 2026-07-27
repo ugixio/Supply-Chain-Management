@@ -49,6 +49,14 @@ relations:
 Ordered 12,400 units, shipped 12,090 → fill 97.5%. Of 3,100 lines, 87 backordered →
 2.81%.
 
+## Project-chosen inputs
+
+| Input | Why the project must choose it |
+|---|---|
+| The fill-rate target | A service commitment, weighed against the inventory it takes to hold |
+| Line, unit or order fill | The same shipments give three different rates; an order-fill figure is always the harshest |
+| Whether a late-but-complete delivery counts as filled | Fill and timeliness are separable, and conflating them hides which one failed |
+
 ## Governing rules
 
 - **INV-R5** — a physical balance cannot be negative; whether unmet demand becomes a backorder is the project's fulfilment policy

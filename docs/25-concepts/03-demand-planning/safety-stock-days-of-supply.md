@@ -62,10 +62,16 @@ D̄ = 50 units/day, LT_avg = 7 days, LT_max = 10 days, planner cover = 5 days:
 - stated cover of 5 days: ss = 50 × 5 = **250 units**
 - cover derived from lead-time spread (max 10, avg 7): ss = 50 × 3 = **150 units**
 
-Same demand, same SKU, two definitions — which is why the node insists the project say which
-one it means.
+Same SKU, same data, **two different buffers** — because these are two different methods sharing a
+name. A project that switches between them without saying so has changed its service level by
+accident.
 
-Same SKU, same data, two different buffers — because they are two different methods.
+## Project-chosen inputs
+
+| Input | Why the project must choose it |
+|---|---|
+| Which of the two forms applies | Chosen cover, or lead-time spread — form (b) collapses to zero on stable lead times |
+| The cover in days, if form (a) | A planner's judgement; nothing external fixes it |
 
 ## Governing rules
 

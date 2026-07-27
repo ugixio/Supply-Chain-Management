@@ -56,6 +56,13 @@ Building 10,000 m³, aisle loss 0.35 → usable 6,500 m³; used 5,200 m³ →
 `u = 0.80`. Locations 9,200/10,000 → fill 92% — high enough that receiving has little slack, and
 `storage_utilization` grades it OPTIMAL (≤ 95) but nearing congestion.
 
+## Project-chosen inputs
+
+| Input | Why the project must choose it |
+|---|---|
+| What counts as usable space | Gross footprint, storable cube, or occupied locations answer different questions |
+| The target band | High utilization removes the slack that absorbs a peak; there is no universally good level |
+
 ## Governing rules
 
 - None direct; feeds capacity decisions that surface as slotting or wave planning work.

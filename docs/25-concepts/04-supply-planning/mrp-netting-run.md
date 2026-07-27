@@ -62,6 +62,14 @@ OH 50, SS 20, gross [40, 60, 30], receipts [0, 0, 0], L4L, LT 1:
 t1: avail 50, net = 40+20−50 = 10 → receipt 10 (release t0), OH 20.
 t2: net = 60+20−20 = 60 → receipt 60 (release t1). t3: net 30 → receipt 30.
 
+## Project-chosen inputs
+
+| Input | Why the project must choose it |
+|---|---|
+| Whether safety stock is netted | Including it makes MRP replan to restore the floor every run — standard, but it changes what a shortage means |
+| The planning horizon and bucket size | Weekly buckets hide within-week timing; a horizon shorter than cumulative lead time cannot plan the long-lead items |
+| What happens to a past-due release | Expedite, re-plan, or refuse — the arithmetic produces it either way |
+
 ## Governing rules
 
 - **SPL-R5** — netting **conserves**: `net = gross − available − scheduled receipts`, which is the

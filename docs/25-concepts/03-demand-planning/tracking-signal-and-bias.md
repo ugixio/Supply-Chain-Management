@@ -70,10 +70,17 @@ rounding noise for high-volume SKUs. How wide it is trades false alarms against 
 - TS = 30 / 15 = **2.0** → within ±4, so not flagged under the classical limit
 - ME = +15 on a mean actual of 110 → a clear **under-forecast** lean
 
-**The two measures disagree here by design.** The signal has not breached its control limit, while
-the mean error already shows a consistent directional lean — because a control limit is deliberately
-insensitive, to avoid re-tuning a forecast on noise. Any dead band applied to the bias direction is
-the project's choice; two observations are far too few to conclude anything from either measure.
+**The two disagree here by design.** The signal has not breached its limit while the mean error
+already shows a lean — a control limit is deliberately insensitive, to avoid re-tuning on noise.
+Two observations conclude nothing either way.
+
+## Project-chosen inputs
+
+| Input | Why the project must choose it |
+|---|---|
+| The control limit | ±4 MAD is the classical reference (Brown 1959), not a requirement |
+| Any dead band on the bias direction | Below it, a lean is not acted on; there is no standard width |
+| What a breach obliges | Re-select the method, re-fit, or escalate — a signal with no action is decoration |
 
 ## Governing rules
 

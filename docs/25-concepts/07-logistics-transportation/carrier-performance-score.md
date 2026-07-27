@@ -53,6 +53,14 @@ relations:
 OTD 94%, claims 1.2%, variance 0.8 days →
 `56.4 + (1 − 0.24)·25 + (1 − 0.2667)·15 = 56.4 + 19 + 11 = **86.4**`.
 
+## Project-chosen inputs
+
+| Input | Why the project must choose it |
+|---|---|
+| The components and their weights | The lane profile decides what matters; weights only have to normalize |
+| Whether any component is a gate | A safety or compliance failure that merely loses points can be outvoted by price |
+| The measurement period | A score over a quarter and over a year reward different behaviour |
+
 ## Governing rules
 
 - **SCM-R3** — a carrier performance record is corrected by a further entry, never destroyed.

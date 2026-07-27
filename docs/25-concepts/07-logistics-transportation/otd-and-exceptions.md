@@ -56,6 +56,14 @@ relations:
 the project set; what the number does say is that **11 shipments missed**, and the exception review
 works on those 11, not on the percentage.
 
+## Project-chosen inputs
+
+| Input | Why the project must choose it |
+|---|---|
+| The date the promise is measured against | Requested, promised or confirmed — the three give different rates from the same deliveries |
+| How in-transit shipments are treated | Excluding them flatters the rate; including them as misses penalizes unfinished work |
+| Any grace window | A delivery an hour late is late unless the project says otherwise |
+
 ## Governing rules
 
 - **SCM-R9** — the dates being compared are ISO 8601, and instants are UTC: an on-time test across

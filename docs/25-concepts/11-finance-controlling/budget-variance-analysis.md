@@ -54,6 +54,14 @@ relations:
 Freight: budget 120,000¢, actual 138,000¢ → +15% UNFAVORABLE, explanation required.
 Packaging: 50,000 → 49,200 → −1.6% ON_BUDGET.
 
+## Project-chosen inputs
+
+| Input | Why the project must choose it |
+|---|---|
+| The on-budget band | The width below which a variance is not investigated is finance policy |
+| The level requiring explanation | An escalation threshold, not an accounting rule |
+| How an unbudgeted category is handled | It has no percentage variance, and that is the case most worth seeing |
+
 ## Governing rules
 
 - **SCM-R3** — a variance record and the explanation attached to it are corrected by a further

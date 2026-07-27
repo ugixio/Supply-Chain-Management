@@ -67,6 +67,14 @@ agree in general: an interpolated table over-estimates z by up to ~1.6% at some 
 that bias lands in every safety stock derived from it. **Use the exact inverse normal**; the
 rounding to whole units belongs at the end, once.
 
+## Project-chosen inputs
+
+| Input | Why the project must choose it |
+|---|---|
+| The cycle service level | A service commitment weighed against the cost of capital; it sets z |
+| The demand-variability estimate and its window | σ_D from a chosen history, and sample versus population estimator applied consistently |
+| Whether lead time is treated as stable | This form assumes it; if it varies, use the combined form (CPT-0015) |
+
 ## Governing rules
 
 - **INV-R5** — a physical balance cannot be negative; whether a shortfall is refused or recorded for investigation is the project's decision.

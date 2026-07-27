@@ -56,11 +56,18 @@ relations:
 
 ## Project-chosen inputs
 
-> Every value an organization decides. Name the decision and the standard that constrains it,
-> then stop — supplying a "sensible default" here is how one company's policy becomes every
-> project's inheritance (ADR-0037). Write "none" if the concept genuinely has no free parameter.
+> Every value an organization decides. Name the decision and **why it is the project's**, then
+> stop — supplying a "sensible default" here is how one company's policy becomes every project's
+> inheritance (ADR-0037). Omit the section only where the concept is a pure identity with no free
+> parameter (a conservation law, a sum, a ratio of two given quantities).
 
-- <the parameter> — <what it follows from; never a value>
+| Input | Why the project must choose it |
+|---|---|
+| <the parameter or the choice> | <what it follows from — a contract, a service commitment, a cost of capital; never a value> |
+
+A second row usually exists and is easy to miss: the **population, period or basis** the concept is
+computed over. Two teams computing the same formula over different denominators disagree while both
+being right.
 
 ## Worked example
 

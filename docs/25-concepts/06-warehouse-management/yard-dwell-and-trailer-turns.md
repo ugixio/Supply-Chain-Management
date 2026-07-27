@@ -52,6 +52,13 @@ relations:
 Arrive 06:00, depart 11:30 → dwell 5.5 h → benchmark missed, detention risk.
 Doors process 21 trailers over 56 door-hours → `21/56×8 = 3.0` turns → benchmark met.
 
+## Project-chosen inputs
+
+| Input | Why the project must choose it |
+|---|---|
+| When the dwell clock starts and stops | Arrival at the gate, at the yard, or at the dock give materially different dwell figures |
+| Whether detention-liable time is separated | The commercially meaningful figure is the time the project pays for |
+
 ## Governing rules
 
 - **WHS-R5** — task quantities conserve; the task lifecycle itself is the project's design.

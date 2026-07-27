@@ -65,6 +65,14 @@ know the balance first, while letting the projection report −5 surfaces the ga
 upstream. A *reader* of an event log can honestly only do the latter — it cannot refuse a movement
 that was already recorded.
 
+## Project-chosen inputs
+
+| Input | Why the project must choose it |
+|---|---|
+| Where the non-negative check sits | Refusing the movement keeps the log always-valid; letting the projection report a negative surfaces an upstream gap |
+| The ordering guarantee on the log | Timestamps alone do not order same-instant movements; a sequence number does |
+| The snapshot cadence, if any | A snapshot is an optimization and must stay reproducible from the log |
+
 ## Governing rules
 
 - **INV-R5** — a physical balance cannot be negative; **SCM-R4** — every

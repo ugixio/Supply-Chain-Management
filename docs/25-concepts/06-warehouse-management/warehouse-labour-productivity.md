@@ -57,6 +57,14 @@ Picker completes 540 lines in 6.0 h → `LPH = 90` → RF_SCANNER band.
 Receiving crew 960 units in 8 h → `UPH = 120`. Whether 120 is good is not something this
 node can say.
 
+## Project-chosen inputs
+
+| Input | Why the project must choose it |
+|---|---|
+| What counts as a productive unit | Lines, units or orders per hour measure different work and are not comparable |
+| Which hours are in the denominator | Paid, present, or on-task hours give three different rates from the same day |
+| The expectation each role is held to | An engineered standard is a project's own study, not a published figure |
+
 ## Governing rules
 
 - **WHS-R5** — task quantities conserve: completions never exceed assignments.

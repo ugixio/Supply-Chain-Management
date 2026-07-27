@@ -49,13 +49,24 @@ relations:
 
 ## Worked example
 
-3 defective in 8,500 received → `3/8500 × 10⁶ = 352.94 PPM`; target 500 →
-variance −147.06 (good), meeting target if FPY bar also passes.
+3 defective in 8,500 received → `3/8500 × 10⁶ = 352.94 PPM`. Against a contractual target the
+signed variance says how far inside or outside it sits — but note the sample: **three units**. One
+more defective would move this to 470 PPM, so at these volumes the metric is dominated by whether a
+single unit happened to fail.
+
+## Project-chosen inputs
+
+| Input | Why the project must choose it |
+|---|---|
+| The PPM target, if any | A customer contract term; automotive and commodity expectations differ by orders of magnitude |
+| What counts as a defective unit | Severity classes change the count, so the class definitions must precede the metric |
+| The population and period | Received, inspected or shipped units are three different denominators |
 
 ## Governing rules
 
-- Feeds the supplier scorecard quality group (SUP rules) and QMS KPI records
-  (soft-delete only, SCM-R3).
+- **QMS-R7** — the rate is stated with its opportunity base: PPM counts defective *units*, so it
+  is not comparable with a DPMO figure. **SUP-R5** — an evaluation that consumes this rate records
+  what was assessed. **SCM-R3** — the record is corrected, never destroyed.
 
 ## Related
 

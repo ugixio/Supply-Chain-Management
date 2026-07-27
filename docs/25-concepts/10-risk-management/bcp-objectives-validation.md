@@ -51,6 +51,14 @@ RTO 24h, RPO 4h, MTPD 72h → valid (24 ≤ 72, 4 ≤ 24).
 RTO 96h, MTPD 72h → violation: recovery exceeds tolerance — re-engineer the recovery
 strategy or renegotiate the MTPD with the business.
 
+## Project-chosen inputs
+
+| Input | Why the project must choose it |
+|---|---|
+| The recovery objectives themselves | RTO, RPO and MTPD are business decisions about tolerable loss |
+| What counts as validation | A tabletop walkthrough and a full failover are not the same evidence |
+| The validation cadence | An objective validated once is an objective validated for one configuration |
+
 ## Governing rules
 
 - **RSK-R2** — residual risk cannot exceed inherent risk: a recovery objective claimed but never

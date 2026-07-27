@@ -56,6 +56,14 @@ relations:
 DEHP (CAS 117-81-7), 0.3% w/w in cable sheathing, 2.4 t/yr → above threshold →
 notify ECHA + inform downstream + (conservative) SDS → ACTION_REQUIRED.
 
+## Project-chosen inputs
+
+| Input | Why the project must choose it |
+|---|---|
+| The evidence a supplier declaration must carry | REACH fixes the 0.1% w/w duty, not what proof the project accepts |
+| The re-screening cadence | The Candidate List is revised, so a one-time screen expires |
+| What an unanswered declaration request means | Unknown is not compliant — but whether it blocks a shipment is the project's call |
+
 ## Governing rules
 
 - **CMP-R3** — a Candidate List substance above 0.1% w/w triggers REACH duties; **CMP-R2** — the assessment records its provenance; **SCM-R7** — retention.

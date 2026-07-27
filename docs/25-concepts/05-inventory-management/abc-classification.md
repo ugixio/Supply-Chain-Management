@@ -51,6 +51,14 @@ Sort by ACV descending, accumulate share `p`:
 
 ACVs 500k/300k/150k/50k (total 1M): cumulative 50%→A, 80%→A, 95%→B, 100%→C.
 
+## Project-chosen inputs
+
+| Input | Why the project must choose it |
+|---|---|
+| The class cut points | Pareto fixes the ordering, not where A becomes B |
+| The period the value is measured over | Change the period and the ranking changes |
+| The reclassification discipline | Without hysteresis a SKU near a boundary flips class — and control policy — on noise |
+
 ## Governing rules
 
 - **INV-R4** — the value that drives the ranking is the sum of movements over a stated period;

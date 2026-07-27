@@ -48,6 +48,13 @@ relations:
 Costs 1.1M + 0.6M + 1.9M + 0.8M + 0.3M = 4.7M on 52M revenue → **9.04% →
 world_class**, with logistics 3.65% the dominant component.
 
+## Project-chosen inputs
+
+| Input | Why the project must choose it |
+|---|---|
+| Which costs count as supply-chain cost | The scope decides the ratio; benchmarks across companies rarely share one |
+| The revenue basis | Gross, net of returns, or net of discounts |
+
 ## Governing rules
 
 - **SCM-R14** — money is exact. **SCM-R3** — a period cost record is corrected by a further

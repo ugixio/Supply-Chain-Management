@@ -45,8 +45,17 @@ relations:
 
 ## Worked example
 
-Planned 12,000; produced 11,340 good units → **94.5%** — just under the bar;
-the gap analysis goes to the S&OP supply review.
+Planned 12,000; produced 11,340 good units → **94.5%**. The 660-unit shortfall is the number the
+supply review acts on; whether 94.5% clears a bar is the project's own threshold, and an aggregate
+this close to 100% can still hide a family that missed badly (see below).
+
+## Project-chosen inputs
+
+| Input | Why the project must choose it |
+|---|---|
+| The acceptable attainment level | The S&OP process owner's decision, not a published figure |
+| Whether over-production counts as a miss | This ratio alone does not penalize it; schedule adherence does |
+| How an authorized re-baseline is handled | Re-baseline and annotate, or measure against the original — averaging the two measures nothing |
 
 ## Governing rules
 

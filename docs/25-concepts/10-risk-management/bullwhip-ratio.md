@@ -61,6 +61,14 @@ variability of the demand that caused them. The structural share of that comes f
 (CPT-0075) — the remainder is what demand-signal sharing, batch sizes and lead times can
 address, and it is cheaper to remove than to buffer.
 
+## Project-chosen inputs
+
+| Input | Why the project must choose it |
+|---|---|
+| The severity bands, if any | What amplification is worth acting on depends on what the chain can absorb |
+| The variance estimator and window | The same estimator on both series, or the ratio moves for no real reason |
+| How a zero-variance denominator is reported | Undefined or refused; returning zero reads as no amplification |
+
 ## Governing rules
 
 - **SCM-R9** — the periods being compared are ISO 8601 intervals. No rule fixes an acceptable

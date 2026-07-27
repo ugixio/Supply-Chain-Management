@@ -56,10 +56,20 @@ relations:
 Supplier operates in XUAR, ships HS 610910 (T-shirts), holds clearance docs → HIGH:
 importable only with the evidence package ready for CBP detention review.
 
+## Project-chosen inputs
+
+| Input | Why the project must choose it |
+|---|---|
+| The evidence collected at each risk level | The statute fixes the presumption and the clear-and-convincing standard, not the dossier |
+| How deep the supply chain is traced | The presumption reaches any input, so tier-1 visibility is a decision to accept exposure |
+| What a high-risk finding blocks | Refuse, hold pending evidence, or re-source |
+
 ## Governing rules
 
-- **SCM-R6** — XUAR suppliers must provide `clearanceDocumentRef` (the rule this
-  classification enforces).
+- **SCM-R6** — goods with any Xinjiang nexus are **presumed** made with forced labour and need
+  clear-and-convincing rebuttal evidence to enter US commerce. This classification is how a project
+  decides where to look; the evidence it then holds is its own design. **CMP-R2** — the assessment
+  records its provenance. **SCM-R7** — the documentation is retained.
 
 ## Related
 

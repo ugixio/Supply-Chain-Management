@@ -57,6 +57,14 @@ n = 5 (A₂ = 0.577, D₄ = 2.114, d₂ = 2.326), X̄̄ = 10.02, R̄ = 0.45 →
 X̄ UCL/LCL = 10.02 ± 0.577×0.45 = **10.280 / 9.760**; R UCL = 0.951, LCL = 0;
 σ̂ = 0.45/2.326 = 0.1935.
 
+## Project-chosen inputs
+
+| Input | Why the project must choose it |
+|---|---|
+| Subgroup size and sampling frequency | They define what within-subgroup variation means, and therefore the limits themselves |
+| The baseline period the limits come from | Limits are established once and held; recomputing them lets a drifting process widen its own limits |
+| Whether a point may be excluded from the baseline | Sometimes legitimate — but only with the reason recorded, or the limits cannot be reproduced |
+
 ## Governing rules
 
 - **QMS-R6** — a chart built from samples shows what the samples showed; excluding a point from the

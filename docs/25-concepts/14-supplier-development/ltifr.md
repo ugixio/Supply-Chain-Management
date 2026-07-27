@@ -50,6 +50,14 @@ relations:
 3 lost-time injuries over 2,400,000 hours → `3 × 10⁶ / 2.4 × 10⁶ = 1.25` lost-time injuries
 per million hours worked.
 
+## Project-chosen inputs
+
+| Input | Why the project must choose it |
+|---|---|
+| The exposure base | Per 200,000 or per 1,000,000 hours are both in use, and the two differ by a factor of five |
+| What counts as a lost-time injury | Jurisdictional definitions differ; a rate is only comparable within one definition |
+| Whether contractor hours are included | Excluding them can move the rate more than any safety programme |
+
 ## Governing rules
 
 - **SDV-R4** — the rate records its evidence: self-reported and audit-verified injury data are not

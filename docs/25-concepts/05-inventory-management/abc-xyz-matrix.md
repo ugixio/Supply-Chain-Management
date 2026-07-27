@@ -53,6 +53,14 @@ relations:
 SKU: ACV ranks A; history μ = 100, σ = 8 → CV 0.08 → X → **AX**: automate
 replenishment, cycle-count frequently, safety stock from CPT-0012.
 
+## Project-chosen inputs
+
+| Input | Why the project must choose it |
+|---|---|
+| The cut points on both axes | Two shifting boundaries churn twice as easily as one |
+| The variability estimator and its window | Sample versus population σ moves a borderline SKU across a class boundary |
+| The policy each of the nine cells obliges | The matrix is only useful if the cells differ in what they require |
+
 ## Governing rules
 
 - **INV-R4** — the ACV behind the A/B/C dimension is derived from movements, so the class inherits

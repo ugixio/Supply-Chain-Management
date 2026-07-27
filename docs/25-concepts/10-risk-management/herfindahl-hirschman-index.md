@@ -58,6 +58,14 @@ Spend shares 50%/30%/20% → `2500 + 900 + 400 = 3800` → **HIGH** — the 50% 
 a structural dependency; dual-sourcing to 35/35/30 drops HHI to 3350… still HIGH:
 concentration falls slowly, which is the point of the squared term.
 
+## Project-chosen inputs
+
+| Input | Why the project must choose it |
+|---|---|
+| The concentration limit that triggers action | Merger-review reference values exist for markets, not for a project's supplier base |
+| The scope the shares are computed over | By category, by site or globally — a diversified total can hide a single-source category |
+| The input scale | Percentage points or fractions, applied consistently; the two differ by 10,000 |
+
 ## Governing rules
 
 - **RSK-R5** — a concentration index is a ratio, not a rank, so unlike a matrix score it *can* be

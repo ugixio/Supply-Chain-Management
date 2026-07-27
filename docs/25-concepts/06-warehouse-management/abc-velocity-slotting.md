@@ -17,50 +17,59 @@ relations:
 
 ## Formula
 
-Sort SKUs by pick frequency descending, accumulate, classify by cumulative share `p`:
+Sort SKUs by pick frequency descending, accumulate, and cut the ranked list where the
+cumulative share `p` crosses each class boundary:
 
-    PY:  p ≤ 80% → PRIMARY   · p ≤ 95% → SECONDARY   · else → BULK
-    TS:  p ≤ 50% → A/GOLDEN  · p ≤ 75% → B/SILVER    · else → C/BRONZE
+    p(k) = Σᵢ₌₁..ₖ picksᵢ / Σ picks        →  class(k) = the first class whose bound p exceeds
 
 | Symbol | Meaning | Unit |
 |---|---|---|
-| p | cumulative pick share after this SKU | percent |
+| p | cumulative pick share after this SKU | fraction of total picks |
 | picks | SKU pick frequency in the period | picks/period |
 
-**Slotting effectiveness** (how good the current assignment is):
+**Slotting effectiveness** — how good the current assignment is against the best possible one:
 
     effectiveness = optimised_travel_distance / actual_travel_distance
 
-100% = optimal; below 80% triggers a re-slotting recommendation, with the potential
-travel reduction reported as `1 − effectiveness`.
+One means the current slotting is already optimal, and `1 − effectiveness` is the travel that
+re-slotting would remove.
 
 ## Inputs and outputs
 
 - **Inputs:** per-SKU pick frequency (and volume, for the CPOI shown alongside);
   effectiveness takes actual and ABC-optimised travel metres (optimised > 0).
-- **Output:** zone per SKU. TS also emits `cpoi`, `abcRank` and a max distance-from-dock
-  budget (A ≤ 10 m, B ≤ 25 m, C ≤ 100 m). Zero total picks → everything lands in the
-  slowest zone (PY) / 100% cumulative (TS).
+- **Output:** the class, and therefore the zone, per SKU.
+- **Degenerate input:** with zero total picks the cumulative share is undefined — there is no
+  ranking to cut. Placing everything in the slowest zone is a defensible answer; returning "no
+  classification" is another. What is not defensible is dividing by zero and reporting a class.
 
 ## Assumptions and limits
 
-- Pareto-shaped demand: a small share of SKUs earns most picks. With flat demand every
-  break-point classification is arbitrary.
+- **Pareto-shaped demand is an assumption, not a guarantee.** The method works because a small
+  share of SKUs earns most picks. With flat demand every break-point is arbitrary and the
+  classification carries no information — check the curve before trusting the classes.
 - Frequency measured over a season-representative window; a slotting run on peak-only
   data mis-slots seasonal items.
 - **Does not apply when:** picks are goods-to-person automated, or item weight/hazard
   class dictates placement regardless of velocity.
 
-## Worked example (PY thresholds)
+## Project-chosen inputs
 
-Picks: S1=500, S2=300, S3=150, S4=50 (total 1000). Cumulative: S1 50%→PRIMARY,
-S2 80%→PRIMARY, S3 95%→SECONDARY, S4 100%→BULK.
+- **The number of classes, their names and every break-point.** These follow from the warehouse
+  itself: how many distinct zones exist, how much closest-to-dispatch space there is, and how
+  much travel a class change actually saves. Two organizations cutting the same ranked list at
+  different points are both right for their own building — a break-point copied from elsewhere
+  slots SKUs for someone else's layout.
+- **The measurement window**, and whether picks are counted by line, by unit or by visit.
+- **The re-slotting trigger** — how far below optimal the effectiveness has to fall, and how
+  often re-slotting is worth its labour cost.
 
-## Divergence (recorded)
+## Worked example
 
-**TS and PY use different break-points** (50/75 vs 80/95) and different zone names — the
-same SKU list slots differently per language. Convergence is a U8/U15b-class owner call;
-until then Python is the analytical reference, TS the domain-side recommendation.
+Picks: S1 = 500, S2 = 300, S3 = 150, S4 = 50 (total 1,000). Ranked cumulative shares are
+50%, 80%, 95%, 100%. Where the class boundaries sit decides how those four SKUs split — cutting
+at 80/95 puts S1 and S2 in the fastest class, cutting at 50/75 puts only S1 there. The ranking
+is the same either way; the classification is not.
 
 ## Governing rules
 

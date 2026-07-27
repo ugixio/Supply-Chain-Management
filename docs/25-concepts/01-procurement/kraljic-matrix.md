@@ -26,9 +26,9 @@ A 2×2 split at a threshold on each axis:
 
 | Symbol | Meaning | Unit |
 |---|---|---|
-| profit_impact_score | spend %, criticality, quality impact | 0–10 (PY) / HIGH·LOW (TS) |
-| supply_risk_score | concentration, geo risk, substitutability | 0–10 (PY) / HIGH·LOW (TS) |
-| threshold | high/low midpoint | default 5.0 (PY) |
+| profit_impact | spend share, criticality, quality impact | any ordered scale, or directly high/low |
+| supply_risk | concentration, geographic risk, substitutability | any ordered scale, or directly high/low |
+| threshold | where high separates from low on each axis | **project-chosen** |
 
 ## Inputs and outputs
 

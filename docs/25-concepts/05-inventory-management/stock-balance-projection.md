@@ -27,14 +27,19 @@ relations:
 
 ## Inputs and outputs
 
-- **PY:** events sorted by timestamp; **raises when any outbound would drive balance
-  negative** (SCM-R1 enforced during replay) and on unknown movement types.
-  Returns one float balance.
-- **TS:** projects a `Map` keyed `sku::warehouseId`; RESERVATION /
-  RESERVATION_RELEASE are ignored (reservations affect availability, not physical
-  balance); it does **not** guard negativity — negative balances surface for
-  investigation instead of throwing (recorded divergence, both defensible: the
-  writer-side guard vs the reader-side projection).
+- **Inputs:** the movement events for a stock-keeping unit at a location, replayed in
+  timestamp order. Order matters: the same events applied in a different sequence can pass or
+  fail a non-negativity check even though the final balance is identical.
+- **Output:** the balance implied by those events.
+- **Reservations are not movements.** A reservation changes what is *available* to promise
+  without changing what is physically present, so a projection of physical balance ignores it.
+  Conflating the two double-counts commitments.
+- **Where the non-negativity check belongs is a project decision, and both answers are
+  defensible.** Refusing the movement that would drive the balance negative keeps the ledger
+  always-valid but requires the writer to know the current balance. Letting the projection
+  report a negative balance surfaces it for investigation instead — which is what a *reader*
+  of an event log can honestly do, since the impossible state is evidence that something
+  upstream was missed.
 
 ## Assumptions and limits
 

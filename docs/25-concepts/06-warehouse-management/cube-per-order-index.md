@@ -21,14 +21,14 @@ relations:
 
 | Symbol | Meaning | Unit |
 |---|---|---|
-| volume | unit storage volume | cm³ (PY) / m³ (TS) |
-| pick_frequency | picks in the period | orders/month (PY) / picks per period (TS) |
+| volume | storage volume of one unit | any volume unit, **used consistently** |
+| pick_frequency | picks in the measurement period | picks per period |
 
 ## Inputs and outputs
 
 - **Inputs:** per-SKU volume `> 0`, pick frequency `≥ 0`.
 - **Output:** CPOI, dimensionless ratio (volume-units per order). `pick_frequency = 0` →
-  `∞` (PY returns `float("inf")`, TS `Infinity`) — flagged "zero picks, consider
+  unbounded — a SKU occupying space with no picks at all is the signal, flagged as "consider
   discontinuation" rather than slotted.
 
 ## Assumptions and limits

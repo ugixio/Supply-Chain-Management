@@ -21,21 +21,21 @@ Per period t (Orlicky's logic):
 
     available_t = projected_on_hand_{t−1} + scheduled_receipt_t
     net_req_t = max(0, gross_req_t + safety_stock − available_t)
-    planned_receipt_t = lot_sizing(net_req)           (PY: CPT-0142 rules;
-                                                       TS: ceil to lot-size multiple)
+    planned_receipt_t = lot_sizing(net_req)           lot-sizing rule is project-chosen
+                                                      (see CPT-0142)
     planned_release = receipt offset back by lead_time
 
 | Symbol | Meaning | Unit |
 |---|---|---|
 | gross_req / scheduled_receipt | demand / firm inbound per period | units |
 | safety_stock | floor added into netting | units |
-| lead_time | release offset | periods (PY) / days (TS) |
+| lead_time | release offset | **the same bucket the plan is timed in** — periods or days, not both |
 
 ## Inputs and outputs
 
-- **PY:** `MRPInput` list (per-SKU horizons, lot rule, costs) →
+- **Inputs:** per-SKU horizons, the lot-sizing rule and the costs →
   `MRPRecord{buckets, total_planned_releases}`.
-- **TS:** per-SKU scalars + dated requirement/receipt lists → `MRPRecord` with
+- **Output:** per-SKU planned orders with their release dates, plus
   ISO-dated buckets; release date = period − leadTimeDays (calendar subtraction).
 
 ## Assumptions and limits

@@ -34,7 +34,8 @@ are the unit the rest of working-capital management speaks in:
 
 - **Input:** `turnoverRatio` — the **annual** ITR. Feeding a quarterly ITR silently yields
   a figure 4× too large.
-- **Output:** days. Returns `Infinity` (TS) / `inf` (PY) when ITR = 0.
+- **Output:** days. Undefined when turnover is zero — stock that never moves has no
+  days-outstanding figure, and reporting a finite number would imply it does.
 - **Compounding sentinel:** CPT-0019 returns `0.0` for zero average inventory, and this
   function maps 0 → infinity. So an item with **no stock at all** reports **infinite
   days of stock** — the exact inverse of the truth. Guard the zero-inventory case upstream.

@@ -23,7 +23,7 @@ relations:
     Non-EU company:  same turnover bands on net EU turnover, no employee test
     else NOT_IN_SCOPE
 
-`hasCriticalImpacts` (TS) flags a due-diligence record containing any identified
+A due-diligence record flags whether it contains any identified
 impact with severity CRITICAL/SEVERE.
 
 ## Regulatory drift — RECORDED (verified 2026-07)

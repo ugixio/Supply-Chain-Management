@@ -34,7 +34,9 @@ normal-inspection table (General Inspection Level II). Disposition:
   the TS side carries Ac/Re for 1.5/4.0 but `getAQLSampleSize` returns n only).
 - **Output:** PY `(n, Ac, Re)` + a `LotDisposition`; TS the sample size, capped at 200
   for lots > 3,200.
-- Very large lots (> 500,000) fall back to n = 1250, Ac 21/Re 22 (PY).
+- The largest lot-size range in the ISO 2859-1 general-inspection-level-II table caps the
+  sample size; lots beyond it use that last row rather than extrapolating. The table is the
+  standard's, and it is not interpolated.
 
 ## Assumptions and limits
 

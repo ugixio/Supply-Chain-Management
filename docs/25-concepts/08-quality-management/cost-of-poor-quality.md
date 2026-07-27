@@ -28,9 +28,9 @@ Per-NCR mapping (`copq_by_category` / TS `totalCopqCents`):
 
 | Symbol | Meaning | Unit |
 |---|---|---|
-| prevention / appraisal | planning, training / inspection, testing | cents (PY aggregate: float currency) |
+| prevention / appraisal | planning, training / inspection, testing | currency, in minor units |
 | scrap, rework, return_freight | per-NCR failure costs | integer cents |
-| revenue | period revenue | integer cents (PY `copq`: float) |
+| revenue | period revenue | currency, in minor units |
 
 ## Inputs and outputs
 

@@ -31,10 +31,13 @@ DSO, DIO (via inventory turnover = COGS/inventory), DPO, C2C, turnover, gross ma
 
 ## Inputs and outputs
 
-- **PY:** the three components (already computed) → C2C float; classification of the
-  result.
-- **TS:** raw period-end balances in cents → `WorkingCapitalSnapshot`; zero
-  denominators produce 0 (PY components raise instead — recorded divergence).
+- **Inputs:** the three component durations, or the balances they are computed from.
+- **Output:** the cycle in days. It can legitimately be **negative** — that means suppliers are
+  financing the operation, which is a business model rather than an error.
+- **A zero denominator is a real case, not an edge case.** A period with no cost of sales or no
+  revenue has no meaningful days-outstanding figure. Whether that reports as zero, as undefined,
+  or refuses to compute is a project decision — but reporting zero is the one option that reads
+  as excellent performance, so it is the one to choose deliberately rather than by default.
 
 ## Assumptions and limits
 

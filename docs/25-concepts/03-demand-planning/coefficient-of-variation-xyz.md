@@ -12,33 +12,43 @@ relations:
 ---
 # Coefficient of Variation and XYZ Classification (CPT-0018)
 
-> CV measures demand **predictability** on a scale-free basis; XYZ turns it into three
-> policy buckets. Crossed with ABC (consumption value) it gives the 9-box grid that drives
-> replenishment strategy.
+> CV measures demand **variability** on a scale-free basis, so a fast mover and a slow mover can
+> be compared. XYZ turns that continuous measure into classes; crossed with ABC (consumption
+> value) it gives the grid many organizations use to pick a replenishment policy.
 
 ## Formula
 
     CV = σ / μ
 
-| Class | Range | Demand | Replenishment policy |
-|---|---|---|---|
-| **X** | CV < 0.10 | Very stable | Fixed replenishment, EOQ (CPT-0017) |
-| **Y** | 0.10 ≤ CV < 0.25 | Moderate | Periodic review, larger buffer |
-| **Z** | CV ≥ 0.25 | Erratic | Dynamic / make-to-order; forecast with care |
+where `σ` is the standard deviation of demand over the measurement period and `μ` its mean.
+XYZ then partitions the CV range into classes, ordered from most to least predictable.
 
-Both implementations use identical thresholds, matching `CLAUDE.md`.
+| Symbol | Meaning | Unit |
+|---|---|---|
+| σ | standard deviation of demand | same unit as demand |
+| μ | mean demand | same unit as demand |
+| CV | coefficient of variation | dimensionless |
+
+## Project-chosen inputs
+
+- **The class boundaries.** Common convention puts the first cut near 0.1 and the second near
+  0.25, but these are conventions, not derived optima — they were chosen because they sort a
+  typical assortment usefully, and a different assortment sorts better at different cuts.
+- **The number of classes and what each obliges** — which replenishment policy follows from
+  which class is a planning decision.
+- **The bucketing period** (see the limits below — it changes the answer).
+- **The estimator for σ:** population (`ddof = 0`) or sample (`ddof = 1`). This is not a
+  technicality. On a short history the sample estimator is materially larger — with ten
+  observations, by roughly 5% — which is enough to move a borderline SKU across a class
+  boundary. Whichever is chosen must be used consistently, because two SKUs measured with
+  different estimators are not comparable.
 
 ## Inputs and outputs
 
-- **TS** `coefficientOfVariation(stdDev, mean)` — takes **pre-computed** moments; returns
-  `Infinity` when mean = 0.
-- **PY** `coefficient_of_variation(demand_history)` — takes the **raw series** and computes
-  the moments itself; returns `inf` when the mean is 0.
-- **Divergence:** NumPy's `arr.std()` defaults to `ddof=0`, the **population** standard
-  deviation. The TS caller decides which estimator it passes in. On a short history the
-  sample estimator (ddof=1) is larger — with 10 observations by about 5% — which is
-  enough to move a borderline SKU across the 0.10 or 0.25 threshold. Recorded under U8.
-- `classifyXYZ` / `classify_xyz` map a CV to the class; both are pure and agree.
+- **Inputs:** a demand history over a stated period, or its moments if computed elsewhere.
+- **Output:** the CV, and the class it falls into. CV is **undefined at μ = 0** — a SKU with no
+  demand has no variability to speak of, and reporting an infinite CV is a way of saying the
+  measure does not apply rather than a value to classify.
 
 ## Assumptions and limits
 
@@ -48,8 +58,9 @@ Both implementations use identical thresholds, matching `CLAUDE.md`.
 - **CV depends on the bucketing period.** Daily demand almost always shows a higher CV
   than the same demand aggregated weekly. A SKU can be "Z" daily and "X" monthly, so the
   classification is only comparable across SKUs measured on the same calendar.
-- The 0.10 / 0.25 cut points are **conventions**, not derived optima. They are policy and
-  changing them is a policy decision applied forward.
+- **Changing a boundary reclassifies history.** Because the classes drive replenishment policy,
+  a boundary change is applied forward deliberately rather than retroactively — otherwise past
+  decisions look wrong against a rule that did not exist when they were made.
 - Assumes the history is representative — a promotion or a one-off outage inflates σ and
   misclassifies an otherwise stable item.
 
@@ -57,15 +68,17 @@ Both implementations use identical thresholds, matching `CLAUDE.md`.
 
 `demand = [100, 105, 95, 110, 90]` — μ = 100:
 
-- population σ (NumPy default) = 7.07 → CV = **0.0707** → class **X**
-- sample σ (ddof=1) = 7.91 → CV = **0.0791** → class **X**
+- population σ (`ddof = 0`) = 7.07 → CV = **0.0707**
+- sample σ (`ddof = 1`) = 7.91 → CV = **0.0791**
 
-Both land in X here; a series with CV near 0.10 would not.
+The two estimators differ by 12% on five observations. Here both fall well inside the most
+predictable class either way; a series sitting near a boundary would not, which is why the
+estimator is part of the definition and not an implementation detail.
 
 ## Governing rules
 
-- **SCM-R11** — SKU codes are immutable; a reclassification changes the class field, never
-  the SKU.
+- None. Classification is a planning aid, not an invariant — the department's `rule.md` governs
+  what may be done with the result.
 
 ## Related
 

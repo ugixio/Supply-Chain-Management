@@ -35,9 +35,10 @@ sets the invoice to MATCHED/DISCREPANCY.
 
 ## Inputs and outputs
 
-- **PY:** `ThreeWayMatchInput` dataclass → status literal; zero-baseline degenerates
+- **Inputs:** the three documents' quantities and prices; a zero baseline degenerates
   safely (`b = 0 ⇒ a must equal 0`).
-- **TS:** the invoice aggregate → new aggregate with per-line statuses (division by
+- **Output:** a match status per line, not only per invoice — a single mismatched line is what
+  blocks payment (division by
   `unitPricePOCents`/`quantityReceived` assumes both non-zero — recorded guard gap).
 
 ## Assumptions and limits

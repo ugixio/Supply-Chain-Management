@@ -26,8 +26,8 @@ a rounding difference:
 | Symbol | Meaning | Unit |
 |---|---|---|
 | D̄ | Average daily demand | units/day |
-| safetyDays | Planner-chosen cover (TS input) | days |
-| LT_max, LT_avg | Maximum and average lead time (PY inputs) | days |
+| cover_days | days of demand the buffer is meant to cover — **project-chosen** | days |
+| LT_max, LT_avg | maximum and average lead time, when the cover is derived from lead-time spread | days |
 
 The TypeScript version buffers against a **freely chosen number of days**. The Python
 version buffers against **lead-time overrun only** — its cover is derived, not chosen,
@@ -36,8 +36,12 @@ questions and are not interchangeable. Recorded under U8 in `program/WORKFLOW.md
 
 ## Inputs and outputs
 
-- **TS:** `avgDailyDemand`, `safetyDays` → integer units (`Math.ceil`).
-- **PY:** `avg_daily_demand`, `max_lead_time_days`, `avg_lead_time_days` → float units.
+- **Inputs:** average daily demand, plus the cover — either stated directly as a number of days
+  or derived from the lead-time spread `LT_max − LT_avg`. **These are two different definitions
+  sharing one name**, and a project must say which it means: a flat day count is a planner's
+  judgement, while the lead-time spread ties the buffer to observed supply variability.
+- **Output:** a quantity in units. Rounding up to an orderable quantity happens at the ordering
+  boundary, not inside the formula.
 - Neither guards against negative inputs; the Python form returns a **negative** buffer if
   `max_lead_time < avg_lead_time`, which is nonsensical but unrejected.
 
@@ -54,8 +58,11 @@ questions and are not interchangeable. Recorded under U8 in `program/WORKFLOW.md
 
 D̄ = 50 units/day, LT_avg = 7 days, LT_max = 10 days, planner cover = 5 days:
 
-- TS: ss = ⌈50 × 5⌉ = **250 units**
-- PY: ss = 50 × (10 − 7) = **150 units**
+- stated cover of 5 days: ss = 50 × 5 = **250 units**
+- cover derived from lead-time spread (max 10, avg 7): ss = 50 × 3 = **150 units**
+
+Same demand, same SKU, two definitions — which is why the node insists the project say which
+one it means.
 
 Same SKU, same data, two different buffers — because they are two different methods.
 

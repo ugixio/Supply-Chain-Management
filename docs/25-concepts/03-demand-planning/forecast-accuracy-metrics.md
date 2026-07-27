@@ -31,8 +31,11 @@ relations:
 
 - **Inputs:** two equal-length series.
 - **Outputs:** MAE and RMSE in **demand units**; MAPE as a **percentage**.
-- **Guards:** MAE throws on a length mismatch or empty input. MAPE returns `NaN` (TS) /
-  `inf` (PY) when every actual is zero. RMSE performs no length check in the TS version.
+- **Guards:** the two series must be the same length and non-empty — a silent length mismatch
+  compares mismatched periods and produces a plausible wrong number.
+- **MAPE is undefined when an actual is zero**, and unstable when actuals are merely small; that
+  is a property of the measure, not a bug to paper over. A series with zeros needs a scale-free
+  alternative (CPT-0009) rather than a substituted value.
 
 ## Assumptions and limits
 

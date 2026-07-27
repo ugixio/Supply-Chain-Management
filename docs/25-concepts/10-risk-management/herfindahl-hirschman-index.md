@@ -17,31 +17,38 @@ relations:
 
 ## Formula
 
-    HHI = Σ share_i² × 10,000        (shares as fractions — PY)
-    HHI = Σ share_i²                  (shares as percent 0–100 — TS; same 0–10,000 scale)
-    < 1,500 LOW · 1,500–2,500 MODERATE · > 2,500 HIGH
+    HHI = Σ sᵢ²        where sᵢ is supplier i's share in **percentage points**
 
 | Symbol | Meaning | Unit |
 |---|---|---|
-| share_i | supplier i's fraction of category spend | fraction (PY) / percent (TS) |
+| sᵢ | supplier i's share of the category | percentage points (0–100) |
+| HHI | concentration | 0–10,000 |
+
+**The input scale is part of the definition, not a convention.** The index as published by the
+US DOJ and FTC is computed on percentage points, which is what puts a monopoly at 10,000 and
+`n` equal suppliers at `10,000/n`. Computing it on fractions yields the same information on a
+0–1 scale, but every published reference value then reads a factor of 10,000 too high — so the
+scale must be stated wherever an HHI is reported.
 
 ## Inputs and outputs
 
-- **PY:** non-negative shares; if they don't sum to ~1 they are **normalized
-  gracefully**, so raw spend values are accepted directly.
-- **TS:** `Record<supplierId, sharePct>`; also returns the top supplier and its share;
-  empty input → HHI 0/LOW.
-- Output scale 0–10,000 in both (monopoly = 10,000; n equal suppliers = 10,000/n).
+- **Inputs:** non-negative shares covering the **whole** category. Shares that do not sum to
+  100 mean the tail was omitted, which understates concentration; normalizing them silently
+  hides that the input was incomplete.
+- **Output:** the index on its 0–10,000 scale, plus — usefully — the largest share, since the
+  index alone does not say who the concentration is in.
 
 ## Assumptions and limits
 
-- Thresholds are the US DOJ/FTC merger guidelines applied by analogy — supply-risk
-  tolerance may differ (a category with HHI 1,400 and one qualified alternate is
-  riskier than 2,600 with instant substitutes). Pair with substitutability judgment.
-- **Input-unit divergence (recorded):** PY fractions vs TS percent. Feeding TS-style
-  percents to PY triggers normalization (harmless); feeding PY-style fractions to TS
-  yields HHI ≈ 0 (silently wrong). U8 golden vectors should pin this.
-- Shares must cover the whole category — omitting the tail overstates concentration.
+- **Concentration bands are borrowed, not applicable.** The DOJ/FTC guidelines set bands for
+  judging *market* concentration in merger review. Reusing those numbers as supply-risk
+  thresholds is an analogy, and a weak one: a category at low concentration with a single
+  qualified alternate is riskier than a highly concentrated one with instant substitutes. Where
+  a project draws its own lines is its decision, and it should pair the index with
+  substitutability rather than read risk off the number.
+- **The index is blind to substitutability, geography and tier depth.** Two suppliers with equal
+  shares score as diversified even when both buy from the same sub-tier plant.
+- Shares must cover the whole category — omitting the tail understates concentration.
 - **Does not apply when:** measuring *network* fragility (use CPT-0069 GNN) or
   geographic concentration (compute HHI over regions instead — same formula).
 

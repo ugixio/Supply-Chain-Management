@@ -13,8 +13,9 @@ relations:
 ---
 # Safety Stock — Statistical Method (CPT-0014)
 
-> The standard method: buffer sized to a stated service level, given demand variability
-> over a **constant** lead time. `CLAUDE.md` names this Method 3.
+> Buffer sized to a stated service level, given demand variability over a **constant** lead
+> time. The most widely used of the safety-stock formulations, and the one whose assumption
+> fails most often.
 
 ## Formula
 
@@ -32,12 +33,16 @@ The √LT arises because the variances of LT independent daily demands add:
 
 ## Inputs and outputs
 
-- **TS** takes `(demandStdDev, avgLeadTimeDays, serviceLevelPercent)` and calls
-  `getZScore` internally, returning integer units (`Math.ceil`).
-- **PY** takes `(z, demand_std, lead_time)` — **z is supplied by the caller**, not derived
-  — returning a float.
-- Both are unguarded: negative σ_D or LT produce a silently wrong number rather than an
-  error.
+- **Inputs:** the standard deviation of daily demand, the average lead time in days, and the
+  service-level multiplier `z` (CPT-0003).
+- **`z` and the service level are not interchangeable.** Passing a service level of 0.95 where
+  `z` is expected understates the buffer by more than 40%, and the result looks entirely
+  plausible — so whichever the interface takes must be unambiguous in its name.
+- **Output:** a quantity in units. Rounding up to an orderable quantity happens at the ordering
+  boundary, not inside the formula.
+- **Negative σ_D or LT are not meaningful** and produce a silently wrong number rather than an
+  error unless the caller checks — σ_D is a standard deviation and LT a duration; neither can be
+  below zero.
 
 ## Assumptions and limits
 

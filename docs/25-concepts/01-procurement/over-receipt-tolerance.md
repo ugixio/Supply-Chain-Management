@@ -55,8 +55,8 @@ relations:
     106 > 105  ⇒  requiresApproval = true
     variancePct = (106 − 100)/100 · 100 = 6.00
 
-TS: the line's `requiresApproval` is `true`, `overReceiptPct = 6.0`, and `hasOverReceipt`
-returns `true`. PY: `{status: "OVER_RECEIPT", variance_pct: 6.0, requires_approval: true}`.
+The variance is `+6%`, above the band, so the line is flagged for release rather than posted
+silently.
 At `received = 104` both report within tolerance (104 ≤ 105).
 
 ## Governing rules

@@ -40,7 +40,8 @@ relations:
 ## Assumptions and limits
 
 - Cost-view polarity (under-spend favorable); revenue budgets need the sign flipped.
-- The 2% on-budget band and 10% explanation bar are finance policy, not accounting
+- The band within which a variance counts as on-budget, and the level above which it must be
+  explained, are **project-chosen** finance policy — not accounting
   law — governed values, changed by decision.
 - Percentage-only triggers miss large-absolute/low-percentage misses on huge
   categories; pair with an absolute-cents threshold for materiality (not

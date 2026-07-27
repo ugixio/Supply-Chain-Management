@@ -65,4 +65,5 @@ would need 0.95/(0.8755/0.94) = 1.02 — impossible alone ⇒ multiple factors m
 
 ## References
 
-- SCOR-DS RL.1.1 and RL.2.* components; Aberdeen Group (2006) — 95% world-class.
+- SCOR-DS RL.1.1 and RL.2.* — the component definitions. Published benchmark surveys report
+  observed ranges; they do not set a requirement.

@@ -1,80 +1,76 @@
 ---
 id: concept-supplier-scorecard-weighting
-title: "Supplier Scorecard Weighted Scoring (CPT-0060)"
+title: "Supplier Scorecard — Weighted Composite (CPT-0060)"
 type: concept
 owner: orchestrator
 status: active
 since: 2026-07-22
-updated: 2026-07-22
+updated: 2026-07-27
 relations:
   - { type: part-of, target: index-concepts-02-supplier-management }
   - { type: governed-by, target: index-adr }
 ---
-# Supplier Scorecard Weighted Scoring (CPT-0060)
+# Supplier Scorecard — Weighted Composite (CPT-0060)
 
-> The periodic supplier grade: delivery, quality and commercial performance blended
-> with a manually assessed soft score into one 0–100 number.
+> A periodic supplier grade: several performance measures, each normalized to a common scale,
+> combined into one number by weights that express what the buying organization cares about.
 
-## Formula
+## Definition
 
-    delivery   = 0.35·OTD + 0.45·OTIF + 0.20·RFT                  (×100)
-    quality    = 0.60·PPM_score + 0.40·NCR_score
-    commercial = 0.70·invoice_accuracy + 0.30·PO_variance_score
-    overall    = 0.40·delivery + 0.30·quality + 0.20·commercial + 0.10·soft
+    score = Σᵢ wᵢ · nᵢ        with  Σᵢ wᵢ = 1  and  nᵢ ∈ [0, 100]
+
+A composite is fully specified only once three things are stated: **which measures** enter it,
+**how each is normalized** onto the common scale, and **what weight** each carries. The identity
+`Σ wᵢ = 1` is what keeps the result interpretable on the same scale as its parts; everything else
+is a choice.
 
 | Symbol | Meaning | Unit |
 |---|---|---|
-| OTD / OTIF / RFT | on-time, on-time-in-full, right-first-time rates | fraction (PY) / % (TS) |
-| PPM_score | PPM inverted to 0–100 (see divergence) | score |
-| NCR_score | PY: (1 − ncr_rate)·100; TS: % of deliveries without NCR | score |
-| soft | manual assessment | 0–100 |
+| nᵢ | measure *i* normalized to the common scale | 0–100 |
+| wᵢ | weight of measure *i* | fraction, Σ = 1 |
+| score | the composite grade | 0–100 |
 
-## Inputs and outputs
+## Project-chosen inputs
 
-- **PY inputs:** rates as fractions 0–1 (`DeliveryMetrics`, `QualityMetrics`,
-  `CommercialMetrics` dataclasses) + soft score 0–100. Each dimension clamps to [0,100],
-  rounds 2 dp.
-- **TS inputs (`calculateKPIs`):** raw counts (deliveries, defects, invoices, PO value);
-  it derives the rates itself (zero denominators grade 100) and returns the full KPI
-  record with rating attached.
+**Everything except the identity above.** Specifically:
+
+- **The criteria.** Delivery reliability, quality, price competitiveness, responsiveness,
+  sustainability, financial stability — which of these belong on the scorecard depends on what the
+  category is bought for.
+- **The weights.** A weighting expresses strategy: weighting delivery heavily suits a
+  just-in-time line, weighting cost heavily suits a commodity purchase. No weighting is standard,
+  and a weighting copied from another organization silently imports its strategy.
+- **The normalization curve** for each measure. Mapping a defect rate onto 0–100 can be linear or
+  logarithmic, and the choice changes the *ranking*, not just the number — a log curve compresses
+  differences among poor performers where a linear one spreads them.
+- **The measurement period**, and how a supplier with no activity in it is handled.
 
 ## Assumptions and limits
 
-- Weights are the repo's contractual standard (CLAUDE.md §Scorecard); change them only
-  via decision, not per supplier.
-- OTIF carries the largest delivery weight (0.45) — a supplier can hit 100% OTD and
-  still score poorly by short-shipping.
-- Zero-activity periods grade 100 in TS (`d === 0 → 100`) — no exposure reads as no
-  failure; suppress scorecards for dormant suppliers instead of ranking them.
-- **Does not apply when:** the period has unrepresentative volume (single-delivery
-  periods swing the score; smooth with CPT-0062).
-
-## Worked example (PY)
-
-OTD 0.96, OTIF 0.92, RFT 0.98 → delivery = (0.336 + 0.414 + 0.196)·100 = 94.6.
-PPM 400 → PPM_score = 100 − log₁₀(401)/log₁₀(10001)·100 ≈ 34.9; NCR rate 0.02 →
-NCR_score 98 → quality = 0.60×34.9 + 0.40×98 = 60.2. Invoice accuracy 0.99, PO variance
-0.03 → commercial = (0.693 + 0.291)·100 = 98.4. Soft 85 →
-overall = 0.4·94.6 + 0.3·60.2 + 0.2·98.4 + 0.1·85 = **84.1** (APPROVED).
-
-## Divergence (recorded)
-
-- **PPM_score:** PY uses a log curve (500 PPM → ~32.5, hard floor at 10,000 PPM; note
-  the code docstring claims "500 → ~85", which its own formula contradicts); TS uses
-  linear `100 − ppm/100` (500 PPM → 95). The same defect rate produces very different
-  quality scores per language.
-- **PO variance:** TS multiplies variance% by 10 before inverting; PY expects a 0–1 rate.
-- **TS `dpmo` = `ppm`** (1 opportunity/unit simplification).
-
-## Governing rules
-
-- **SUP-R*** (scorecard invariants) · **SCM-R3** — scorecards soft-delete only.
+- **A composite hides its components.** Two suppliers reach the same score by opposite routes; the
+  score decides ranking, the components decide what to do about it. Publishing the composite
+  without the breakdown removes the actionable part.
+- **Zero exposure is not good performance.** A supplier with no deliveries in a period has no
+  failures either. Whether that grades as perfect, as null, or as excluded is a decision the
+  formula does not make — and grading it as perfect ranks dormant suppliers above active ones.
+- **Compensatory by construction.** Weighted addition lets a strong measure offset a weak one. A
+  criterion that must not be traded away — a safety or compliance requirement — belongs as a
+  **gate outside** the composite, never as a weighted term inside it.
+- **Unstable at low volume.** A single delivery can swing the score; smoothing (CPT-0062) exists
+  for exactly this.
+- **Does not apply when:** a supplier carries a compliance disqualifier. That is a gate, and no
+  score overrides it.
 
 ## Related
 
-- CPT-0061 Rating classification — consumes the overall score.
-- CPT-0051 PPM / CPT-0052 DPMO — the quality inputs.
+- CPT-0061 Rating classification — segments the score into bands.
+- CPT-0062 Scorecard smoothing — stabilizes the input across periods.
+- CPT-0051 PPM · CPT-0052 DPMO — candidate quality measures for the composite.
 
 ## References
 
-- APICS CPIM — supplier evaluation; Chopra & Meindl (2016), Ch. 15.
+- APICS Dictionary 16th Ed. (ASCM, 2024) — *supplier evaluation*, *supplier scorecard*.
+- ISO 9001:2015 §8.4.1 — requires criteria for evaluating external providers to be **defined**,
+  and deliberately does not prescribe what they are.
+- Chopra & Meindl, *Supply Chain Management*, 6th Ed., Ch. 15 — supplier scoring as a decision
+  framework.

@@ -62,7 +62,8 @@ notify ECHA + inform downstream + (conservative) SDS → ACTION_REQUIRED.
 
 ## Related
 
-- CPT-0098 Composite compliance score — REACH carries 20% weight.
+- CPT-0098 Composite compliance score — REACH is one of its inputs; the weighting is
+  project-chosen.
 
 ## References
 

@@ -62,7 +62,8 @@ importable only with the evidence package ready for CBP detention review.
 
 ## Related
 
-- CPT-0098 Composite compliance score — UFLPA carries 25% weight.
+- CPT-0098 Composite compliance score — UFLPA is one of its inputs; the weighting is
+  project-chosen.
 - CPT-0069 GNN network risk — propagates UFLPA exposure upstream.
 
 ## References

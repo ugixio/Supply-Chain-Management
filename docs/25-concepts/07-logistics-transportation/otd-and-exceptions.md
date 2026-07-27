@@ -38,7 +38,8 @@ relations:
 
 - Basis is the **requested** date; contractual OTD is often against the *promised*
   date — the CPT-0082/CPT-0089 two-bases note applies here identically.
-- World-class ≥ 95% (CLAUDE.md KPI bar); carrier scorecards weight it at 60%
+- The acceptable level, and how heavily OTD weighs against cost and damage in a carrier
+  scorecard, are commercial decisions — the delivery contract sets them, not this node
   (CPT-0131).
 - Same-day granularity — no delivery-window (AM/PM slot) precision.
 - EXCEPTION is a milestone value on the tracking event stream; counting exceptions
@@ -57,7 +58,8 @@ misses join the exception review queue.
 
 ## Related
 
-- CPT-0131 Carrier performance — consumes OTD at 60% weight.
+- CPT-0131 Carrier performance — consumes OTD as one input among several; the weighting is
+  project-chosen.
 - CPT-0082 OTIF — the order-level composite.
 
 ## References

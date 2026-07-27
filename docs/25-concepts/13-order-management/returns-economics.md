@@ -24,7 +24,7 @@ relations:
       net_line   = round_half_even(gross_line × (1 − fee%/100))
       refund     = Σ net_line ·  fees = Σ gross_line − refund
       fee% = 0 for fault-based reasons (DEFECTIVE, DAMAGED_IN_TRANSIT, WRONG_ITEM,
-             QUALITY_ISSUE, NEAR_EXPIRY); else per-line override or default 15%
+             QUALITY_ISSUE, NEAR_EXPIRY); otherwise the rate is **project-chosen** per line
 
     reverse_cost = shipment + inspection + disposition + refund
     as_pct_of_refund = reverse_cost / refund × 100
@@ -50,7 +50,7 @@ relations:
   are pinned by the U8 golden vectors (`tests/golden/money.golden.json`).
 - **Fault-based returns always refund in full** — the fee override is ignored for the
   five fault reasons, mirroring EU Consumer Rights Directive 2011/83/EU obligations;
-  the 15% default applies to change-of-mind/excess only (and jurisdictions differ —
+  a restocking fee applies to change-of-mind or excess returns only, and jurisdictions differ —
   parametrize per market).
 - `as_pct_of_refund > 100%` = the return costs more than the credit — the flag for
   "refund without return" policies on low-value items.

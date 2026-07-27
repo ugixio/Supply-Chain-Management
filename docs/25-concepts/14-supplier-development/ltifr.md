@@ -26,8 +26,9 @@ relations:
 
 ## Inputs and outputs
 
-- **Output:** rate per 1M hours. World-class < 1.0 (feeds the +5 bonus in
-  CPT-0132's S pillar; ≥ 5.0 costs −10).
+- **Output:** rate per 1,000,000 hours worked — the normalization base is part of the metric's
+  definition, and comparing two rates computed on different bases is meaningless. What rate is
+  acceptable, and any scoring built on it, are project decisions.
 
 ## Assumptions and limits
 
@@ -46,8 +47,8 @@ relations:
 
 ## Worked example
 
-3 lost-time injuries over 2,400,000 hours → `3 × 10⁶ / 2.4 × 10⁶ = 1.25` — above
-world-class, below the penalty band.
+3 lost-time injuries over 2,400,000 hours → `3 × 10⁶ / 2.4 × 10⁶ = 1.25` lost-time injuries
+per million hours worked.
 
 ## Governing rules
 

@@ -14,7 +14,7 @@ relations:
 # Perfect Order & Perfect Order Rate (CPT-0083)
 
 > The flawless-execution test: OTIF *and* damage-free *and* invoice-accurate — and the
-> share of orders that pass. World-class ≥ 95%.
+> share of orders that pass every element. The acceptable share is a project's decision.
 
 ## Formula
 

@@ -53,7 +53,8 @@ relations:
 ## Worked example
 
 Daily 4-feature signal `[demand, price, lead_time, otd]`, seq_len 14 → windows;
-train on 12 disruption-free months; calibrate at FPR 2% → threshold 0.031; a port-
+*Illustrative only.* Train on disruption-free months, then calibrate the threshold to the
+false-positive rate the operation can absorb — say an FPR giving a threshold of 0.031; a port-
 strike fortnight reconstructs at 0.11 → score 1.0, flagged across its windows.
 
 ## Governing rules

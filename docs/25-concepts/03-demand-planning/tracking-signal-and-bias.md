@@ -47,8 +47,9 @@ relations:
 | ME < −tol | `OVER_FORECAST` | Forecast too **high**; plan exceeded demand |
 | \|ME\| ≤ tol | `UNBIASED` | Within the dead band |
 
-The tolerance band `tol` is **0.5% of mean absolute actual demand** — a proportional dead
-band, so the classification does not flip on rounding noise for large-volume SKUs.
+The dead band `tol` is **project-chosen**, and expressing it as a proportion of mean absolute
+demand rather than as an absolute quantity is what keeps the classification from flipping on
+rounding noise for high-volume SKUs. How wide it is trades false alarms against slow detection.
 
 ## Assumptions and limits
 

@@ -30,7 +30,8 @@ relations:
 - **Inputs:** two timestamps on a common clock (implementation takes hours-since-midnight
   floats).
 - **Output:** `{dts_hours, dts_minutes, benchmark_hours: 2.0, benchmark_met}` —
-  world-class ≤ 2 h for ambient goods (WERC 2022).
+  What dwell time is acceptable depends on the goods and the service promise — a project sets
+  it; this node only defines how the time is measured.
 - **Guards:** negative DTS raises (putaway cannot precede receipt).
 
 ## Assumptions and limits

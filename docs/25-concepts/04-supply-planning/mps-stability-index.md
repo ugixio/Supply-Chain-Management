@@ -13,7 +13,8 @@ relations:
 # MPS Stability Index (CPT-0146)
 
 > How nervous the master production schedule is: one minus the relative churn
-> between the original and revised plan. Target > 0.85 (< 15% nervousness).
+> between the original and revised plan. What stability is acceptable is a planning-process
+> decision, and it trades against responsiveness to real demand changes.
 
 ## Formula
 

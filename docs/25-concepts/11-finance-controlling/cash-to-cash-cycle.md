@@ -51,8 +51,9 @@ DSO, DIO (via inventory turnover = COGS/inventory), DPO, C2C, turnover, gross ma
 
 ## Worked example
 
-DIO 58, DSO 32, DPO 45 → **C2C = 45 days** → AVERAGE (PY) / POOR (TS band edge —
-the divergence in action).
+DIO 58, DSO 32, DPO 45 → **C2C = 45 days**. Whether 45 days is good is not a property of the
+identity: it depends entirely on the industry and the business model, and a negative cycle —
+normal for some retailers — means suppliers are financing the operation.
 
 ## Governing rules
 

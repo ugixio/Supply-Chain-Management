@@ -29,7 +29,7 @@ Three checks, each within a tolerance:
 |---|---|---|
 | po_qty / grn_qty / invoice_qty | ordered / received / billed quantity | units |
 | po_price / inv_price | PO / invoiced unit price | integer cents |
-| qty_tol / price_tol | tolerances (default 0% / 2%) | percent |
+| qty_tol / price_tol | quantity and price tolerance | percent — **project-chosen**, from the supply contract |
 | variance_cents | invoiced value − received value | integer cents |
 
 ## Inputs and outputs

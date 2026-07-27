@@ -42,7 +42,7 @@ relations:
 - Additive-linear model: components are treated as independent; a supplier that is
   simultaneously single-source *and* financially weak is riskier than the sum
   suggests — treat CRITICAL as a floor, not a ceiling.
-- Capacity strain contributes only above 85% utilisation, reaching full weight at 100% —
+- Where capacity strain starts to count, and how steeply it rises, are **project-chosen** —
   below the knee, utilisation is considered healthy.
 - The compliance component **counts** open flags; severity lives in the compliance
   department (CPT-0091-family); a single UFLPA detention order still only moves this

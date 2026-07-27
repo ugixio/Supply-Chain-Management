@@ -55,7 +55,8 @@ OTD 94%, claims 1.2%, variance 0.8 days →
 
 ## Governing rules
 
-- **LOG-R*** — carrier records period-stamped and soft-deleted (SCM-R3).
+- **SCM-R3** — a carrier performance record is corrected by a further entry, never destroyed.
+  **SCM-R9** — the period it covers is stated in ISO 8601. No rule fixes the weights.
 
 ## Related
 

@@ -56,7 +56,8 @@ Packaging: 50,000 → 49,200 → −1.6% ON_BUDGET.
 
 ## Governing rules
 
-- **FIN-R*** — variance records and explanations retained (SCM-R3).
+- **SCM-R3** — a variance record and the explanation attached to it are corrected by a further
+  entry, never rewritten. **SCM-R14** — the variance is exact money.
 
 ## Related
 

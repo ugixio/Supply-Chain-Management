@@ -53,7 +53,8 @@ becomes a PO.
 
 ## Governing rules
 
-- **SPL-R*** — planned-order changes traceable to demand (audit trail discipline).
+- **SPL-R1** — the BOM is acyclic, which is what makes a peg chain terminate; **SPL-R5** — netting
+  conserves, so every planned quantity pegs to some demand or the two disagree.
 
 ## Related
 

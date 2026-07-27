@@ -52,12 +52,14 @@ relations:
 
 ## Worked example
 
-184 of 195 delivered shipments on time → `94.36%` — just under the 95% bar; the 11
-misses join the exception review queue.
+184 of 195 delivered shipments on time → `94.36%`. Whether that clears the bar depends on the bar
+the project set; what the number does say is that **11 shipments missed**, and the exception review
+works on those 11, not on the percentage.
 
 ## Governing rules
 
-- **LOG-R*** — shipment lifecycle stamps the dates; SCM-R9 ISO dates.
+- **SCM-R9** — the dates being compared are ISO 8601, and instants are UTC: an on-time test across
+  time zones is otherwise undefined. No rule fixes an acceptable OTD level.
 
 ## Related
 

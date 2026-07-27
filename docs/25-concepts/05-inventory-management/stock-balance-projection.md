@@ -68,7 +68,8 @@ that was already recorded.
 ## Governing rules
 
 - **INV-R5** — a physical balance cannot be negative; **SCM-R4** — every
-  movement journals; **ENG-R\*** — retry safety; ADR-0005 event sourcing.
+  movement journals; retry safety is an engineering duty (ENG-R1..R10 govern the write path, not this
+  projection); ADR-0005 event sourcing.
 
 ## Related
 

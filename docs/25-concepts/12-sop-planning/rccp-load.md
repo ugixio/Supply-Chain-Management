@@ -56,7 +56,8 @@ demonstrates 250 h, the plan is infeasible before MRP runs.
 
 ## Governing rules
 
-- **SOP-R*** — an S&OP cycle publishes a capacity-checked plan; CPT-0087's CTP
+- **SOP-R4** — one plan means the capacity check and the demand plan describe the same cycle;
+  publishing a demand plan no one checked against capacity produces two plans. CPT-0087's CTP
   should consult this when it grows past lead-time-only checking.
 
 ## Related

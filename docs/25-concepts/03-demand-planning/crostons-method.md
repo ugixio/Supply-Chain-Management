@@ -65,6 +65,10 @@ Otherwise both estimates carry forward unchanged. The forecast is:
 
 ## Governing rules
 
+- **DMD-R6** — percentage error is undefined where the actual is zero, which is precisely the case
+  intermittent demand is full of: accuracy for this method must be measured with a scale-free
+  metric (CPT-0009), not MAPE. No rule fixes the smoothing constant.
+
 ## Related
 
 - CPT-0007 Syntetos-Boylan Approximation — the bias-corrected form; prefer it.

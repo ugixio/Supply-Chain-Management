@@ -82,7 +82,8 @@ chosen.
 
 ## Governing rules
 
-- **DMD-R\*** — no rule mandates a selection method; several are legitimate, so the choice, the
+- **DMD-R9** — a forecast is stated with its horizon and bucket, so a selection made on one horizon
+  does not transfer to another. No rule mandates a selection method; several are legitimate, so the choice, the
   holdout policy and the error measure are the project's (see CPT-0008 on what each measure
   penalizes).
 

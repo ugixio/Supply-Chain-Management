@@ -55,8 +55,9 @@ stock 20.
 
 ## Governing rules
 
-- **ORD-R*** — a promise date on the order comes from a governed promising path;
-  INV-R5 and the project's backorder policy.
+- **ORD-R5** — allocation conserves: a promise made from capacity already promised elsewhere is
+  double-counted supply. **INV-R5** — a promise may not rest on physical stock that does not exist;
+  whether a shortfall becomes a backorder or a refusal is the project's policy.
 
 ## Related
 

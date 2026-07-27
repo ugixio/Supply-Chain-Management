@@ -58,7 +58,8 @@ secondary 0.6 · ammonia 2.09 · urea 0.709 · hydrogen SMR 9.0 · electricity 0
 
 ## Governing rules
 
-- **CMP-R*** — CBAM declarations and evidence retained; ADR-0008 named regulations
+- **CMP-R2** — the declaration records what was assessed and on what evidence; **SCM-R7** — the
+  documentation is retained at least five years. ADR-0008 named regulations
   are product features.
 
 ## Related

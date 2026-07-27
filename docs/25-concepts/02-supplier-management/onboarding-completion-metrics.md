@@ -49,8 +49,9 @@ verification) → approval blocked despite 80%.
 
 ## Governing rules
 
-- **SUP-R*** — onboarding approval requires all required items (the state machine
-  enforces it; this node only names the arithmetic).
+- **SUP-R5** — the completion figure records what was assessed: which items counted as required.
+  Which items those are, and whether approval waits for all of them, is the project's design — this
+  node names only the arithmetic over whatever list it is given.
 - **SCM-R6** — XUAR clearance is one such required item.
 
 ## Related

@@ -53,8 +53,9 @@ ACVs 500k/300k/150k/50k (total 1M): cumulative 50%→A, 80%→A, 95%→B, 100%�
 
 ## Governing rules
 
-- **INV-R*** — classification stamps the item master via governed update
-  (`updateABCXYZ`), never ad hoc.
+- **INV-R4** — the value that drives the ranking is the sum of movements over a stated period;
+  change the period and the ranking changes. **No rule fixes the class boundaries** — they are a
+  project decision, and the class is written back deliberately, never ad hoc.
 
 ## Related
 

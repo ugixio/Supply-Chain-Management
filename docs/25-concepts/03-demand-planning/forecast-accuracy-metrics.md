@@ -60,6 +60,10 @@ relations:
 
 ## Governing rules
 
+- **DMD-R6** — absolute percentage error is **undefined when the actual is zero**, so MAPE has no
+  value on an intermittent series and excluding those periods silently changes the population being
+  measured. **DMD-R9** — an accuracy figure is stated with the horizon and bucket it was measured at.
+
 ## Related
 
 - CPT-0009 Scale-free accuracy — WMAPE/sMAPE/Theil's U for intermittent or cross-SKU work.

@@ -80,6 +80,12 @@ RETIRED_ROW = re.compile(r"^\|\s*\*\*((?:SCM|[A-Z]{3})-R\d+)\*\*\s*\|", re.M)
 RULE_ID = re.compile(r"\b((?:SCM|[A-Z]{3})-R\d+)\b")
 RETIRED_HEADING = "## Retired rules"
 
+# G12 — a rule citation names an ID, never a family wildcard. `**FIN-R***` reads as law and
+# resolves to nothing: it survived every other gate because it is not a broken link, not a
+# duplicate, and not a retired ID. 47 of them were citing lifecycle rules that had been retired
+# with the deleted application, so the wildcard was hiding exactly what it looked like it covered.
+RULE_WILDCARD = re.compile(r"\*\*((?:SCM|[A-Z]{3})-R)\\?\*\*\*")
+
 
 def section_body(text: str, heading: str) -> str:
     """The lines under `heading` up to the next same-or-higher-level heading."""
@@ -186,6 +192,7 @@ class Gates:
             "G9": "context budget & disclosure",
             "G10": "standards provenance (source cited, no owned code)",
             "G11": "retired rules stay retired",
+            "G12": "rule citations name an ID",
         }
         ok = True
         for gate in sorted(names, key=lambda name: int(name[1:])):
@@ -488,6 +495,20 @@ def main() -> int:
                                   f"retired in {retirement_home[rule_id]} and is never "
                                   f"reassigned, so the citation resolves to nothing "
                                   f"(ADR-0037)")
+
+    # G12 — a rule citation names an ID. Same estate as G11, and the rule files themselves are
+    # included: a family wildcard is no more meaningful in a rule than in a concept node.
+    #
+    # A wildcard inside a code span is a **mention**, not a citation — the same declaring-versus-
+    # citing distinction G11 draws. The gate itself has to be documented somewhere, and the three
+    # records that explain why it exists quote the pattern in backticks.
+    for path, (_meta, text) in checked.items():
+        for number, line in enumerate(text.splitlines(), 1):
+            line = re.sub(r"`[^`]*`", "", line)
+            for family in set(RULE_WILDCARD.findall(line)):
+                gates.fail("G12", f"{path}:{number} cites {family}* — a family wildcard is not a "
+                                  f"citation: it reads as law and resolves to no rule. Name the "
+                                  f"live ID, or say plainly that no rule fixes this")
 
     return gates.report(len(docs))
 

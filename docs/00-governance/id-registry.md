@@ -150,10 +150,13 @@ ADR-0037; the keys are unaffected.)*
 ## 6. Gate-invariant IDs (fixed)
 
 `G1`–`G8` name the knowledge-architecture §11 invariants. New gates append (G9+).
-Allocated: **G1–G11** (G9 context budget, ADR-0012; G10 **standards provenance** — was concept
+Allocated: **G1–G12** (G9 context budget, ADR-0012; G10 **standards provenance** — was concept
 coverage under ADR-0015, rewritten by ADR-0037 when the code it policed was deleted; **G11
 retired rules stay retired**, added at Phase C3 because a citation of a retired ID is invisible to
-G4 — it is not a broken link, it silently resolves to nothing and reads as law).
+G4 — it is not a broken link, it silently resolves to nothing and reads as law; **G12 a rule
+citation names an ID**, added at Phase C1d after 47 nodes were found citing family wildcards like
+`**FIN-R***` — invisible for the same reason, and most of them stood in for lifecycle rules
+retired with the deleted application).
 
 ### What replaced a retired rule (Phase C3)
 

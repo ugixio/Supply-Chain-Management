@@ -50,7 +50,8 @@ world_class**, with logistics 3.65% the dominant component.
 
 ## Governing rules
 
-- **FIN-R*** — period cost records; SCM-R14 exact money.
+- **SCM-R14** — money is exact. **SCM-R3** — a period cost record is corrected by a further
+  entry, never destroyed. No rule fixes an acceptable cost ratio.
 
 ## Related
 

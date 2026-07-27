@@ -61,7 +61,8 @@ minimum holdings **125 / 250 / 375 / 1,000** certificates. A single import of
 
 ## Governing rules
 
-- **CMP-R*** — declaration evidence retention; SCM-R14 for the money leg (CPT-0102).
+- **CMP-R2** — provenance on the declaration; **SCM-R7** — retention; **SCM-R14** — the money leg
+  is exact (CPT-0102).
 
 ## Related
 

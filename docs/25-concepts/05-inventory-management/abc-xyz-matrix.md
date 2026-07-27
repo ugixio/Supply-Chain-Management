@@ -55,8 +55,9 @@ replenishment, cycle-count frequently, safety stock from CPT-0012.
 
 ## Governing rules
 
-- **INV-R*** — item-master classification changes flow through `updateABCXYZ`
-  (an identifier's stability is a data-modelling decision; the classification is a field).
+- **INV-R4** — the ACV behind the A/B/C dimension is derived from movements, so the class inherits
+  whatever period those movements cover. **No rule fixes the cut points on either axis** — both are
+  project decisions, and a nine-box built on two shifting boundaries churns twice as easily as one.
 
 ## Related
 

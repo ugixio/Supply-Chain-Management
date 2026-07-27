@@ -56,7 +56,8 @@ returns instead flips to −2%.
 
 ## Governing rules
 
-- **FIN-R*** — CTS records per period/customer; SCM-R14 exact money.
+- **FIN-R6** — an apportionment across customers or lines sums exactly to the cost apportioned;
+  **SCM-R14** — money is exact. **SCM-R3** — a period record is corrected, never destroyed.
 
 ## Related
 

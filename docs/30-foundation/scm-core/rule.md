@@ -58,7 +58,7 @@ relations:
 | **SCM-R5** | "Lot tracking mandatory when `storageCondition !== AMBIENT` or `reachSVHC`" | The *obligation* to trace comes from law (EU 178/2002 for food, REACH for SVHC, GDP/GMP for pharma) and is stated per department; this particular trigger condition was invented. |
 | **SCM-R8** | "Money is arbitrary-precision Decimal, `ROUND_HALF_EVEN`, string over gRPC" | An engineering standard, not a supply-chain one. The externally-fixed part is now **SCM-R14**; the implementation obligations are **ENG-R4/ENG-R5**. |
 | **SCM-R11** | "SKU codes immutable; lifecycle via status flags" | A sound data-modelling convention, but a convention. → §Project decisions. |
-| **SCM-R12** | "Inventory transactions carry an `idempotencyKey`" | An engineering concern (**ENG-R\***, retry safety), not supply-chain law. |
+| **SCM-R12** | "Inventory transactions carry an `idempotencyKey`" | Retry safety belongs to the write path (`ENG` family), not to supply-chain law. |
 | **SCM-R13** | "Python type hints and docstrings; pytest mirrors Jest" | A code standard, and for a codebase this repository no longer has. |
 
 ## Project decisions (recorded as examples, never as law)

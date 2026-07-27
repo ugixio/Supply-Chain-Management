@@ -77,7 +77,9 @@ the project's choice; two observations are far too few to conclude anything from
 
 ## Governing rules
 
-- **DMD-R\*** — no rule fixes a control limit or a bias tolerance; both are the project's, and this
+- **DMD-R6** — an absolute percentage error is undefined where the actual is zero, which is why the
+  mean *percentage* error needs a stated convention. No rule fixes a control limit or a bias
+  tolerance; both are the project's, and this
   node supplies the arithmetic and the classical reference only.
 
 ## Related

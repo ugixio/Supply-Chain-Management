@@ -52,7 +52,8 @@ CRITICAL grievance received 2026-07-20T08:00Z; now 2026-07-22 → 48+ h elapsed 
 
 ## Governing rules
 
-- **CMP-R*** — grievance mechanism availability and record-keeping; SCM-R9 UTC
+- **CMP-R2** — a grievance record carries its provenance; **SCM-R7** — retention is at least five
+  years; **SCM-R9** — the clock runs on UTC
   timestamps.
 
 ## Related

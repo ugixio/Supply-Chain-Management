@@ -60,7 +60,8 @@ than L4L's three orders, more holding.
 
 ## Governing rules
 
-- **SPL-R*** — lot rule is item-master policy, changed by decision.
+- **SPL-R5** — netting conserves, whatever the lot rule then does with the net requirement. The
+  choice of rule is item policy, changed by decision, and no rule mandates one.
 
 ## Related
 

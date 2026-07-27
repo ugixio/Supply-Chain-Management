@@ -57,7 +57,8 @@ Order: line A due 07-10 delivered 07-10 (100/100); line B due 07-10 delivered 07
 
 ## Governing rules
 
-- **ORD-R*** — sales-order lifecycle stamps the dates these tests read; SCM-R9 ISO
+- **ORD-R6** — OTIF is a conjunction: an order is on time **and** in full, so the rate is at most
+  the lower of its two components. **SCM-R9** — the dates it reads are ISO
   dates.
 
 ## Related

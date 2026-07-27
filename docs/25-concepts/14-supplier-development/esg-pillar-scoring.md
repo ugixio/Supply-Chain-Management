@@ -55,7 +55,8 @@ waste 2.4 t → −5 = **81**. S: base 50 + policy 10 + UFLPA 10 + ISO 10 + LTIF
 
 ## Governing rules
 
-- **SDV-R*** — sustainability records lifecycle; SCM-R6 UFLPA documentation feeds
+- **SDV-R4/R5** — evidence and dating, and unknown is not compliant: a pillar with no submission
+  scored at a mid-range default converts silence into adequacy. **SCM-R6** — UFLPA documentation feeds
   the S pillar input.
 
 ## Related

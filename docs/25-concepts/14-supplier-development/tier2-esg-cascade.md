@@ -60,7 +60,8 @@ except coverage note if < 50.
 
 ## Governing rules
 
-- **SDV-R*** — cascade records; CSDDD Art. 7–9 indirect business relationships
+- **SDV-R4** — each cascade claim records its evidence and date; **SDV-R5** — a tier-2 supplier
+  that has returned nothing is unknown, not compliant. CSDDD Art. 7–9 indirect business relationships
   (dept 09 scope caveats apply — see CPT-0093 drift note).
 
 ## Related

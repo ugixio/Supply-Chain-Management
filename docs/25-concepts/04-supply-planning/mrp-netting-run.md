@@ -64,8 +64,10 @@ t2: net = 60+20−20 = 60 → receipt 60 (release t1). t3: net 30 → receipt 30
 
 ## Governing rules
 
-- **SPL-R*** — MRP records lifecycle; planned orders become POs only through the
-  the project's own purchase-approval flow.
+- **SPL-R5** — netting **conserves**: `net = gross − available − scheduled receipts`, which is the
+  identity this whole run rests on. **SPL-R1** — the BOM is acyclic, so the explosion terminates.
+  A planned order becomes a purchase order only through the project's own approval flow — MRP
+  output is a plan, and **PRC-R1** applies the moment it becomes an order.
 
 ## Related
 

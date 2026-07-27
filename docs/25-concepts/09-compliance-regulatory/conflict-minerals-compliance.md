@@ -62,7 +62,8 @@ Form SD due **2026-05-31**.
 
 ## Governing rules
 
-- **CMP-R*** — evidence retention (CPT-0096) applies to CMRTs and RCOI records.
+- **CMP-R2** — provenance: which smelters were assessed, from which template version, when.
+  **SCM-R7** — retention (CPT-0096) applies to CMRTs and RCOI records alike.
 
 ## Related
 

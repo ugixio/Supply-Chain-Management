@@ -50,7 +50,9 @@ E 81, S 60, G 80 → `0.4·81 + 0.4·60 + 0.2·80 = 72.4` → **A**.
 
 ## Governing rules
 
-- **SDV-R*** — ratings recorded per period on the sustainability record (SCM-R3).
+- **SDV-R4** — the rating records the evidence it rests on and when that evidence was gathered;
+  **SDV-R5** — an unevidenced pillar is *unknown*, and must not be scored as adequate.
+  **SCM-R3** — the record is corrected by a further entry, never destroyed.
 
 ## Related
 

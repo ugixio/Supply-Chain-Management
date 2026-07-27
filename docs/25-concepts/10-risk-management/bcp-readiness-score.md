@@ -57,8 +57,9 @@ Last drill 90 days ago (30), RTO met 80% (28), RPO met 60% (15), 1 open critical
 
 ## Governing rules
 
-- **RSK-R*** — drill lifecycle (plan→start→complete/fail, findings resolve) is
-  state-machine law; this score only reads its outcomes.
+- **RSK-R2** — residual risk cannot exceed inherent risk, so a readiness score can only claim what
+  the drills actually demonstrated: an untested plan is *unproven*, not ready. This score reads
+  drill outcomes; the process that produces them, and the bands over the score, are the project's.
 
 ## Related
 

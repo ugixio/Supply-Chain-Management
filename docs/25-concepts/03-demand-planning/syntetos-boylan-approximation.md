@@ -52,6 +52,10 @@ Continuing CPT-0006 (`demand = [0, 5, 0, 0, 7]`, `alpha = 0.1`):
 
 ## Governing rules
 
+- **DMD-R6** — as for Croston, percentage error is undefined on zero actuals. The correction this
+  method applies is to Croston's **bias**, so judging it on a bias-blind metric hides the only
+  thing it changes.
+
 ## Related
 
 - CPT-0006 Croston's Method — the estimator this corrects; SBA is the default choice.

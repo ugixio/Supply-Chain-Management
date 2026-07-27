@@ -51,7 +51,8 @@ the demand review either finds volume/mix or finance re-forecasts.
 
 ## Governing rules
 
-- **SOP-R*** — the executive S&OP records the gap decision (close/accept) per
+- **SOP-R4** — a gap left undecided is two plans in disguise: finance's number and operations'.
+  Whether the gap is closed or accepted is a decision the cycle records, per
   cycle.
 
 ## Related

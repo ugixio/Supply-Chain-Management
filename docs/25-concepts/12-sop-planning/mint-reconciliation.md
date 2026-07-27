@@ -58,7 +58,8 @@ incoherent (115 ≠ 100). With equal variances, MinT lands total ≈ 110, SKUs
 
 ## Governing rules
 
-- **SOP-R*** — the published S&OP numbers are the reconciled set (one-number
+- **SOP-R4** — the published numbers are **one plan**: reconciliation is what makes a hierarchy
+  add up to that single set, so an unreconciled hierarchy cannot satisfy it (one-number
   principle).
 
 ## Related

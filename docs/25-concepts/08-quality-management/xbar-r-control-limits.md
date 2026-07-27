@@ -59,8 +59,9 @@ X̄ UCL/LCL = 10.02 ± 0.577×0.45 = **10.280 / 9.760**; R UCL = 0.951, LCL = 0;
 
 ## Governing rules
 
-- Chart lifecycle (activate/deactivate/exclude-point) is state-machine law in the QMS
-  rule family; the limits themselves are semantics owned here.
+- **QMS-R6** — a chart built from samples shows what the samples showed; excluding a point from the
+  baseline is a judgement that must be recorded with its reason, or the limits cannot be reproduced.
+  The chart's own lifecycle is the project's design; the limit arithmetic is what this node fixes.
 
 ## Related
 

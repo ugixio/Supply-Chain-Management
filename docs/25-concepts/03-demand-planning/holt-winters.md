@@ -58,6 +58,10 @@ seasonal indices in order — so `forecast[0]` reflects the same month position 
 
 ## Governing rules
 
+- **DMD-R9** — horizon and bucket are stated; the bucket also fixes the season length, so changing
+  the bucket invalidates the fitted seasonal factors. **At least two full seasons of history are
+  required** to estimate them at all — that is arithmetic, not a guideline. No rule fixes α, β or γ.
+
 ## Related
 
 - CPT-0004 Holt's Linear Method — the level/trend core this extends.

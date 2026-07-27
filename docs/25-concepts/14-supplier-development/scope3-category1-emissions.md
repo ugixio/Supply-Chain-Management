@@ -60,7 +60,8 @@ relations:
 
 ## Governing rules
 
-- **SDV-R*** — emissions on the sustainability record; SCM-R14 for the spend leg.
+- **SDV-R4** — the figure records its evidence and its date, which matters most for a
+  spend-based estimate; **SCM-R14** — the spend leg is exact money.
 
 ## Related
 

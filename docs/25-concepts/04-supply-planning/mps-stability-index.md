@@ -53,8 +53,9 @@ driver before the shop floor does.
 
 ## Governing rules
 
-- **SPL-R*** — MPS changes inside the frozen fence require authorization (the
-  index evidences the policy).
+- **SOP-R5** — attainment is measured against the plan as committed, which is what makes the
+  stability of that plan measurable at all. Whether changes inside a fence require authorization is
+  the project's policy; this index is the evidence of whether that policy is being kept.
 
 ## Related
 

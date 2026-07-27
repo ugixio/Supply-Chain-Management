@@ -62,6 +62,10 @@ relations:
 
 ## Governing rules
 
+- **DMD-R6** — these metrics exist because percentage error is undefined at zero actuals; each
+  handles that differently, so they are not interchangeable. **DMD-R9** — the horizon and bucket are
+  part of the figure. No rule mandates which metric a project reports.
+
 ## Related
 
 - CPT-0008 MAE/MAPE/RMSE — the basic suite these extend.

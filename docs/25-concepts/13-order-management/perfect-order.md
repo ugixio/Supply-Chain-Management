@@ -59,7 +59,9 @@ gap is failure correlation.
 
 ## Governing rules
 
-- **ORD-R*** — `markDelivered` stamps the component flags; ADR-0029 places
+- **ORD-R6** — a perfect-order measure is the **conjunction** of its elements, so it is at most its
+  worst component; a rate that exceeds one of its components is arithmetically impossible.
+  ADR-0029 places
   perfect-order metrics in dept 13.
 
 ## Related

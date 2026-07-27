@@ -1,0 +1,12 @@
+# CI-light dev dependencies (U7). Only what the enforced Python gate needs — the heavy end
+# of requirements.txt stays out of CI (risk register #6: torch/tensorflow/prophet are too
+# slow for the merge gate). `make test-py` runs services/calc/tests, which import stdlib
+# plus these.
+#
+# numpy and scipy joined at L3a: Python is the exclusive owner of the planning mathematics
+# (ENG-R8), so that lane has to be *testable* in CI before its TypeScript duplicate can be
+# deleted. Both are BSD-3, install from wheels in seconds, and are nothing like the ML
+# stack in cost. Add statsmodels when the forecasting slice lands.
+pytest>=8,<10
+numpy>=1.26,<3
+scipy>=1.11,<2

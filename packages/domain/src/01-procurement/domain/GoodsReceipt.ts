@@ -26,7 +26,7 @@
  */
 
 import { v4 as uuidv4 } from 'uuid';
-import { ISODate, ISOTimestamp, UOMCode, nowUTC } from '@scm/shared/types';
+import { ISODate, ISOTimestamp, UOMCode, nowUTC, multiplyCents } from '@scm/shared/types';
 
 export const OVER_RECEIPT_TOLERANCE_PCT = 5; // default 5% over orderedQty
 
@@ -235,7 +235,7 @@ export function softDelete(grn: GoodsReceiptNote): GoodsReceiptNote {
 /** Total value of received goods (receivedQty × unitPriceCents) in integer cents. */
 export function totalReceivedValueCents(grn: GoodsReceiptNote): number {
   return grn.lines.reduce(
-    (sum, l) => sum + Math.round(l.receivedQty * l.unitPriceCents),
+    (sum, l) => sum + multiplyCents(l.unitPriceCents, l.receivedQty),
     0,
   );
 }

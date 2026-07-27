@@ -5,7 +5,7 @@ type: concept
 owner: orchestrator
 status: active
 since: 2026-07-20
-updated: 2026-07-20
+updated: 2026-07-26
 relations:
   - { type: part-of, target: index-concepts }
   - { type: governed-by, target: index-adr }
@@ -13,11 +13,17 @@ relations:
 ---
 # Concepts — Demand Planning (03)
 
-> The calculation catalogue for `src/departments/03-demand-planning/` and
-> `python/03_demand_planning/`. This is the **exemplar** department for ADR-0015:
+> The calculation catalogue for `packages/domain/src/03-demand-planning/` and
+> `services/calc/03_demand_planning/`. This is the **exemplar** department for ADR-0015:
 > coverage is `enforced`, so every public calculation symbol below has a node.
 > Law lives in [40-contexts/03-demand-planning/rule.md](../../40-contexts/03-demand-planning/rule.md)
 > (`DMD-R*`); these nodes carry meaning and mathematics only.
+>
+> **Lane note (L3a, 2026-07-26):** the safety-stock family (CPT-0003, CPT-0013..0020) is now
+> **Python-only** — `algorithms/SafetyStock.ts` was deleted, not ported (mathematics is
+> Python's lane, ENG-R8). That closed its TS/PY divergences at once, ADR-0028 included:
+> `get_z_score` is now the exact Φ⁻¹. Coverage moved with ownership
+> (`services/calc/tests/test_safety_stock.py`).
 
 ## What counts as a public calculation symbol
 
@@ -26,8 +32,8 @@ Python (leading-underscore names excluded). This is a deliberate convention, not
 accident of the regex: domain aggregates in this repo publish their lifecycle through a
 namespace object (`export const DemandPlan = { create, approve, … }`), so state
 transitions stay out of the catalogue while the algorithm modules — `Forecasting.ts`,
-`SafetyStock.ts` — are fully in it. Lifecycle transitions are governed by `rule.md`, not
-by a concept node.
+`forecasting.py`, `safety_stock.py` — are fully in it. Lifecycle transitions are governed by
+`rule.md`. G10 also reads `pub fn` in the Rust core (ADR-0035), so coverage survives the port.
 
 ## Catalogue
 

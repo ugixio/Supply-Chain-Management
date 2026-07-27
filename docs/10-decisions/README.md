@@ -61,6 +61,13 @@ relations:
 - ADR-0027 — The **agent layer is formalized** (resolves the open "Agent lanes" decision): 7 least-privilege subagent profiles (`.claude/agents/`) over WHAT/HOW/SPECIALTY lanes + 7 technology/practice skills; the main session is the orchestrator; agents reference the governance, never restate it. (accepted 2026-07-20)
 - ADR-0028 — The **canonical service-level z-score is the exact inverse-normal** Φ⁻¹ (Python `scipy.stats.norm.ppf`; TypeScript a high-accuracy rational approximation). Resolves U15; the lookup tables are retired. (accepted 2026-07-20)
 - ADR-0029 — The misplaced `07_order_management` calc dir is dissolved: perfect-order metrics belong to dept 13, SCOR-agility + VaR to dept 10. Resolves the numbering collision (U11/risk #4). (accepted 2026-07-20)
+- ADR-0030 — The workspace is a **tech-company operating model**: SCM is the read-only versioned **Global Context** (operating discipline + engineering practice, wiki premise + `docs/` SSOT preserved) that governs a **portfolio of Projects spanning all tech branches**; projects reference global nodes by stable ID + a local overlay, never mutate them. Extends ADR-0017/0021/0024/0026/0008. (Accepted — owner-directed 2026-07-22; A1 = SCM-as-operating-context, A2 = reference+overlay)
+- ADR-0031 — A complementary **monitoring-connector** layer adds real-time project development/progress **Dashboards** and **Metrics** (metrics defined as `CPT-*` concept nodes); connectors unify external dev tools + internal project data, internal-first. Build deferred/reserved. (Accepted — owner-directed 2026-07-22; A3 = both, internal-first)
+- ADR-0032 — **Prompt-refinement gate:** a user prompt is first improved, then the improved prompt is executed — the company's incoming-quality control on instructions (SCM incoming-inspection analogue). (Accepted — owner-directed 2026-07-22)
+- ADR-0033 — **Exclusive technology lanes:** every technology owns exactly one responsibility and **no other technology may enter it** — Next.js presentation only · **NestJS is the sole technology the frontend talks to** · TypeScript owns business rules and **leaves the calculation lane** · **Rust joins Python** in calculation (Rust: exact arithmetic, hot path, ingestion; Python: models, statistics, optimization, ML). Rewrites `ENG-R8`; moves the money core to a single Rust implementation. (Accepted — owner-directed 2026-07-22)
+- ADR-0034 — **Scale tier for monitoring:** **ClickHouse** owns analytics/time-series at scale (never the source of truth — rebuildable, one-way like ENG-R7) · **Docker** owns images · **Kubernetes** owns orchestration. Broker and cache stay gated on measured volume. (Accepted — owner-directed 2026-07-22)
+- ADR-0035 — **Rust is the complete core; it replaces the TypeScript domain.** Business rules, invariants, state machines, exact arithmetic, the hot path and ingestion all move to Rust; **Python is the tools layer** (models, statistics, optimization, ML) reached over the schema-first gRPC contract; TypeScript survives **only inside NestJS and Next.js** as framework code, never as core logic. **Supersedes the TypeScript-domain clause of ADR-0001**, narrows ADR-0033. Migration is incremental (strangler), guarded by the U8 golden vectors. (Accepted — owner-directed 2026-07-22)
+- ADR-0036 — **Telemetry data model at tens-of-thousands scale:** continuous project-supervision telemetry in ClickHouse — `(project_id, metric, ts)` sort key, monthly partitions, `Delta`+`ZSTD` / `Gorilla` codecs, `LowCardinality` labels, `AggregatingMergeTree` rollup cascade (raw→1m→1h→1d), short raw TTL with long rollup retention, batched async inserts from the Rust ingester. Resolves the L1 volume question. (Accepted — owner-directed 2026-07-22)
 
 ---
 
@@ -1070,6 +1077,478 @@ source of truth for law.
   the divergences that matter are invisible from inside one language.
 - *Per-department concept families (`PRC-C*`, `DMD-C*`)* — rejected: forces a single
   owner onto genuinely shared concepts and renumbers when ownership moves.
+
+---
+
+---
+
+## ADR-0030 — The workspace is a tech-company operating model: SCM is the Global Context governing a portfolio of multi-branch tech Projects
+
+**Status:** Accepted (owner-directed 2026-07-22)
+**Extends:** ADR-0017 (staged full-stack app), ADR-0021 (context-engineering layer already
+instantiated), ADR-0024 (one-way knowledge read model, `docs/` SSOT), ADR-0026 (octagon
+node-graph wiki), ADR-0018/0023 (Clean Architecture / monorepo), ADR-0008 (named standards
+are first-class), and the `50-engineering` tier + `.claude/skills` practice layer.
+
+**Context:** To date the estate (ADR-0017) is a full-stack app that surfaces the SCM knowledge
+as a wiki. The owner has now set the direction and resolved the gating questions
+(conversation, 2026-07-22). **This is not a commercial product; it is a project/workspace
+modeled as a technology company.** The insight: **supply-chain management is used as the
+operating discipline of the company itself** — the same plan → source → make → deliver →
+return → enable flow, its KPIs, quality control, risk and procurement logic, applied not to
+physical goods but to **the flow of technical work**. That operating discipline is the
+**Global Context** that plans, governs, produces, delivers and monitors a **portfolio of
+Projects**, where each project is a deliverable in **any branch of technology**. Recorded
+before any build (ADR-0010 plan⇄context; §5 conversation is never the source of truth).
+
+**Decision:**
+- The **Global Context** is the company's operating context: (a) the SCM discipline — the 14
+  SCOR-DS departments, `CPT-*` concept catalogue and `SCM-R*`/department rules — reused as the
+  **operating system** for running work; plus (b) the **engineering & professional-practice
+  knowledge** already in the estate (`50-engineering` ENG-R* rules, and the `.claude/skills`
+  practice layer: clean-architecture, engineering-standards, testing-quality, nestjs-graphql,
+  nextjs-frontend, postgresql-data, python-precision-grpc). It is exposed as a **read-only,
+  versioned substrate** with the wiki front end (ADR-0026), keeping the one-way SSOT
+  (ADR-0024: `docs/` is the single source of truth; the served graph is a projection, never
+  hand-edited).
+- The Global Context's remit is **best practices, technical concepts, applied professionalism,
+  design, processes, organization and structure** (non-exhaustive) — the standards the company
+  applies to every project.
+- A **Workspace** is the company space that contains **Projects**. A **Project** is a unit of
+  technical work in some **tech branch** — non-exhaustive: AI, Machine Learning, Data Science,
+  Data Analysis, Data Engineering, software development, Backend, Frontend / web design,
+  UI/UX, Databases, DevOps, MLOps, Cloud & Infrastructure / SRE, Security, QA & testing,
+  Mobile, Systems / embedded, Product & Project management, Technical writing. A project
+  **references** the Global Context by stable ID and carries its own transactional data; it
+  **never mutates** the Global Context.
+- **A1 — context scope (RESOLVED, owner 2026-07-22):** the Global Context is **SCM-specific as
+  the operating discipline** (supply chain is the company's OS). The *projects it governs* span
+  all tech branches; that breadth lives in project data + per-branch practice knowledge, not in
+  a generalized domain engine. A **domain-agnostic** context engine stays **reserved** for a
+  future ADR — not built toward yet (no speculative generalization).
+- **A2 — project relationship (RESOLVED = reference + overlay, owner 2026-07-22):** a project
+  holds a **local overlay** (project-scoped concepts + parameter/threshold overrides) that
+  references but never rewrites global nodes. Reads resolve *global node, then project
+  override* — preserving the SSOT while letting each project tune practice to its branch.
+- **Architecture placement (ADR-0018/0023):** `workspace` / `projects` are **new bounded
+  contexts outside the 14-department SCM taxonomy** — company/platform concerns, not SCM
+  departments. Per-tech-branch practice knowledge is materialized **only as justified by a
+  build task** (no speculative directories/skills for every branch up front).
+- **Prompt-refinement operating rule:** every user prompt is first improved, then the improved
+  prompt is executed — recorded as a distinct decision in **ADR-0032** and treated as the
+  company's incoming-quality gate on instructions.
+- **Staging:** **extends** ADR-0017 — Stage A (wiki / Global Context) stands; Stage B is the
+  workspace+projects layer on the same stack (Next.js · NestJS/GraphQL · PostgreSQL · Python
+  calc); real-time monitoring is ADR-0031 (Stage C).
+
+**Consequences:**
+- (+) The knowledge investment (154 concept nodes, rules, ADRs, engineering practice) becomes
+  the company's reusable operating context, not one app's content.
+- (+) A coherent metaphor: SCM's incoming inspection, quality control, risk, KPIs and S&OP map
+  directly onto governing technical delivery — the discipline transfers.
+- (+) SSOT preserved: projects reference, never mutate; ADR-0024's one-way projection holds.
+- (+) Breadth (all tech branches) is expressed as data + incrementally-materialized practice
+  knowledge, keeping the model bounded rather than speculative.
+- (−) A new mutable application-data domain (workspace/projects) with schema, auth/tenancy and
+  lifecycle — real build scope beyond the read-only wiki.
+- (−) The overlay (A2) adds global+override resolution complexity at every read.
+- (−) "All tech branches" is an open-ended remit; disciplined materialization (per justified
+  task) is the standing guard against scope sprawl.
+
+**Alternatives considered:**
+- *Treat it as a commercial SCM product* — rejected: the owner reframed it as an internal
+  project/workspace where SCM is the operating discipline, not the sold good.
+- *Generalize to a domain-agnostic engine now (A1 alt)* — rejected: premature generalization of
+  a model with one real operating domain; reserved for a future ADR.
+- *Projects fork/snapshot the whole context (A2 alt)* — rejected: breaks the one-way SSOT
+  (editable copies drift), multiplies storage, blocks global-correction propagation.
+- *Materialize a rule family + skill per tech branch now* — rejected: speculative; branches are
+  catalogued as they are actually built (knowledge-architecture "only justified nodes").
+
+---
+
+## ADR-0031 — A monitoring-connector layer adds real-time project development metrics (future, complementary)
+
+**Status:** Accepted (owner-directed 2026-07-22 — A3 resolved = both sources, internal-first; build deferred)
+**Extends:** ADR-0030 (workspace/projects), ADR-0015 (concept-node catalogue), ADR-0025
+(code-first GraphQL), ADR-0002 (OSI-only).
+
+**Context:** Alongside the workspace/projects direction, the owner wants a future **connector**
+for **real-time monitoring of a project's development and progress** — dashboards and metric
+calculations that show, live, how a project under development advances. The owner framed it as
+**complementary** to the current objective, to be added later, but recorded now so the platform
+is designed with it in mind (plan⇄context).
+
+**Decision:**
+- A **Connector** ingests development/progress signals for a project; a **Monitoring** module
+  computes **Metrics** over them; **Dashboards** render them in near-real-time.
+- **A3 — metric source (RESOLVED = both, internal-first, owner 2026-07-22):** the connector
+  unifies **both** sources — external development tools (GitHub/CI/issue-trackers) and the
+  platform's own internal project data — behind one metrics model. Delivery is
+  **internal-project-data first** (dashboards over the platform's own tasks/milestones/progress),
+  with external connectors added incrementally.
+- Metrics reuse the estate's discipline: each progress/velocity metric is **defined as a concept
+  node** (`CPT-*`) with formula, units and worked example, so a delivery metric is as governed and
+  citable as a supply-chain KPI — one catalogue, not a parallel one.
+- **OSI-only (ADR-0002):** connectors and dashboard tooling must be OSI-licensed; no proprietary
+  observability SaaS as a hard dependency.
+- **Scope guard:** this layer is **deferred / reserved, not scheduled**. It is recorded so the
+  ADR-0030 project data model is designed to **emit the progress events** monitoring will consume,
+  avoiding a retrofit; no monitoring code is built until a dedicated task is scoped and this ADR is
+  ratified.
+
+**Consequences:**
+- (+) Recording it now lets the project data model emit progress events from day one.
+- (+) Metrics-as-concept-nodes keeps one calculation catalogue and one review discipline for SCM
+  KPIs and delivery metrics alike.
+- (−) Real-time ingestion + time-series storage + a dashboard UI is a substantial subsystem,
+  explicitly out of the near-term build.
+- (−) A3 (source unification) is unresolved; the ADR stays **Proposed**.
+
+**Alternatives considered:**
+- *Adopt an existing observability stack* — deferred: Grafana (AGPL) is OSI-admissible, Datadog is
+  not; the buy-vs-build call is left to the scoped task, but the metric *definitions* stay in the
+  concept catalogue regardless of the render tool.
+- *Treat progress metrics as ad-hoc queries* — rejected: it would create ungoverned calculations
+  outside the catalogue, exactly what ADR-0015 exists to prevent.
+
+---
+
+---
+
+## ADR-0032 — Prompt-refinement gate: improve a user prompt before executing it
+
+**Status:** Accepted (owner-directed 2026-07-22)
+**Extends:** ADR-0030 (the company operating context), ADR-0008 (SCM standards are first-class),
+ADR-0015 (governed nodes over ad-hoc behavior).
+
+**Context:** The owner added an operating rule (conversation, 2026-07-22): when a user submits a
+prompt, the system must **first improve/refine the prompt, then send the improved prompt** to
+the executing model/agent. In the tech-company operating metaphor (ADR-0030) this is the natural
+analogue of **incoming inspection / quality control** (dept 08) applied to the *instruction* as
+the raw material entering the flow — a bad instruction, like a defective input, is caught and
+corrected before it consumes downstream work.
+
+**Decision:**
+- Every user prompt passes a **Prompt-Refinement Gate** before execution: the raw prompt is
+  transformed into an **improved prompt** (clarified intent, resolved ambiguity, added missing
+  constraints/context, aligned to the Global Context's standards), and only the improved prompt
+  is executed. The original and the improved prompt are both retained (traceability, like an
+  inspection record).
+- It is an **operating rule of the Global Context** (ADR-0030), applied across all projects and
+  tech branches — not project-specific.
+- **[ASSUMPTION A4 — enforcement surface, owner to confirm]:** the gate is a **platform runtime
+  feature** (the app refines end-user prompts before dispatching them to a model). It also reads
+  as guidance for how agents work on this repo; the two are compatible, and the platform-runtime
+  reading is taken as primary. Owner may narrow it.
+- Its stable **rule ID and the refinement criteria** are materialized in the platform rule
+  family when the W2 task creates it (id-registry §2); the refinement quality metric, if
+  measured, is a `CPT-*` node (ADR-0015). Not built until Stage B (W3).
+
+**Consequences:**
+- (+) Higher-quality execution and fewer wasted downstream cycles — quality-at-the-source applied
+  to instructions.
+- (+) Metaphor coherence: the SCM incoming-inspection discipline governs the company's own inputs.
+- (+) Retaining original+improved prompts gives an auditable trail (and data for a
+  forecast-value-added-style "did refinement help?" metric later).
+- (−) Latency and cost of an extra refinement step on every prompt; must be fast and, ideally,
+  skippable for already-precise prompts.
+- (−) A refinement step can drift from user intent if over-eager — needs a visible diff / opt-out
+  so the user sees what changed (design constraint for W3).
+
+**Alternatives considered:**
+- *Refine only on request / low-confidence prompts* — reasonable optimization, folded into the
+  design as the "skippable for precise prompts" note rather than a separate decision.
+- *No refinement (execute prompts verbatim)* — rejected: the owner explicitly wants
+  quality-control on inputs; verbatim execution is the status quo being improved.
+
+---
+
+---
+
+## ADR-0033 — Exclusive technology lanes: one responsibility per technology, no trespassing
+
+**Status:** Accepted (owner-directed 2026-07-22)
+**Extends / refines:** ADR-0001 (two-language split), ADR-0017/0018/0023 (staging, Clean
+Architecture, monorepo), ADR-0020 (gRPC contract), ADR-0025 (code-first GraphQL), ADR-0030
+(company operating model). **Rewrites the ENG-R8 slot** and narrows ADR-0001.
+
+**Context:** ADR-0001 split TypeScript (domain) from Python (analytics), but in practice both
+languages implemented the same calculations — measured: **49 of 154 concept nodes exist in both
+TS and Python**, which is the documented source of the ~30 cross-language divergences. The owner
+set a stricter principle (conversation, 2026-07-22): **each technology has one exclusive
+responsibility and no other technology may do its job**, even to save an implementation. Two
+consequences were directed explicitly: **only NestJS may communicate with the frontend**, and
+**TypeScript leaves the calculation lane** — Rust joins Python there so the two split
+calculation responsibilities between them. Recorded before code (ADR-0010 plan⇄context).
+
+**Decision — the lane map. Each row has exactly ONE owner; no other technology may perform it:**
+
+| Lane | Exclusive owner | Owns | Must never |
+|---|---|---|---|
+| Presentation | **Next.js** | UI, rendering, interaction, a11y, design tokens | Hold business rules or calculations; talk to anything except NestJS |
+| Frontend gateway | **NestJS + GraphQL** | **The only technology the frontend talks to**: resolvers, input validation, authN/authZ, subscriptions/SSE, orchestration of internal calls | Compute business results itself; be an ingestion firehose; act as a scheduler |
+| Business rules | **TypeScript (framework-free)** | Invariants, guards, state machines, lifecycle, identity | **Any mathematics or statistics** — it is out of the calculation lane |
+| Exact arithmetic · hot path · ingestion | **Rust** | The single money/Decimal core, per-event transforms, connector ingestion workers, deterministic high-throughput work | Model fitting, statistical inference, optimization solving |
+| Models · statistics · optimization · ML | **Python** | statsmodels/scipy/sklearn/prophet/ortools/simpy work: fitting, inference, solving, simulation, training | Serve the frontend; own the hot per-event path; do rollups the analytics store does at ingest |
+| Transactional state | **PostgreSQL** | OLTP, event store, knowledge read model (one-way from `docs/`) | Be a message queue or a high-volume time-series store |
+| Analytics at scale | **ClickHouse** (ADR-0034) | Columnar time-series, ingest-time aggregation, dashboard queries | Be a source of truth |
+| Images | **Docker** (ADR-0034) | Reproducible images, local composition | Encode environment secrets |
+| Orchestration | **Kubernetes** (ADR-0034) | Scheduling, scaling, config/secrets, network policy | Hold application logic |
+
+- **Communication rule (load-bearing):** the frontend has exactly one counterpart — NestJS.
+  Rust, Python, ClickHouse and PostgreSQL are reached **only** through it (Rust/Python over the
+  gRPC contract, ADR-0020; the stores through infrastructure adapters). No other technology
+  exposes an endpoint the browser may call.
+- **Calculation split inside the shared lane:** Rust takes work that is *exact, deterministic and
+  hot* (money arithmetic, per-event evaluation, streaming transforms); Python takes work whose
+  value is the *scientific library* (fitting, inference, optimization, ML, simulation). Neither
+  duplicates the other; the boundary is recorded per `CPT-*` node.
+- **Consequence for the money core (supersedes the P5 slice-1/3 shape):** money moves from two
+  mirrored implementations (TS + Python) to **one Rust implementation** exposed to TypeScript
+  (napi-rs) and Python (PyO3). The P5 work is not discarded — its semantics, ROUND_HALF_EVEN
+  decisions and the U8 golden vectors become the **specification and acceptance tests** for the
+  Rust port.
+- **Every technology is held to its own current best practices** — enforced as `ENG-R9`
+  (best-option verification gate) in `50-engineering/rule.md`.
+
+**Consequences:**
+- (+) The 49 duplicated calculations get a single owner each; the divergence class disappears
+  structurally rather than being detected after the fact.
+- (+) One money implementation instead of two mirrors, in a memory-safe language with exact
+  decimals — and TypeScript stops doing arithmetic it should not own.
+- (+) The ingestion path finally has a legitimate owner: since NestJS may only serve the
+  frontend and Python's lane is mathematics, Rust owns it. The rule created the clarity.
+- (+) A single frontend counterpart shrinks the attack surface to one audited gateway.
+- (−) **More technologies to build, operate and secure** (Rust toolchain and cross-compilation
+  join CI). This is the accepted price of the rule.
+- (−) A cross-language boundary appears inside calculation (Rust ↔ Python); the split must be
+  recorded per concept node or it becomes a grey zone.
+- (−) Work already landed (P5 money in TS/Python) is re-homed rather than reused as-is.
+
+**Alternatives considered:**
+- *Pragmatic shared lanes (let whoever is convenient compute)* — rejected by the owner: it is
+  exactly how the 49 duplicates appeared.
+- *All calculation in Python* — rejected: the interpreter and the GIL are wrong for the exact
+  hot path (per-event, per-write arithmetic).
+- *All calculation in Rust* — rejected: loses statsmodels/ortools/prophet/sklearn, which are the
+  reason Python is in the stack.
+- *Keep TypeScript in the calculation lane* — rejected by the owner directive; it is also what
+  made the duplication possible.
+
+---
+
+## ADR-0034 — Scale tier: ClickHouse for analytics, Docker for images, Kubernetes for orchestration
+
+**Status:** Accepted (owner-directed 2026-07-22)
+**Extends:** ADR-0031 (monitoring connector), ADR-0033 (exclusive lanes), ADR-0024 (one-way
+projection discipline), ADR-0002 (OSI-only).
+
+**Context:** The monitoring layer (ADR-0031) must observe **many projects at once with large data
+volumes**, in real time, without losing speed or security. Under ADR-0033 the existing
+technologies may not be stretched to absorb this: PostgreSQL may not become a high-volume
+time-series store or a queue, and NestJS may not become an ingestion firehose. The owner directed
+adopting **ClickHouse**, **Docker** and **Kubernetes**.
+
+**Decision:**
+- **ClickHouse** (Apache-2.0) owns analytics and time-series at scale: columnar storage,
+  **ingest-time aggregation via materialized views** (cost moves from query time to insert time),
+  and dashboard queries with high concurrency and multi-tenant fan-out.
+- **ClickHouse is never a source of truth.** It is **rebuildable** from the durable event record
+  (PostgreSQL event store / the connector stream) — the same one-way discipline ENG-R7 imposes on
+  the knowledge read model. Dropping and rebuilding it must always be safe.
+- **Write path:** only the **Rust ingestion workers** (ADR-0033) insert into ClickHouse, in
+  **batches** (row-by-row inserts are an anti-pattern there). **Read path:** only **NestJS**
+  queries it, and only NestJS serves the result to the frontend.
+- **Least privilege:** separate ClickHouse users — an **INSERT-only** identity for ingestion and a
+  **SELECT-only** identity for queries, the latter constrained by row/time/memory quotas so a
+  dashboard query cannot exhaust the cluster. TLS in transit. No direct browser access, ever.
+- **Docker** owns reproducible images and local composition; **Kubernetes** owns orchestration
+  (scheduling, scaling, config/secrets, network policy). ClickHouse is stateful: in Kubernetes it
+  requires persistent volumes and an operator rather than a plain Deployment.
+- **Deliberately still gated on measured volume (not adopted here):** the **event broker**
+  (NATS vs Kafka, both Apache-2.0) and the **cache** (Valkey, BSD-3). They are adopted only when
+  measurements show ingestion or fan-out that the Rust workers plus ClickHouse cannot absorb —
+  YAGNI as recorded in `engineering-standards`.
+- **Sequencing guard:** Kubernetes is justified once there are multiple long-running services to
+  orchestrate; Docker Compose covers the interim. Building the cluster before the services exist
+  is explicitly out of order.
+- **License note (ADR-0002):** ClickHouse, Docker Engine and Kubernetes are OSI-licensed
+  (Apache-2.0). Rejected on licensing grounds for this tier: **TimescaleDB** (its advanced
+  features are proprietary TSL — and it would also violate ADR-0033 by making PostgreSQL do the
+  analytics job) and **Redpanda** (BSL restricts managed-service use).
+
+**Consequences:**
+- (+) Dashboard queries stay sub-second at volume without touching the OLTP database.
+- (+) Rebuildability keeps the analytics store disposable — a corrupted or re-modelled ClickHouse
+  is a rebuild, never a data-loss incident.
+- (+) Split-privilege access and a single query gateway keep the attack surface small.
+- (−) A real operational surface arrives: a stateful cluster, volumes, an operator, backups,
+  upgrades — plus Kubernetes itself. Each is a new thing to patch and secure.
+- (−) Two stores must be kept coherent (PostgreSQL truth vs ClickHouse projection); a drift check
+  is required, analogous to the ingest drift guard planned for the knowledge read model.
+
+**Alternatives considered:**
+- *PostgreSQL alone (or with TimescaleDB)* — rejected: violates ADR-0033's lane rule, and
+  TimescaleDB's useful features are proprietary.
+- *A managed analytics service* — rejected: ADR-0002 self-hostable, modifiable OSI policy.
+- *Defer analytics entirely until volume is proven* — the honest minimal option, and it remains
+  correct for the **broker and cache** (still gated); the owner directed adopting ClickHouse now
+  so the monitoring data model is designed against its shape from the start rather than retrofitted.
+
+---
+
+---
+
+## ADR-0035 — Rust is the complete core; Python is the tools layer; TypeScript leaves the core
+
+**Status:** Accepted (owner-directed 2026-07-22)
+**Supersedes:** the TypeScript-owns-domain-logic clause of **ADR-0001** (the two-language split
+becomes Rust core + Python tools). **Narrows:** ADR-0033 (the "business rules" lane changes owner
+from framework-free TypeScript to Rust). **Rewrites in part:** ENG-R1/ENG-R2 (see ENG-R10).
+**Depends on:** ADR-0020 (gRPC contract), ADR-0019 (exact decimal money), ADR-0002 (OSI-only).
+
+**Context:** ADR-0033 established exclusive lanes with framework-free TypeScript owning business
+rules and Rust owning exact arithmetic, the hot path and ingestion. The owner then directed a
+stronger arrangement (conversation, 2026-07-22): **Rust replaces TypeScript entirely as the
+core** — "que Rust sea el núcleo completo y Python las herramientas" — with the explicit
+requirement that Rust and Python **converge** on best practices, speed, security and
+scalability. The estate today holds **12,388 lines of TypeScript domain code** (14 departments,
+314 invariant guards) and **12,771 lines of Python** calculation code.
+
+**Decision:**
+- **The core is Rust.** It owns business rules, invariants, state machines, lifecycle and
+  identity; exact arithmetic (the single money/Decimal implementation); the per-event hot path;
+  and connector ingestion. No I/O framework enters it.
+- **Python is the tools layer.** Stateless model services: fitting, statistical inference,
+  optimization solving, simulation, ML — the work whose value is the scientific library
+  (statsmodels, scipy, sklearn, prophet, ortools, simpy). Python holds **no business rules** and
+  never serves the frontend.
+- **TypeScript survives only as framework code** — inside **NestJS** (the sole frontend gateway)
+  and **Next.js** (presentation). It carries no core logic, no business rules and no mathematics.
+  `packages/domain` and the domain half of `packages/shared` are retired into the Rust core.
+- **How the two converge (the owner's explicit requirement):**
+  1. **Schema-first contract.** The `.proto` files (`scm.calc.v1`, ADR-0020) are the single
+     source of the wire contract; **Rust types are generated with `prost`/`tonic` and Python
+     types with `grpcio-tools` from the same schema.** Hand-written DTOs on either side are a
+     defect. Money and rates cross as **strings** (ENG-R5).
+  2. **Call direction.** NestJS → Rust core; the **Rust core** orchestrates and calls Python
+     tools over gRPC when a model is needed. Python never calls the core; the gateway never
+     calls Python directly.
+  3. **Transport choice, justified.** Core↔Python is **gRPC**, not PyO3 embedding — isolation,
+     independent scaling of model workers, and the GIL stays out of the core process (decisive
+     at the telemetry scale of ADR-0036). NestJS↔core is **in-process via `napi-rs`**, because
+     a network hop between the gateway and the core buys nothing and costs latency on every
+     request; gRPC remains the escape hatch if the core ever needs independent scaling.
+  4. **One error taxonomy.** Rust `Result` with typed error enums and Python typed exceptions
+     both map to the **same gRPC status/error codes declared in the proto**, which NestJS maps to
+     GraphQL errors. No stringly-typed errors across the boundary.
+  5. **Shared correctness fixtures.** The U8 golden vectors (`tests/golden/*.json`) become the
+     **Rust↔Python** contract tests — the Rust suite reads the same file the Python suite does.
+     The fixtures are the acceptance criterion for every ported calculation.
+  6. **Distributed tracing.** OpenTelemetry context propagates NestJS → Rust → Python so one
+     request is traceable end to end; without it, a three-technology path is undebuggable at
+     scale.
+- **Migration is incremental (strangler), never a freeze.** The Rust core grows department by
+  department behind the same public behaviour; each ported unit must make its existing tests and
+  golden vectors pass **unchanged** before the TypeScript original is deleted. Order: money core
+  → the departments already dedup-targeted → the remaining rule sets. `main` stays green
+  throughout; no long-lived rewrite branch.
+- **Tooling consequences:** a Cargo workspace joins the monorepo; CI gains a Rust toolchain,
+  `cargo test`, `clippy` (warnings as errors) and cross-compilation for the `napi-rs` artefact;
+  `tools/verify.py` must learn Rust symbols (`pub fn`) and crate paths so **G10 keeps the concept
+  catalogue honest** across the port.
+
+**Consequences:**
+- (+) One core language for rules *and* arithmetic: the 49 duplicated calculations collapse to a
+  single owner, and the money mirrors become one implementation.
+- (+) Memory safety, exhaustive matching and compiler-forced error handling on the code that
+  enforces financial and compliance invariants — the strongest security posture available for
+  that surface.
+- (+) Predictable latency with no GC pauses on the hot path, and fearless concurrency for
+  ingestion at the ADR-0036 scale.
+- (+) Python keeps exactly what justifies it (the scientific ecosystem) and nothing else.
+- (−) **The largest change in the project: ~12,400 lines of working TypeScript are retired and
+  re-expressed in Rust, along with their 85 passing tests.** It produces no new user-facing
+  capability by itself. This is accepted deliberately by the owner.
+- (−) The concept catalogue's TypeScript implementation links must be repointed, and the gate
+  extended, or G10 silently stops protecting the catalogue.
+- (−) A compiled toolchain, cross-compilation matrix and native artefact enter CI and every
+  developer machine; build times rise.
+- (−) Two boundaries now exist inside what used to be one process (napi-rs and gRPC); both need
+  tracing and typed errors to stay debuggable.
+
+**Alternatives considered:**
+- *Keep framework-free TypeScript for rules (ADR-0033 as written)* — rejected by the owner
+  directive; it also leaves rules and arithmetic in different languages.
+- *Rust for new surface only, TypeScript rules left in place indefinitely* — rejected as an end
+  state, but **adopted as the migration path**: it is the strangler pattern, and it is why no
+  freeze is needed.
+- *Move rules into Python instead* — rejected earlier and again: interpreter and GIL are wrong
+  for per-write rule evaluation, and it would put rules in the tools lane.
+- *Big-bang rewrite on a long-lived branch* — rejected: it would park the estate's green state
+  for months and merge as one unreviewable change.
+
+---
+
+## ADR-0036 — Telemetry data model: continuous project-supervision telemetry at tens-of-thousands scale
+
+**Status:** Accepted (owner-directed 2026-07-22)
+**Extends:** ADR-0034 (ClickHouse tier), ADR-0031 (monitoring), ADR-0035 (Rust owns ingestion).
+**Resolves:** the L1 volume question in `program/WORKFLOW.md`.
+
+**Context:** The owner specified the monitoring workload (conversation, 2026-07-22): **tens of
+thousands**, **telemetry only, for project supervision** — i.e. continuous numeric series rather
+than bursty development events. That is a **high-cardinality, sustained-ingest** time-series
+workload, which fixes several ClickHouse design choices that were left open in ADR-0034.
+
+**Decision:**
+- **Shape.** One wide raw table of telemetry samples: `project_id`, `metric` (name), `ts`,
+  `value`, plus `LowCardinality(String)` label columns. No `Nullable` on hot columns (it costs a
+  second column and blocks some optimizations) — absence is encoded explicitly.
+- **Sort key `(project_id, metric, ts)`.** Supervision queries always scope to a project (and
+  usually a metric) before a time range, so the leading high-cardinality column is correct here
+  and prunes the most data. **Partition by `toYYYYMM(ts)`** — monthly parts keep the part count
+  manageable at tens of thousands of series; daily partitions would fragment it.
+- **Codecs, chosen per column type:** `ts` → `Delta` + `ZSTD`; float metrics → `Gorilla` or
+  `DoubleDelta` + `ZSTD`; labels → `LowCardinality`. Telemetry is highly regular, so these are
+  the difference between reasonable and ruinous storage.
+- **Rollup cascade with `AggregatingMergeTree`:** raw → **1 minute → 1 hour → 1 day**, built as
+  **ingest-time materialized views** so dashboard cost is paid on insert, not on query
+  (ADR-0034). Dashboards read the coarsest table that answers the question.
+- **Retention.** Short **TTL on raw** samples (weeks), long retention on rollups (months to
+  years). Supervision needs recent detail and historical trend, not historical detail.
+- **Write path.** The **Rust ingester** (ADR-0035) batches — client-side batches or
+  `async_insert` — never row-by-row. Batching is the single most important ingest decision in
+  ClickHouse.
+- **Read path.** Only NestJS queries, only through the SELECT-only identity, with row/memory/time
+  quotas so no dashboard can exhaust the cluster (ADR-0034 least privilege).
+- **Metrics are governed.** Every supervision metric is a `CPT-*` concept node (ADR-0015/0031)
+  whose definition matches the materialized view that computes it; a rollup without its node is
+  an ungoverned calculation.
+- **Still gated (unchanged).** The broker (NATS/Kafka) and cache (Valkey) enter only when
+  measurement shows the Rust ingester plus ClickHouse cannot absorb the rate — telemetry that is
+  batched directly usually does not need a broker until multiple independent consumers appear.
+
+**Consequences:**
+- (+) Sub-second dashboards over tens of thousands of series, because the aggregation already
+  happened at insert time.
+- (+) Storage stays proportionate: regular telemetry compresses extremely well with these codecs.
+- (+) The raw-TTL/rollup split bounds growth without losing the trend history supervision needs.
+- (−) The rollup cascade is schema that must be migrated carefully: changing a materialized view
+  requires a backfill plan, and ClickHouse will not do it implicitly.
+- (−) Choosing the sort key for project-scoped queries makes cross-project "top N metrics
+  everywhere" queries more expensive; those need their own projection or a separate view.
+- (−) The design assumes numeric telemetry; if bursty development events (commits, PRs, builds)
+  are added later, they belong in their own table with its own sort key, not in this one.
+
+**Alternatives considered:**
+- *PostgreSQL / TimescaleDB* — rejected in ADR-0034 on lane and licence grounds; at tens of
+  thousands of continuous series the row-store cost is also the wrong shape.
+- *Daily partitions and no rollups* — rejected: part explosion plus full scans at query time is
+  exactly the failure mode ClickHouse materialized views exist to avoid.
+- *Store only rollups, discard raw immediately* — rejected: incident investigation needs recent
+  raw detail; the short raw TTL is the compromise.
 
 ---
 

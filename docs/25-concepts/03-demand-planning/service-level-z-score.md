@@ -5,7 +5,7 @@ type: concept
 owner: orchestrator
 status: active
 since: 2026-07-20
-updated: 2026-07-20
+updated: 2026-07-26
 relations:
   - { type: part-of, target: index-concepts-demand-planning }
   - { type: governed-by, target: index-adr }
@@ -23,10 +23,10 @@ where Φ⁻¹ is the inverse standard normal CDF.
 
 | Symbol | Meaning | Unit |
 |---|---|---|
-| SL | Target cycle service level | spec & PY: **fraction** (0.95) · TS: **percent** (95) |
+| SL | Target cycle service level | **fraction** (0.95) — the TS percent form is gone |
 | z | Standard-normal multiplier | dimensionless |
 
-## Three definitions exist in this repo
+## How the three definitions were reconciled (history)
 
 The department's business-context document
 ([IMPLEMENTATION.md](../../../packages/domain/src/03-demand-planning/IMPLEMENTATION.md) §10,
@@ -34,8 +34,8 @@ The department's business-context document
 
     z = scipy.stats.norm.ppf(target_service_level)
 
-**Neither implementation does this.** Both approximate Φ⁻¹ by table lookup with linear
-interpolation, and disagree with each other as well as with the spec (measured):
+Until L3a **neither implementation did this.** Both approximated Φ⁻¹ by table lookup with
+linear interpolation, and disagreed with each other as well as with the spec (measured):
 
 | SL | exact | TS | TS err | PY | PY err |
 |---|---|---|---|---|---|
@@ -50,11 +50,13 @@ in 1-point steps) so interpolation barely matters, while Python's sparse table (
 overstates z by up to **1.57%** — Φ⁻¹ is convex here, and a chord above a convex curve
 always overshoots.
 
-**Resolved (ADR-0028):** the canonical z is the **exact** Φ⁻¹ — Python
-`scipy.stats.norm.ppf` (already a dependency), TypeScript an Acklam rational approximation
-(error < 1.15e-9). Both lookup tables are retired; golden vectors assert TS ≈ PY to 1e-6.
-The code migration is a tracked follow-up (it shifts asserted safety-stock values and the
-Python side needs a runnable env).
+**Resolved (ADR-0028) and LANDED at L3a (2026-07-26):** the canonical z is the **exact** Φ⁻¹.
+`get_z_score` now returns `scipy.stats.norm.ppf(service_level)` and the coarse lookup table is
+deleted. The TypeScript side needed no Acklam approximation after all — the whole file was
+deleted instead, because mathematics is Python's exclusive lane (ENG-R8 / ADR-0033), so there
+is now **one** implementation rather than two agreeing ones. Asserted to 1e-9 against
+reference quantiles in `services/calc/tests/test_safety_stock.py`, which also pins the
+convexity property that made table interpolation wrong.
 
 ## Assumptions and limits
 
@@ -68,34 +70,33 @@ Python side needs a runnable env).
 - **Does not apply when:** SL ≤ 0 or ≥ 1 — Python raises; TypeScript throws only when the
   value falls outside the table's interpolation range.
 
-## Cross-language divergence (resolved by ADR-0028 — historical detail)
+## Cross-language divergence (closed at L3a — historical detail)
 
-Before ADR-0028 the two implementations disagreed with each other and the spec:
+The two implementations disagreed with each other *and* with the spec on three axes:
+**scale** (TS took `95`, Python `0.95`), **precision** (TS 2 dp → 1.65, Python 3 dp → 1.645
+— a systematic over-stock bias across a portfolio), and **granularity** (TS tabulated 91–94%
+and 96%; Python jumped 90 → 95, so at 92% they returned 1.410 vs 1.427).
 
-1. **Scale.** TS takes `95`; Python takes `0.95`. Passing `0.95` to the TS function is
-   out of table range; passing `95` to Python raises.
-2. **Precision.** TS rounded to 2 decimals (95% → 1.65), Python to 3 (1.645) — a
-   systematic over-stock bias across a portfolio.
-3. **Granularity.** TS tabulated 91–94% and 96%; Python jumped 90 → 95, so at 92% they
-   returned 1.410 vs 1.427 (1.22% apart).
-
-The U8 golden vectors enforce the resolved canonical going forward.
+There is now nothing to reconcile: one implementation, exact, in the owning lane.
 
 ## Worked example
 
 Target 95%, σ_D = 20 units/day, LT = 9 days (see CPT-0014):
 
-- Spec (`norm.ppf(0.95)` = 1.6449): ss = 1.6449 × 20 × 3 = **98.69 units**
-- PY table (z = 1.645): ss = 1.645 × 20 × 3 = **98.70 units**
-- TS table (z = 1.65): ss = ⌈1.65 × 20 × 3⌉ = **99 units**
+    z  = Φ⁻¹(0.95) = 1.6449
+    ss = 1.6449 × 20 × √9 = 1.6449 × 20 × 3 = 98.69 units
 
-At 92% the gap widens: TS reads a tabulated 1.410 while Python interpolates to 1.4272 —
-1.22% apart, and Python is the one 1.57% above the exact value.
+The retired tables gave 98.70 (PY, 3 dp) and 99 (TS, 2 dp then ceiled). Rounding up to
+orderable units is the caller's decision at the ordering boundary — the formula returns the
+exact requirement.
 
 ## Implementations
 
-- TS: [`getZScore`](../../../packages/domain/src/03-demand-planning/algorithms/SafetyStock.ts)
 - PY: [`get_z_score`](../../../services/calc/03_demand_planning/safety_stock.py)
+
+TypeScript had a duplicate until L3a; it was **deleted, not ported** — planning
+mathematics is Python's exclusive lane (ENG-R8 / ADR-0033). Python is now the sole
+owner, covered by `services/calc/tests/test_safety_stock.py`.
 
 ## Related
 

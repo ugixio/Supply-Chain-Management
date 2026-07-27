@@ -20,7 +20,7 @@
  */
 
 import { v4 as uuidv4 } from 'uuid';
-import { ISODate, ISOTimestamp, nowUTC } from '@scm/shared/types';
+import { ISODate, ISOTimestamp, nowUTC, multiplyCents } from '@scm/shared/types';
 
 // ─── Enums ───────────────────────────────────────────────────────────────────
 
@@ -382,7 +382,7 @@ function expectedAnnualLossCents(risk: RiskItem): number {
   if (risk.financialExposureCents === undefined) return 0;
   const annual =
     risk.probabilityAnnual ?? probabilityToAnnualLikelihood(risk.probability);
-  return Math.round(annual * risk.financialExposureCents);
+  return multiplyCents(risk.financialExposureCents, annual);
 }
 
 // ─── Namespace export (matches factory pattern used elsewhere) ────────────────

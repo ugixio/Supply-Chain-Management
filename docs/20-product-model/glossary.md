@@ -55,3 +55,14 @@ relations:
 | EUDR / CBAM | EU Deforestation Regulation / Carbon Border Adjustment Mechanism. | 14-supplier-dev / 09-compliance |
 | ESG Scoring | Environment + Social + Governance composite supplier score. | 14-supplier-development |
 | Idempotency Key | Client-supplied key making a transaction safe to retry (SCM-R12). | cross (scm-core) |
+| Global Context | The read-only, versioned SCM knowledge substrate (`docs/` SSOT + `CPT-*` + rules) surfaced as a wiki; consumed by projects. | platform (ADR-0030) |
+| Workspace | Top-level tenant space that contains Projects. | platform (ADR-0030) |
+| Project | A unit of work that references the Global Context by stable ID and owns its transactional data; never mutates the context. | platform (ADR-0030) |
+| Project Overlay | A project's local layer of project-scoped concepts + parameter overrides referencing (never rewriting) global nodes; reads resolve global-then-override. | platform (ADR-0030) |
+| Connector | Ingests a project's development/progress signals (external dev tools and/or internal project data). | platform (ADR-0031) |
+| Delivery Metric | A progress/velocity calculation over project signals, defined as a `CPT-*` concept node. | platform (ADR-0031) |
+| Tech Branch | The technical discipline a Project belongs to (AI, ML, Data, Backend, Frontend, UI/UX, DevOps, …); open, materialized incrementally. | platform (ADR-0030) |
+| Prompt-Refinement Gate | A user prompt is improved first, then the improved prompt is executed; original + improved retained. Incoming-quality control on instructions. | platform (ADR-0032) |
+| Node | Any addressable workspace unit with a stable `id` and declared `type` (concept, rule, ADR, …); the atom of the workspace graph. | platform (node-model) |
+| Edge | A typed relation between nodes (`part-of`/`governed-by`/`refines`/`depends-on`/`traces-to`/`supersedes`); authority edges point up the tier ladder. | platform (node-model) |
+| Region | A connected subgraph of the workspace: the Global Context region, or one Project region per project. | platform (node-model) |

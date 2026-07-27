@@ -82,10 +82,35 @@ mirror-coverage bar) · duplicated formulas across TS/Python with one past diver
   `ncrRate` using the wrong metrics group; REACH compliance reading an excluded input
   field — now conservative, see U11). Result: typecheck 0 errors, 40/40 tests green.
   **Still open inside U6 → follow-ups:** eslint flat config (U12) · pytest gate (U7).
-- ⬜ **U7 · HOW lane** — Test debt: Python test suite (SCM-R13 currently unmet); extend
+- 🟦 **U7 · HOW lane** — Test debt: Python test suite (SCM-R13 currently unmet); extend
   TS unit coverage beyond the 4 existing files; every SCM-Rx gets its test.
-- ⬜ **U8 · HOW lane** — Cross-language consistency mechanism (golden test vectors shared
-  by TS and Python — see open decision; prevents another `a12c114`).
+  **Started 2026-07-22 (with P5 slice 3):** the pytest suite is now real and **enforced** —
+  `services/calc/tests/test_money.py` runs in `make verify-full` and CI via `make test-py`
+  (CI-light `requirements-dev.txt` = pytest only). First Python module under test is the
+  money core. **Next:** extend pytest to the calc models (needs a heavier CI lane or mocked
+  deps — risk #6), and add a test per SCM-Rx / department rule.
+- 🟦 **U8 · HOW lane** — Cross-language consistency mechanism (golden test vectors shared
+  by TS and Python — prevents another `a12c114`).
+  **MECHANISM LANDED 2026-07-22:** `tests/golden/money.golden.json` is **one fixture file
+  read by both languages** — `tests/unit/golden-money.test.ts` (Jest) and
+  `services/calc/tests/test_golden_money.py` (pytest). 26 money vectors (multiply/divide/
+  net-of-fee/allocate/refund) with a `why` on each; if TS and PY ever disagree, one suite
+  goes red. Both suites run in `make verify-full`.
+  **First divergence closed with it — refund rounding (CPT-0091, was U15b-class):** TS did
+  one `Math.round` (float, half-up), PY two `round()` steps. **Canonical = two-step
+  quantization, ROUND_HALF_EVEN at each step** (the gross line extension is
+  document-visible so it quantizes first; the fee applies to that stated gross —
+  e.g. `2.5 × 1299 @ 15%` → **2761**, not 2760). TS `calculateRefundCents` converged +
+  exported (now catalogued in CPT-0091 — G10 correctly demanded it); PY `refund_amount`
+  moved to exact `Decimal`. Concept node + dept-13 index updated.
+  **Finding recorded:** the numbered calc dirs (`13_order_management`) are not importable
+  packages and pull numpy/pandas, so a department function cannot be unit-tested in the
+  CI-light lane — the golden test asserts the canonical structure always and the
+  department implementation only when the full stack is present (`importorskip`).
+  Fix is packaging at P6 (risk #6).
+  **Next:** extend the fixture pattern to the remaining U15b divergences (service-level
+  z-scores, safety-stock variants, MAPE units, CV estimator, ABC break-points, HHI input
+  units, risk-matrix thresholds) — each becomes a vector set + a convergence decision.
 - ✅ **U9 · orchestrator** — Stamp front-matter on `docs/standards/REGULATORY_FRAMEWORK.md`
   (or keep grandfathered — record which).
   **Resolved 2026-07-19: keep grandfathered** (allowlisted in knowledge-architecture §3
@@ -258,10 +283,40 @@ mirror-coverage bar) · duplicated formulas across TS/Python with one past diver
   SCM core node centre, 14 department nodes around it as a connected circuit, CPT sub-nodes
   on expand; click → right sidebar rendering the concept node (formula, worked example,
   links). Accessibility + light/dark.
-- ⬜ **P5 · WHAT+HOW (blocks on P0)** — Money → Decimal migration (ADR-0019): `Money` type,
-  `multiplyMoney`/allocation with `ROUND_HALF_EVEN`, Python `Decimal` context, `NUMERIC`
-  columns, string-over-gRPC. Golden vectors (U8) prove TS==PY==SQL. Retires the live
-  `Math.round(amount*factor)` precision bug.
+- 🟦 **P5 · WHAT+HOW** — Money → Decimal migration (ADR-0019). **Sliced (L/high-risk):**
+  (1) `@scm/shared` Decimal money core · (2) domain call-site migration by department ·
+  (3) Python `Decimal` context · (4) `NUMERIC` columns + string-over-gRPC · (5) golden
+  vectors (U8) prove TS==PY==SQL.
+  **Slice 1 LANDED 2026-07-22:** `decimal.js` added to `@scm/shared` (the ADR-0019-decided
+  lib); `multiplyMoney` rewritten to compute in exact Decimal and round **ROUND_HALF_EVEN**
+  (retires the live `Math.round(amount*factor)` float bug); added `subtractMoney` and
+  `allocateMoney` (largest-remainder, sum-preserving — no lost/invented minor units) +
+  `MONEY_ROUNDING` constant; `tests/unit/money.test.ts` (14 cases: banker's rounding, exact
+  string rates, no-float-drift, sum-preserving allocation incl. negatives). Non-breaking:
+  `Money.amount` stays integer-cents this slice (type→Decimal is slice 2+). verify-full green
+  (54 tests).
+  **Slice 2 LANDED 2026-07-22:** added shared `multiplyCents` / `divideCents` (Decimal +
+  ROUND_HALF_EVEN; `multiplyMoney` now delegates to `multiplyCents`, DRY) and migrated the
+  **4 unambiguous scalar money sites** off `Math.round(...)` float math: GoodsReceipt
+  `totalReceivedValueCents` (01), LandedCost unit cost (11), InventoryValuation WAC (05),
+  RiskItem EAL (10). `PurchaseOrder.calculatePOTotal` was already correct (it routes through
+  the slice-1 `multiplyMoney`). +5 core tests (59 total), verify-full green.
+  **Deferred (needs a convergence decision, not a mechanical change):**
+  `ReturnAuthorization` refund (13) — its single-round structure diverges from Python
+  `refund_amount`'s double-round (CPT-0091 divergence); resolve under U8/U15b. Upstream
+  float *accumulation* in InventoryValuation `totalValueCents` (Σ qty×cost) noted for a
+  later slice.
+  **Slice 3 LANDED 2026-07-22:** the Python money core in `services/calc/shared/types.py`
+  (`multiply_cents` / `divide_cents` / `allocate_cents` / `money_subtract` + `MONEY_ROUNDING`)
+  using `decimal.Decimal` + ROUND_HALF_EVEN, **mirroring the TS core value-for-value** (float
+  factors go via `str()` to match decimal.js). `services/calc/tests/test_money.py` asserts the
+  **same inputs → same outputs as `money.test.ts`** (TS == PY confirmed) — the U8 seed. This
+  also **starts U7**: `make test-py` (pytest on `services/calc/tests`, stdlib-only) joins
+  `verify-full`; CI installs a CI-light `requirements-dev.txt` (pytest only; heavy ML stack
+  stays out, risk #6). verify-full green (TS 59 + PY 5).
+  **Next:** slice 4 — `NUMERIC` columns already exist in `schema.sql`; wire string-over-gRPC
+  when P6 lands. Slice 5 / **U8** — promote the mirrored money cases into shared golden-vector
+  fixtures and extend to the deferred `ReturnAuthorization` refund convergence (CPT-0091).
 - ⬜ **P6 · HOW lane (Stage B)** — Python gRPC calc service (`scm.calc.v1`), NestJS client;
   interactive calculator for the demand-planning concepts first (the `enforced` dept).
 - ⬜ **P7 · HOW lane (Stage C, planned)** — Clean-Architecture wiring of `src/departments`
@@ -281,6 +336,143 @@ mirror-coverage bar) · duplicated formulas across TS/Python with one past diver
   allowlisted (ungated) — the "references, never restates" rule keeps the gated docs the
   source. **Note:** the frontend-UX `ENG-*`/`50-engineering/frontend` tokens and the
   boundary linter (ENG-R1 enforcement) are still P1 proper.
+
+### Phase W — Tech-company operating model: Global Context + Workspace/Projects (ADR-0030/0031/0032; Accepted, owner-directed)
+
+> Owner direction 2026-07-22: this is a **project/workspace modeled as a tech company** where
+> **SCM is the operating discipline** (the Global Context) governing a **portfolio of Projects
+> spanning all tech branches**; a **prompt-refinement gate** (ADR-0032) sits on every input; a
+> future **Monitoring** connector adds real-time dashboards + metrics. Consolidated first as
+> ADR-0030/0031/0032 + product-statement (plan⇄context, ADR-0010). Assumptions **A1/A2/A3
+> RESOLVED**; **A4** (prompt-gate surface) owner-confirmable. Build is disciplined: per-branch
+> practice and platform rules materialize **only per justified task**.
+
+- ✅ **W0 · orchestrator** — Consolidate the direction into governance. **Landed 2026-07-22
+  (branch `claude/supply-chain-framework-m6r3g6`, restarted from the merged default):**
+  ADR-0030 (tech-company operating model — reframed from "platform"; A1 = SCM-as-operating-
+  context, A2 = reference+overlay), ADR-0031 (monitoring connector; A3 = both, internal-first),
+  ADR-0032 (prompt-refinement gate), `20-product-model/product-statement.md` +8 glossary rows,
+  id-registry ADR→0032 + reserved platform family `PLT` (§2), decision-index one-liners (G9).
+  Doc gates green.
+- 🟦 **W2 · WHAT lane** — Model the platform bounded contexts. **Landed 2026-07-22:** the
+  **Node Model** (`20-product-model/node-model.md`) — the workspace as a typed node+edge graph
+  with **Regions** (Global Context + one per Project), grounded in the C4 model / arc42 so a
+  developer can interpret every part; the **`PLT` rule family is now LIVE**
+  (`30-foundation/platform/rule.md`, id-registry §1): PLT-R1 prompt-refinement gate (ADR-0032),
+  PLT-R2 read-only project reference, PLT-R3 everything-connected (via G4/G5/G6), PLT-R4
+  node/edge typing, PLT-R5 one-branch-per-project; glossary +Node/Edge/Region; platform rule
+  home = `30-foundation/platform/` (cross-cutting axis above the 14 depts). Doc gates green.
+  **Still open in W2 (next):** the `workspace`/`projects` **concept nodes** + the tech-branch
+  taxonomy as an open data-driven set, and concept nodes for the refinement-value / project-
+  progress metrics (feed W3/W4).
+- ⬜ **W3 · HOW lane (Stage B)** — Build the workspace/projects bounded context: Postgres schema
+  for the mutable project data domain (separate from the ADR-0024 knowledge read model),
+  tenancy/auth, NestJS code-first GraphQL resolvers, project→context reference resolution +
+  overlay, and the **prompt-refinement gate** (refine → show diff / opt-out → execute; retain
+  original+improved). Reads the knowledge read model, never writes it.
+- ⬜ **W4 · HOW lane (Stage C, ADR-0031)** — Monitoring connector: emit progress events from the
+  W3 data model; connectors (internal-first, then external dev tools: GitHub/CI/issue-trackers);
+  delivery metrics as `CPT-*` nodes; dashboards. Deferred until W3 lands.
+- ⬜ **W5 · WHAT lane (as branches are onboarded)** — Per-tech-branch practice knowledge
+  (AI/ML/Data/Backend/Frontend/DevOps/…): materialize a branch's standards/skills **only when a
+  real project in that branch needs them** (no speculative pre-build — knowledge-architecture).
+
+### Phase L — Exclusive lanes, Rust core & scale tier (ADR-0033/0034/0035/0036; owner-directed 2026-07-22)
+
+> The owner set **exclusive technology lanes** (ENG-R8) and the **best-option verification gate**
+> (ENG-R9), adopted **ClickHouse**, **Docker** and **Kubernetes** (ADR-0034), and then made the
+> load-bearing call: **Rust is the complete core and Python is the tools layer** (ADR-0035) —
+> TypeScript leaves the core entirely and survives only inside NestJS and Next.js. Monitoring
+> scale is fixed at **tens of thousands of continuous telemetry series for project supervision**
+> (ADR-0036).
+>
+> **Shape of the work.** L2–L3 are one **strangler migration**, not a rewrite: the Rust core grows
+> department by department behind unchanged public behaviour, each ported unit proves itself
+> against its existing tests **and** the U8 golden vectors before the TypeScript original is
+> deleted, and `main` stays green throughout (**ENG-R10.6**; no long-lived rewrite branch).
+> Nothing is built before its lane and its six ENG-R9 checks are stated.
+
+- ✅ **L0 · orchestrator** — Consolidate the lane direction into governance. **Landed 2026-07-22:**
+  ADR-0033 (exclusive lane map + communication rule), ADR-0034 (ClickHouse/Docker/Kubernetes;
+  broker + cache still gated on measured volume), **ENG-R8** (lanes) and **ENG-R9** (six-check
+  best-option gate) in `50-engineering/rule.md` with lane-trespassing anti-states, ENG-R9 wired
+  into `evaluation.md` §1.5 so it runs *before* code, product-statement §3 lane table,
+  id-registry (ADR→0034, ENG→R9).
+- ✅ **L1 · orchestrator** — Consolidate the **core + telemetry** direction. **Resolved by the
+  owner (2026-07-22) and landed:** volume = **tens of thousands, telemetry only, for project
+  supervision** → **ADR-0036** (raw table + sort key `(project_id, metric, ts)`, monthly
+  partitions, `Delta`/`ZSTD` + `Gorilla` codecs, `LowCardinality` labels, `AggregatingMergeTree`
+  rollup cascade raw→1m→1h→1d, short raw TTL + long rollup retention, batched async inserts);
+  core = **Rust complete** → **ADR-0035** (supersedes ADR-0001's TS-domain clause, narrows
+  ADR-0033) plus **ENG-R10** (Rust core boundary), ENG-R1/R2 annotated as narrowed,
+  product-statement §3 rewritten (TypeScript is no longer a lane owner), id-registry
+  (ADR→0036, ENG→R10). *The old L1 question — event-vs-telemetry and order of magnitude — is
+  answered; no schema tuning is left blocked.*
+- 🟦 **L2 · WHAT+HOW** — **Rust core, slice 1: the money core** (the first port ADR-0035 names).
+  **L2a landed 2026-07-26:** `crates/scm-money` — one `rust_decimal` implementation
+  (`ROUND_HALF_EVEN` quantization at boundaries only; `multiply_cents` · `divide_cents` ·
+  `net_of_fee_cents` · sum-preserving largest-remainder `allocate_cents` · `Money` with a
+  currency guard), typed `MoneyError` (overflow **reported, never wrapped**), `unsafe_code`
+  forbidden and clippy denying truncating casts, floats and `unwrap`. **Acceptance met:
+  `tests/golden/money.golden.json` passes unchanged from a third reader (`cargo test`)**
+  alongside Jest and pytest — 13 Rust tests. Toolchain landed: Cargo workspace, `make test-rs`
+  in the FAST gate + `make lint-rs` (fmt + `clippy -D warnings`) in the merge gate, cargo cache
+  in CI. `tools/verify.py` now parses `RS:` implementation bullets, resolves `pub fn`/`pub
+  const`/`pub struct`/`pub enum` and scans `crates/*/src/NN-*` for department coverage, so
+  **G10 protects the catalogue across the port** (ENG-R10.7). The primitives are catalogued as
+  **CPT-0154** with all twelve RS/TS/PY links verified.
+  **L2b remaining:** the **napi-rs** binding plus its cross-compilation matrix, `@scm/shared`
+  and `services/calc/shared` delegating to the core, then deleting the two mirrors (107 + 70
+  lines) once every call site is on the binding.
+- 🟦 **L3 · WHAT+HOW** — **Collapse the duplication as the core absorbs it** (the 49 concepts
+  implemented twice — source of ~30 documented divergences). Two directions, one lane map:
+  *(a)* the **703 lines of TypeScript mathematics** (`Forecasting.ts` 207, `SafetyStock.ts` 140,
+  `SPCChart.ts` 356) are **deleted, not ported** — mathematics is Python's lane; *(b)* the
+  **314 invariant guards** across the 14 departments are **ported into the Rust core** and their
+  Python duplicates deleted (stock-balance guard, FEFO, risk matrix, three-way match,
+  UFLPA/REACH/CSDDD, OTD). Department by department, each with its tests and golden vectors green
+  before deletion. Each removal updates its `CPT-*` node in the same commit (G10 enforces it).
+  Blocks on P6 for the paths the core must still reach.
+  **L3a landed 2026-07-26 — the safety-stock family (140 lines):** the surviving lane was
+  covered *first* (`services/calc/tests/test_safety_stock.py`, 37 tests; `numpy` + `scipy`
+  joined the CI-light requirements so Python's mathematics is testable in the merge gate), the
+  **ADR-0028 z-score resolution landed** (`get_z_score` is now the exact `norm.ppf`; the coarse
+  lookup table is deleted), and only then were `algorithms/SafetyStock.ts`, its barrel export
+  and its 12 Jest tests removed. Ten `CPT-*` nodes repointed to the single owner in the same
+  commit. **Order matters and was corrected here:** deleting the duplicate first would have left
+  the surviving implementation with no CI coverage at all.
+  **L3b started 2026-07-26 — `crates/scm-core`, department 01, PurchaseOrder (194 lines):**
+  the first rules in the Rust core. `PurchaseOrder.ts`, its barrel exports and its 12 Jest tests
+  are deleted; 19 Rust tests replace them. The port **strengthened** the aggregate rather than
+  transliterating it: status is an `enum` (illegal transitions are exhaustive matches, not string
+  comparisons), line currencies are checked against the order currency (the TS node documented
+  mixed currency as "a data error the aggregate does not detect"), quantities must be positive
+  (UCC Art. 2), and creation is **pure** — identity and timestamps are inputs, so opening the
+  same order twice yields the same value. The total flows through `scm-money`, retiring the last
+  `Math.round` money path in dept 01. Two gate improvements landed with it: G10 attributes
+  `crates/*/src/dNN_*` to its department, and **G10 now fails on two nodes claiming one `CPT-*`
+  number** — which is how the duplicate CPT-0026 node was found and deleted.
+  Convention recorded: **calculations are free functions, lifecycle transitions are `impl`
+  methods**, mirroring the existing TypeScript split so G10 stays pointed at calculations.
+  **L3 remaining:** `Forecasting.ts` (207 lines — needs `statsmodels` in CI-light first) ·
+  `SPCChart.ts` (356) · the other 13 departments' rule guards, department by department ·
+  then **L2b** (napi-rs) once `apps/api` needs the core.
+- ⬜ **L4 · HOW** — **ClickHouse telemetry tier (ADR-0034/0036).** The ADR-0036 schema exactly:
+  raw `MergeTree` on `(project_id, metric, ts)` partitioned `toYYYYMM(ts)`, per-column codecs,
+  the four-level `AggregatingMergeTree` rollup cascade as **ingest-time materialized views**,
+  raw TTL + rollup retention, **split-privilege users** (INSERT-only ingest vs SELECT-only queries
+  with row/memory/time quotas), TLS, rebuild-from-truth procedure + a drift check. Read path
+  exclusively through NestJS; every supervision metric documented as a `CPT-*` node
+  (ADR-0031/0015) matching the view that computes it.
+- ⬜ **L5 · HOW** — **Rust ingestion workers** — the connector path (normalize → validate →
+  deduplicate → **batch** insert; `async_insert` or client-side batching, never row-by-row).
+  Ingestion is core work (ADR-0035): NestJS may only serve the frontend and Python's lane is
+  mathematics. OpenTelemetry spans propagate from the gateway through the core (ADR-0035).
+- ⬜ **L6 · HOW** — **Docker** images for every service (non-root, minimal base, pinned digests,
+  no secrets in layers; multi-stage for the Rust core so only the artefact ships) + Compose for
+  local composition. **Kubernetes** afterwards, once ≥2 long-running services exist: ClickHouse
+  via an operator with persistent volumes, config/secrets, network policy restricting the frontend
+  to NestJS only.
 
 ### Phase 1 — Product evolution (owner-defined)
 - ⬜ Resolve the open decisions in `10-decisions/README.md` (runtime/persistence, API

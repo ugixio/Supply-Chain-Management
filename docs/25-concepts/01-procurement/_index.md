@@ -5,7 +5,7 @@ type: concept
 owner: orchestrator
 status: active
 since: 2026-07-20
-updated: 2026-07-20
+updated: 2026-07-26
 relations:
   - { type: part-of, target: index-concepts }
   - { type: governed-by, target: index-adr }
@@ -58,12 +58,13 @@ matches, classifications, scoring, cost models — is catalogued.
 ## Not concepts (excluded from G10)
 
 > Aggregate lifecycle / state-machine transitions — governed by `rule.md` (PRC-R*), not
-> calculations. Listed so G10 coverage is exact.
+> calculations. Listed so G10 coverage is exact. In the Rust core the same split is
+> structural rather than by name: **calculations are free functions, lifecycle transitions
+> are `impl` methods**, and G10 reads only the free functions (see `crates/scm-core/src/lib.rs`).
 
 `createSupplier` · `addCertification` · `createRFQ` · `create` · `addLine` ·
-`recordInspection` · `post` · `reverse` · `close` · `softDelete` · `createPurchaseOrder` ·
-`approvePurchaseOrder` · `rejectPurchaseOrder` · `sendPurchaseOrderToSupplier` ·
-`cancelPurchaseOrder` · `softDeletePurchaseOrder` · `createContract` · `activateContract`
+`recordInspection` · `post` · `reverse` · `close` · `softDelete` · `createContract` ·
+`activateContract`
 
 ## Divergences surfaced (for the backlog)
 
@@ -72,8 +73,17 @@ matches, classifications, scoring, cost models — is catalogued.
   replace the placeholder.
 - **Kraljic (CPT-0031)** — TS takes pre-bucketed HIGH/LOW, PY takes 0–10 scores; no shared
   rubric.
-- **Money precision** — `calculatePOTotal`, `totalReceivedValueCents`, `calculate_tco`,
-  `adjusted_price` handle money in float/cents; all are subject to the ADR-0019 Decimal
-  migration (P5).
-- **Coverage gaps** — TCO, price escalation, three-way match are Python-only; PO total,
-  received value, completeness, cert/contract validity are TS-only.
+- **Money precision** — `totalReceivedValueCents`, `calculate_tco` and `adjusted_price` still
+  handle money outside the exact core; each is migrated as its aggregate moves (ADR-0019/0035).
+  **CPT-0026 is done:** the PO total is computed in the Rust core through `multiply_cents`.
+- **Coverage gaps** — TCO, price escalation and three-way match are Python-only; received
+  value, completeness and cert/contract validity are still TypeScript-only, pending their port.
+
+## Ported to the Rust core (L3b)
+
+- **PurchaseOrder** (2026-07-26) → `crates/scm-core/src/d01_procurement/purchase_order.rs`.
+  `PurchaseOrder.ts` and its Jest suite are deleted; the port strengthened the aggregate with a
+  status **enum** (exhaustive transitions), a **line-currency guard** and a **positive-quantity
+  guard**, and made creation **pure** — identity and timestamps are now inputs, so the same
+  input yields the same order. CPT-0026 repointed; the duplicate node claiming CPT-0026
+  (`purchase-order-total-value.md`) was deleted and G10 now fails on a duplicated CPT number.

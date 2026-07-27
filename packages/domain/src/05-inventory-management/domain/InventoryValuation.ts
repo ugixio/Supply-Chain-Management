@@ -19,7 +19,7 @@
  */
 
 import { v4 as uuidv4 } from 'uuid';
-import { ISODate, ISOTimestamp, nowUTC } from '@scm/shared/types';
+import { ISODate, ISOTimestamp, nowUTC, divideCents } from '@scm/shared/types';
 
 export type ValuationMethod = 'FIFO' | 'LIFO' | 'WAC';
 
@@ -67,7 +67,7 @@ function recompute(layers: CostLayer[]): {
     totalValueCents += l.remainingQty * l.unitCostCents;
   }
   const averageUnitCostCents =
-    totalQty > 0 ? Math.round(totalValueCents / totalQty) : 0;
+    totalQty > 0 ? divideCents(totalValueCents, totalQty) : 0;
   return { totalQty, totalValueCents, averageUnitCostCents };
 }
 

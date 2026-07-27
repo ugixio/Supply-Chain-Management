@@ -57,8 +57,10 @@ ADR_INDEX_LINE = re.compile(r"^-\s+ADR-(\d{4})\s+—", re.M)
 # --- G10 — concept coverage (ADR-0015) ------------------------------------------------
 CONCEPTS_DIR = f"{DOCS_DIR}/25-concepts"
 # `- TS: [`symbolName`](relative/path.ts)` inside the `## Implementations` section.
+# `RS` is the Rust core (ADR-0035): as departments migrate, their symbols must stay linked
+# from their concept node exactly as the TS and PY ones do (ENG-R10.7).
 IMPL_BULLET = re.compile(
-    r"^\s*-\s*(TS|PY):\s*\[`([A-Za-z_][A-Za-z0-9_]*)`\]\(([^)\s]+)\)"
+    r"^\s*-\s*(TS|PY|RS):\s*\[`([A-Za-z_][A-Za-z0-9_]*)`\]\(([^)\s]+)\)"
 )
 # Coverage table rows in the concepts index: `| 03 | ... | enforced |`
 COVERAGE_ROW = re.compile(r"^\|\s*(\d{2})\s*\|[^|]*\|\s*(enforced|census)\s*\|", re.M)
@@ -67,7 +69,16 @@ BACKTICKED = re.compile(r"`([A-Za-z_][A-Za-z0-9_]*)`")
 # Public calculation symbols, by language.
 TS_EXPORT = re.compile(r"^export function (\w+)", re.M)
 PY_DEF = re.compile(r"^def (\w+)", re.M)
-DEPT_NUMBER = re.compile(r"^(?:packages/domain/src|services/calc)/(\d{2})[-_]")
+RS_PUB_FN = re.compile(r"^pub fn (\w+)", re.M)
+# Department-scoped code, in any of the three languages. Rust department modules live at
+# `crates/<crate>/src/dNN_<key>/` — snake_case so the module name is Rust-legal, with the
+# stable department number preserved (ADR-0035). Language-agnostic crates (the money core)
+# are catalogued by their concept node instead of by path.
+DEPT_NUMBER = re.compile(
+    r"^(?:packages/domain/src|services/calc)/(\d{2})[-_]|^crates/[^/]+/src/d(\d{2})_"
+)
+# A concept node's CPT number, taken from its title: `# Title (CPT-0026)`.
+CPT_IN_TITLE = re.compile(r"^#\s+.*\((CPT-\d{4})\)", re.M)
 
 
 def section_body(text: str, heading: str) -> str:
@@ -93,6 +104,13 @@ def defines_symbol(path: str, symbol: str) -> bool:
         return False
     if path.endswith(".ts"):
         patterns = (rf"^export function {symbol}\b", rf"^export const {symbol}\b")
+    elif path.endswith(".rs"):
+        patterns = (
+            rf"^pub fn {symbol}\b",
+            rf"^pub const {symbol}\b",
+            rf"^pub struct {symbol}\b",
+            rf"^pub enum {symbol}\b",
+        )
     else:
         patterns = (rf"^def {symbol}\b", rf"^{symbol}\s*=")
     return any(re.search(p, text, re.M) for p in patterns)
@@ -109,16 +127,19 @@ def public_symbols(tracked):
             lang, pattern = "TS", TS_EXPORT
         elif path.endswith(".py") and not path.endswith("__init__.py"):
             lang, pattern = "PY", PY_DEF
+        elif path.endswith(".rs") and not path.endswith("/mod.rs"):
+            lang, pattern = "RS", RS_PUB_FN
         else:
             continue
         try:
             text = open(path, encoding="utf-8").read()
         except OSError:
             continue
+        number = match.group(1) or match.group(2)
         for name in pattern.findall(text):
             if name.startswith("_"):
                 continue
-            found.setdefault(match.group(1), set()).add((lang, name))
+            found.setdefault(number, set()).add((lang, name))
     return found
 
 
@@ -442,12 +463,22 @@ def main() -> int:
 
     # G10 — concept coverage (ADR-0015): symbol links must resolve; enforced departments
     # must have a concept node (or an explicit exclusion) for every public calculation.
-    covered, excluded = {}, {}
+    covered, excluded, cpt_owner = {}, {}, {}
     for path, (meta, text) in docs.items():
         if meta.get("type") != "concept":
             continue
         dept = path.split("/")[2] if path.startswith(f"{CONCEPTS_DIR}/") else ""
         number = dept[:2] if dept[:2].isdigit() else ""
+        if not path.endswith("_index.md"):
+            # One CPT number, one node. Two files claiming the same ID is how a concept
+            # silently forks: they drift, and a reader cannot tell which one is law.
+            for cpt in CPT_IN_TITLE.findall(text):
+                if cpt in cpt_owner:
+                    gates.fail("G10", f"{path}: {cpt} is already claimed by "
+                                      f"{cpt_owner[cpt]} — one concept, one node "
+                                      f"(id-registry §1)")
+                else:
+                    cpt_owner[cpt] = path
         if path.endswith("_index.md"):
             for name in BACKTICKED.findall(section_body(text, EXCLUSION_HEADING)):
                 excluded.setdefault(number, set()).add(name)

@@ -14,29 +14,22 @@ from scipy import stats
 
 XYZClass = Literal["X", "Y", "Z"]
 
-# Precomputed Z-scores for common service levels
-SERVICE_LEVEL_Z: dict[float, float] = {
-    0.80: 0.842,
-    0.85: 1.036,
-    0.90: 1.282,
-    0.95: 1.645,
-    0.97: 1.881,
-    0.98: 2.054,
-    0.99: 2.326,
-    0.999: 3.090,
-}
-
 
 def get_z_score(service_level: float) -> float:
     """
-    Returns Z-score for given service level via linear interpolation.
-    service_level ∈ (0, 1), e.g. 0.95 for 95%.
+    Z-score for a target cycle service level: z = Φ⁻¹(SL), the *exact* inverse standard
+    normal CDF (CPT-0003, canonical per ADR-0028).
+
+    service_level ∈ (0, 1) — a fraction, e.g. 0.95 for 95%.
+
+    The previous coarse lookup table with linear interpolation is retired. Φ⁻¹ is convex
+    above the median, so a chord drawn across a sparse table always overshoots: at 92% the
+    table returned 1.4272 against an exact 1.4051, a 1.57% over-estimate that propagated
+    straight into every safety-stock number derived from it.
     """
     if service_level <= 0 or service_level >= 1:
         raise ValueError("service_level must be in (0, 1)")
-    sl_list = sorted(SERVICE_LEVEL_Z.keys())
-    z_list = [SERVICE_LEVEL_Z[sl] for sl in sl_list]
-    return float(np.interp(service_level, sl_list, z_list))
+    return float(stats.norm.ppf(service_level))
 
 
 # ── Safety Stock Methods ──────────────────────────────────────────────────────

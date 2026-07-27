@@ -31,6 +31,15 @@ relations:
    reversibility), and pick the simplest thing that respects the rules. In this repo that
    includes the cross-language rule: a formula that exists in both TS and Python is
    changed in both or not at all (see the `a12c114` divergence — risk register #2).
+5. **Run the ENG-R9 best-option gate before writing code** (`50-engineering/rule.md`), and
+   state the result at handoff — six checks, no exceptions: **lane** (is this the owning
+   technology? ENG-R8/ADR-0033) · **best practice** (idiomatic for *that* technology, not
+   imported from another) · **security** (boundary validation, least privilege, no secrets in
+   code, nothing trusted from the client) · **speed** (complexity and round trips suit the path;
+   a hot path acquires no network hop) · **scalability** (holds at the target scale of many
+   projects and large data volumes, ADR-0034, or the limit is documented) · **license** (OSI,
+   commercially usable, modifiable — ADR-0002). If a check fails, the design changes before the
+   code is written, not after.
 
 ## 2. Decision ladder (where a choice gets recorded)
 

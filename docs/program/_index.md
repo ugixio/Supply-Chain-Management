@@ -16,6 +16,9 @@ relations:
 - **Exists today:**
   - [WORKFLOW.md](WORKFLOW.md) — the ordered backlog: unification follow-ups + gaps
     surfaced by the adoption audit.
+  - [state-of-the-project.md](state-of-the-project.md) — regenerated status snapshot:
+    completion by layer, best-practice scorecard, security posture, and the chosen
+    improvement route (references the authorities; non-authority itself).
   - [operating-model.md](operating-model.md) — how AI-driven work is executed here
     (knowledge layers; the repo already implements the area-skill layer via
     `.claude/skills/`; §4 communication contract).

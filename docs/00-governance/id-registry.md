@@ -5,7 +5,7 @@ type: governance
 owner: orchestrator
 status: active
 since: 2026-07-19
-updated: 2026-07-19
+updated: 2026-07-26
 relations:
   - { type: part-of, target: index-governance }
   - { type: governed-by, target: knowledge-architecture }
@@ -42,7 +42,8 @@ relations:
 | SOP | 12-sop-planning | `docs/40-contexts/12-sop-planning/rule.md` | SOP-R3 |
 | ORD | 13-order-management | `docs/40-contexts/13-order-management/rule.md` | ORD-R4 |
 | SDV | 14-supplier-development | `docs/40-contexts/14-supplier-development/rule.md` | SDV-R3 |
-| ENG | Engineering (build-time, cross-cutting) | `docs/50-engineering/rule.md` | ENG-R7 |
+| ENG | Engineering (build-time, cross-cutting) | `docs/50-engineering/rule.md` | ENG-R10 |
+| PLT | Platform / workspace (above the 14 depts) | `docs/30-foundation/platform/rule.md` | PLT-R5 |
 
 ### Concept IDs — LIVE (ADR-0015)
 
@@ -51,9 +52,9 @@ relations:
 
 | Prefix | Area | Owning doc | Highest allocated |
 |---|---|---|---|
-| CPT | Supply-chain concepts & calculations | `docs/25-concepts/` (per-node files) | CPT-0153 |
+| CPT | Supply-chain concepts & calculations | `docs/25-concepts/` (per-node files) | CPT-0154 |
 
-Allocated so far: **CPT-0001 … CPT-0153**. CPT-0001..0025 = dept 03 (demand-planning);
+Allocated so far: **CPT-0001 … CPT-0154**. CPT-0001..0025 = dept 03 (demand-planning);
 CPT-0026..0035 = dept 01 (procurement); CPT-0036..0049 = dept 06 (warehouse management);
 CPT-0050..0059 = dept 08 (quality management);
 CPT-0060..0070 = dept 02 (supplier management);
@@ -69,15 +70,20 @@ CPT-0139..0146 = dept 04 (supply planning);
 (U14 rollout complete 2026-07-22; see
 [25-concepts/_index.md](../25-concepts/_index.md)). CPT-0024/0025 are `draft`
 (specified in the business-context document but not implemented, ADR-0016).
+**CPT-0154 = money quantization & sum-preserving allocation** (dept 11 catalogue; the
+cross-cutting primitive implemented in the Rust core — L2, ADR-0035).
 
 ## 2. Rule-ID families — RESERVED (future areas)
 
-*(none — all 14 department families are LIVE above; a 15th department appends via ADR)*
+- **PLT — now LIVE** (materialized at W2, 2026-07-22, in `docs/30-foundation/platform/rule.md`;
+  see §1). PLT-R1 prompt-refinement gate (ADR-0032) · PLT-R2 read-only project reference ·
+  PLT-R3 everything-connected · PLT-R4 node/edge typing · PLT-R5 one-branch-per-project.
+- *(no other reserved families — a 15th SCM department appends via its own ADR)*
 
 ## 3. Decision (ADR) numbers
 
 - Format: `ADR-NNNN`, strictly increasing, allocated at proposal time.
-- Allocated: **ADR-0001 … ADR-0029** (see `docs/10-decisions/README.md`).
+- Allocated: **ADR-0001 … ADR-0036** (see `docs/10-decisions/README.md`).
   0001–0009 retroactive; 0010–0013 proposed at skeleton adoption; 0014 (MIT) accepted;
   0015 (concepts) / 0016 (business-context extraction) proposed; **0017–0021 proposed —
   the full-stack product decisions** (staging, Clean Architecture, Decimal money, gRPC
@@ -87,9 +93,23 @@ CPT-0139..0146 = dept 04 (supply planning);
   technology skills; resolves the open "Agent lanes" decision); **0028/0029 — domain
   resolutions** (canonical z-score = exact inverse-normal, resolves U15; order-management
   calc dir dissolved, resolves the U11 numbering collision). **All 0010..0029 ratified
-  Accepted (owner-authorized 2026-07-20).**
+  Accepted (owner-authorized 2026-07-20).** **0030/0031/0032 — the tech-company operating
+  direction** (SCM as the Global Context governing a multi-branch tech-project portfolio;
+  monitoring connector; prompt-refinement gate), **Accepted (owner-directed 2026-07-22)** —
+  assumptions A1 (context scope = SCM-as-operating-context) and A2 (reference+overlay)
+  resolved on ADR-0030; A3 (both sources, internal-first) on ADR-0031; A4 (prompt-gate
+  enforcement surface) on ADR-0032 still owner-confirmable.
+  **0033/0034 — the lane & scale direction** (exclusive technology lanes; ClickHouse
+  analytics tier + Docker/Kubernetes), **Accepted (owner-directed 2026-07-22)**.
+  **0035/0036 — the core & telemetry direction** (Rust is the complete core with Python as
+  the tools layer; telemetry data model at tens-of-thousands scale), **Accepted
+  (owner-directed 2026-07-22)**.
   Supersession chain: **ADR-0019** supersedes the ADR-0006 money clause and rewrites
-  SCM-R8; **ADR-0022** supersedes ADR-0013 (npm → pnpm).
+  SCM-R8; **ADR-0022** supersedes ADR-0013 (npm → pnpm); **ADR-0035** supersedes the
+  TypeScript-owns-domain-logic clause of **ADR-0001** and **narrows ADR-0033**'s
+  business-rules lane (owner: framework-free TypeScript → Rust), rewriting ENG-R1/ENG-R2 in
+  part via **ENG-R10**. ADR-0030 **extends** (does not supersede) ADR-0017's staging;
+  ADR-0036 **extends** ADR-0034/0031/0035.
 
 ## 4. Department / module keys
 

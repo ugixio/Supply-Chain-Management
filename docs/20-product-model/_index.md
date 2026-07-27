@@ -13,20 +13,24 @@ relations:
 # 20-product-model
 
 - **Belongs here:** the authoritative description of WHAT this product is.
-- **What the repo observably is today (recorded, pending the owner's product statement):**
-  an **enterprise SCM domain platform** — 14 SCOR-DS-aligned departments of executable
-  domain logic (TypeScript), mathematical/ML models (Python), per-department SQL schemas,
-  KPI frameworks and regulatory compliance logic, grounded in named standards (ADR-0008).
-  It has **no recorded runtime/API/UI decision yet** (open decisions,
-  `10-decisions/README.md`).
+- **What it is (owner direction, 2026-07-22 — ADR-0030/0031/0032, Accepted):** a
+  **project/workspace modeled as a technology company**, where **SCM is the operating
+  discipline** — a read-only versioned **Global Context** (SCM discipline + engineering
+  practice + standards, wiki front end, `docs/` SSOT) that governs a **portfolio of
+  Projects spanning all tech branches** (AI, ML, Data, Backend, Frontend, DevOps, …). Adds
+  a **prompt-refinement gate** (ADR-0032) and a future **Monitoring** connector (ADR-0031).
+  Not a commercial product. Full statement in `product-statement.md`.
 - **Exists today:**
+  - [product-statement.md](product-statement.md) — the authoritative WHAT: layers, who it
+    serves, delivery form/staging, core concepts, invariants, open owner decisions.
+  - [node-model.md](node-model.md) — how the workspace is organized: a typed node+edge graph
+    with regions (Global Context + Projects), grounded in the C4 model / arc42 so a developer
+    can interpret every part; law in `30-foundation/platform/rule.md` (PLT-R*).
   - [glossary.md](glossary.md) — the controlled vocabulary, seeded from the estate.
 - **MISSING (owner input needed):**
-  - `product-model.md` — the product statement: who it serves, the delivery form
-    (library / service / full ERP), and the growth path. Until it exists, `README.md` +
-    `CLAUDE.md` §Project Overview are the best available description (allowlisted homes).
-  - `context-map.md` — the SCOR-DS ↔ department map is currently in `README.md`
-    (referenced, not duplicated); promote it here when it needs to grow.
+  - `context-map.md` — the concept relationship map (Global Context ↔ Workspace ↔ Project
+    ↔ Monitoring) + the SCOR-DS ↔ department map currently in `README.md` (referenced, not
+    duplicated); promote it here when it needs to grow.
 - **Rule:** product concepts are DEFINED here and REFERENCED everywhere else. A change
   that introduces or renames a concept lands here FIRST (plan⇄context discipline,
   ADR-0010).

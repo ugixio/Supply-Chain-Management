@@ -5,7 +5,7 @@ type: concept
 owner: orchestrator
 status: active
 since: 2026-07-22
-updated: 2026-07-22
+updated: 2026-07-26
 relations:
   - { type: part-of, target: index-concepts }
   - { type: governed-by, target: index-adr }
@@ -14,7 +14,9 @@ relations:
 # Concepts — Finance & Controlling (11)
 
 > The calculation catalogue for `packages/domain/src/11-finance-controlling/` and
-> `services/calc/11_finance_controlling/`. Coverage is `enforced`. Law lives in
+> `services/calc/11_finance_controlling/`, plus the cross-cutting **money primitives** that
+> every department's cent arithmetic runs through (CPT-0154 — implemented in the Rust core,
+> `crates/scm-money`). Coverage is `enforced`. Law lives in
 > [40-contexts/11-finance-controlling/rule.md](../../40-contexts/11-finance-controlling/rule.md)
 > (`FIN-R*`); these nodes carry meaning and mathematics only.
 
@@ -44,6 +46,7 @@ FX and investment mathematics are catalogued.
 | [CPT-0108](budget-variance-analysis.md) | Budget variance analysis | Actual-vs-plan control |
 | [CPT-0109](cost-to-serve.md) | Cost-to-serve | Customer/SKU profitability |
 | [CPT-0111](landed-cost-and-allocation.md) | Landed cost & allocation (IAS 2) | True import unit cost |
+| [CPT-0154](money-quantization-and-allocation.md) | Money quantization & sum-preserving allocation | Any cent amount or split — the primitive under every other money node |
 
 ### Treasury & investment
 

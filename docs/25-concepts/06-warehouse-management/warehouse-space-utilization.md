@@ -32,11 +32,11 @@ relations:
 ## Inputs and outputs
 
 - **Inputs:** cube or location counts; denominators must be `> 0`.
-- **Outputs:** `cubic_space_utilisation` → utilisation + `benchmark_met` (≤ 85% of usable
-  cube — above that putaway flexibility collapses); `rack_location_utilisation` →
-  fill rate + vacant count. What utilization is healthy is **project-chosen** — too high leaves
-no room to receive, too low wastes rent; `storage_utilization` →
-  percentage + status grade (`OPTIMAL` 70–95%).
+- **Outputs:** the utilisation ratio, plus the vacancy count behind it — a percentage alone cannot
+  say whether the free space is usable (contiguous, in the right zone) or scattered.
+- **What utilisation is healthy is project-chosen**, and it is not monotone: too high leaves no room
+  to receive and putaway flexibility collapses, too low wastes rent. Any grade or band over the
+  ratio comes from the project's own operation, not from this node.
 
 ## Assumptions and limits
 

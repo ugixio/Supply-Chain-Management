@@ -18,13 +18,16 @@ relations:
 
 ## Formula
 
-    AG.1.1  upside: response_days vs target (30); uplift% = (max − base)/base × 100
+    AG.1.1  upside:   uplift% = (max − base)/base × 100, achievable within a stated
+                      response window (the window itself is project-chosen)
     AG.1.2  downside: reduction% = (base − reduced)/base × 100;
-            penalty_free ⇔ unrecoverable_cost = 0
-    AG.1.3  VaR: expected_loss = P × revenue_at_risk;
-            net_var = max(0, expected_loss − mitigation_cost)
-            recommendation: INCREASE_MITIGATION if loss > 2×mitigation ·
-            MAINTAIN if net < 5% of exposure · else REVIEW
+                      penalty_free ⇔ unrecoverable_cost = 0
+    AG.1.3  VaR:      expected_loss = P × revenue_at_risk
+                      net_var = max(0, expected_loss − mitigation_cost)
+
+A **negative** net figure means the mitigation costs more than the exposure it removes, which is a
+finding worth acting on. Any band that turns `net_var` into a recommendation is the project's risk
+appetite, not part of the metric (RSK-R6: expectation is not exposure).
 
 | Symbol | Meaning | Unit |
 |---|---|---|

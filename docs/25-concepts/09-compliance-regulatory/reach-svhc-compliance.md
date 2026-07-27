@@ -5,7 +5,7 @@ type: concept
 owner: orchestrator
 status: active
 since: 2026-07-22
-updated: 2026-07-22
+updated: 2026-07-27
 relations:
   - { type: part-of, target: index-concepts-09-compliance-regulatory }
   - { type: governed-by, target: index-adr }
@@ -74,6 +74,8 @@ notify ECHA + inform downstream + (conservative) SDS → ACTION_REQUIRED.
   project-chosen.
 
 ## References
+
+> Verified on **2026-07-27** — the 0.1% w/w duty is unchanged; the Candidate List is not.
 
 - EU Regulation 1907/2006 (REACH), Art. 7(2), 31, 33; ECHA Candidate List;
   ECJ C-106/14 (article-level 0.1%).

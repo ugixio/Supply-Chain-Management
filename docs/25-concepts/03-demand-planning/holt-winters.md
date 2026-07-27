@@ -56,6 +56,14 @@ level seeded from the season-1 mean. A 12-step forecast reuses the last 12 smoot
 seasonal indices in order — so `forecast[0]` reflects the same month position as
 `data[12]`.
 
+## Project-chosen inputs
+
+| Input | Why the project must choose it |
+|---|---|
+| α, β and γ | Three smoothing constants, fitted or chosen; no standard fixes them |
+| Additive or multiplicative seasonality | Additive suits constant seasonal amplitude, multiplicative suits amplitude that scales with level |
+| The season length | Follows from the bucket (DMD-R9); changing the bucket invalidates the fitted factors |
+
 ## Governing rules
 
 - **DMD-R9** — horizon and bucket are stated; the bucket also fixes the season length, so changing

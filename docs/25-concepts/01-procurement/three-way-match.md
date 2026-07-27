@@ -61,6 +61,14 @@ Three checks, each within a tolerance:
     ⇒ matched = false (the over-receipt must be approved before payment)
     variance_cents = 106·1250 − 106·1250 = 0
 
+## Project-chosen inputs
+
+| Input | Why the project must choose it |
+|---|---|
+| The quantity and price tolerances | Contract terms; commonly strict on price and looser on quantity, or the reverse |
+| Granularity — per line or per order | Decides whether one bad line blocks a whole invoice |
+| What a mismatch triggers | Hold, partial payment, or pay-and-claim are all legitimate |
+
 ## Governing rules
 
 - **PRC-R4** — a posted GRN's inspected quantities reconcile exactly; the three-way match

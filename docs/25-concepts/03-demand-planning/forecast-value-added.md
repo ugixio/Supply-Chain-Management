@@ -24,12 +24,9 @@ a naive baseline?** Effort is not evidence — a sophisticated model, a consensu
 of judgemental overrides can each make accuracy worse, and none of them will say so. FVA is the
 comparison that finds out, so it is catalogued even though it is the metric most commonly absent.
 
-This gap is invisible to gate G10, which reports code lacking a concept node — never a
-concept lacking code. See the note in `25-concepts/_index.md`.
-
 ## Formula
 
-The business-context document gives **two variants and does not reconcile them**:
+**Two variants are in common use, and they measure different stages:**
 
     FVA_consensus = MAPE_statistical − MAPE_consensus        (§10)
     FVA_naive     = MAPE_naive − MAPE_statistical            (§11, vs 3-month moving average)
@@ -55,12 +52,11 @@ existence; a negative FVA means it should be removed.
   the most common way FVA is reported wrongly, and it always flatters the statistics.
 - Built on MAPE, so it inherits every CPT-0008 weakness — asymmetry and undefined
   behaviour on zero actuals (DMD-R6). On intermittent SKUs compute it on WMAPE instead.
-- **FVA is a process metric, not a person metric.** Its purpose is to decide which
-  *stages* to keep. Using it to rank planners produces gaming — overrides get withheld on
-  hard SKUs where judgement is most valuable.
-- A single period's FVA is noise. Judge over a rolling window of at least an S&OP cycle.
-- Negative FVA is the **normal** finding in published studies, not an anomaly — which is
-  precisely why the metric is worth computing.
+- **A process metric, not a person metric.** It decides which *stages* to keep; ranking planners
+  with it produces gaming — overrides get withheld on the hard SKUs where judgement pays most.
+- A single period's FVA is noise; judge it over a rolling window.
+- **Negative FVA is the normal published finding**, not an anomaly — which is exactly why it is
+  worth computing.
 
 ## Worked example
 
@@ -71,10 +67,19 @@ For one SKU-quarter: MAPE_naive = 32%, MAPE_statistical = 24%, MAPE_consensus = 
   accuracy. Whether overrides are classified after the fact is an S&OP process decision;
   the recommended action is to reduce manual intervention on this segment.
 
+## Project-chosen inputs
+
+| Input | Why the project must choose it |
+|---|---|
+| The naive baseline | A random walk and a seasonal naive answer different questions; FVA is meaningless without naming it |
+| The accuracy measure | FVA inherits every weakness of the metric it is computed on |
+| What a negative FVA obliges | The finding is only useful if a step that adds nothing can actually be removed |
+
 ## Governing rules
 
-- **DMD-R9** — a forecast is stated with its horizon and bucket; how overrides are classified is the project's S&OP design.
-  that classification is the per-record input FVA aggregates.
+- **DMD-R9** — a forecast is stated with its horizon and bucket, and FVA compares stages **at the
+  same** horizon and bucket or it compares nothing. How overrides are classified is the project's
+  S&OP design; that classification is the per-record input FVA aggregates.
 - **DMD-R6** — zero-actual periods are excluded from the MAPE terms.
 
 ## Related

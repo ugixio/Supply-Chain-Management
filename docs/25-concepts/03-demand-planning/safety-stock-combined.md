@@ -59,14 +59,25 @@ The two variance terms are the whole point:
 
 ## Worked example
 
-D̄ = 50 units/day, σ_D = 20 units/day, LT = 9 days, σ_LT = 2 days, 95% (z = 1.65):
+D̄ = 50 units/day, σ_D = 20 units/day, LT = 9 days, σ_LT = 2 days, and a project-chosen service
+level of 95% → z = Φ⁻¹(0.95) = 1.6449 (CPT-0003, ADR-0028):
 
 - demand term = 9 × 20² = 3,600
 - lead-time term = 50² × 2² = 10,000  ← **74% of total variance**
-- ss = ⌈1.65 × √13,600⌉ = ⌈1.65 × 116.62⌉ = ⌈192.4⌉ = **193 units**
+- ss = ⌈1.6449 × √13,600⌉ = ⌈1.6449 × 116.62⌉ = ⌈191.8⌉ = **192 units**
 
 Against CPT-0014's 99 units on the same SKU: ignoring σ_LT would have under-buffered by
-95 units — nearly half the requirement.
+**93 units** — nearly half the requirement. Note where the variance actually sits: three quarters
+of it comes from lead-time variability, so on this SKU stabilizing the supplier is worth more than
+any forecasting improvement.
+
+## Project-chosen inputs
+
+| Input | Why the project must choose it |
+|---|---|
+| The cycle service level | It sets z (CPT-0003), and it is a service commitment, not a statistic |
+| The variability estimates and their window | Demand and lead-time σ both come from a chosen history |
+| Whether demand and lead time are treated as independent | The combined formula assumes it; correlated variability needs more buffer than it returns |
 
 ## Governing rules
 

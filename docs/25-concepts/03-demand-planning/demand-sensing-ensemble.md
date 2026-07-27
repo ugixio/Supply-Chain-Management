@@ -18,35 +18,31 @@ relations:
 
 ## Pipeline
 
-1. **`build_features`** — engineers the design matrix for one SKU:
-   - lags 1, 2, 4, 8, 13, 52 weeks · rolling mean 4/13 and rolling std 4
-   - calendar: week of year, month, quarter, `is_holiday` (weeks 52 and 1)
-   - trailing 13-week CV (CPT-0018) and a 13-week linear trend slope (`np.polyfit`)
-   - promotion flag (0/1) and price index, normalised to its own mean
-   - Rows with NaN from lag creation are **dropped**, so a lag-52 feature costs a full
-     year of usable history.
-2. **`train_lightgbm_demand_model`** — LightGBM regression (`num_leaves 31`,
-   `learning_rate 0.05`, `n_estimators 300`, feature/bagging fraction 0.8) under
-   **walk-forward time-series CV** (`n_splits`, default 3). The walk-forward split is the
-   critical choice: a random k-fold would leak future periods into training and produce
-   accuracy that cannot be reproduced in production.
-3. **`train_prophet_demand_model` / `predict_prophet`** — additive trend + seasonality
-   with holiday effects; robust to missing periods.
-4. **`select_best_model`** — runs LightGBM, Prophet and Holt-Winters (CPT-0005, always
-   attempted as the statistical baseline) and picks the **lowest holdout MAPE**. If
-   LightGBM or Prophet is not installed it is skipped gracefully rather than failing.
-5. **`ensemble_forecast`** — weighted blend, default **LightGBM 0.40 / Prophet 0.35 /
-   statistical 0.25**, floored at zero so no negative demand is emitted.
+1. **Feature building** — the design matrix for one SKU: demand lags, rolling mean and standard
+   deviation, calendar position and holiday flags, a trailing CV (CPT-0018) and trend slope, plus
+   the exogenous drivers (promotion flag, price index). Lag creation leaves NaN rows that are
+   **dropped**, so a one-year lag costs a full year of usable history.
+2. **Gradient-boosting model** — hyperparameters are a fitting decision, but the **validation
+   scheme is not**: it must be **walk-forward** over time. A random k-fold leaks future periods
+   into training and produces accuracy that cannot be reproduced in production.
+3. **Structural model** (additive trend + seasonality with holiday effects) — robust to missing
+   periods, and a useful contrast because it fails differently from a tree ensemble.
+4. **Selection** — every candidate, including the statistical baseline (CPT-0005), is scored on the
+   same holdout. A candidate whose library is unavailable is *absent*, not a loser: skipping it
+   silently changes what "best" means.
+5. **Blend** — a weighted combination, floored at zero so no negative demand is emitted. The
+   weights are a modelling choice (see below), and a blend must beat its own best member to be
+   worth having.
 
 ## Assumptions and limits
 
-- **Horizon is short by design** (1–4 weeks). Exogenous drivers are known or reliably
-  estimable only near-term; beyond that the ML edge over Holt-Winters disappears.
-- Requires enough history for the longest lag — a lag-52 feature plus dropped NaN rows
-  means roughly **two years** before the model trains on anything.
-- The default ensemble weights are **fixed constants, not fitted**. They encode a prior
-  that gradient boosting beats Prophet beats statistics; on a given SKU that ordering may
-  simply be wrong, and nothing re-estimates it.
+- **Horizon is short by design.** Exogenous drivers are reliably known only near-term; beyond that
+  the edge over Holt-Winters disappears.
+- The longest lag sets the history required: a lag-52 feature plus dropped NaN rows means roughly
+  **two years** before the model trains on anything.
+- **Fixed blend weights encode a prior about which model wins** — that boosting beats a structural
+  model beats statistics. On a given SKU that ordering may simply be wrong, and constants never
+  re-estimate themselves.
 - **Selecting on MAPE** inherits the CPT-0008 asymmetry — it favours under-forecasting.
   For intermittent SKUs this is the wrong criterion entirely (CPT-0009).
 - A model that always wins the holdout can still be **biased**; pair with CPT-0010.
@@ -56,11 +52,21 @@ relations:
 
 ## Worked example
 
-156 weeks of history, `horizon_weeks = 4`, promotions supplied. After feature building
-(~104 usable rows once lag-52 NaNs drop), `select_best_model` reports holdout MAPEs of
-LightGBM 12.1%, Prophet 14.8%, Holt-Winters 18.3% → LightGBM selected. Blending instead:
+*Illustrative numbers.* 156 weeks of history, a 4-week horizon, promotions known for the horizon.
+Feature building leaves ~104 usable rows once the lag-52 NaNs drop — **a third of the history spent
+on one feature**. Holdout MAPEs of 12.1% / 14.8% / 18.3% would select the boosting model; a blend
 
-    F = 0.40·F_lgb + 0.35·F_prophet + 0.25·F_hw,  floored at 0
+    F = w₁·F_boost + w₂·F_structural + w₃·F_statistical,  floored at 0
+
+is the alternative, and it is only worth having if it beats the 12.1%.
+
+## Project-chosen inputs
+
+| Input | Why the project must choose it |
+|---|---|
+| The candidate models and the blend weights | A modelling choice; a single best model and a blend are both defensible |
+| The exogenous drivers admitted | Each one added is a data dependency the forecast then cannot run without |
+| The retraining cadence | Short-horizon sensing decays fastest, and a stale ensemble is confidently wrong |
 
 ## Governing rules
 

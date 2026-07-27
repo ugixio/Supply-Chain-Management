@@ -50,9 +50,16 @@ Lines: 10 × $12.50 and 4 × $30.00, currency USD (amounts in cents):
 
     total = (1250 · 10) + (3000 · 4) = 12,500 + 12,000 = 24,500 cents = $245.00
 
-If `PO_APPROVAL_THRESHOLD_CENTS` = 500,000 ($5,000), this PO is below threshold and
-needs no approval; at or above it, it does. **The threshold itself is project-chosen** —
-this node supplies none.
+Whether that total needs approval depends entirely on a limit **this node does not supply**. What
+the node does fix is that the figure compared against any such limit is the exactly-quantized total
+above — not a float that rounds to it.
+
+## Project-chosen inputs
+
+| Input | Why the project must choose it |
+|---|---|
+| Whether an approval step exists, and at what amount | Internal control policy, constrained by the delegation of authority — not by any standard |
+| Whether the limit means "above" or "at or above" | The order sized exactly to the limit is the one an approver most wants to see |
 
 ## Governing rules
 

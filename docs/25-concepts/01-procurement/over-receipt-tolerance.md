@@ -66,6 +66,14 @@ number comes from the agreement with the supplier, per supplier or per category.
 At `received = 104` the same contract reports inside the band (104 ≤ 105) — and the variance is
 still `+4%`, which is worth recording.
 
+## Project-chosen inputs
+
+| Input | Why the project must choose it |
+|---|---|
+| The over-receipt tolerance | A term of the supply contract, often per supplier or category |
+| The under-receipt tolerance | Frequently not symmetric with the over side; state it separately |
+| Whether a shortfall closes the line | Under one policy a short delivery is complete; under another the balance stays outstanding |
+
 ## Governing rules
 
 - **PRC-R1** — a purchase-order line states a quantity; the tolerance it is judged against is a

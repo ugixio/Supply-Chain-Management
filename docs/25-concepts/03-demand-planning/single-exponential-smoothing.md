@@ -53,6 +53,13 @@ Expanding the recursion shows the geometric decay: the weight on A_{t−k} is α
 - fitted[2] = 0.3·110 + 0.7·100 = **103.0**
 - forecast = 0.3·90 + 0.7·103.0 = **99.1**
 
+## Project-chosen inputs
+
+| Input | Why the project must choose it |
+|---|---|
+| α | How much of the recent variation the project believes is signal rather than noise |
+| The initial level | On a short series the seed still influences the forecast; state how it is set |
+
 ## Governing rules
 
 - **DMD-R9** — the forecast carries its horizon and bucket. **No rule fixes α**: it trades

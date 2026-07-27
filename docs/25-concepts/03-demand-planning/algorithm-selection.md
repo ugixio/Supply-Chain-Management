@@ -13,8 +13,8 @@ relations:
 ---
 # Forecast Algorithm Selection (CPT-0011)
 
-> Choosing among SMA, SES, Holt and Holt-Winters. The repo does this **two different
-> ways**, and the two are not interchangeable.
+> Choosing among SMA, SES, Holt and Holt-Winters. There are **two established ways** to make that
+> choice, and they are not interchangeable.
 
 ## The two strategies
 
@@ -46,24 +46,18 @@ Selection by measured holdout accuracy; returns a **fitted forecast**, not just 
 
 ## Assumptions and limits
 
-- **The two strategies have different contracts and are not substitutes.** (a) takes declared
-  flags and returns a name; (b) takes the series and returns a fitted forecast. A caller written
-  for one cannot consume the other, and calling the choice "algorithm selection" in both cases
-  hides that.
-- **Smoothing parameters left at fixed defaults make the comparison unfair.** Each candidate is
-  then judged at whatever α/β/γ it happened to be given, so (b) selects the algorithm best suited
-  to those defaults rather than the algorithm best suited to the series. Either optimise the
-  parameters per candidate or state that the ranking is conditional on the defaults used.
-- Selecting on **MAPE** inherits every MAPE weakness (CPT-0008): it is asymmetric and
-  drops zero actuals, so on intermittent demand this selector is biased toward whichever
-  candidate happens to over-forecast least on non-zero periods. Croston (CPT-0006) is not
-  a candidate at all.
-- **A candidate that fails must not fail silently.** Swallowing an error per candidate turns a
-  broken implementation into a candidate that simply never wins, and the selector still returns a
-  confident answer.
-- **A percentage holdout on a short series can be a single period** — a selection made on one
-  observation, which is indistinguishable from chance. Set a minimum holdout length in periods,
-  not only a fraction.
+- **Different contracts, not substitutes.** (a) returns a name from declared flags; (b) returns a
+  fitted forecast from the series. A caller written for one cannot consume the other.
+- **Fixed smoothing defaults make the comparison unfair.** Each candidate is judged at whatever
+  α/β/γ it was given, so (b) selects the algorithm best suited to *those defaults* — not to the
+  series. Optimise per candidate, or state that the ranking is conditional on them.
+- Selecting on **MAPE** inherits its weaknesses (CPT-0008): asymmetric and undefined on zero
+  actuals, so on intermittent demand it favours whichever candidate over-forecasts least — and
+  Croston (CPT-0006) is usually not even a candidate.
+- **A candidate that fails must not fail silently** — a swallowed error turns a broken
+  implementation into one that merely never wins, and the selector still answers confidently.
+- **A percentage holdout on a short series can be a single period**, which is indistinguishable
+  from chance. Set a minimum length in periods, not only a fraction.
 
 ## Worked example
 
@@ -80,17 +74,23 @@ series has two seasons, (b) asks whether the *training* segment does. The lesson
 two-season requirement must state which segment it applies to — the answer changes the model
 chosen.
 
+## Project-chosen inputs
+
+| Input | Why the project must choose it |
+|---|---|
+| The selection strategy | Declared-flag dispatch and empirical backtest have different contracts; both are legitimate |
+| The holdout policy | A fraction plus a **minimum length in periods** — a percentage alone can select on one observation |
+| The error measure it selects on | Each penalizes different mistakes (CPT-0008/0009); on intermittent demand MAPE is not usable |
+
 ## Governing rules
 
-- **DMD-R9** — a forecast is stated with its horizon and bucket, so a selection made on one horizon
-  does not transfer to another. No rule mandates a selection method; several are legitimate, so the choice, the
-  holdout policy and the error measure are the project's (see CPT-0008 on what each measure
-  penalizes).
+- **DMD-R9** — a forecast is stated with its horizon and bucket, so a selection made at one horizon
+  does not transfer to another. No rule mandates a selection method.
 
 ## Related
 
 - CPT-0001, CPT-0002, CPT-0004, CPT-0005 — the candidate algorithms.
-- CPT-0021 Demand sensing ensemble — the ML-side equivalent (`select_best_model`).
+- CPT-0021 Demand sensing ensemble — the ML-side equivalent of the same choice.
 
 ## References
 

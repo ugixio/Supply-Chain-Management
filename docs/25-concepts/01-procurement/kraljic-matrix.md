@@ -66,6 +66,14 @@ strategy. Note how little it takes to move it: a supply-risk score of 5 instead 
 item in the strategic quadrant, which is why the rubric behind the score matters more than the
 quadrant it lands in.
 
+## Project-chosen inputs
+
+| Input | Why the project must choose it |
+|---|---|
+| The cut on each axis | A midpoint is a convention, not an answer; it re-segments the whole portfolio |
+| The scoring rubric behind each axis | Which sub-factors count, and how they combine into one score — write it down once, or two parts of the system will disagree about the same supplier |
+| What each quadrant obliges | A quadrant with no consequent strategy is a label |
+
 ## Governing rules
 
 - **SUP-R5** — absence of evidence is not evidence: a supplier with no risk assessment is

@@ -47,6 +47,13 @@ relations:
 10 items, 8 complete → 80.0%; the 2 open items are `required` (ISO 28000 cert, bank
 verification) → approval blocked despite 80%.
 
+## Project-chosen inputs
+
+| Input | Why the project must choose it |
+|---|---|
+| Which items count as required | The whole metric is relative to this list; adding an item lowers every supplier's completion |
+| Whether approval waits for all of them | Some organizations onboard provisionally and complete in parallel |
+
 ## Governing rules
 
 - **SUP-R5** — the completion figure records what was assessed: which items counted as required.

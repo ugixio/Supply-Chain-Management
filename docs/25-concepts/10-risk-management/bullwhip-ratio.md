@@ -13,14 +13,19 @@ relations:
 # Bullwhip Ratio & Severity (CPT-0074)
 
 > Measures demand-signal amplification up the chain: the variance of the orders you
-> place divided by the variance of the demand you see. Target ≈ 1.0; every unit above
-> is inventory and capacity you are buying to serve noise you created.
+> place divided by the variance of the demand you see. A ratio of 1 means variability passes
+> through unamplified — that is arithmetic, not a target. Above 1, the excess is inventory and
+> capacity bought to serve noise the chain created itself.
 
 ## Formula
 
-    BWE = Var(orders) / Var(demand)         (sample variance, ddof = 1)
-    PY severity:  <1.1 NONE · <2 MILD · <5 MODERATE · ≥5 SEVERE
-    TS severity:  <1.2 NONE · <2 MILD · <5 MODERATE · ≥5 SEVERE
+    BWE = Var(orders) / Var(demand)
+
+Use the **same variance estimator on both series** — sample (`ddof = 1`) or population, but not
+one of each: on short windows the two differ enough to move the ratio either side of 1.
+
+**Severity bands over the ratio are project-chosen.** Where amplification becomes worth acting
+on depends on what the chain can absorb, so this node states what the number means and stops.
 
 | Symbol | Meaning | Unit |
 |---|---|---|
@@ -29,11 +34,14 @@ relations:
 
 ## Inputs and outputs
 
-- **PY (rich):** equal-length series, ≥ 4 observations; zero demand variance raises.
-  Returns ratio (6 dp), both variances, severity, an intervention recommendation and
-  `n_periods`.
-- **Inputs:** the two variances, computed over the same periods. Zero demand variance leaves
-  `{ratio: 0, severity: NONE}` — a silent degenerate (recorded divergence vs PY raise).
+- **Inputs:** the two series, or the variances computed from them, over identical periods. A
+  handful of observations is not enough for a variance ratio to mean anything; state the minimum
+  window and report `n`.
+- **Output:** the ratio, and the two variances alongside it — the ratio alone hides whether it
+  moved because orders got noisier or because demand got calmer.
+- **Zero demand variance has no ratio.** Perfectly flat demand makes the denominator zero, so the
+  honest results are "undefined" or a refusal. Returning `0` is the one option that reads as
+  *no amplification* — the opposite of what a flat demand with lumpy orders actually shows.
 
 ## Assumptions and limits
 
@@ -48,12 +56,15 @@ relations:
 
 ## Worked example
 
-Var(orders) = 3,600, Var(demand) = 1,600 → `BWE = 2.25` → MODERATE — investigate
-demand-signal sharing (VMI), batch sizes and lead times before adding safety stock.
+Var(orders) = 3,600, Var(demand) = 1,600 → `BWE = 2.25`: the orders carry more than twice the
+variability of the demand that caused them. The structural share of that comes first
+(CPT-0075) — the remainder is what demand-signal sharing, batch sizes and lead times can
+address, and it is cheaper to remove than to buffer.
 
 ## Governing rules
 
-- SCOR-DS lists bullwhip ≈ 1.0 as the target (CLAUDE.md KPI table, cited).
+- **SCM-R9** — the periods being compared are ISO 8601 intervals. No rule fixes an acceptable
+  ratio; Lee et al. explain the causes, not a limit.
 
 ## Related
 

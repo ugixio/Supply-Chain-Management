@@ -60,7 +60,8 @@ concentration falls slowly, which is the point of the squared term.
 
 ## Governing rules
 
-- **RSK-R*** — concentration findings feed the risk register with owner + strategy.
+- **RSK-R5** — a concentration index is a ratio, not a rank, so unlike a matrix score it *can* be
+  compared and averaged; do not confuse the two. No rule fixes a concentration limit.
 
 ## Related
 

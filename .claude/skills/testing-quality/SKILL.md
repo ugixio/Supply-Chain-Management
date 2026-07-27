@@ -1,7 +1,7 @@
 ---
 description: >
   Testing and quality for this repository — what the gates actually run today (doc gates
-  G1-G11, tsc, cargo test, fmt/clippy), test-first discipline, a test per live rule ID,
+  G1-G12, tsc, cargo test, fmt/clippy), test-first discipline, a test per live rule ID,
   the golden-vector fixture pattern, and what each lane will need when the monitoring
   application arrives. Use when writing tests, verifying a change, or adding a gate.
 ---
@@ -14,7 +14,7 @@ description: >
 
 ## What the gates run today
 
-`make verify` → `doc-gates` (`tools/verify.py`, G1–G11) · `typecheck` (`tsc --noEmit` over
+`make verify` → `doc-gates` (`tools/verify.py`, G1–G12) · `typecheck` (`tsc --noEmit` over
 `packages/shared`) · `test-rs` (`cargo test --workspace`).
 `make verify-full` adds `deps-locked` (`pnpm install --frozen-lockfile`) and `lint-rs`
 (`cargo fmt --check`, `clippy -D warnings`).

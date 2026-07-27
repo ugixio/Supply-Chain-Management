@@ -24,45 +24,54 @@ relations:
 |---|---|---|
 | ordered | PO-line ordered quantity (`> 0`) | units |
 | received | quantity physically received (`≥ 0`) | units |
-| overTol | over-receipt tolerance (default 5) | percent |
-| underTol | under-receipt tolerance (PY only, default 0) | percent |
+| overTol | over-receipt tolerance — **project-chosen**, a term of the supply contract | percent |
+| underTol | under-receipt tolerance — **project-chosen**, often not symmetric with overTol | percent |
+
+**This node supplies no tolerance value.** It states the arithmetic a tolerance is applied to; the
+number comes from the agreement with the supplier, per supplier or per category.
 
 ## Inputs and outputs
 
-- **TS (`hasOverReceipt`):** per line `requiresApproval` is set at build time; the query
-  returns `true` if **any** line exceeds the upper band. `overReceiptPct` is rounded to 2 dp.
-- **PY (`receiving_tolerance_check`):** returns `{status, variance_pct, requires_approval}`
-  with `status ∈ {WITHIN_TOLERANCE, OVER_RECEIPT, UNDER_RECEIPT, SHORT}`.
+- **Inputs:** the ordered and received quantities for one line, plus the tolerances that apply
+  to it.
+- **Output:** the signed variance, and which side of the band the receipt falls on.
+- `ordered > 0` is required — it is the denominator. A receipt against a zero-quantity line is a
+  data error, not a 0% variance.
+- **Report the variance even when it is inside the band.** A receipt that is always "within
+  tolerance" tells you nothing about whether it was 1% or 4.9% over, and the drift is what
+  eventually renegotiates the contract.
 
 ## Assumptions and limits
 
-- `ordered > 0` is required (division); TS `buildLine` and PY both reject `ordered ≤ 0`.
-- **Cross-language divergence (material):** the two sides are **not symmetric**.
-  - TS models **only the over-receipt** case — a single boolean `requiresApproval`. It has
-    no notion of under-receipt or short shipment.
-  - PY adds a full four-way classification and an **under-tolerance band** (`SHORT` vs
-    `UNDER_RECEIPT`). A shortfall is `SHORT` when below `ordered·(1−underTol/100)`.
-  - Neither shares constants at runtime; both default `overTol = 5`, but drift is possible.
-  Flag for the backlog: unify on the PY four-state model.
+- **Over- and under-receipt are separate decisions.** Modelling only the over side leaves a short
+  shipment indistinguishable from an exact one, which is the more expensive omission: an unflagged
+  shortfall becomes an open commitment nobody is chasing. If the two bands differ, say so
+  explicitly rather than reusing one number for both directions.
+- **Whether a shortfall closes the line or leaves it open is a project decision**, and it changes
+  what the number means: under one policy a 3% short delivery is complete, under another it is 97%
+  delivered with a balance outstanding.
 - **Does not apply when:** the mismatch is a value/price dispute rather than a quantity one
   — use the three-way match (CPT-0030).
 
 ## Worked example
 
-`ordered = 100`, `received = 106`, `overTol = 5`:
+*Illustrative only — the 5% below is an example, not a recommendation.*
+
+`ordered = 100`, `received = 106`, and a contract allowing 5% over:
 
     upper = 100 · 1.05 = 105
-    106 > 105  ⇒  requiresApproval = true
-    variancePct = (106 − 100)/100 · 100 = 6.00
+    106 > 105  ⇒  outside the band
+    variancePct = (106 − 100)/100 · 100 = +6.00
 
-The variance is `+6%`, above the band, so the line is flagged for release rather than posted
-silently.
-At `received = 104` both report within tolerance (104 ≤ 105).
+At `received = 104` the same contract reports inside the band (104 ≤ 105) — and the variance is
+still `+4%`, which is worth recording.
 
 ## Governing rules
 
-- **PRC-R1** — a line states its quantity; the tolerance it is judged against is a contract term.
-  silently; this concept is the arithmetic a receipt tolerance is applied to.
+- **PRC-R1** — a purchase-order line states a quantity; the tolerance it is judged against is a
+  contract term, not part of the order's validity.
+- **PRC-R4** — inspection conserves what arrived: `accepted + rejected = received`. A tolerance
+  decides whether to accept, never how much arrived.
 
 ## Related
 

@@ -53,7 +53,8 @@ run ≈ 21 days of production, max inventory 4,157.
 
 ## Governing rules
 
-- **SPL-R*** — run quantities feed the MPS (CPT-0146 stability watches the
+- **SPL-R5** — netting conserves; a run quantity larger than the net requirement is a deliberate
+  lot-sizing choice, not a netting error. Run quantities feed the MPS (CPT-0146 stability watches the
   consequences).
 
 ## Related

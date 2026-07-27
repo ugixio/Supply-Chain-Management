@@ -58,7 +58,8 @@ intuition: don't drag the big t4 demand three periods.
 
 ## Governing rules
 
-- **SPL-R*** — heuristic choice is item policy, evidence from the comparator.
+- **SPL-R5** — netting conserves, whichever heuristic sizes the lots. The choice of heuristic is
+  item policy; the comparator supplies the evidence, not a mandate.
 
 ## Related
 

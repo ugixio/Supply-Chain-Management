@@ -18,9 +18,10 @@ relations:
 
 ## The two strategies
 
-### Rule-based dispatch (TypeScript)
+### (a) Rule-based dispatch
 
-Selection from declared series characteristics; returns only the **name** of an algorithm.
+Selection from declared series characteristics; returns only the **name** of an algorithm. Cheap,
+transparent, and reproducible.
 
 | Condition (evaluated in order) | Result |
 |---|---|
@@ -32,47 +33,59 @@ Selection from declared series characteristics; returns only the **name** of an 
 Trend and seasonality are **caller-supplied booleans** — nothing is inferred from the
 series. Garbage flags in, wrong algorithm out.
 
-### Empirical backtest (Python)
+### (b) Empirical backtest
 
-Selection by measured holdout accuracy; returns a **fitted `ForecastResult`**.
+Selection by measured holdout accuracy; returns a **fitted forecast**, not just a name.
 
-1. Split: train on the first 80%, hold out the last 20% (minimum 1 period).
-2. Fit each candidate on train with fixed default parameters — SMA (`period = min(6, len−1)`),
-   SES (`α=0.3`), Holt (`α=0.3, β=0.1`), and Holt-Winters (`α=0.3, β=0.1, γ=0.1`) only
-   when `len(train) ≥ 2 · season_length`.
-3. Score each on the holdout; **pick the lowest MAPE**.
-4. Re-fit the winner on the **full** series and return that forecast.
-5. If every candidate fails, fall back to SMA with `period = min(3, len−1)`.
+1. Split the series into train and holdout — the split fraction is project-chosen.
+2. Fit each candidate on train. Holt-Winters is only a candidate where the train segment covers at
+   least two full seasons.
+3. Score each on the holdout; pick the best by the chosen error measure.
+4. Re-fit the winner on the **full** series and forecast from that.
+5. Define what happens if every candidate fails — a fallback, or a refusal.
 
 ## Assumptions and limits
 
-- **The two implementations do not share a contract**: TS returns a `ForecastAlgorithm`
-  string from declared flags; Python returns a fitted forecast chosen by backtest. Same
-  concept name, different inputs, different outputs. Do not treat them as ports of each
-  other.
-- Python's smoothing parameters are **hard-coded defaults**, not optimised — the selection
-  is fair between algorithms only insofar as those defaults are equally suited to each.
+- **The two strategies have different contracts and are not substitutes.** (a) takes declared
+  flags and returns a name; (b) takes the series and returns a fitted forecast. A caller written
+  for one cannot consume the other, and calling the choice "algorithm selection" in both cases
+  hides that.
+- **Smoothing parameters left at fixed defaults make the comparison unfair.** Each candidate is
+  then judged at whatever α/β/γ it happened to be given, so (b) selects the algorithm best suited
+  to those defaults rather than the algorithm best suited to the series. Either optimise the
+  parameters per candidate or state that the ranking is conditional on the defaults used.
 - Selecting on **MAPE** inherits every MAPE weakness (CPT-0008): it is asymmetric and
   drops zero actuals, so on intermittent demand this selector is biased toward whichever
   candidate happens to over-forecast least on non-zero periods. Croston (CPT-0006) is not
   a candidate at all.
-- Each candidate is wrapped in a bare `except Exception: pass`, so a genuinely broken
-  candidate is silently skipped rather than surfaced.
-- A 20% holdout on a short series can be a single period — a one-observation selection.
+- **A candidate that fails must not fail silently.** Swallowing an error per candidate turns a
+  broken implementation into a candidate that simply never wins, and the selector still returns a
+  confident answer.
+- **A percentage holdout on a short series can be a single period** — a selection made on one
+  observation, which is indistinguishable from chance. Set a minimum holdout length in periods,
+  not only a fraction.
 
 ## Worked example
 
-24 monthly observations, `season_length = 12`:
+24 monthly observations, `season_length = 12`, holdout 20%:
 
 - holdout = max(1, ⌊24 × 0.2⌋) = **4**; train = 20 periods.
-- Holt-Winters is skipped: `20 < 2 × 12`. Candidates are SMA, SES and Holt.
-- Lowest MAPE on the 4 holdout periods wins and is re-fitted on all 24.
+- Under **(b)** Holt-Winters is not a candidate: the *train* segment holds 20 periods and
+  `20 < 2 × 12`. Candidates are SMA, SES and Holt.
+- Under **(a)** the same series passes the seasonality test, because the check runs against the
+  **full** 24 observations and `24 ≥ 2 × 12`.
 
-Note the TS dispatcher, given `hasSeasonality = true` and m = 12, would also reject
-Holt-Winters here — `24 ≥ 24` is true, so it would **accept** it. The two disagree on
-this exact input because they test different lengths (full series vs train split).
+**The two strategies disagree on this exact input**, and neither is wrong: (a) asks whether the
+series has two seasons, (b) asks whether the *training* segment does. The lesson is that a
+two-season requirement must state which segment it applies to — the answer changes the model
+chosen.
 
 ## Governing rules
+
+- **DMD-R9** — a forecast is stated with its horizon and bucket, so a selection made on one horizon
+  does not transfer to another. No rule mandates a selection method; several are legitimate, so the choice, the
+  holdout policy and the error measure are the project's (see CPT-0008 on what each measure
+  penalizes).
 
 ## Related
 

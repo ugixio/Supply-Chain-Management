@@ -59,7 +59,8 @@ overall = (24 + 15 + 18 + 7)/0.85 = **75.3 → MEDIUM**.
 
 ## Governing rules
 
-- **CMP-R*** — assessed evidence retained per CPT-0096; SCM-R6 UFLPA documentation.
+- **CMP-R2** — every component of the composite carries its own provenance, or the composite has
+  none. **SCM-R7** — retention per CPT-0096; **SCM-R6** — UFLPA documentation.
 
 ## Related
 

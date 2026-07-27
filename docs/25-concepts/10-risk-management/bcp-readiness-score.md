@@ -34,9 +34,9 @@ relations:
 ## Inputs and outputs
 
 - **Inputs:** validated ranges (percentages 0–100, counts ≥ 0).
-- **Output:** `{score, rating, components}` — the component breakdown shows what to
-  fix first. The TS `openCriticalFindings` selector supplies the findings input from
-  the drill aggregate.
+- **Output:** `{score, rating, components}` — the component breakdown shows what to fix first,
+  and is the part worth reporting: a single readiness number cannot distinguish an untested plan
+  from a tested one with open findings.
 
 ## Assumptions and limits
 
@@ -57,8 +57,9 @@ Last drill 90 days ago (30), RTO met 80% (28), RPO met 60% (15), 1 open critical
 
 ## Governing rules
 
-- **RSK-R*** — drill lifecycle (plan→start→complete/fail, findings resolve) is
-  state-machine law; this score only reads its outcomes.
+- **RSK-R2** — residual risk cannot exceed inherent risk, so a readiness score can only claim what
+  the drills actually demonstrated: an untested plan is *unproven*, not ready. This score reads
+  drill outcomes; the process that produces them, and the bands over the score, are the project's.
 
 ## Related
 

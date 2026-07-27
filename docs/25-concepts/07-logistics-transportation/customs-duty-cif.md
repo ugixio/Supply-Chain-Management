@@ -53,7 +53,8 @@ duty **6,955**; total landed 113,955.
 
 ## Governing rules
 
-- **LOG-R*** — customs declarations reference shipment records (SCM-R3 soft-delete).
+- **LOG-R1** — the Incoterms rule governs which costs are in the customs value; **SCM-R14** —
+  the duty is exact money; **SCM-R3** — a declaration is corrected, never destroyed.
 
 ## Related
 

@@ -20,8 +20,8 @@ relations:
     volumetric_kg = volume_m³ × 167          (IATA 1 m³ ≡ 167 kg)
     chargeable_kg = max(actual_kg, volumetric_kg)
     cost = base_rate × chargeable_kg × (1 + fuel_surcharge) + accessorials
-    TS adds: total = max(round(cost_cents), lane.minChargeableCents)
-    lane validity: isActive ∧ ¬isDeleted ∧ validFrom ≤ date ≤ validTo
+    with a lane minimum: total = max(cost, lane_minimum)
+    lane validity: the rate is in force on the shipment date (validFrom ≤ date ≤ validTo)
 
 | Symbol | Meaning | Unit |
 |---|---|---|

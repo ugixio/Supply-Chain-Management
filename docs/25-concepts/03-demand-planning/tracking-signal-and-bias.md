@@ -33,9 +33,10 @@ relations:
 
 - **Inputs:** equal-length `actual` and `forecast`, both non-empty (mismatch or empty
   raises).
-- **`tracking_signal`** returns `tracking_signal`, `mad`, `cumulative_error`, and
-  `is_biased` — **True when |TS| > 4**, the classical Brown (1959) control limit.
-  When MAD = 0 (a perfect forecast) TS is defined as 0.
+- **`tracking_signal`** returns the signal, MAD, and the cumulative error. Whether it counts as
+  *biased* depends on a control limit: **±4 MAD is the classical limit** (Brown 1959) and is quoted
+  here as the reference value, not as a requirement — a project may set a tighter one, and should
+  say which it uses. When MAD = 0 the signal is defined as 0.
 - **`forecast_bias`** returns `mean_error`, `mean_percentage_error`, and
   `bias_direction`.
 
@@ -66,13 +67,20 @@ rounding noise for high-volume SKUs. How wide it is trades false alarms against 
 `actual = [100, 120]`, `forecast = [90, 100]`:
 
 - errors = [10, 20]; cumulative = 30; MAD = 15
-- TS = 30 / 15 = **2.0** → |TS| ≤ 4 → `is_biased = False`
-- ME = 15; tol = 0.005 × 110 = 0.55 → 15 > 0.55 → **`UNDER_FORECAST`**
+- TS = 30 / 15 = **2.0** → within ±4, so not flagged under the classical limit
+- ME = +15 on a mean actual of 110 → a clear **under-forecast** lean
 
-Note the two disagree by design: TS has not yet breached its control limit, while the
-mean error already shows a clear directional lean.
+**The two measures disagree here by design.** The signal has not breached its control limit, while
+the mean error already shows a consistent directional lean — because a control limit is deliberately
+insensitive, to avoid re-tuning a forecast on noise. Any dead band applied to the bias direction is
+the project's choice; two observations are far too few to conclude anything from either measure.
 
 ## Governing rules
+
+- **DMD-R6** — an absolute percentage error is undefined where the actual is zero, which is why the
+  mean *percentage* error needs a stated convention. No rule fixes a control limit or a bias
+  tolerance; both are the project's, and this
+  node supplies the arithmetic and the classical reference only.
 
 ## Related
 

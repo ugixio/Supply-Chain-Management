@@ -56,8 +56,13 @@ SCAR issued 2026-07-01, ack due 2026-07-03, not acknowledged, now 2026-07-05 →
 
 ## Governing rules
 
-- **SCM-R9** — ISO 8601/UTC dates; **SCM-R3** — NCR/SCAR records soft-delete only.
-- NCR/SCAR state machines (QMS rule family) own the transitions these metrics observe.
+- **SCM-R9** — ISO 8601 dates, UTC instants. **SCM-R3** — a quality record is corrected by a
+  further entry, never destroyed.
+- **QMS-R8** — a corrective action is not complete until its effectiveness has been reviewed
+  (ISO 9001:2015 §10.2.1). That review is why **days-to-close is not the metric to optimize**: a
+  record closed fast without an effectiveness review is worse than one held open, and this node's
+  clock cannot tell the two apart. Whichever states a project defines, the metrics only observe
+  them.
 
 ## References
 

@@ -31,9 +31,9 @@ relations:
 ## Inputs and outputs
 
 - **Inputs:** counts ≥ 0; zero denominator → 0.0.
-- **Outputs:** DPMO (PY rounds 4 dp; TS returns raw float — same formula, different
-  rounding); sigma level rounded 3 dp, clamped to 6.0 at DPMO ≤ 0 and 0.0 at
-  DPMO ≥ 10⁶.
+- **Outputs:** DPMO, and the sigma level derived from it. Both ends are clamped — a zero defect
+  count does not mean infinite capability, and a fully defective population has no sigma level —
+  so state the clamp rather than letting the ceiling read as a measurement.
 - The exact inverse normal (`scipy.stats.norm.ppf`) is the canonical z per **ADR-0028**.
 
 ## Assumptions and limits

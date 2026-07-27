@@ -57,7 +57,8 @@ order t1 covering t1 (cost 100) + order t3 covering t3..t4
 
 ## Governing rules
 
-- **SPL-R*** — lot-plan outputs feed planned orders (PRC approval before spend).
+- **SPL-R5** — netting conserves; the optimal lot plan covers exactly the net requirements it was
+  given. **PRC-R1** — a planned order becomes a purchase order only with a stated quantity.
 
 ## Related
 

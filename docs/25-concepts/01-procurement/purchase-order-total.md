@@ -35,11 +35,11 @@ relations:
 
 ## Assumptions and limits
 
-- **Money precision — resolved at L3b.** The retired TypeScript computed
-  `Math.round(amount · factor)`, a float multiply before rounding. Each line extension now
-  goes through the exact money core (`multiply_cents`, `ROUND_HALF_EVEN`) and is quantized
-  **once**, so the figure an approval threshold is compared against cannot drift
-  (ADR-0019/0035, ENG-R4, CPT-0154).
+- **Money precision is not incidental to this sum.** A line extension computed as
+  `round(amount · factor)` through a float can land a cent either side of the exact value, and the
+  order total inherits every one of those errors. Each extension goes through exact arithmetic and
+  is quantized **once**, at a defined boundary, with ties to even (SCM-R14, ENG-R4, CPT-0154) —
+  which matters most precisely where a total is compared against a limit.
 - No discount, tax or freight is included here — those are landed-cost concerns
   (finance, dept 11). This is the pre-tax goods value only.
 - **Does not apply when:** the order mixes currencies — refused, not converted.

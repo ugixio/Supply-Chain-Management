@@ -58,7 +58,7 @@ notify ECHA + inform downstream + (conservative) SDS → ACTION_REQUIRED.
 
 ## Governing rules
 
-- **CMP-R3** — a Candidate List substance above 0.1% w/w triggers REACH duties; **CMP-R*** — evidence retention.
+- **CMP-R3** — a Candidate List substance above 0.1% w/w triggers REACH duties; **CMP-R2** — the assessment records its provenance; **SCM-R7** — retention.
 
 ## Related
 

@@ -51,7 +51,8 @@ working-capital plan (CPT-0104).
 
 ## Governing rules
 
-- **SOP-R*** — the published plan carries inventory targets per family.
+- **SOP-R4** — the inventory target belongs to the same single plan as the demand and supply
+  numbers. The target **level** is a project decision (service commitments, cost of capital).
 
 ## Related
 

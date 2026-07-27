@@ -55,6 +55,10 @@ Expanding the recursion shows the geometric decay: the weight on A_{t−k} is α
 
 ## Governing rules
 
+- **DMD-R9** — the forecast carries its horizon and bucket. **No rule fixes α**: it trades
+  responsiveness against stability, and the right value depends on how much of the variation the
+  project believes is signal.
+
 ## Related
 
 - CPT-0004 Holt's Linear Method — SES plus a trend component.

@@ -49,8 +49,9 @@ relations:
 
 ## Governing rules
 
-- **FIN-R*** — payment-term decisions recorded against invoices (soft-deleted,
-  SCM-R3).
+- **SCM-R14** — money and rates are exact; an annualized rate compounds errors that a float
+  introduces. **SCM-R3** — a payment-term decision is recorded against the invoice by a further
+  entry, never by editing the original terms.
 
 ## Related
 

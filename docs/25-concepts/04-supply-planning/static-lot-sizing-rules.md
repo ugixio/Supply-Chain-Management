@@ -40,9 +40,10 @@ relations:
 - Trade-off in one line: L4L minimizes holding and maximizes orders; EOQ the
   reverse; FIXED_PERIOD is calendar-convenient; PPB balances the two costs
   per-order.
-- The EOQ rule here orders **one EOQ** per trigger — a net requirement larger
-  than the EOQ in a single bucket under-covers (no ⌈nr/EOQ⌉ multiples; recorded
-  caveat — TS `runMRP` does round to lot multiples).
+- **One EOQ per trigger under-covers a large bucket.** If a single period's net requirement exceeds
+  the EOQ, ordering exactly one EOQ leaves the balance short; covering it needs ⌈net/EOQ⌉ multiples.
+  Whether the rule rounds up to lot multiples is a design decision that must be stated, because
+  both behaviours look reasonable in a table of order quantities.
 - Static rules ignore the *future* demand pattern; the dynamic programs
   (CPT-0143/0144) exploit it — use those when demand is lumpy.
 - L4L transmits demand noise straight into orders — the bullwhip's friend
@@ -59,7 +60,8 @@ than L4L's three orders, more holding.
 
 ## Governing rules
 
-- **SPL-R*** — lot rule is item-master policy, changed by decision.
+- **SPL-R5** — netting conserves, whatever the lot rule then does with the net requirement. The
+  choice of rule is item policy, changed by decision, and no rule mandates one.
 
 ## Related
 

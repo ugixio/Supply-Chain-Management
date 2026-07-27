@@ -33,9 +33,9 @@ Standardize each plotted point `z_i = (x_i − CL) / σ`; test the **latest** po
 ## Inputs and outputs
 
 - **Inputs:** ordered plotted statistics (e.g. subgroup means), CL, σ > 0.
-- **Output:** list of violation records `{rule, description, point_index}` — empty when
-  in control. Only the *last* point is judged (streaming usage: call after each new
-  subgroup, as the TS `addSubgroup` does).
+- **Output:** list of violation records `{rule, description, point_index}` — empty when in control.
+  In streaming use only the newest point is judged, once per new subgroup; re-scanning the whole
+  series on every append reports the same historical violation repeatedly.
 
 ## Assumptions and limits
 

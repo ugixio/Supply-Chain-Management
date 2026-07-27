@@ -56,6 +56,10 @@ relations:
 
 ## Governing rules
 
+- **DMD-R9** — horizon and bucket are stated, and they matter more here than for a level-only
+  method: a linear trend extrapolates without limit, so the horizon is the whole of the risk.
+  **No rule fixes α or β.**
+
 ## Related
 
 - CPT-0002 SES — the level equation Holt extends.

@@ -53,7 +53,8 @@ strategy or renegotiate the MTPD with the business.
 
 ## Governing rules
 
-- **RSK-R*** — every BCP carries validated objectives before activation.
+- **RSK-R2** — residual risk cannot exceed inherent risk: a recovery objective claimed but never
+  validated does not reduce anything. Whether a plan may activate unvalidated is the project's.
 
 ## Related
 

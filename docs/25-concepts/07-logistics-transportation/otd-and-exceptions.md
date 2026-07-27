@@ -28,11 +28,14 @@ relations:
 
 ## Inputs and outputs
 
-- **TS `isOnTimeDelivery`:** tri-state boolean (`null` = in transit) — undelivered
-  shipments are excluded rather than failed, the opposite of CPT-0082's OTIF
-  treatment (recorded divergence: shipment-level OTD is measured on completions;
-  order-level OTIF punishes pending).
-- **PY `otd_rate`:** pre-counted numerator/denominator → percentage (4 dp).
+- **A shipment in transit is neither on time nor late, and the choice of how to treat it changes the
+  metric.** Three-valued at the shipment level — on time, late, or *not yet determined* — excludes
+  undelivered shipments from the rate. Order-level OTIF (CPT-0082) does the opposite and counts a
+  pending order as a miss. Both are defensible: one measures completed deliveries, the other
+  measures promises kept so far. **Excluding in-transit shipments flatters the rate**, so the basis
+  must be stated wherever the number is published — and the two figures will not reconcile.
+- **Output:** the rate, plus the counts behind it. A percentage with no denominator hides how few
+  deliveries it is based on.
 
 ## Assumptions and limits
 
@@ -49,12 +52,14 @@ relations:
 
 ## Worked example
 
-184 of 195 delivered shipments on time → `94.36%` — just under the 95% bar; the 11
-misses join the exception review queue.
+184 of 195 delivered shipments on time → `94.36%`. Whether that clears the bar depends on the bar
+the project set; what the number does say is that **11 shipments missed**, and the exception review
+works on those 11, not on the percentage.
 
 ## Governing rules
 
-- **LOG-R*** — shipment lifecycle stamps the dates; SCM-R9 ISO dates.
+- **SCM-R9** — the dates being compared are ISO 8601, and instants are UTC: an on-time test across
+  time zones is otherwise undefined. No rule fixes an acceptable OTD level.
 
 ## Related
 

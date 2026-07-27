@@ -50,7 +50,8 @@ CONDITIONAL, correctly distinguishing trend from accident.
 
 ## Governing rules
 
-- **SUP-R*** — rating decisions use governed scores; smoothing parameters are decision-
+- **SUP-R5** — an evaluation records what was assessed and against which criteria; a smoothed
+  score must therefore disclose that it is smoothed, and with what parameters. Those are decision-
   recorded, not per-analyst.
 
 ## Related

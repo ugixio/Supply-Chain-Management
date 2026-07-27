@@ -58,8 +58,11 @@ all get ratio: A 66.7, B 25, C 8.3 (equals pro-rata here). With C=5: C filled 5,
 
 ## Governing rules
 
-- **ORD-R*** — allocations feed `OrderAllocation` records (policies match
-  `OrderAllocation.ts`); ORD-R5 — allocation conserves available stock.
+- **ORD-R5** — an allocation **conserves** the available stock: the sum of what is allocated equals
+  what there was to allocate, so no unit is created or lost by rounding the shares independently
+  (the same sum-preservation requirement as SCM-R14, applied to units rather than money).
+- **Which allocation policy applies is a project decision** — pro-rata, priority-ordered, or a
+  minimum-viable-quantity rule are all legitimate, and each is fair by a different definition.
 
 ## Related
 

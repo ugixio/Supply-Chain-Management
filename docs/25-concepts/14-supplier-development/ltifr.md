@@ -52,7 +52,8 @@ per million hours worked.
 
 ## Governing rules
 
-- **SDV-R*** — safety metrics on the sustainability record; audit verification.
+- **SDV-R4** — the rate records its evidence: self-reported and audit-verified injury data are not
+  the same measurement. No rule fixes an acceptable rate.
 
 ## Related
 

@@ -33,8 +33,10 @@ relations:
   total remaining** (INV-R5: a physical balance cannot be negative).
 - **Output:** `{cogs_cents, remaining_layers, layers_consumed}` — the consumed-draws
   list is the journal detail (SCM-R4).
-- TS `valuationSnapshot` reports the aggregate's point-in-time summary (method,
-  total qty/value, average unit cost, layer count).
+- A point-in-time summary — total quantity and value, average unit cost, layer count — must name
+  **the method it was produced under**. The same layers valued FIFO and weighted-average give
+  different numbers, both correct, and a snapshot without its method cannot be reconciled later.
+  (IAS 2 permits FIFO and weighted average; **LIFO is not permitted** — FIN-R4.)
 
 ## Assumptions and limits
 

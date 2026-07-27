@@ -57,10 +57,15 @@ The √LT arises because the variances of LT independent daily demands add:
 
 ## Worked example
 
-σ_D = 20 units/day, LT = 9 days, target service level 95%:
+σ_D = 20 units/day, LT = 9 days, and a project-chosen cycle service level of 95%:
 
-- z = 1.65 (TS table) → ss = ⌈1.65 × 20 × √9⌉ = ⌈1.65 × 20 × 3⌉ = ⌈99.0⌉ = **99 units**
-- With the Python table (z = 1.645): 98.7 units — see CPT-0003 on the divergence.
+    z = Φ⁻¹(0.95) = 1.6449          exact inverse normal (CPT-0003, ADR-0028)
+    ss = 1.6449 × 20 × √9 = 1.6449 × 20 × 3 = 98.69 → 99 units when rounded up
+
+A rounded table value of `1.65` gives 99.0 here, so the two agree after rounding — but they do not
+agree in general: an interpolated table over-estimates z by up to ~1.6% at some service levels, and
+that bias lands in every safety stock derived from it. **Use the exact inverse normal**; the
+rounding to whole units belongs at the end, once.
 
 ## Governing rules
 

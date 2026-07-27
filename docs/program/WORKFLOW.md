@@ -573,6 +573,31 @@ mirror-coverage bar) · duplicated formulas across TS/Python with one past diver
   the Rust golden fixture. Jest, ts-jest, eslint (never configured), `ts-node` and `@types/uuid`
   dropped; lockfile regenerated. `turbo.json` and `tsconfig.json` paths cleaned. **A runner that
   passes because it found nothing is worse than no runner — it reads as coverage.**
+- 🟩 **C1d · WHAT — the divergence sections were a hiding place for policy (2026-07-27).**
+  47 concept nodes still described differences between the **two deleted implementations**. That
+  framing is why C1a missed real policy: its detector needed a number and a normative word on the
+  same line, and `PY bands: <0 EXCELLENT · ≤30 GOOD` matches neither pattern. Removed here — the
+  cash-to-cash rating bands, the bullwhip severity thresholds, the 5×5 risk-matrix level cuts,
+  three competing AP matching tolerances, the 10% budget-variance bar, `Cpk ≥ 1.33 capable`, the
+  0.5% bias dead band C1a had *reported removing*, and the 5% over-receipt default — the original
+  ADR-0037 example, still sitting in a symbol table.
+  **Questions the divergences were avoiding, now answered:** the σ estimate decides *which index
+  you computed* (within-subgroup → Cp/Cpk, total-sample → Pp/Ppk — different names for exactly
+  this reason); consensus forecasting is **two stages**, not two implementations; days-of-supply
+  safety stock is two formulas, one of which collapses to zero on stable lead times; excluding
+  in-transit shipments flatters OTD and the two bases never reconcile.
+  **A correctness fix:** the statistical safety-stock example still used `z = 1.65` from the lookup
+  table ADR-0028 retired in favour of the exact inverse normal.
+  **G12 added — a rule citation names an ID.** `**FIN-R***` reads as law and resolves to nothing;
+  it was invisible to G4 (not a broken link), G3 (not a duplicate) and G11 (not a retired ID). Most
+  of the 47 stood in for *lifecycle* rules retired with the deleted application, so the wildcard
+  was concealing precisely what it appeared to cover. The gate found one more in the core rule file
+  itself, and was verified by planting a wildcard and watching it go red.
+  **Eight `## Governing rules` sections were empty** — a heading promising law and delivering none.
+  Filled with what actually governs each forecasting method (DMD-R6 on undefined percentage error,
+  DMD-R9 on horizon and bucket, and Holt-Winters' two-season requirement as arithmetic).
+  **The scripted-edit lesson paid for the fourth time:** four replacements left dangling tails
+  because the original line continued onto the next. Caught by reading the diff, fixed by hand.
 - ⬜ **C5 · WHAT** — Re-check `docs/standards/REGULATORY_FRAMEWORK.md` against current law; it is
   now one of the most load-bearing documents in the repository.
 

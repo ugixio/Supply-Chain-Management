@@ -64,7 +64,9 @@ LightGBM 12.1%, Prophet 14.8%, Holt-Winters 18.3% → LightGBM selected. Blendin
 
 ## Governing rules
 
-- **ADR-0001** — ML lives in Python; the TS layer consumes results via `DemandSensingRun`.
+- **ENG-R8 / ADR-0033/0035** — fitting, inference and ensembling belong to the **Python tools
+  lane**; the core calls them and never reimplements them. No rule fixes the blend weights: they
+  are a modelling choice, and the example above is an illustration.
 
 ## Related
 

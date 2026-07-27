@@ -28,7 +28,7 @@ relations:
 | 05 | inventory-management | 3 | ⬜ |
 | 06 | warehouse-management | 2 | ⬜ |
 | 07 | logistics-transportation | 3 | ⬜ |
-| 08 | quality-management | 3 | ⬜ |
+| 08 | quality-management | 4 | ⬜ |
 | 09 | compliance-regulatory | 3 | ⬜ |
 | 10 | risk-management | 3 | ⬜ |
 | 11 | finance-controlling | 3 | ⬜ |

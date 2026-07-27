@@ -21,7 +21,7 @@ relations:
     COPQ = prevention + appraisal + internal_failure + external_failure
     copq_pct_revenue = COPQ / revenue × 100
 
-Per-NCR mapping (`copq_by_category` / TS `totalCopqCents`):
+Per-nonconformance mapping into the failure categories:
 
     internal_failure = scrap_cost + rework_cost
     external_failure = return_freight_cost
@@ -37,7 +37,10 @@ Per-NCR mapping (`copq_by_category` / TS `totalCopqCents`):
 - **Inputs:** category costs ≥ 0; `copq_by_category` takes NCR records (integer cents,
   validated non-negative) + `revenue_cents: int`; zero revenue → 0% (no division).
 - **Outputs:** category totals, grand total, % of revenue (4 dp), and per-NCR breakdown.
-- TS `totalCopqCents` is the NCR-level sum: scrap + rework + return freight.
+- **Which costs are captured decides what the total means.** A per-record sum of scrap, rework and
+  return freight is a *failure*-cost total; adding prevention and appraisal makes it a cost-of-
+  quality total. Both are legitimate and they are not comparable, so the basis is named wherever
+  the number is reported.
 
 ## Assumptions and limits
 

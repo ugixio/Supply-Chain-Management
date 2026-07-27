@@ -35,9 +35,9 @@ relations:
 - **Inputs:** validated non-negative integer cents; quantity > 0; allocation lines
   with the chosen basis (zero basis total → even split fallback).
 - **Outputs:** totals + unit landed cost + `duty_and_tax_cents` +
-  `freight_per_unit_cents` + breakdown; allocation returns lines with
-  `allocated_cents` and per-unit cost. TS selectors compute duty+tax and
-  freight/unit from the LandedCost aggregate's typed components.
+  `freight_per_unit_cents` + breakdown; the allocation returns each line's allocated amount and
+  its per-unit cost. The allocated amounts **sum exactly to the pool** being allocated
+  (SCM-R14) — a per-unit figure computed by independent division does not.
 
 ## Assumptions and limits
 

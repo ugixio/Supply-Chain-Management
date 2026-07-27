@@ -30,8 +30,9 @@ relations:
 ## Inputs and outputs
 
 - **Inputs:** `SKUMetrics` records (ACV + demand history).
-- **Output:** `{sku_id: 'AX'…'CZ'}`. TS `updateABCXYZ` writes the result to the item
-  master (a governed setter, excluded from the catalogue).
+- **Output:** one cell per SKU, `AX`…`CZ`. Persisting it on the item master is a deliberate step,
+  not a side effect of computing it: the stored class is what policy reads, so it needs the same
+  reclassification discipline as the ABC dimension alone (CPT-0019).
 
 ## Assumptions and limits
 
@@ -54,8 +55,9 @@ replenishment, cycle-count frequently, safety stock from CPT-0012.
 
 ## Governing rules
 
-- **INV-R*** — item-master classification changes flow through `updateABCXYZ`
-  (an identifier's stability is a data-modelling decision; the classification is a field).
+- **INV-R4** — the ACV behind the A/B/C dimension is derived from movements, so the class inherits
+  whatever period those movements cover. **No rule fixes the cut points on either axis** — both are
+  project decisions, and a nine-box built on two shifting boundaries churns twice as easily as one.
 
 ## Related
 

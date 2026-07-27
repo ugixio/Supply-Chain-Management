@@ -30,9 +30,10 @@ relations:
 ## Inputs and outputs
 
 - **Inputs:** `avgDailyDemand`, `avgLeadTimeDays`, `safetyStock`.
-- **Output:** TS applies `Math.ceil` to the **cycle-stock term only** and then adds `ss`
-  unrounded (`Math.ceil(D̄ · LT) + ss`); Python returns the plain float sum. With an
-  integer `ss` the two agree; with a fractional `ss` they differ by the rounding.
+- **Output:** units. **Round the sum, not the terms.** Rounding the cycle-stock term up and then
+  adding an unrounded safety stock gives a different reorder point from rounding the total, and the
+  difference is invisible whenever the safety stock happens to be a whole number — so the defect
+  hides until the first fractional buffer.
 
 ## Assumptions and limits
 

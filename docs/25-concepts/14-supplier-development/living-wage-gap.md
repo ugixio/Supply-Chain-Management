@@ -54,7 +54,8 @@ closure.
 
 ## Governing rules
 
-- **SDV-R*** — remediation tracked on the record; CSDDD adequate-wage duty
+- **SDV-R4** — the gap records which wage benchmark it was measured against and when; two
+  benchmarks give two different gaps. CSDDD adequate-wage duty
   (dept 09 scope).
 
 ## Related

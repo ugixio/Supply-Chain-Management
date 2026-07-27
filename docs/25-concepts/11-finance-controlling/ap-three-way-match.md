@@ -24,9 +24,8 @@ relations:
     price_ok ⇔ |inv_price − po_price|/po_price ≤ tol
     APPROVED / QUANTITY_MISMATCH / PRICE_MISMATCH / BOTH_MISMATCH
 
-TS (`performThreeWayMatch`) applies the same per-line tests, stamps
-`matchStatus` per line and `varianceCents = invoiced_value − received_value`, and
-sets the invoice to MATCHED/DISCREPANCY.
+The value variance alongside the status — `invoiced_value − received_value` — is what makes a
+mismatch actionable: the status says *whether* to pay, the variance says how much is in dispute.
 
 | Symbol | Meaning | Unit |
 |---|---|---|
@@ -38,17 +37,17 @@ sets the invoice to MATCHED/DISCREPANCY.
 - **Inputs:** the three documents' quantities and prices; a zero baseline degenerates
   safely (`b = 0 ⇒ a must equal 0`).
 - **Output:** a match status per line, not only per invoice — a single mismatched line is what
-  blocks payment (division by
-  `unitPricePOCents`/`quantityReceived` assumes both non-zero — recorded guard gap).
+  blocks payment. Both ratios divide by a baseline (PO price, received quantity), so a zero
+  baseline must be handled explicitly rather than produce a division error.
 
 ## Assumptions and limits
 
-- **Three tolerances in the estate (recorded divergence):** PY dept 11 defaults 1%,
-  TS invoice 2%, and the dept-01 `three_way_match_status` (CPT-0030) uses 0%/2%
-  qty/price split. One AP policy should govern; owner call (U8).
-- PENDING gates only *material under-receipt* — over-receipt flows into
-  QUANTITY_MISMATCH (over-receipt approval is PRC-R territory, CPT-0027).
-- Match is per line in TS, per order in PY — partial-line approval differs.
+- **One tolerance policy, applied at one granularity.** A quantity tolerance, a price tolerance
+  and the granularity they are applied at (per line or per order) are contract terms. What breaks
+  a system is holding *several* of them at once: the same invoice then matches in one place and
+  mismatches in another, and neither answer is wrong. Decide once; see below.
+- Under-receipt and over-receipt are different questions. Holding payment for a short delivery is
+  an AP decision; accepting more than was ordered is a receiving decision (CPT-0027).
 - **Does not apply when:** service POs without GRN (two-way match).
 
 ## Worked example
@@ -57,10 +56,20 @@ PO 100 @ 1,250¢; GRN 100; invoice 100 @ 1,280¢. The price differs by 2.4%, so 
 matches or does not depending entirely on the tolerance the contract sets — which is the point:
 the same three documents are a clean match under one agreement and a discrepancy under another.
 
+## Project-chosen inputs
+
+| Input | Why the project must choose it |
+|---|---|
+| The quantity and price tolerances | Terms of the supply contract, often per supplier or category; this context supplies none |
+| Whether the tolerances are equal | Many agreements are strict on price and loose on quantity, or the reverse |
+| Granularity — per line or per order | Determines whether one bad line blocks a whole invoice |
+| What a mismatch triggers | Hold, partial payment, or pay-and-claim are all legitimate |
+
 ## Governing rules
 
-- **FIN-R*** — no payment release on DISCREPANCY; **SCM-R3** — invoices soft-delete;
-  SCM-R14 exact money.
+- **SCM-R3** — an invoice is corrected by a further entry, never destroyed.
+  **SCM-R14** — money is exact, and an allocation across lines sums to the invoice total.
+  **PRC-R4** — inspection conserves what arrived: `accepted + rejected = received`.
 
 ## Related
 

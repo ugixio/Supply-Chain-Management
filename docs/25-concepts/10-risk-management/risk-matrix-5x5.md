@@ -17,7 +17,6 @@ relations:
 
 ## Formula
 
-    score = probability × impact       (1..25)
     score = likelihood × impact          each on an ordinal 1–5 scale → score ∈ [1, 25]
 
 Where the score bands sit, and what each band obliges, are **project-chosen** — they express
@@ -33,32 +32,42 @@ demanding different responses).
 
 ## Inputs and outputs
 
-- **Inputs:** two integers in [1,5] (validated; PY raises outside range).
-- **Output:** the level literal; TS `createRiskItem` stamps `riskScore` and `riskLevel`
-  at creation from the same mapping.
+- **Inputs:** two integers on the 1–5 ordinal scales. A value outside the scale is an error,
+  not a value to clamp — clamping silently turns an unrated risk into a rated one.
+- **Output:** the score, and the band it falls in under the project's own mapping. Keep the
+  **pair** stored alongside, not only the product: the product is lossy (see below), so a
+  register that keeps just the score cannot be re-banded later without re-assessing.
 
 ## Assumptions and limits
 
 - Ordinal × ordinal multiplication is a *convention*, not measurement — a 5×1 and a
   1×5 both score 5 but mean different things (frequent trivia vs rare catastrophe);
   keep the raw pair visible next to the level.
-- **CRITICAL divergence (recorded):** the two languages disagree materially — a score
-  of 15 is HIGH in Python but CRITICAL in TypeScript; a 8 is LOW in Python (≤8) but
-  HIGH in TypeScript (≥8). The same risk item classifies two levels apart. This is a
-  U15b-class owner decision; until resolved, the TS thresholds govern the domain
-  records (they stamp `RiskItem`), the PY ones the analytics.
+- **One mapping, applied everywhere.** Two systems banding the same score differently is not a
+  disagreement about risk, it is two different scales sharing one word — a register and its
+  analytics that disagree by two bands on the same item make the register unusable as evidence.
+  The mapping is chosen once and applied by every consumer.
 - **Does not apply when:** quantitative loss data exists — prefer EAL (CPT-0072) /
   VaR (CPT-0077) over matrix positioning.
 
+## Project-chosen inputs
+
+| Input | Why the project must choose it |
+|---|---|
+| The band boundaries over 1–25, and their inclusivity | They express risk appetite; the boundary case is the one that gets argued about, so state whether a boundary score falls in the higher band or the lower one |
+| What each band obliges (escalation, treatment, acceptance) | A band with no consequence is a label |
+| The wording of each 1–5 anchor | "Likely" means nothing until the scale says what it means; unanchored scales are not comparable between assessors |
+
 ## Worked example
 
-probability 4, impact 4 → score 16 → PY **HIGH**, TS **CRITICAL** (the divergence in
-action).
+Likelihood 4, impact 4 → **score 16**. Whether that is the top band or the one below is the
+project's mapping, and 16 also arises as 2×8 — impossible on a 1–5 scale — which is a reminder
+that the product loses information the pair carries.
 
 ## Governing rules
 
-- **RSK-R*** — risk items carry score, level, strategy and owner; registers are
-  soft-deleted (SCM-R3).
+- **RSK-R5** — an ordinal product stays ordinal: scores are not averaged, and equal scores do
+  not mean equal risk. **SCM-R3** — a risk register entry is corrected, never destroyed.
 
 ## Related
 

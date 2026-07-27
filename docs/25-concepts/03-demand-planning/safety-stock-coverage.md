@@ -16,12 +16,12 @@ relations:
 > Two questions about the buffer actually on the shelf: **how many days does it cover**,
 > and **is it the right size** compared with what the model says it should be.
 
-## Status — specified, NOT implemented
+## Why this node exists
 
-**No implementation exists in TypeScript or Python.** Extracted from
-the department's own planning specification. A project can *compute* the
-target safety stock (CPT-0012..0015) but has nothing that compares it against the level
-actually held — the gap analysis that makes those calculations actionable. Backlog U18.
+Computing a target safety stock (CPT-0012..0015) is the easy half. The half that gets skipped is
+comparing that target against the buffer **actually held** — and without it, the calculation is
+advice nobody checked. A project can be running a textbook-correct safety-stock method and holding
+a completely different quantity, indefinitely, with no signal that the two have parted company.
 
 ## Formula
 

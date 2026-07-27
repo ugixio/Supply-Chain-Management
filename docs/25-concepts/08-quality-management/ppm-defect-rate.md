@@ -25,15 +25,18 @@ relations:
 |---|---|---|
 | defective_units | units rejected in the period | count |
 | total_units | units inspected/received | count |
-| PPM_target | contract/industry bar | PPM |
+| PPM_target | the bar this rate is judged against — **project-chosen**, from the customer contract | PPM |
 
 ## Inputs and outputs
 
-- **Inputs:** counts ≥ 0; `total_units = 0` → 0.0 (PY convention — no exposure means no
-  signal, not perfection; treat as "no data").
-- **Outputs:** PY PPM rounded 4 dp; TS `ppmVarianceToTarget` signed variance;
-  `isMeetingTarget` couples PPM **and** first-pass-yield targets — a supplier must pass
-  both.
+- **Inputs:** the two counts, over the same period and the same population.
+- **Zero units inspected has no defect rate.** Reporting `0` for an empty period says "perfect"
+  when the truth is "no data", and a supplier with no deliveries then outranks one with an
+  excellent record. Report it as absent.
+- **Outputs:** the rate, and the signed variance against the target if one is set. Signed, not
+  absolute: a rate under target is a different management action from one over it.
+- **A composite pass/fail over several targets hides which one failed.** If PPM and yield are both
+  gated, report both verdicts, not their conjunction.
 
 ## Assumptions and limits
 

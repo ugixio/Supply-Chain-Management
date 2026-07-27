@@ -33,9 +33,12 @@ relations:
 
 - **Inputs:** subgroups (each exactly n observations, n ∈ [2,10]); non-empty.
 - **Output:** `{xbar_bar, r_bar, xbar_ucl/cl/lcl, r_ucl/cl/lcl, sigma_est}` (6 dp).
-- The TS SPC chart recomputes limits inside `addSubgroup` once `targetSubgroups`
-  points exist, then flags points via Western Electric rules (CPT-0058) and derives
-  Cp/Cpk (CPT-0053) from σ̂ = R̄/d₂.
+- **Limits are established once, from a baseline period, then held.** Recomputing them as each new
+  subgroup arrives lets a drifting process widen its own limits until nothing looks out of control
+  — the chart then tracks the drift instead of detecting it. How many subgroups form the baseline
+  is a project decision; that the limits stop moving afterwards is not.
+- σ̂ = R̄/d₂ from these subgroups is the **within-subgroup** estimate, which is what makes it the
+  right input for Cp/Cpk rather than Pp/Ppk (CPT-0053).
 
 ## Assumptions and limits
 
@@ -56,8 +59,9 @@ X̄ UCL/LCL = 10.02 ± 0.577×0.45 = **10.280 / 9.760**; R UCL = 0.951, LCL = 0;
 
 ## Governing rules
 
-- Chart lifecycle (activate/deactivate/exclude-point) is state-machine law in the QMS
-  rule family; the limits themselves are semantics owned here.
+- **QMS-R6** — a chart built from samples shows what the samples showed; excluding a point from the
+  baseline is a judgement that must be recorded with its reason, or the limits cannot be reproduced.
+  The chart's own lifecycle is the project's design; the limit arithmetic is what this node fixes.
 
 ## Related
 

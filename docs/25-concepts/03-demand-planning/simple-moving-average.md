@@ -51,6 +51,10 @@ relations:
 
 ## Governing rules
 
+- **DMD-R9** — a forecast is stated with its horizon and its bucket. A moving average has no
+  horizon of its own: it repeats one level forward, so the horizon it is quoted for is the caller's
+  claim, not the method's. The window length is a project choice.
+
 ## Related
 
 - CPT-0002 Single Exponential Smoothing — the weighted successor to a flat window.

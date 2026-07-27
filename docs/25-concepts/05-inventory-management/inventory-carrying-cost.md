@@ -31,7 +31,9 @@ relations:
 ## Assumptions and limits
 
 - The rate bundles **cost of capital + storage + obsolescence/shrink + insurance/
-  tax**; 25% is the classic industrial default — perishables and electronics run
+  tax**. The rate is **project-chosen** and industry-specific: it is built up from that
+project's own cost of capital, storage, insurance and obsolescence, not taken from a
+published figure. Perishables and electronics run
   higher (obsolescence), bulk commodities lower. Set per category, record the
   decision.
 - Uses *average* inventory value; a period-end snapshot inherits window dressing.
@@ -58,4 +60,4 @@ increases must justify against service gains.
 ## References
 
 - Silver, Pyke & Peterson — holding cost composition; REM Associates / industry
-  surveys for the 20–30% band.
+  surveys report ranges, which describe what others chose — not what this project should.

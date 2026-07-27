@@ -30,7 +30,7 @@ sets the invoice to MATCHED/DISCREPANCY.
 
 | Symbol | Meaning | Unit |
 |---|---|---|
-| tol | tolerance (PY default 1%; TS `MATCH_TOLERANCE_PCT` 2%) | fraction |
+| tol | matching tolerance | fraction — **project-chosen**, from the supply contract |
 | prices | unit prices | integer cents |
 
 ## Inputs and outputs
@@ -52,9 +52,9 @@ sets the invoice to MATCHED/DISCREPANCY.
 
 ## Worked example
 
-PO 100 @ 1,250¢; GRN 100; invoice 100 @ 1,280¢, tol 1% → price diff 2.4% > 1% →
-**PRICE_MISMATCH** (PY). Same input at TS 2% tolerance → still variance (2.4% > 2%)
-→ PRICE_VARIANCE, invoice → DISCREPANCY.
+PO 100 @ 1,250¢; GRN 100; invoice 100 @ 1,280¢. The price differs by 2.4%, so the invoice
+matches or does not depending entirely on the tolerance the contract sets — which is the point:
+the same three documents are a clean match under one agreement and a discrepancy under another.
 
 ## Governing rules
 

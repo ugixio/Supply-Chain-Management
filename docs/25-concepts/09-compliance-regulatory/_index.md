@@ -47,10 +47,11 @@ relations:
 
 - **CSDDD (CPT-0093)** — the implemented 3-phase model follows the original
   2024/1760; **Directive (EU) 2026/470 (Omnibus I)** replaced it with a single
-  >5,000-employee / >€1.5B band applying 26 Jul 2029. Code update required.
+  >5,000-employee / >€1.5B band applying 26 Jul 2029. The node states the current law; a
+  project scoping itself must read the amended text, not the superseded phase-in.
 - **CBAM (CPT-0100..0102)** — Omnibus Regulation (Oct 2025): 50 t/yr de-minimis
   (not modelled), certificate sales from Feb 2027, declaration due 30 Sep; the
-  50% quarterly holding default matches the amended rate.
+  50% quarterly holding requirement is the amended rate.
 - **Two retention dating methods (CPT-0096)** disagree by ±1 day at leap boundaries.
 - **REACH (CPT-0095)** — Art. 31 SDS applied to articles is a conservative
   simplification; ECHA-notification tracking still open (U11b).

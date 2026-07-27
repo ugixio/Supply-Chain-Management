@@ -33,7 +33,7 @@ relations:
 ## Assumptions and limits
 
 - Same mathematics as single exponential smoothing over demand (CPT-0002 family) —
-  α = 0.3 means a one-off bad month moves the rating basis by only 30% of the shock,
+  A small α means a one-off bad month moves the rating basis by only a fraction of the shock,
   and a sustained change reaches ~92% of its level after 7 periods.
 - Smoothing delays detection by design — pair with the CAP trigger on the *raw* score
   for catastrophic single-period failures (e.g. a critical recall) so smoothing never

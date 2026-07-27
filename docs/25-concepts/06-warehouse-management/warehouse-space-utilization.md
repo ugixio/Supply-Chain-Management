@@ -34,7 +34,8 @@ relations:
 - **Inputs:** cube or location counts; denominators must be `> 0`.
 - **Outputs:** `cubic_space_utilisation` → utilisation + `benchmark_met` (≤ 85% of usable
   cube — above that putaway flexibility collapses); `rack_location_utilisation` →
-  fill rate + vacant count, benchmark band **85–90%**; `storage_utilization` →
+  fill rate + vacant count. What utilization is healthy is **project-chosen** — too high leaves
+no room to receive, too low wastes rent; `storage_utilization` →
   percentage + status grade (`OPTIMAL` 70–95%).
 
 ## Assumptions and limits
@@ -52,7 +53,7 @@ relations:
 ## Worked example
 
 Building 10,000 m³, aisle loss 0.35 → usable 6,500 m³; used 5,200 m³ →
-`u = 0.80` (benchmark met). Locations 9,200/10,000 → fill 92% → above the 85–90 band and
+`u = 0.80`. Locations 9,200/10,000 → fill 92% — high enough that receiving has little slack, and
 `storage_utilization` grades it OPTIMAL (≤ 95) but nearing congestion.
 
 ## Governing rules

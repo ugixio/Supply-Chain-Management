@@ -14,7 +14,7 @@ relations:
 
 > What bad quality costs, in Juran's four categories: prevention, appraisal, internal
 > failure (scrap/rework) and external failure (customer-facing). Benchmark 5–30% of
-> revenue; world-class < 5%.
+> revenue. What level is tolerable is a business decision, not a property of the measure.
 
 ## Formula
 

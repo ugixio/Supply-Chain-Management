@@ -416,11 +416,29 @@ mirror-coverage bar) · duplicated formulas across TS/Python with one past diver
 
 > The deletion is done; making the remaining knowledge consistent with it is not.
 
-- ⬜ **C1 · WHAT** — **Sweep the 154 concept nodes for policy.** Remove every threshold, target,
-  tolerance, weighting, rating band and mandated method; add a **Project-chosen inputs** section
-  naming what the project must decide. Judgement work, node by node — no gate can find these.
-  Two nodes are already done as the pattern: CPT-0003 (service-level z-score) and the department
-  index headers.
+- 🟦 **C1 · WHAT** — **Sweep the concept nodes for policy.**
+  **C1a landed 2026-07-27 — the numeric policy is out.** Method: a detector for lines carrying a
+  number *and* a normative word (target, threshold, tolerance, weight, band, default), minus
+  citations, narrowed 169 flagged nodes to **47 real candidate lines in 37 nodes**, each then judged
+  by hand. Removed: every "world-class ≥ X" bar (13 of them, one citing a `CLAUDE.md` section that
+  no longer exists) · matching tolerances (0%/1%/2%) · the 25% carrying rate and its 20–30% "band" ·
+  the 85–90% space-utilization band · warehouse throughput and dock-to-stock benchmarks ·
+  MPS stability > 0.85 · fill ≥ 98% / backorder ≤ 2% · the 15% restocking default · compliance-score
+  weightings · C2C rating bands · the 0.5% tracking dead band · α = 0.3 smoothing · the 85%
+  capacity-strain onset.
+  **Kept, because a regulator fixes them:** REACH 0.1% w/w (Reg. 1907/2006), CSDDD >5,000
+  employees ∧ >€1.5B from 26 Jul 2029 (Directive 2026/470), CBAM 50% quarterly holding. Worked
+  examples keep their illustrative numbers; mathematical domains (`α ∈ (0,1)`, `n ≥ 1`) are not
+  policy.
+  **Two nodes were policy end to end and were rewritten as definitions:** CPT-0060 (scorecard) now
+  states only `Σwᵢ = 1` and why a compensatory composite must keep gates outside it; CPT-0061
+  (rating bands) states only that a partition must be exhaustive, non-overlapping and explicit
+  about boundary inclusivity.
+  **C1b remaining:** 35 nodes still annotate their symbols with `(PY)` / `(TS)` to contrast two
+  deleted implementations — meaningless now, and in a few cases hiding a real question (`cm³ (PY) /
+  m³ (TS)` never says which unit the concept uses). Each needs one canonical answer.
+  **C1c remaining:** add a **Project-chosen inputs** section to every node that needs values —
+  3 of 154 have one so far.
 - ⬜ **C2 · WHAT** — Sweep the **department rule files** (`docs/40-contexts/*/rule.md`, families
   `PRC-*` … `SDV-*`) with the same test. `SCM-R*` is done.
 - ⬜ **C3 · WHAT** — Retire citations of the retired `SCM-R1/R2/R5/R8/R11/R12/R13` across the

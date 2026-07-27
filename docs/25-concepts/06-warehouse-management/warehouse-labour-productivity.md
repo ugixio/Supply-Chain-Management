@@ -21,7 +21,9 @@ relations:
     UPH = units_received / labour_hours
 
 Picking grade (PY): `<60 BELOW_STANDARD · 60–120 RF_SCANNER · 120–200 VOICE_PICKING ·
->200 AUTOMATED`. Receiving benchmark: world-class ≥ 120 units/h (WERC 2022).
+>200 AUTOMATED`. What counts as good throughput is a project's own bar, set from its
+  automation level, product mix and labour market — industry surveys report ranges, not
+  requirements.
 
 | Symbol | Meaning | Unit |
 |---|---|---|
@@ -50,7 +52,8 @@ Picking grade (PY): `<60 BELOW_STANDARD · 60–120 RF_SCANNER · 120–200 VOIC
 ## Worked example
 
 Picker completes 540 lines in 6.0 h → `LPH = 90` → RF_SCANNER band.
-Receiving crew 960 units in 8 h → `UPH = 120` → benchmark met (world-class threshold).
+Receiving crew 960 units in 8 h → `UPH = 120`. Whether 120 is good is not something this
+node can say.
 
 ## Governing rules
 

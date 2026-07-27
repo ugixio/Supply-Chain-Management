@@ -13,7 +13,7 @@ relations:
 # Manufacturing Plan Attainment (CPT-0150)
 
 > Did production hit the plan? Actual output over MPS-planned output, as a
-> percentage. World-class ≥ 95%.
+> percentage. What attainment is acceptable is the S&OP process owner's decision.
 
 ## Formula
 

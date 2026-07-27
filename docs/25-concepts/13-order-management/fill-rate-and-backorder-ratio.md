@@ -28,7 +28,8 @@ relations:
 ## Inputs and outputs
 
 - **Inputs:** positive denominators (raise otherwise); non-negative numerators.
-- **Outputs:** percentages (floats). World-class: fill ≥ 98% FMCG; backorder ≤ 2%.
+- **Outputs:** percentages. What fill rate is acceptable follows from the service commitment
+  the project has made — it is not a property of the metric.
 
 ## Assumptions and limits
 
@@ -46,7 +47,7 @@ relations:
 ## Worked example
 
 Ordered 12,400 units, shipped 12,090 → fill 97.5%. Of 3,100 lines, 87 backordered →
-2.81% — both just below world-class.
+2.81%.
 
 ## Governing rules
 

@@ -27,7 +27,9 @@ relations:
 ## Inputs and outputs
 
 - **Inputs:** standard > 0 (validated); wage on the same period/currency basis.
-- **Output:** signed percentage — 0 or negative = met/exceeded; target 0%.
+- **Output:** signed percentage. Zero is the definitional break-even — the wage paid equals the
+  living-wage benchmark — and a negative gap means it exceeds it. Zero is where the measure's
+  meaning changes, not a target this context sets.
 
 ## Assumptions and limits
 

@@ -43,7 +43,9 @@ ratio by the entire gross margin — the most common way this metric is reported
   a business with a Q4 peak can post a healthy annual ITR while carrying dead stock for
   nine months. Prefer a monthly average where the data supports it.
 - Benchmarks are **industry-specific** and comparisons across sectors are meaningless:
-  world-class FMCG runs 8–12×, heavy industrial 3–4×, fresh grocery 30×+.
+  Turnover is only comparable within an industry and a product class: the same ratio that is
+  healthy for fresh grocery would signal dead stock in heavy industry. Comparing across them,
+  or against a single number, is the standard misuse of this measure.
 - A rising ITR is not automatically good — it can mean lean operations, or it can mean
   systematic stockouts. Read it against fill rate and OTIF, never alone.
 - Annualisation is implicit: feeding a quarter's COGS against an average inventory yields

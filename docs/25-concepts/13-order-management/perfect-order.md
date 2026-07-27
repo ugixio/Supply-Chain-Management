@@ -31,8 +31,10 @@ reading the `isPerfectOrder` flag stamped by `markDelivered`.
 
 ## Inputs and outputs
 
-- **PY:** order objects with the two flags; empty list raises.
-- **TS:** filters to DELIVERED/CLOSED; empty basis returns 0 (divergence: PY raises,
+- **Inputs:** the orders in scope, each with the elements the definition counts.
+- **The basis must be closed orders only** — counting in-flight orders as imperfect penalizes
+  the metric for work not yet finished. An empty basis has no rate (returning zero would read as
+  total failure,
   TS returns 0).
 
 ## Assumptions and limits

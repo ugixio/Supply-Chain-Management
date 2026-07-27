@@ -26,18 +26,19 @@ the expression above.
 | Symbol | Meaning | Unit |
 |---|---|---|
 | D | Annual demand | units/year |
-| S | Cost per order placed | **integer cents** (TS) · currency float (PY) |
-| H | Annual holding cost per unit | **integer cents** (TS) · currency float (PY) |
+| S | cost per order placed | currency |
+| H | annual holding cost per unit | currency |
 | EOQ | Order quantity | units |
 
 ## Inputs and outputs
 
-- **Guard:** `H ≤ 0` throws (TS) / raises `ValueError` (PY) — the formula diverges.
-- **Output:** TS returns integer units (`Math.ceil`); Python returns a float.
-- **SCM-R8 (money is integer cents)** applies to the TypeScript signature: `S` and `H`
-  are cents. Because the ratio `S/H` is dimensionless in currency, passing both in the
-  same unit gives the right answer — but passing S in cents and H in dollars is off by
-  10×, and nothing checks it.
+- **Guard:** `H ≤ 0` has no solution — the total-cost curve has no minimum, and the
+  expression diverges.
+- **Output:** a quantity in units, not necessarily a whole one. Rounding to an orderable
+  quantity is a separate decision (see the flat-curve note below).
+- **`S` and `H` must be in the same currency unit.** Only their ratio enters the result, so the
+  unit cancels — which is exactly why a mismatch is dangerous: passing `S` in minor units and
+  `H` in major units is wrong by a factor of a hundred and nothing in the arithmetic objects.
 
 ## Assumptions and limits
 
@@ -46,21 +47,23 @@ EOQ is the most-taught and most-misapplied formula in the field. It assumes:
 - **Constant, known demand** — no seasonality, no trend, no uncertainty.
 - **Constant unit price** — no quantity discounts. With price breaks the true optimum is
   found by evaluating total cost at each break point, which is **not implemented here**.
-- **Instantaneous replenishment** — the whole order arrives at once. For gradual receipt
-  use EPQ (implemented in `python/04_supply_planning/`).
+- **Instantaneous replenishment** — the whole order arrives at once. Gradual receipt needs the
+  economic production quantity instead.
 - **No capacity, shelf-life or MOQ constraints** — a perishable item's EOQ routinely
   exceeds what will be consumed before expiry.
 - **The cost curve is flat near the optimum.** Being 20% off on Q raises total cost by
   only ~2%, so precision in S and H matters far less than practitioners assume. Treat EOQ
   as an order of magnitude, then round to a practical pack or pallet quantity.
-- **Does not apply when:** demand is intermittent or lumpy — use dynamic lot sizing
-  (Wagner-Whitin / Silver-Meal in `python/04_supply_planning/`).
+- **Does not apply when:** demand is intermittent or lumpy. Dynamic lot sizing
+  (Wagner–Whitin, Silver–Meal) addresses that case, and **which lot-sizing method to use is a
+  project's choice** — EOQ is one option, not a mandate.
 
 ## Worked example
 
 D = 12,000 units/year, S = $50 (5,000 cents), H = $6/unit/year (600 cents):
 
-    EOQ = √(2 × 12,000 × 5,000 / 600) = √200,000 = 447.2 → ⌈447.2⌉ = 448 units (TS)
+    EOQ = √(2 × 12,000 × 5,000 / 600) = √200,000 ≈ **447 units**, which in practice is rounded to a
+whole pack or pallet quantity
 
 Check: 12,000/448 ≈ 27 orders/year; ordering cost ≈ $1,340, holding ≈ $1,344 — the two
 costs balance, as the derivation requires.

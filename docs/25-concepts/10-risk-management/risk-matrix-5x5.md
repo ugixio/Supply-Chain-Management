@@ -18,8 +18,13 @@ relations:
 ## Formula
 
     score = probability × impact       (1..25)
-    PY:  LOW ≤ 8 · MEDIUM 9–14 · HIGH 15–19 · CRITICAL ≥ 20
-    TS:  LOW < 4 · MEDIUM ≥ 4 · HIGH ≥ 8 · CRITICAL ≥ 15
+    score = likelihood × impact          each on an ordinal 1–5 scale → score ∈ [1, 25]
+
+Where the score bands sit, and what each band obliges, are **project-chosen** — they express
+risk appetite. Note the arithmetic trap they must respect: the product of two ordinal scales is
+not itself an interval scale, so a score of 20 is not "twice as bad" as 10, and several
+distinct likelihood/impact pairs collapse onto the same number (4×5 and 5×4 both give 20 while
+demanding different responses).
 
 | Symbol | Meaning | Unit |
 |---|---|---|

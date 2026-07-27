@@ -35,9 +35,12 @@ The two variance terms are the whole point:
 
 ## Inputs and outputs
 
-- **TS:** `(avgDailyDemand, demandStdDev, avgLeadTimeDays, leadTimeStdDev, serviceLevelPercent)`
+- **Inputs:** average daily demand, demand standard deviation, average lead time, lead-time
   → integer units; z derived internally.
-- **PY:** `(z, demand_std, avg_demand, avg_lt, lt_std)` → float; **z supplied by caller**.
+  standard deviation, and the service-level multiplier `z` (CPT-0003). Whether `z` is supplied
+  by the caller or derived inside from a service level is an interface choice; what matters is
+  that the two are not mixed up, since a service level of 0.95 passed where `z` is expected
+  understates the buffer by more than half.
   Note the argument orders differ substantially — check the signature, do not assume.
 - Setting σ_LT = 0 reduces the formula exactly to CPT-0014, which is a useful sanity check.
 

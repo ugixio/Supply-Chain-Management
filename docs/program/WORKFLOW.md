@@ -434,11 +434,38 @@ mirror-coverage bar) · duplicated formulas across TS/Python with one past diver
   states only `Σwᵢ = 1` and why a compensatory composite must keep gates outside it; CPT-0061
   (rating bands) states only that a partition must be exhaustive, non-overlapping and explicit
   about boundary inclusivity.
-  **C1b remaining:** 35 nodes still annotate their symbols with `(PY)` / `(TS)` to contrast two
-  deleted implementations — meaningless now, and in a few cases hiding a real question (`cm³ (PY) /
-  m³ (TS)` never says which unit the concept uses). Each needs one canonical answer.
-  **C1c remaining:** add a **Project-chosen inputs** section to every node that needs values —
-  3 of 154 have one so far.
+  **C1b landed 2026-07-27 — no node compares deleted implementations any more.** All `(PY)`/`(TS)`
+  annotations are gone, and several were hiding a real question rather than a formatting wart:
+  · **HHI** never said which input scale it used. The published index is computed on **percentage
+  points** (0–10,000) — that is definitional, not conventional, and computing it on fractions
+  makes every published reference value read a factor of 10,000 off. Stated once, with the
+  consequence.
+  · **CV/XYZ** hid the **estimator** choice: population versus sample standard deviation differs
+  by ~5% on ten observations, enough to move a borderline SKU across a class boundary. Now named
+  as a project decision that must be applied consistently, because two SKUs measured differently
+  are not comparable. Its 0.10/0.25 class table also survived C1a — the detector missed it
+  because the number and the normative word sat in different table rows. **Detector blind spot
+  worth remembering.**
+  · **Safety stock "days of supply"** was two different formulas under one name (a flat day count
+  versus the lead-time spread `LT_max − LT_avg`). Both survive as legitimate definitions; the node
+  now insists the project say which it means, and the worked example shows the same SKU getting
+  250 or 150 units.
+  · **EAL** allowed impacts in currency and as a fraction of revenue in the same sum, and summed
+  correlated scenarios. Both now stated as errors.
+  · **Stock-balance projection** — where the non-negativity check belongs is recorded as a real
+  choice: refusing the movement keeps the ledger always-valid, letting the projection report a
+  negative surfaces the upstream gap. A *reader* of an event log can only do the latter.
+  · **ABC slotting**, **risk matrix 5×5** and **Kraljic** had their break-points, bands and axis
+  midpoints removed; what remains is the structure (rank-then-cut; an ordinal product is not an
+  interval scale; a 2×2 on two dimensions).
+  · **AQL** large-lot behaviour is ISO 2859-1 table data and is cited as such rather than
+  described as a fallback.
+  Also: the two department "Divergences" sections became **Regulatory drift to watch**, keeping
+  the CSDDD/CBAM/REACH/EUDR movements and dropping the code-gap notes.
+  **Lesson recorded:** three scripted line replacements produced broken prose that the gates
+  cannot see. Prose edits get read back; only structural edits get scripted.
+  **C1c remaining:** a **Project-chosen inputs** section on every node that needs values — about
+  a dozen have one now, out of 154.
 - ⬜ **C2 · WHAT** — Sweep the **department rule files** (`docs/40-contexts/*/rule.md`, families
   `PRC-*` … `SDV-*`) with the same test. `SCM-R*` is done.
 - ⬜ **C3 · WHAT** — Retire citations of the retired `SCM-R1/R2/R5/R8/R11/R12/R13` across the

@@ -21,8 +21,8 @@ relations:
 
 | Symbol | Meaning | Unit |
 |---|---|---|
-| COGS | Annual cost of goods sold | integer cents (TS) |
-| Average Inventory Value | Mean inventory **at cost** over the period | integer cents (TS) |
+| COGS | cost of goods sold over the period | currency |
+| Average Inventory Value | mean inventory **at cost** over the same period | currency |
 | ITR | Turns per year | dimensionless |
 
 **Both terms must be at cost.** Dividing COGS by inventory valued at *retail* inflates the
@@ -30,7 +30,9 @@ ratio by the entire gross margin — the most common way this metric is reported
 
 ## Inputs and outputs
 
-- **Inputs:** `cogsAnnualCents`, `avgInventoryCents` (TS) / `cogs`, `avg_inventory_value` (PY).
+- **Inputs:** cost of goods sold and average inventory value, both **at cost** and over the
+  **same period**. Mixing a cost-basis numerator with a retail-basis denominator inflates the
+  ratio, and annualizing one but not the other is the other common error.
 - **Output:** float turns per year.
 - **Degenerate case:** both implementations return **0.0** when average inventory is 0.
   This is a deliberate sentinel but mathematically wrong — zero inventory with positive

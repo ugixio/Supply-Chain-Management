@@ -32,7 +32,7 @@ relations:
 - **PY (rich):** equal-length series, ≥ 4 observations; zero demand variance raises.
   Returns ratio (6 dp), both variances, severity, an intervention recommendation and
   `n_periods`.
-- **TS:** takes the two *pre-computed variances*; zero demand variance returns
+- **Inputs:** the two variances, computed over the same periods. Zero demand variance leaves
   `{ratio: 0, severity: NONE}` — a silent degenerate (recorded divergence vs PY raise).
 
 ## Assumptions and limits

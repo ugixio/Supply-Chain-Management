@@ -45,15 +45,18 @@ relations:
 |---|---|---|
 | [CPT-0137](eudr-deforestation-gates.md) | EUDR gates & risk class | Deforestation due diligence |
 
-## Divergences & regulatory drift (for the backlog)
+## Regulatory drift to watch
 
-- **EUDR (CPT-0137)** — application delayed to 30 Dec 2026 (OJ 23 Dec 2025);
-  hardcoded high-risk countries contradict the official May-2025 benchmark
-  (only BY/MM/KP/RU are high-risk; BR/ID/MY standard); production-date cutoff is
-  a conservative proxy for the deforestation-date rule; `maize` is not an Annex I
-  commodity.
-- **Unit split (CPT-0134)** — `calculate_scope3_cat1` returns tonnes;
-  `scope3_category1_intensity` returns kilograms; unknown materials silently use
-  the generic EF 1.0.
-- **Base-points floor (CPT-0132)** — zero-evidence suppliers score ~46; treat as
-  unknown, not average.
+- **EUDR (CPT-0137)** — application was delayed to **30 Dec 2026** (OJ, 23 Dec 2025). The
+  country risk classification is **published by the Commission and revised**: the May-2025
+  benchmark lists only BY, MM, KP and RU as high-risk, with BR, ID and MY standard. A
+  hardcoded country list is guaranteed to go stale — the classification is read from the
+  benchmark, not embedded. Note also that the obligation turns on the **deforestation cut-off
+  date**, which a production date only approximates, and that Annex I fixes which commodities
+  are in scope.
+- **Emissions units (CPT-0134)** — a Scope 3 figure in tonnes and an intensity in kilograms are
+  a factor of a thousand apart and both look reasonable. The unit belongs in the reported
+  value's name, and an emission factor for an unrecognized material must fail rather than fall
+  back to a generic value that quietly understates.
+- **Scoring floors (CPT-0132)** — a supplier with no evidence submitted is **unknown**, not
+  average. A composite that floors at a mid-range score treats silence as adequacy.

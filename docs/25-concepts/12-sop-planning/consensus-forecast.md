@@ -31,9 +31,9 @@ relations:
 
 ## Inputs and outputs
 
-- **PY:** `ForecastSource(name, forecast, historical_mape)` list — equal horizons
+- **Inputs:** one forecast per participating source, over equal horizons
   enforced; returns the blended vector.
-- **TS:** per-item scalars; positive-result guard; the override *replaces* the
+- **Override semantics matter:** a management override *replaces* the
   statistical baseline (it does not average with it), then the lift adds.
 
 ## Assumptions and limits

@@ -12,18 +12,19 @@ relations:
 ---
 # Warehouse Labour Productivity (CPT-0045)
 
-> Output per labour hour for the two big touch processes — picking (lines per hour) and
-> receiving (units per hour) — graded against technology-tier benchmarks.
+> Output per labour hour for the two big touch processes: picking, measured in lines per hour,
+> and receiving, measured in units per hour.
 
 ## Formula
 
     LPH = lines_picked / labour_hours
     UPH = units_received / labour_hours
 
-Picking grade (PY): `<60 BELOW_STANDARD · 60–120 RF_SCANNER · 120–200 VOICE_PICKING ·
->200 AUTOMATED`. What counts as good throughput is a project's own bar, set from its
-  automation level, product mix and labour market — industry surveys report ranges, not
-  requirements.
+A measured rate says as much about the **method** as about the people: paper picking, RF
+scanning, voice picking and goods-to-person automation occupy visibly different throughput
+ranges, so a rate is only comparable against the same technology. What counts as good is a
+project's own bar, set from its automation level, product mix and labour market — published
+surveys report observed ranges, not requirements.
 
 | Symbol | Meaning | Unit |
 |---|---|---|
@@ -33,16 +34,17 @@ Picking grade (PY): `<60 BELOW_STANDARD · 60–120 RF_SCANNER · 120–200 VOIC
 
 ## Inputs and outputs
 
-- **Inputs:** counts ≥ 0; hours > 0 (PY receiving raises on 0; PY picking returns a
-  N/A record; TS returns `null`).
-- **Outputs:** rate + benchmark grade. TS `linesPerHour` computes per-task LPH from the
-  task's `startedAt`/`completedAt` timestamps, rounded to 2 dp, and returns `null`
-  unless the task is `COMPLETE` with positive duration.
+- **Inputs:** non-negative counts and **positive** labour hours. Zero hours has no rate; a
+  measure that reports one anyway is reporting a division by zero.
+- **Outputs:** the rate. Computing it per task from start and completion timestamps only makes
+  sense for a *finished* task — an in-progress task has an elapsed time but not a duration.
+- **What counts as direct labour hours is a definition to state**, since including or excluding
+  breaks, travel and idle time changes the rate substantially and silently.
 
 ## Assumptions and limits
 
-- Rates are technology-dependent — the grade bands identify *which* technology the
-  measured rate resembles, not personal performance; SKU cube, order profile and travel
+- Rates are technology-dependent, so a rate never measures personal performance on its own;
+  SKU cube, order profile and travel
   distance move the number materially (Frazelle 2016).
 - Receiving benchmark assumes case-level ambient receipt; pallet-in/pallet-out or
   each-level receipt need different bars.

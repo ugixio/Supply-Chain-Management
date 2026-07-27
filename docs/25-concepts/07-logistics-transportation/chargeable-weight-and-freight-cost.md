@@ -26,16 +26,19 @@ relations:
 | Symbol | Meaning | Unit |
 |---|---|---|
 | 167 | IATA volumetric divisor (1 m³ = 166.67 kg, rounded to 167) | kg/m³ |
-| base_rate | lane rate per kg (TS: integer cents) | currency/kg |
+| base_rate | lane rate per kilogram | currency/kg |
 | fuel_surcharge | fraction (0.25 = 25%) | fraction |
 
 ## Inputs and outputs
 
-- **PY:** floats; accessorial charges additive after surcharge (surcharge applies to
-  base only). Output rounded 2 dp.
-- **TS:** lane record + weight/volume → integer cents with the **minimum-charge
-  floor** (PY has no floor — recorded divergence) and no accessorials parameter.
-- `isValid` gates the rate card by date and status before pricing.
+- **Inputs:** the shipment's actual weight and volume, plus the lane's rate card. The card is
+  checked for validity — date range and status — before it prices anything, since an expired
+  tariff quietly produces a plausible wrong number.
+- **Output:** a freight charge in currency.
+- **Project decisions the order of operations depends on:** whether a fuel or currency surcharge
+  applies to the base rate only or to the accessorials as well, and whether the lane carries a
+  **minimum charge** that floors the result. Both change the total, and both come from the
+  carrier agreement rather than from the formula.
 
 ## Assumptions and limits
 

@@ -24,7 +24,7 @@ Ranked descending. Weights must sum to a fixed total (100 in TS, 1.0 in PY).
 | Symbol | Meaning | Unit |
 |---|---|---|
 | criterionScore | a supplier's score on one criterion | 0–100 |
-| weight | criterion importance | sums to 100 (TS) / 1.0 (PY) |
+| weight | criterion importance | any scale, **normalized so the weights sum to one whole** |
 | score_i | supplier i's weighted total | 0–100 |
 
 ## Inputs and outputs
@@ -47,14 +47,14 @@ Ranked descending. Weights must sum to a fixed total (100 in TS, 1.0 in PY).
   - Weight scales differ (100 vs 1.0). Do not port results between them.
   - Flag (backlog U8/modeling): converge on one scoring contract; replace the TS quality
     placeholder with an actual quality input.
-- Relative price scoring (TS) means a single very cheap outlier compresses everyone else's
+- **Scoring price relative to the best quote** means a single very cheap outlier compresses everyone else's
   price score — intended (rewards the best price), but sensitive to an unrealistic low bid.
 - Weight validation is enforced (fail fast): PY raises if weights ≠ 1.0; TS RFQ creation
   (PRC-R7) rejects criteria not summing to 100.
 - **Does not apply when:** award depends on total cost over the life, not quote price — use
   TCO (CPT-0033) as the price input.
 
-## Worked example (PY)
+## Worked example
 
 Two quotes, weights `price .4, quality .3, delivery .2, sustainability .1`:
 

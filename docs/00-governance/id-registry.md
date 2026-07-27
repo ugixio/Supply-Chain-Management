@@ -26,24 +26,36 @@ relations:
 ## 1. Rule-ID families — LIVE
 
 > All 14 department families materialized at U4 (2026-07-20); IDs append-only per file.
+> **Reclassified at Phase C2 (2026-07-27, ADR-0037):** every family was swept with the inclusion
+> test. Of the original **70** department rules, **45 are retired** — they stated an invented
+> workflow, a field check, or a policy value belonging to code this repository no longer contains —
+> and **25 survived**. **13 new IDs** were allocated for statements that *are* externally fixed but
+> had never been written down: the IAS 2 measurement and non-recoverable-tax rules, the Incoterms
+> sea-only restriction, the ISO 2859-1 table discipline, EUDR's benchmark-read obligation, and
+> several conservation and measurement identities (allocation conserves, an ordinal product stays
+> ordinal, a defect rate needs its opportunity base). Total now **38 live**.
+>
+> A retired ID is **never redefined**. Where a retired rule gestured at something durable, the
+> durable form took a **new** ID — SUP-R2 → SUP-R5, CMP-R1 → CMP-R4, SDV-R3 → SDV-R6 — so a stale
+> citation resolves to the retirement note and its reason rather than silently to different law.
 
 | Prefix | Area | Owning doc | Highest allocated |
 |---|---|---|---|
 | SCM | Cross-department core rules (externally-fixed only) | `docs/30-foundation/scm-core/rule.md` | SCM-R14 |
 | PRC | 01-procurement | `docs/40-contexts/01-procurement/rule.md` | PRC-R8 |
-| SUP | 02-supplier-management | `docs/40-contexts/02-supplier-management/rule.md` | SUP-R4 |
-| DMD | 03-demand-planning | `docs/40-contexts/03-demand-planning/rule.md` | DMD-R8 |
-| SPL | 04-supply-planning | `docs/40-contexts/04-supply-planning/rule.md` | SPL-R4 |
-| INV | 05-inventory-management | `docs/40-contexts/05-inventory-management/rule.md` | INV-R3 |
-| WHS | 06-warehouse-management | `docs/40-contexts/06-warehouse-management/rule.md` | WHS-R4 |
-| LOG | 07-logistics-transportation | `docs/40-contexts/07-logistics-transportation/rule.md` | LOG-R3 |
-| QMS | 08-quality-management | `docs/40-contexts/08-quality-management/rule.md` | QMS-R4 |
-| CMP | 09-compliance-regulatory | `docs/40-contexts/09-compliance-regulatory/rule.md` | CMP-R3 |
-| RSK | 10-risk-management | `docs/40-contexts/10-risk-management/rule.md` | RSK-R4 |
-| FIN | 11-finance-controlling | `docs/40-contexts/11-finance-controlling/rule.md` | FIN-R3 |
-| SOP | 12-sop-planning | `docs/40-contexts/12-sop-planning/rule.md` | SOP-R3 |
-| ORD | 13-order-management | `docs/40-contexts/13-order-management/rule.md` | ORD-R4 |
-| SDV | 14-supplier-development | `docs/40-contexts/14-supplier-development/rule.md` | SDV-R3 |
+| SUP | 02-supplier-management | `docs/40-contexts/02-supplier-management/rule.md` | SUP-R5 |
+| DMD | 03-demand-planning | `docs/40-contexts/03-demand-planning/rule.md` | DMD-R9 |
+| SPL | 04-supply-planning | `docs/40-contexts/04-supply-planning/rule.md` | SPL-R5 |
+| INV | 05-inventory-management | `docs/40-contexts/05-inventory-management/rule.md` | INV-R5 |
+| WHS | 06-warehouse-management | `docs/40-contexts/06-warehouse-management/rule.md` | WHS-R6 |
+| LOG | 07-logistics-transportation | `docs/40-contexts/07-logistics-transportation/rule.md` | LOG-R4 |
+| QMS | 08-quality-management | `docs/40-contexts/08-quality-management/rule.md` | QMS-R7 |
+| CMP | 09-compliance-regulatory | `docs/40-contexts/09-compliance-regulatory/rule.md` | CMP-R4 |
+| RSK | 10-risk-management | `docs/40-contexts/10-risk-management/rule.md` | RSK-R6 |
+| FIN | 11-finance-controlling | `docs/40-contexts/11-finance-controlling/rule.md` | FIN-R6 |
+| SOP | 12-sop-planning | `docs/40-contexts/12-sop-planning/rule.md` | SOP-R5 |
+| ORD | 13-order-management | `docs/40-contexts/13-order-management/rule.md` | ORD-R7 |
+| SDV | 14-supplier-development | `docs/40-contexts/14-supplier-development/rule.md` | SDV-R6 |
 | ENG | Engineering (build-time, cross-cutting) | `docs/50-engineering/rule.md` | ENG-R10 |
 | PLT | Platform / workspace (above the 14 depts) | `docs/30-foundation/platform/rule.md` | PLT-R5 |
 
@@ -72,11 +84,14 @@ CPT-0139..0146 = dept 04 (supply planning);
 sum-preserving allocation** (dept 11 catalogue). See
 [25-concepts/_index.md](../25-concepts/_index.md).
 
-> **Pending under ADR-0037:** the catalogue was written when nodes were allowed to carry
-> parameters and link to implementations. The implementation links are gone; the **parameter
-> sweep is outstanding** — nodes may still state a threshold, target or weighting that the
-> inclusion test forbids. Each node is corrected as it is next touched, and no gate can detect
-> this for you (see 25-concepts/_index.md "What the gate does and does not check").
+> **Swept under ADR-0037 (Phases C1a/C1b, 2026-07-27):** implementation links removed from all
+> nodes; every numeric threshold, target, weighting and rating band removed or attributed to the
+> regulator that fixes it; per-language annotations resolved to one canonical answer each. What no
+> gate can check remains true — a number copied from a textbook example reads exactly like a
+> standard — so the anti-states in
+> [30-foundation/scm-core/rule.md](../30-foundation/scm-core/rule.md) stay the reviewer's
+> checklist. **Outstanding:** a `Project-chosen inputs` section on every node that needs values
+> (Phase C1c).
 
 ## 2. Rule-ID families — RESERVED (future areas)
 

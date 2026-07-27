@@ -5,7 +5,7 @@ type: rule
 owner: orchestrator
 status: active
 since: 2026-07-20
-updated: 2026-07-20
+updated: 2026-07-27
 relations:
   - { type: part-of, target: index-contexts }
   - { type: governed-by, target: index-adr }
@@ -13,37 +13,41 @@ relations:
 ---
 # Rules — Supplier Management
 
-> Invariants enforced in `src/departments/02-supplier-management/`. Know-how lives in the
-> allowlisted homes (`README.md`, `IMPLEMENTATION.md`, `.claude/skills/supplier-management/`).
-> IDs append-only (family `SUP`). Inherited `SCM-R*` referenced, never restated.
+> **A rule lives here only if something outside this repository fixes it** — a standards body, a
+> regulator, or an arithmetic identity (ADR-0037). Anything an organization can reasonably choose
+> is a **project decision** and is listed as such, never as an invariant. IDs are append-only
+> (family `SUP`); a retired ID stays listed so old citations resolve. Cross-department rules
+> (`SCM-R*`) are inherited, referenced never restated.
 
-## Invariants (NEVER violated — each verifiable by test)
+## Invariants (externally fixed — NEVER violated)
 
-- **SUP-R1:** A supplier audit cannot be closed while any `MAJOR_NC` finding is open, and
-  its outcome cannot be set `APPROVED` when major non-conformances exist
-  (`SupplierAudit.ts`).
-- **SUP-R2:** The supplier-audit lifecycle is status-guarded — start, add-finding,
-  issue-report and close are each valid only from their allowed prior status; no
-  transition skips a state.
-- **SUP-R3:** Completing an onboarding checklist item requires both a `documentRef` and a
-  `verifiedBy`; an onboarding cannot be approved while any required checklist item is
-  incomplete (`SupplierOnboarding.ts`).
-- **SUP-R4:** Onboarding approval is valid only from `APPROVAL_PENDING` and requires an
-  `approvedBy` and a `qualificationScore` within [0, 100].
+- **SUP-R5:** An evaluation of an external provider records **what was assessed, against which
+  criteria, and when**. An assessment whose basis is not recorded cannot be reviewed or repeated.
+  *Source:* ISO 9001:2015 §8.4.1 (evaluation, selection, monitoring and re-evaluation, with
+  retained documented information); the criteria themselves are the project's.
 
-## Mandatory validations
+## Retired rules
 
-- Date fields validate `YYYY-MM-DD` format before use.
-- `supplierId` is required and non-empty on onboarding creation.
+> Retired because they stated **project policy or an implementation detail** of code this
+> repository no longer contains (ADR-0037). Listed permanently so citations resolve.
 
-## Anti-states (the system must never allow)
+| ID | Was | Why retired |
+|---|---|---|
+| **SUP-R1** | "An audit cannot be closed while any `MAJOR_NC` finding is open" | The finding severities and the closure gate are an audit programme's design. The principle — a nonconformity is closed on evidence, not on elapsed time — belongs to the quality department's own definition of its process. |
+| **SUP-R2** | "The supplier-audit lifecycle is status-guarded — start, add-finding, close…" | An invented lifecycle. The durable duty it gestured at — that an evaluation records its basis — is stated freshly as **SUP-R5** rather than by reusing this ID, since an ID is never redefined. |
+| **SUP-R3** | "Completing an onboarding checklist item requires a `documentRef` and a date" | A sound practice, and a design choice: what evidence an onboarding step demands is the project's. |
+| **SUP-R4** | "Onboarding approval is valid only from `APPROVAL_PENDING`" | A guard over invented states. |
 
-- A closed audit with an unresolved major non-conformance (SUP-R1).
-- An approved onboarding with an incomplete required checklist item (SUP-R3).
+## Project decisions (the questions this department must answer for itself)
+
+- The **evaluation criteria** for suppliers, their **weights** and any **rating bands**
+  (see CPT-0060/CPT-0061 — the context defines the structure and refuses to supply values).
+- The **audit programme**: frequency, scope, finding severities, and what closes a finding.
+- The **onboarding steps** and the evidence each requires.
+- **Re-evaluation cadence** — ISO 9001 requires re-evaluation; how often is the project's.
 
 ## Inherited rules (referenced, not restated)
 
-- **SCM-R6** — a supplier with XUAR operations must supply a UFLPA clearance document
-  reference before transacting.
-- **SCM-R3** — supplier scorecards and audit records are soft-deleted only.
-- **SCM-R9** — dates ISO 8601.
+- **SCM-R3** — scorecards and audit records are corrected, not deleted.
+- **SCM-R6** — UFLPA applies to supplier qualification, not only to shipments.
+- **SCM-R7** — due-diligence documentation is retained at least five years (CSDDD Art. 23).

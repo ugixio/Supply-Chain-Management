@@ -548,11 +548,31 @@ mirror-coverage bar) · duplicated formulas across TS/Python with one past diver
   `40-contexts/_index.md`, the operating-model lane diagram, and the dept-03 section that framed
   two concepts as "specified but not implemented" (a code-state claim) rather than as measures of
   the planning process.
-  **C4b remaining:** the 22 `.claude/skills/*/SKILL.md` files (3,968 lines) still reference deleted
-  paths and carry policy values — measured: 10 policy hits in supplier-management, 7 each in
-  warehouse-management, supply-chain-core, sop-planning and procurement. They are the department
-  know-how a project consults for *how* to implement, so they stay — but they need the same
-  inclusion-test sweep the rule files got.
+- 🟩 **C4b · WHAT — the operating layer swept (2026-07-27).** The 22 `.claude/skills/`, the four
+  `.claude/commands/`, the agent definitions and the root `README.md`. They are the department
+  know-how a project consults for *how* to implement, so they stay — but under the inclusion test.
+  Measured first: only **13** policy lines by the number-plus-normative-word detector, far fewer
+  than feared, because most of the drift was **stale paths**, not stated policy.
+  **G11 had been giving a false green.** It only scanned front-matter documents, so the skills
+  tree cited retired rules unseen; extended to `.claude/**` and `CLAUDE.md`, it immediately found
+  **13** more (10 in agents/skills, then 3 in `testing-quality` alone). *A gate over part of the
+  estate certifies the part it can see.*
+  **The two worst files were the two most-read.** `supply-chain-core/SKILL.md` carried
+  `Money = { amount: number }`, the `KG`/`L`/`M` codes `CLAUDE.md` names as an anti-pattern, the
+  $5,000 threshold, a "World-Class KPI Benchmarks" table, a `service_level: float = 0.98` default
+  in a signature, and a test **asserting round-half-up** against SCM-R14 — rewritten. The root
+  `README.md` — the front door — still opened with a `src/departments/` tree, `npm test`, a
+  "World Benchmark" KPI table and 26 "Algorithms Implemented" naming deleted `.ts` files;
+  rewritten around the inclusion test.
+  **Half-edits found by reading the diff back** (the third time this lesson has paid): the ABC
+  and defect-classification tables had policy stripped from the *first* row and left in the rows
+  below, which reads as though those numbers were the standard. Also fixed: a known-pitfalls entry
+  left dangling mid-sentence around a deleted constant and a deleted test path.
+  **Dead JS test estate removed:** `jest.config.js` still mapped the deleted `@scm/domain`, and
+  `package.json` declared `test`/`test:unit`/`test:integration` over a `tests/` tree holding only
+  the Rust golden fixture. Jest, ts-jest, eslint (never configured), `ts-node` and `@types/uuid`
+  dropped; lockfile regenerated. `turbo.json` and `tsconfig.json` paths cleaned. **A runner that
+  passes because it found nothing is worse than no runner — it reads as coverage.**
 - ⬜ **C5 · WHAT** — Re-check `docs/standards/REGULATORY_FRAMEWORK.md` against current law; it is
   now one of the most load-bearing documents in the repository.
 

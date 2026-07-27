@@ -1,16 +1,20 @@
 ---
 description: >
-  Python calculation core (services/calc) — exact Decimal money (ADR-0019), numerical
+  Python as the tools layer (ADR-0033/0035) — exact Decimal money, numerical
   correctness for the SCM algorithms, ROUND_HALF_EVEN, gRPC/protobuf service contract
   (ADR-0020) with string-encoded money, type hints, docstrings and pytest. Use for any
-  work in services/calc or the proto/ contracts.
+  work in the Python tools layer or the shared `.proto` contract.
 ---
 
-# Python calculation core — precision & gRPC
+# Python as the tools layer — precision & gRPC
 
-> `services/calc` owns all mathematical models and ML (ADR-0001). It is exposed to the API
-> as a gRPC service (`scm.calc.v1`, ADR-0020). Two things must never slip: **financial
+> Python owns models, statistics, optimization and ML — and nothing else (ENG-R8). It is reached
+> as a gRPC service (`scm.calc.v1`, ADR-0020) called **by the Rust core**, never by the frontend.
+> It decides no business rule and holds no policy value. Two things must never slip: **financial
 > exactness** and **the string-money boundary**.
+>
+> There is no Python in the repository today — ADR-0037 deleted the invented calculation service.
+> This lane activates with Phase M, over the monitoring platform's telemetry.
 
 ## Money is Decimal, not float (ADR-0019 / ENG-R4)
 
@@ -24,9 +28,10 @@ description: >
   mid-calculation. Allocation/pro-rata: distribute with Decimal and assign the rounding
   remainder deterministically so the parts sum **exactly** to the whole (the "penny
   problem" — the largest-remainder method, documented in the function).
-- This is the fix for the live `Math.round(amount*factor)` bug (CPT-0003/U15 kin): the same
-  discipline must hold in TS and Python — a money formula in both languages is changed in
-  both or neither (risk register #2).
+- **Exact money belongs to the core, not here** (ENG-R4/R10): `crates/scm-money` is the one
+  implementation. Python parses a decimal string, keeps it exact through any arithmetic it must
+  do, and returns a decimal string. Re-implementing an apportionment in Python creates the
+  divergence risk the single core exists to remove (risk register #2).
 
 ## Numerical correctness
 
@@ -52,9 +57,10 @@ description: >
 
 ## Testing (see `testing-quality`)
 
-- `pytest` mirrors the TS coverage bar (SCM-R13). Every public calc function has a test;
-  every rule ID it enforces has an assertion.
-- **Golden vectors** (U8): a shared fixture set proves TS == Python == SQL for the same
-  inputs — the mechanism that prevents another `a12c114` divergence.
+- Every public function has a test, and every live rule ID it enforces has an assertion naming
+  that ID. Check the rule is live first — a retired ID fails gate G11.
+- **Golden vectors:** where the same arithmetic is exercised from more than one place, both read
+  one shared fixture (`tests/golden/*.json`) and the vectors pass **unchanged**. Editing a
+  fixture to make a suite green is a rule violation, not a fix.
 - Test the Decimal boundaries explicitly: rounding direction, allocation-sums-to-whole,
   and the string round-trip across the gRPC codec.

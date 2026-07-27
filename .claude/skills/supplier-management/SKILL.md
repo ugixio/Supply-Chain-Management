@@ -2,7 +2,7 @@
 description: >
   Supplier management domain expertise for Department 02. Use when reviewing supplier
   scorecards, OTD/OTIF/PPM/DPMO metrics, scorecard weighting, performance rating,
-  or any code in src/departments/02-supplier-management/.
+  or the concept nodes and rules of department 02 (supplier-management).
 ---
 
 # Supplier Management — Department 02 Skills Reference
@@ -39,8 +39,12 @@ description: >
 
 **Approved Vendor List (AVL) Governance**
 - Annual qualification audit per ISO 9001:2015 §8.4.1
-- Disqualification triggers: 3 consecutive CONDITIONAL ratings, any PROBATION rating + missed CAR
-- Re-qualification: minimum 6-month performance period after corrective action
+- **Disqualification triggers are project policy.** Common shapes: a run of consecutive poor
+  ratings, or a poor rating plus a missed corrective action. The context defines the rating
+  structure (CPT-0061) and supplies no trigger.
+- **Re-qualification** requires a performance period long enough to be evidence rather than a
+  single good month, and ISO 9001:2015 §8.4.1 requires the re-evaluation be recorded — how long
+  that period is remains the project's call.
 
 ## Data Analytics
 

@@ -7,9 +7,7 @@
     "noEmit": true,
     "paths": {
       "@scm/shared": ["./packages/shared/src/index.ts"],
-      "@scm/shared/*": ["./packages/shared/src/*"],
-      "@scm/domain": ["./packages/domain/src/index.ts"],
-      "@scm/domain/*": ["./packages/domain/src/*"]
+      "@scm/shared/*": ["./packages/shared/src/*"]
     },
     "strict": true,
     "esModuleInterop": true,

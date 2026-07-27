@@ -2,7 +2,7 @@
 description: >
   Inventory management domain expertise for Department 05. Use when reviewing
   stock movements, ABC-XYZ classification, lot tracking, FEFO, event sourcing,
-  negative inventory guards, or any code in src/departments/05-inventory-management/.
+  negative inventory guards, or the concept nodes and rules of department 05 (inventory-management).
 ---
 
 # Inventory Management — Department 05 Skills Reference
@@ -24,11 +24,15 @@ description: >
 | SCRAP | Scrap Expense | Inventory Asset |
 
 **ABC Classification (Pareto)**
-| Class | % of SKUs | % of Value | Policy |
-|-------|-----------|-----------|--------|
-| A | 10–20% | 70–80% | Tight control; weekly review; high accuracy target |
-| B | 30% | 15–25% | Moderate control; monthly review |
-| C | 50–60% | 5–10% | Minimal control; EOQ-driven; bulk replenishment |
+| Class | Share of items | Share of value | Control |
+|-------|----------------|----------------|---------|
+| A | smallest | largest | Tightest |
+| B | middle | middle | Moderate |
+| C | largest | smallest | Lightest |
+
+The **ordering** is what Pareto fixes: few items carry most of the value. The cut points
+(where A becomes B), the review cadence and the accuracy expectation per class are **project
+decisions** — no percentage in this table is a standard.
 
 **XYZ Classification (Demand Variability)**
 | Class | CV | Policy |

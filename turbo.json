@@ -3,8 +3,6 @@
   "//": "Task graph for the monorepo (ADR-0022). Wired into `make verify-full` at the pnpm activation sub-step.",
   "tasks": {
     "build": { "dependsOn": ["^build"], "outputs": ["dist/**"] },
-    "typecheck": { "dependsOn": ["^build"] },
-    "test": { "dependsOn": ["^build"] },
-    "lint": {}
+    "typecheck": { "dependsOn": ["^build"] }
   }
 }

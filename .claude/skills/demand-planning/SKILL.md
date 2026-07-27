@@ -2,7 +2,7 @@
 description: >
   Demand planning and forecasting expertise for Department 03. Use when reviewing
   forecasting algorithms (SMA/SES/Holt/Holt-Winters), safety stock, EOQ, S&OP,
-  projected order intake, backtesting, or any code in src/departments/03-demand-planning/.
+  projected order intake, backtesting, or the concept nodes and rules of department 03 (demand-planning).
 ---
 
 # Demand Planning — Department 03 Skills Reference
@@ -91,7 +91,8 @@ ORDER BY period, sku_id;
 **Walk-Forward Holdout Backtesting** (Hyndman & Athanasopoulos §5.8)
 - Mandatory before deploying any forecast model
 - Hold out last h=12 periods; fit on train; compute MAPE/WMAPE/RMSE/Bias vs actuals
-- Deployable threshold: MAPE < 15% for A-items, |Bias| < 2%
+- Deployability is judged against **project-chosen** accuracy and bias limits — what is good
+  enough depends on the decision the forecast feeds, not on a published number
 
 **Forecast Value Added (FVA)**
 ```
@@ -225,7 +226,7 @@ interface ForecastResult {
   values: number[];           // demand units per period
   mape: number;               // validated against holdout
   bias: number;
-  deployable: boolean;        // mape < threshold AND |bias| < 2%
+  deployable: boolean;        // within the project's accuracy AND bias limits
   backtestPeriods: number;    // number of holdout periods used
 }
 ```

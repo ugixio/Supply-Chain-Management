@@ -13,7 +13,8 @@ Verify:
 1. **Auth security** — credentials stored in env vars / secrets manager, never hardcoded
 2. **Retry logic** — exponential backoff with jitter for transient failures
 3. **Idempotency** — duplicate acknowledgements/orders handled gracefully
-4. **Timeout handling** — all HTTP calls have explicit timeouts (recommended: 30s connect, 60s read)
+4. **Timeout handling** — every HTTP call sets an explicit connect and read timeout; the values
+   belong to the project (they follow from its SLA), but "no timeout" is always a defect
 5. **Error classification** — transient vs permanent errors distinguished (4xx vs 5xx)
 6. **EDI compliance** — if EDI, verify ISA/GS/ST envelope structure and segment terminators
 7. **Data validation** — supplier data validated against schema before persisting

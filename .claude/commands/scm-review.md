@@ -22,7 +22,7 @@ Review the current git diff (`git diff HEAD`) for supply chain domain correctnes
 3. **Idempotency**: Verify that inventory transactions and order mutations use an idempotency key or are otherwise safe to retry.
 4. **Soft deletes**: Confirm financial records (POs, invoices, GRNs, stock movements) are never hard-deleted.
 5. **UOM consistency**: Flag any place where quantities are compared or summed without normalizing the unit of measure.
-6. **Approval workflow**: Ensure purchase order creation/modification above threshold triggers approval, not auto-approval.
+6. **Approval workflow**: Where the project has an approval threshold, check the comparison at the boundary — an order sized exactly to the limit must land where the policy says, and both readings ("above" vs "at or above") are legitimate, so the code must match the stated rule. The threshold itself is the project's, never this context's.
 7. **Audit trail**: All stock movements should record who, what, when, and why.
 
 Report findings grouped by severity: BLOCKER → WARNING → INFO.

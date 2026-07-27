@@ -2,7 +2,7 @@
 description: >
   Finance and controlling domain expertise for Department 11. Use when reviewing
   GL journal entries, inventory valuation (FIFO/WAC), landed cost, COGS, DIO,
-  working capital, or any code in src/departments/11-finance-controlling/.
+  working capital, or the concept nodes and rules of department 11 (finance-controlling).
 ---
 
 # Finance & Controlling — Department 11 Skills Reference

@@ -61,4 +61,4 @@ the standards themselves, existing CPT/rule nodes, and `templates/concept.md`.
 
 ## Handoff
 I hand the architect any decision a finding forces (an ADR), and the engineers the
-concept/rule they must implement or test against (a test per rule ID — SCM-R13).
+concept/rule they must implement or test against (a test per rule ID).

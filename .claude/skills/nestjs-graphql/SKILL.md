@@ -8,16 +8,17 @@ description: >
 
 # NestJS + GraphQL (code-first) — apps/api
 
-> The API is the outermost ring (Clean Arch — see `clean-architecture`). It maps GraphQL
-> ⇄ use-cases and owns no business logic. Schema strategy is **code-first** (ADR-0025):
+> The API is the outermost ring (Clean Arch — see `clean-architecture`) and **the only
+> counterpart the frontend has** (ENG-R8). It maps GraphQL ⇄ the core and owns no business
+> logic — it computes no business result itself. Schema strategy is **code-first** (ADR-0025):
 > classes with decorators generate `schema.gql`, a committed build artifact — never
 > hand-edited (ENG-R6).
 
 ## Module layout (ADR-0023 modular monolith)
 
-- **One Nest module per department** (14), each wiring that department's use-cases from
-  `packages/application`. A module exposes resolvers + providers; it does not import
-  another department's internals — cross-department goes through a published application
+- **One Nest module per bounded concern**, each calling the Rust core through its binding
+  (`napi-rs`) and reading the telemetry tier. A module exposes resolvers + providers; it does
+  not import another department's internals — cross-department goes through a published
   port (ENG-R3).
 - **Composition root** is the module: bind port → adapter here (DI). Resolvers receive
   use-cases by constructor injection; they never `new` anything.

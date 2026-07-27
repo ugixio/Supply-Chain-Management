@@ -1,8 +1,7 @@
 ---
 description: >
   Quality management domain expertise for Department 08. Use when reviewing incoming
-  inspection (AQL), NCR lifecycle, DPMO, SPC, AQL sampling plans, or any code in
-  src/departments/08-quality-management/.
+  inspection (AQL), NCR lifecycle, DPMO, SPC, AQL sampling plans, or the concept nodes and rules of department 08 (quality-management).
 ---
 
 # Quality Management — Department 08 Skills Reference
@@ -26,11 +25,16 @@ description: >
 ```
 
 **Defect Classification**
-| Class | Definition | AQL | Action on Reject |
-|-------|-----------|-----|-----------------|
-| Critical | Safety/regulatory risk | 0% (zero tolerance) | 100% inspection + hold |
-| Major | Reduces usability | ≤ 1.0% | Sort or return to supplier |
-| Minor | Cosmetic/deviates from spec | ≤ 4.0% | Concession or sort |
+| Class | Definition | AQL | Action on reject |
+|-------|-----------|-----|------------------|
+| Critical | Safety or regulatory risk | zero — not a project choice; the obligation is external | 100% inspection + hold |
+| Major | Reduces usability for its purpose | project-chosen | Sort or return to supplier |
+| Minor | Cosmetic, or deviates without affecting use | project-chosen, looser than Major | Concession or sort |
+
+The **classes and their ordering** are standard practice, and once an AQL is chosen the
+**sampling plan follows ISO 2859-1** mechanically (sample size code letter → sample size →
+accept/reject numbers). The **AQL level itself is a term of the customer contract**, so this
+context supplies none.
 
 **NCR — Non-Conformance Report Lifecycle**
 `OPEN → UNDER_INVESTIGATION → CORRECTIVE_ACTION_REQUIRED → ACTION_IN_PROGRESS → VERIFICATION → CLOSED`
@@ -105,7 +109,7 @@ ORDER BY occurrences DESC;
 **Measurement System Analysis (Gauge R&R)**
 ```
 %GRR = (GRR_variance / Total_variance) × 100
-< 10%: acceptable; 10–30%: marginal; > 30%: unacceptable
+the bands that separate acceptable from marginal are a project decision
 ```
 
 **Process Capability Indices**

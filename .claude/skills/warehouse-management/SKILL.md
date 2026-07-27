@@ -2,7 +2,7 @@
 description: >
   Warehouse management domain expertise for Department 06. Use when reviewing WMS
   operations, FEFO lot picking, ABC velocity slotting, CPOI, inbound quality,
-  order entry accuracy for inbound, or any code in src/departments/06-warehouse-management/.
+  order entry accuracy for inbound, or the concept nodes and rules of department 06 (warehouse-management).
 ---
 
 # Warehouse Management — Department 06 Skills Reference

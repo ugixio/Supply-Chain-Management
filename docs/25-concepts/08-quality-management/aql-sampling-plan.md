@@ -30,36 +30,43 @@ normal-inspection table (General Inspection Level II). Disposition:
 
 ## Inputs and outputs
 
-- **Inputs:** `lot_size ≥ 2`; AQL parameter (only **1.0%** table implemented in PY;
-  the TS side carries Ac/Re for 1.5/4.0 but `getAQLSampleSize` returns n only).
-- **Output:** PY `(n, Ac, Re)` + a `LotDisposition`; TS the sample size, capped at 200
-  for lots > 3,200.
-- The largest lot-size range in the ISO 2859-1 general-inspection-level-II table caps the
-  sample size; lots beyond it use that last row rather than extrapolating. The table is the
-  standard's, and it is not interpolated.
+- **Inputs:** the lot size, the inspection level, and the **AQL — which the project supplies**
+  from its customer contract. An implementation that supports only one AQL column does not have a
+  configurable plan; it has one plan with an AQL-shaped parameter, and the mismatch is invisible
+  until a contract specifies a different level.
+- **Output:** the sample size `n` with **both** `Ac` and `Re`. Returning `n` alone is not a plan:
+  without the acceptance number there is nothing to compare the defect count against.
+- **Read from the table, never interpolated or extrapolated** (QMS-R5). Lots beyond the largest
+  tabulated range use that last row — the sample size stops growing, which is a property of the
+  standard, not a shortcut.
 
 ## Assumptions and limits
 
-- The standard's full scheme walks **code letters** (lot size × inspection level →
-  letter → plan) and includes switching rules (normal ↔ tightened ↔ reduced,
-  ISO 2859-1 §9). The implementation hardcodes the Level II / AQL 1.0 path and has
-  **no switching rules** — sustained poor quality does not tighten inspection
-  automatically (recorded gap).
-- Single sampling only; double/multiple plans are out of scope.
-- Under ISO 2859-1 single sampling, `Re = Ac + 1`, so the `SORT_100PCT` branch is
-  unreachable with the built-in table — it exists for future double-sampling support.
+- **The full scheme is more than one lookup.** ISO 2859-1 walks lot size × inspection level → a
+  **code letter** → the plan, and it includes **switching rules** (normal ↔ tightened ↔ reduced,
+  §9). A system with no switching does not tighten inspection when quality degrades — the part of
+  the standard that actually protects the buyer is the part most often left out.
+- Single sampling here; double and multiple plans have their own tables and their own acceptance
+  logic — not derivable from these.
+- Under single sampling `Re = Ac + 1`, so there is no gap between accept and reject: any
+  "inspect further" branch belongs to double sampling, not to this plan.
 - **Does not apply when:** inspection is by variables (ISO 3951) or 100% inspection is
   mandated (safety-critical characteristics).
 
 ## Worked example
 
-Lot of 1,000 → row (501–1200): `n = 80, Ac = 5, Re = 6`. 4 defects → ACCEPT;
-6 defects → REJECT.
+*Illustrative — the AQL below is an example, not a recommendation.*
+
+Lot of 1,000 at AQL 1.0%, general inspection level II → row (501–1200): `n = 80, Ac = 5, Re = 6`.
+4 defects → accept; 6 → reject. Note what accepting means: 5 defects in 80 is 6.25% of the sample,
+and the lot is still accepted — the plan bounds the *probability* of accepting a lot worse than the
+AQL, it does not certify 1% quality (QMS-R6).
 
 ## Governing rules
 
-- **QMS-R*** (incoming inspection invariants) — the inspection record lifecycle consumes
-  this plan; ISO 9001:2015 §8.4/§8.6 anchor the process requirement.
+- **QMS-R5** — the plan is read from the ISO 2859-1 table for the lot size, inspection level and
+  AQL; never interpolated. **QMS-R6** — accepting a sample is not accepting a lot.
+  **QMS-R7** — a defect rate is stated with its opportunity base.
 
 ## Related
 

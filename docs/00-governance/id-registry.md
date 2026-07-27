@@ -49,7 +49,7 @@ relations:
 | INV | 05-inventory-management | `docs/40-contexts/05-inventory-management/rule.md` | INV-R5 |
 | WHS | 06-warehouse-management | `docs/40-contexts/06-warehouse-management/rule.md` | WHS-R6 |
 | LOG | 07-logistics-transportation | `docs/40-contexts/07-logistics-transportation/rule.md` | LOG-R4 |
-| QMS | 08-quality-management | `docs/40-contexts/08-quality-management/rule.md` | QMS-R7 |
+| QMS | 08-quality-management | `docs/40-contexts/08-quality-management/rule.md` | QMS-R8 |
 | CMP | 09-compliance-regulatory | `docs/40-contexts/09-compliance-regulatory/rule.md` | CMP-R4 |
 | RSK | 10-risk-management | `docs/40-contexts/10-risk-management/rule.md` | RSK-R6 |
 | FIN | 11-finance-controlling | `docs/40-contexts/11-finance-controlling/rule.md` | FIN-R6 |
@@ -179,7 +179,7 @@ G4 — it is not a broken link, it silently resolves to nothing and reads as law
 | CMP-R1 | **CMP-R4** — an exception has an expiry. |
 | SDV-R1 / R2 / R3 | **SDV-R4/R5/R6** — evidence and dating, unknown ≠ compliant, and EUDR's benchmark-read duty. |
 | FIN-R1 / R2 / R3 | **FIN-R4/R5/R6** (IAS 2 measurement, non-recoverable tax, apportionment) and **ENG-R4**. |
-| QMS-R1..R4 | **QMS-R5/R6/R7** (ISO 2859-1 table, sample ≠ lot, opportunity base) and **ENG-R4**. |
+| QMS-R1..R4 | **QMS-R5/R6/R7** (ISO 2859-1 table, sample ≠ lot, opportunity base) and **ENG-R4**. QMS-R1's durable half returned at Phase C2b as **QMS-R8** — ISO 9001:2015 §10.2.1 requires a corrective action's *effectiveness* to be reviewed, which is an obligation the invented lifecycle had been carrying. |
 | RSK-R1 / R3 / R4 | Project decisions (scale, justification, recovery objectives). **RSK-R5/R6** state the measurement facts. |
 | ORD-R1..R4 | **ORD-R5/R6/R7** (allocation conserves, perfect order is a conjunction, a credit cannot exceed the charge). |
 | SOP-R1 / R2 / R3 | **SOP-R4/R5** (consensus is one plan; attainment is measured against the committed plan). |

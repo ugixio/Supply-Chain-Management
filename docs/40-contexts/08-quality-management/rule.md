@@ -29,6 +29,12 @@ relations:
   bounds the probability of accepting a lot worse than the AQL; it does not certify the lot. A
   passed inspection is evidence, not a guarantee. *A property of the method,* stated because it is
   the most common misreading of an AQL result.
+- **QMS-R8:** A corrective action is not complete until its **effectiveness has been reviewed**.
+  Taking the action and recording it is not the requirement; determining whether the nonconformity
+  can still recur is. *Source:* ISO 9001:2015 §10.2.1 — the organization shall review the
+  effectiveness of any corrective action taken, and §10.2.2 requires the results retained as
+  documented information. *What* evidence counts as proof of effectiveness, how long the
+  observation window is, and who signs it off are the project's design.
 - **QMS-R7:** Defect rates are stated **with their opportunity base**. PPM counts defective units
   per million units; DPMO counts defects per million *opportunities*, so a product with several
   inspection points has more opportunities than units and the two numbers are not comparable.
@@ -41,7 +47,7 @@ relations:
 
 | ID | Was | Why retired |
 |---|---|---|
-| **QMS-R1** | "An NCR cannot be closed while any corrective action is `INEFFECTIVE`" | A sound gate over an invented lifecycle. The durable principle — a nonconformity closes on verified effectiveness — belongs to the project's own corrective-action process (ISO 9001 §10.2 requires the process, not its states). |
+| **QMS-R1** | "An NCR cannot be closed while any corrective action is `INEFFECTIVE`" | The named states were an invented lifecycle. The durable part is not: ISO 9001:2015 §10.2.1 requires the **effectiveness** of a corrective action to be reviewed, so that obligation is restated free of any lifecycle as **QMS-R8**. What remains a project decision is which states exist and what closes a record. |
 | **QMS-R2** | "The NCR lifecycle is strict (open → investigate → root-cause → disposition…)" | An invented workflow. 8D, DMAIC and a two-step disposition are all legitimate. |
 | **QMS-R3** | "An NCR requires `affectedQty > 0` and a non-empty description" | Field checks. |
 | **QMS-R4** | "Quality cost values are non-negative integer cents" | An engineering concern — **ENG-R4**. |

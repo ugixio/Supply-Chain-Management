@@ -43,9 +43,10 @@ relations:
   points there).
 - Needs n̄·p̄ large enough that LCL > 0 to detect *improvement*; with tiny p̄ the LCL
   clamps to 0 and only degradation is detectable.
-- **Does not apply when:** counting *defects per unit* rather than defective units —
-  that is the c/u-chart family (the TS chart's `C_CHART` type reuses these limits as an
-  approximation — recorded divergence).
+- **Does not apply when:** counting *defects per unit* rather than defective units — that is the
+  c/u-chart family, which has its own limits. Reusing p-chart limits for defect counts is an
+  approximation that gets worse as the defects-per-unit rate rises, because the binomial variance
+  behind these limits is not the Poisson variance of a defect count.
 
 ## Worked example
 

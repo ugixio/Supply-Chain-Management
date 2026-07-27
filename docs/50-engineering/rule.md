@@ -21,16 +21,12 @@ relations:
 ## Invariants (NEVER violated — each mechanically checkable)
 
 - **ENG-R1:** Dependency direction is inward only:
-  `apps → infrastructure → application → domain`. A source file in a package **never**
-  imports from a package to its left. `domain` imports from no workspace package;
-  `shared` imports from none. (Boundary linter fails a violating import — ADR-0018/0023.)
-  *Narrowed by ADR-0035:* the innermost ring becomes the **Rust core**; the direction is
-  unchanged (`apps/web → apps/api → core`).
-- **ENG-R2:** `packages/domain` depends on **no framework** — no NestJS, GraphQL, ORM,
-  gRPC or Node-only API. It is pure TypeScript + `shared`. A framework import into
-  `domain` fails the build.
-  *Narrowed by ADR-0035:* governs `packages/domain` while it exists; its successor is
-  **ENG-R10**, and `packages/domain` is retired department by department, never re-grown.
+  `apps → adapters → core`. A source file never imports from a package to its left, and the
+  standards module imports from none. (A boundary check fails a violating import —
+  ADR-0018/0023, as narrowed by ADR-0035: the innermost ring is the **Rust core**.)
+- **ENG-R2:** *(retired — ADR-0037.)* It required `packages/domain` to import no framework. That
+  package was deleted with the invented application, so the rule governs nothing. Its intent lives
+  on as **ENG-R10.1**: no I/O framework enters the core crates. The ID is not reassigned.
 - **ENG-R3:** Cross-department calls go through a **published application port**, never by
   importing another department's internals. Each department is a module boundary at `apps/api`
   (modular monolith, ADR-0023).
@@ -88,7 +84,7 @@ relations:
 
 ## Anti-states (the system must never allow)
 
-- A framework type leaking into `packages/domain` (violates ENG-R2).
+- A framework type leaking into the core crates (ENG-R10.1).
 - A department reaching into another department's domain (ENG-R3).
 - A float holding money, or an implicit round mid-calculation (ENG-R4 / SCM-R14).
 - A hand-edited `schema.gql` or a hand-edited read-model row (ENG-R6 / ENG-R7).

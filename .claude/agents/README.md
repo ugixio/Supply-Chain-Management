@@ -13,7 +13,7 @@ and **references** the governance (`CLAUDE.md`, ADRs, `rule.md`, `CPT` nodes, `e
 | [backend-engineer](backend-engineer.md) | HOW | `apps/api`, `packages/{application,infrastructure}` | yes | clean-architecture, nestjs-graphql, engineering-standards, testing-quality |
 | [frontend-engineer](frontend-engineer.md) | HOW | `apps/web` | yes | nextjs-frontend, engineering-standards, testing-quality |
 | [data-engineer](data-engineer.md) | HOW | Postgres schema, migrations, read model | yes | postgresql-data, clean-architecture, testing-quality |
-| [calc-engineer](calc-engineer.md) | HOW/SPECIALTY | `services/calc`, `proto/` | yes | python-precision-grpc, testing-quality, engineering-standards + domain skills |
+| [calc-engineer](calc-engineer.md) | HOW/SPECIALTY | the Python tools layer, `proto/` | yes | python-precision-grpc, testing-quality, engineering-standards + domain skills |
 | [quality-reviewer](quality-reviewer.md) | verify | the verdict (gates, review, security) | **none (read-only critic)** | testing-quality, engineering-standards, clean-architecture |
 
 ## How they work together (per-unit flow, operating-model §3)

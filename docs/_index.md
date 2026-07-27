@@ -29,7 +29,7 @@ relations:
   - [program](program/_index.md) — workflow, operating model, templates (non-authority)
 - **Knowledge living OUTSIDE `docs/` (allowlisted, see knowledge-architecture §3):**
   root [CLAUDE.md](../CLAUDE.md) (the contract) · root [README.md](../README.md) ·
-  per-department `README.md` + `IMPLEMENTATION.md` (next to the code they document) ·
+  per-package `README.md` (next to the code it documents) ·
   `.claude/skills/*/SKILL.md` (the area-skill layer) · `.claude/commands/` ·
   [standards/REGULATORY_FRAMEWORK.md](standards/REGULATORY_FRAMEWORK.md) (grandfathered).
 - **MISSING (tracked in [program/WORKFLOW.md](program/WORKFLOW.md)):** `50-engineering`

@@ -319,7 +319,7 @@ mirror-coverage bar) · duplicated formulas across TS/Python with one past diver
   fixtures and extend to the deferred `ReturnAuthorization` refund convergence (CPT-0091).
 - ⬜ **P6 · HOW lane (Stage B)** — Python gRPC calc service (`scm.calc.v1`), NestJS client;
   interactive calculator for the demand-planning concepts first (the `enforced` dept).
-- ⬜ **P7 · HOW lane (Stage C, planned)** — Clean-Architecture wiring of `src/departments`
+- ⛔ **P7 · VOID (ADR-0037)** — was Clean-Architecture wiring of the department tree
   to durable event-sourced Postgres (`EventStore` → adapter over an event table, ADR-0005
   realized), use-case ring, auth/RBAC, audit. Not scheduled.
 
@@ -522,8 +522,37 @@ mirror-coverage bar) · duplicated formulas across TS/Python with one past diver
   finally caught this very backlog entry naming withdrawn IDs while explaining them. That is the
   argument for the gate: the script was neither sufficient nor safe, and only the gate was
   reliable.
-- ⬜ **C4 · WHAT** — Rewrite `docs/20-product-model/product-statement.md` and the department
-  `README`/`SKILL` files, which still describe a product being built.
+- 🟦 **C4 · WHAT** — **Prose that still described deleted code (2026-07-27).**
+  **The agent definitions came first, because they instruct future work** — an agent told to build
+  `packages/domain` aggregates would have sent the next session straight back into the mistake.
+  Four rewritten: `calc-engineer` (Python is the tools layer, and it now carries the lesson that a
+  policy default in a signature is how one company's habits get inherited), `domain-knowledge`
+  (leads with the inclusion test), `backend-engineer` (the only door to the frontend, serving
+  monitoring), and the agents README.
+  **A defect that would have propagated:** `templates/concept.md` still instructed authors to add
+  an `## Implementations` section — which **G10 now rejects** — so every node created from it would
+  have failed the build. It now teaches the current contract: unique CPT number, non-empty
+  `## References`, no implementations, a **Project-chosen inputs** section, illustrative worked
+  numbers, and a warning that G11 fails on a retired rule ID.
+  **Risk register reconciled:** seven of eleven risks were **closed by the deletion itself** —
+  the untested Python tree, the TS/PY divergence, the duplicate order-management packages, the
+  heavy ML toolchain, the 84% of prose sitting outside the governed tree, the `IMPLEMENTATION.md`
+  files specifying a different system (SAP/Superset/Airflow — itself evidence of the drift), and
+  the spec-versus-code z-score contradiction. G10's structural blindness is superseded.
+  **And the risk ADR-0037 created is now recorded as #11:** no gate can tell a standard from a
+  plausible-looking invention. G10 checks that a source is *cited*, not that the content matches
+  it. That is the residual, and it is how the original problem started.
+  **ENG-R2 retired** — it governed `packages/domain`, which no longer exists; its intent survives
+  as ENG-R10.1. ENG-R1's ring names updated to `apps → adapters → core`.
+  Structural indices corrected: the knowledge-architecture allowlist, `docs/_index.md`,
+  `40-contexts/_index.md`, the operating-model lane diagram, and the dept-03 section that framed
+  two concepts as "specified but not implemented" (a code-state claim) rather than as measures of
+  the planning process.
+  **C4b remaining:** the 22 `.claude/skills/*/SKILL.md` files (3,968 lines) still reference deleted
+  paths and carry policy values — measured: 10 policy hits in supplier-management, 7 each in
+  warehouse-management, supply-chain-core, sop-planning and procurement. They are the department
+  know-how a project consults for *how* to implement, so they stay — but they need the same
+  inclusion-test sweep the rule files got.
 - ⬜ **C5 · WHAT** — Re-check `docs/standards/REGULATORY_FRAMEWORK.md` against current law; it is
   now one of the most load-bearing documents in the repository.
 

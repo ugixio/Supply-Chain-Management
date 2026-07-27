@@ -24,10 +24,10 @@ relations:
 > `depends-on` ONLY for true mathematical prerequisites (G6 enforces acyclicity — two
 > concepts that merely reference each other must use `traces-to`, not `depends-on`).
 >
-> **G10:** the `## Implementations` bullets are machine-read. Each bullet must name the
-> symbol in backticks inside the link text and point at the file that defines it, or the
-> gate fails. Omit the section entirely when nothing implements the concept yet — state
-> that under `## Status` instead.
+> **G10 (rewritten by ADR-0037):** a node must claim a **unique CPT number** in its title, carry a
+> **non-empty `## References`**, and carry **no `## Implementations`** section at all. The gate no
+> longer maps concepts to code — there is no application here to map to, and a link into a
+> project's code would invert the one-way rule (ADR-0024).
 >
 > Budget: 700 words (gate G9). Be dense, not long.
 
@@ -54,24 +54,36 @@ relations:
 - <assumption the formula rests on — e.g. demand is normally distributed>
 - **Does not apply when:** <the boundary — e.g. intermittent demand; use CPT-NNNN>
 
+## Project-chosen inputs
+
+> Every value an organization decides. Name the decision and the standard that constrains it,
+> then stop — supplying a "sensible default" here is how one company's policy becomes every
+> project's inheritance (ADR-0037). Write "none" if the concept genuinely has no free parameter.
+
+- <the parameter> — <what it follows from; never a value>
+
 ## Worked example
 
-<concrete numbers in, arithmetic shown, number out — must match the implementation>
-
-## Implementations
-
-- TS: [`<symbolName>`](../../../src/departments/<NN-dept>/<path>.ts)
-- PY: [`<symbol_name>`](../../../python/<NN_dept>/<path>.py)
+<concrete numbers in, arithmetic shown, number out. Numbers here are **illustrative**: label them
+so a reader cannot mistake an example input for a recommended value.>
 
 ## Governing rules
 
-- <RULE-ID> — <one line on how this concept is constrained by that rule; cite a LIVE id>
+- <RULE-ID> — <one line on how this concept is constrained by that rule>
+
+> Cite a **live** ID. G11 fails the build on a citation of a retired rule, since a retired ID is
+> never reassigned and resolves to nothing.
 
 ## Related
 
 - <CPT-NNNN> <Name> — <why it is related>
 
 ## References
+
+> **Required and non-empty (G10).** Name the standards body, regulation or identity that fixes
+> this concept. A node that cannot cite one does not belong in the context. **Do not add an
+> `## Implementations` section** — G10 rejects it: the context defines concepts, projects own
+> their code (ADR-0037).
 
 - <author, work, chapter/equation — the standard or literature lineage>
 ```

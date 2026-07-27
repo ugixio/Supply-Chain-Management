@@ -68,15 +68,16 @@ relations:
 | [CPT-0019](inventory-turnover-ratio.md) | Inventory Turnover Ratio | Measuring inventory efficiency |
 | [CPT-0020](days-inventory-outstanding.md) | Days Inventory Outstanding | Expressing turnover in days |
 
-### Specified but NOT implemented (ADR-0016 extraction)
+### Measures of the planning process itself
 
-> Extracted from `IMPLEMENTATION.md`; no code computes these. Invisible to G10 — see
-> [_index](../_index.md) "What G10 cannot see". Implementing them is backlog U18.
+> These judge the planning function rather than the demand: whether forecasting adds value over a
+> naive baseline, and whether the buffer a project holds matches the buffer its own method calls
+> for. Both are commonly skipped, which is why they are catalogued.
 
-| ID | Concept | Gap |
+| ID | Concept | Use when |
 |---|---|---|
-| [CPT-0024](forecast-value-added.md) | Forecast Value Added | Required KPI with an S&OP escalation path; nothing computes it |
-| [CPT-0025](safety-stock-coverage.md) | Safety-stock coverage & adequacy | Targets are computed, but never compared against stock actually held |
+| [CPT-0024](forecast-value-added.md) | Forecast Value Added | Asking whether the forecasting effort beats a naive baseline at all |
+| [CPT-0025](safety-stock-coverage.md) | Safety-stock coverage & adequacy | Comparing the buffer actually held against the buffer the method requires |
 
 ### Machine-learning demand sensing
 

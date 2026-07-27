@@ -19,7 +19,7 @@ relations:
 ## Status — specified, NOT implemented
 
 **No implementation exists in TypeScript or Python.** Extracted from
-`03-demand-planning/IMPLEMENTATION.md` §9 and §10 (ADR-0016). The repo can *compute* the
+the department's own planning specification. A project can *compute* the
 target safety stock (CPT-0012..0015) but has nothing that compares it against the level
 actually held — the gap analysis that makes those calculations actionable. Backlog U18.
 

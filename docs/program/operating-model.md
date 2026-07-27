@@ -27,7 +27,7 @@ relations:
 │                      technology skills in .claude/skills/*     │
 ├──────────────────────────────────────────────────────────────┤
 │  AREA SKILL       →  .claude/skills/<dept>/SKILL.md          │
-│                      + src/departments/<dept>/README.md      │
+│                      + .claude/skills/<dept>/SKILL.md        │
 │                      + rule IDs (SCM-Rx, dept families)      │
 ├──────────────────────────────────────────────────────────────┤
 │  UNIT CONTRACT    →  docs/40-contexts/<dept>/specs/<key>.md  │
@@ -51,7 +51,7 @@ never fabricated samples.
 | Lane | Role | Owns here | Never does |
 |---|---|---|---|
 | **WHAT** | defines the business | specs, department rule.md files, glossary, acceptance criteria | write code |
-| **HOW** | implements | `src/`, `python/`, tests, git | invent rules; skip the spec |
+| **HOW** | implements | `apps/`, `crates/`, tests, git | invent rules; skip the spec |
 | **SPECIALTY** | augments | heavy ML/optimization models by contract | decide business rules alone |
 
 **Lanes are now activated (ADR-0027).** The lanes are realized as 7 least-privilege agent

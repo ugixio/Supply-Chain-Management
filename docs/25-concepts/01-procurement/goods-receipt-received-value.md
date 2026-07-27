@@ -53,9 +53,9 @@ extra 6 units are valued here at their real received amount.
 
 ## Governing rules
 
-- **SCM-R8** — Money is Decimal (ADR-0019); the per-line float round is the tracked
+- **SCM-R14** — Money is Decimal (ADR-0019); the per-line float round is the tracked
   exception.
-- **PRC-R5** — a GRN posts only against fully inspected quantities; this value is what
+- **PRC-R4** — inspection conserves what arrived; this value is what
   posts to the GL when the receipt is accepted.
 
 ## Related

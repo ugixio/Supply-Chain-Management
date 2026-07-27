@@ -56,7 +56,7 @@ Same rates M/D/1: `Lq = 1.6`, `Wq = 0.4 h` — constant service halves the queue
 ## Governing rules
 
 - Advisory sizing mathematics; no domain invariant attaches until a recommendation is
-  executed as dock scheduling (WHS-R2 lifecycle).
+  executed as dock scheduling (the project's own task lifecycle).
 
 ## Related
 

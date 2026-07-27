@@ -59,8 +59,8 @@ node can say.
 
 ## Governing rules
 
-- **WHS-R4** — completion quantities are non-negative; the TS metric reads them.
-- **WHS-R2** — LPH only exists for a task that legally reached `COMPLETE`.
+- **WHS-R5** — task quantities conserve: completions never exceed assignments.
+- **WHS-R5** — task quantities conserve; the task lifecycle itself is the project's design.
 
 ## Related
 

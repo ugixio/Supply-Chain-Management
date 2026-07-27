@@ -13,7 +13,7 @@ relations:
 # Purchase-Order Total (CPT-0026)
 
 > The monetary value of a purchase order: the sum of each line's unit price times its
-> quantity. Feeds the approval-threshold decision (SCM-R2/PRC).
+> quantity. It is the figure any approval threshold is compared against.
 
 ## Formula
 
@@ -38,7 +38,7 @@ relations:
 - **Money precision — resolved at L3b.** The retired TypeScript computed
   `Math.round(amount · factor)`, a float multiply before rounding. Each line extension now
   goes through the exact money core (`multiply_cents`, `ROUND_HALF_EVEN`) and is quantized
-  **once**, so the figure SCM-R2 compares against the threshold cannot drift
+  **once**, so the figure an approval threshold is compared against cannot drift
   (ADR-0019/0035, ENG-R4, CPT-0154).
 - No discount, tax or freight is included here — those are landed-cost concerns
   (finance, dept 11). This is the pre-tax goods value only.
@@ -51,13 +51,14 @@ Lines: 10 × $12.50 and 4 × $30.00, currency USD (amounts in cents):
     total = (1250 · 10) + (3000 · 4) = 12,500 + 12,000 = 24,500 cents = $245.00
 
 If `PO_APPROVAL_THRESHOLD_CENTS` = 500,000 ($5,000), this PO is below threshold and
-initializes `APPROVED`; at or above it, `PENDING_APPROVAL` (SCM-R2).
+needs no approval; at or above it, it does. **The threshold itself is project-chosen** —
+this node supplies none.
 
 ## Governing rules
 
-- **SCM-R2 (PRC)** — a PO at or above the approval threshold enters `PENDING_APPROVAL`;
-  this total is the value compared against the threshold.
-- **SCM-R8 / ENG-R4** — money is exact decimal, quantized only at boundaries; the core is
+- **PRC-R1** — an order states a quantity per line, which is what makes this total computable.
+  Whether an approval step exists, and at what amount, is a project decision.
+- **SCM-R14 / ENG-R4** — money is exact decimal, quantized only at boundaries; the core is
   its single owner (CPT-0154).
 
 ## Related

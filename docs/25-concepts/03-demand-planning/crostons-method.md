@@ -65,8 +65,6 @@ Otherwise both estimates carry forward unchanged. The forecast is:
 
 ## Governing rules
 
-- **DMD-R4** — forecast values are non-negative (guaranteed: inputs must be ≥ 0).
-
 ## Related
 
 - CPT-0007 Syntetos-Boylan Approximation — the bias-corrected form; prefer it.

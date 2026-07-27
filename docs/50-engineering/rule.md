@@ -36,7 +36,7 @@ relations:
   (modular monolith, ADR-0023).
 - **ENG-R4:** No monetary value is held or computed as a float anywhere in the stack
   (`decimal.js` / `decimal.Decimal` / `rust_decimal` / `NUMERIC` / string-over-gRPC). Rounding is
-  explicit `ROUND_HALF_EVEN` at defined boundaries only (SCM-R8 per ADR-0019). A new
+  explicit `ROUND_HALF_EVEN` at defined boundaries only (SCM-R14 per ADR-0019). A new
   `number`-typed money path is a violation.
 - **ENG-R5:** Money and rate values cross the gRPC boundary as **`string`**, never protobuf
   `double` (ADR-0020). A `double` carrying money fails contract review.
@@ -90,7 +90,7 @@ relations:
 
 - A framework type leaking into `packages/domain` (violates ENG-R2).
 - A department reaching into another department's domain (ENG-R3).
-- A float holding money, or an implicit round mid-calculation (ENG-R4 / SCM-R8).
+- A float holding money, or an implicit round mid-calculation (ENG-R4 / SCM-R14).
 - A hand-edited `schema.gql` or a hand-edited read-model row (ENG-R6 / ENG-R7).
 - **Lane trespassing (ENG-R8 / ENG-R10), specifically:**
   - anything but NestJS answering the frontend, or the frontend calling anything else;
@@ -108,6 +108,5 @@ relations:
 
 ## Inherited rules (referenced, not restated)
 
-**SCM-R8** (Decimal money — ENG-R4/R5 are its code-boundary enforcement) · **SCM-R3**
-(soft-delete — honoured by the persistence adapters) · **SCM-R12** (idempotent inventory
-transactions — preserved by the event-store adapter). See `30-foundation/scm-core/rule.md`.
+**SCM-R14** (exact money — ENG-R4/R5 enforce it in code) · **SCM-R3** (a financial record is
+corrected, never destroyed). See `30-foundation/scm-core/rule.md`.

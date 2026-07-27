@@ -69,7 +69,7 @@ destroyed more value than it credited.
 
 ## Governing rules
 
-- **SCM-R8** — integer-cent money (Decimal at P5); **SCM-R3** — return records
+- **SCM-R14** — integer-cent money (Decimal at P5); **SCM-R3** — return records
   soft-delete; SCM-R4 — credit notes hit the GL.
 
 ## Related

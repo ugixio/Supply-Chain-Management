@@ -64,8 +64,6 @@ LightGBM 12.1%, Prophet 14.8%, Holt-Winters 18.3% → LightGBM selected. Blendin
 
 ## Governing rules
 
-- **DMD-R4** — a run's forecast values, `mape` and `mae` are non-negative; the zero floor
-  in `ensemble_forecast` is what enforces the forecast half of this.
 - **ADR-0001** — ML lives in Python; the TS layer consumes results via `DemandSensingRun`.
 
 ## Related

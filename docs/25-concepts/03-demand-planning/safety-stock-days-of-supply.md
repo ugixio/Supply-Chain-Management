@@ -68,7 +68,7 @@ Same SKU, same data, two different buffers — because they are two different me
 
 ## Governing rules
 
-- **SCM-R1** — inventory never goes negative without `backorderAllowed`; safety stock is
+- **INV-R5** — a physical balance cannot be negative; safety stock is
   the buffer that makes this affordable.
 
 ## Related

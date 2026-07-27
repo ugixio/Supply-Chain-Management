@@ -16,8 +16,8 @@ relations:
   Each axis carries a `rule.md` (hard rules, stable IDs — Tier 4); its know-how counterpart is
   the matching `.claude/skills/*/SKILL.md` (allowlisted Tier-6 home).
 - **Exists today:**
-  - [scm-core/rule.md](scm-core/rule.md) — the cross-department core rules **SCM-R1..R13**
-    (extracted from `CLAUDE.md` §Critical Business Rules + §Code Standards; skill
+  - [scm-core/rule.md](scm-core/rule.md) — the cross-department core rules, reclassified at
+    ADR-0037 to hold only externally-fixed statements (skill
     counterpart: `.claude/skills/supply-chain-core/SKILL.md`).
   - [platform/rule.md](platform/rule.md) — the platform / workspace rules **PLT-R1..R5**
     (prompt-refinement gate, read-only project reference, everything-connected, node/edge

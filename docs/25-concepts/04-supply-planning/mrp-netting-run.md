@@ -63,7 +63,7 @@ t2: net = 60+20−20 = 60 → receipt 60 (release t1). t3: net 30 → receipt 30
 ## Governing rules
 
 - **SPL-R*** — MRP records lifecycle; planned orders become POs only through the
-  PRC approval flow (SCM-R2).
+  the project's own purchase-approval flow.
 
 ## Related
 

@@ -64,7 +64,7 @@ Three checks, each within a tolerance:
 
 - **PRC-R4** — a posted GRN's inspected quantities reconcile exactly; the three-way match
   extends that reconciliation to the invoice before payment.
-- **SCM-R8** — money in cents/Decimal; never float.
+- **SCM-R14** — exact money.
 
 ## Related
 

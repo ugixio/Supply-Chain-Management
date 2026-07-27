@@ -36,7 +36,7 @@ relations:
 
 - Uses `≥`, so an over-receipt (CPT-0027) still counts as complete for this predicate —
   completeness asks "did everything arrive", not "did exactly the right amount arrive".
-  The over-quantity is caught separately by CPT-0027/PRC-R3.
+  The over-quantity is caught separately by CPT-0027.
 - Aggregates multiple GRNs only if they are combined into the map's summed quantities; a
   single GRN sees only its own lines.
 - **Does not apply when:** you need value reconciliation (that is the three-way match,
@@ -52,7 +52,7 @@ Had B received only 38, B fails (38 < 40) and the PO is not yet complete.
 
 ## Governing rules
 
-- **PRC-R6** — GRN lifecycle is guarded; a PO closes only when its receipts reconcile.
+- **PRC-R4** — inspection conserves: accepted plus rejected equals received.
   Completeness is the quantity precondition for that close.
 
 ## Related

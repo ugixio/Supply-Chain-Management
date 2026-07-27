@@ -61,7 +61,7 @@ consensus = 526 + 316 + 190 = **1,032**. In the meeting, sales overrides to
 
 ## Governing rules
 
-- **SOP-R*** — consensus items carry override reasons; DMD-R7 override
+- **SOP-R*** — consensus items carry override reasons
   classification feeds FVA (CPT-0024).
 
 ## Related

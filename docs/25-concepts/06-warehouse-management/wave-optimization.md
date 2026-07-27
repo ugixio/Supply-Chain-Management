@@ -57,8 +57,8 @@ wave 2 gives (9L,70U) ✓. D: wave 1 fits lines (10L) but 50+60 = 110 > 100; wav
 
 ## Governing rules
 
-- **WHS-R1** — a wave is never planned or released with zero orders.
-- **WHS-R2** — the wave state machine (plan → release → pick → complete) governs execution.
+- **WHS-R5** — a wave's picked quantities equal the sum of its task completions.
+- **WHS-R5** — task quantities conserve; the task lifecycle itself is the project's design.
 
 ## Related
 

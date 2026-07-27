@@ -65,7 +65,7 @@ relations:
 
 ## Governing rules
 
-- <DMD-R4> — <one line on how this concept is constrained by that rule>
+- <RULE-ID> — <one line on how this concept is constrained by that rule; cite a LIVE id>
 
 ## Related
 

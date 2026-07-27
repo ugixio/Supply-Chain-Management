@@ -60,8 +60,6 @@ relations:
 
 ## Governing rules
 
-- **DMD-R4** — a demand-sensing run's `mape` and `mae` are non-negative.
-
 ## Related
 
 - CPT-0009 Scale-free accuracy — WMAPE/sMAPE/Theil's U for intermittent or cross-SKU work.

@@ -62,8 +62,6 @@ relations:
 
 ## Governing rules
 
-- **DMD-R4** — reported accuracy figures are non-negative.
-
 ## Related
 
 - CPT-0008 MAE/MAPE/RMSE — the basic suite these extend.

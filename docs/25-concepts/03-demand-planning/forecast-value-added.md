@@ -68,12 +68,12 @@ For one SKU-quarter: MAPE_naive = 32%, MAPE_statistical = 24%, MAPE_consensus = 
 
 - FVA_naive = 32 − 24 = **+8 pp** → the statistical model earns its place.
 - FVA_consensus = 24 − 27 = **−3 pp** → the manual override **destroyed** 3 points of
-  accuracy. Per DMD-R7 each of these overrides is already flagged `override_worsened`;
+  accuracy. Whether overrides are classified after the fact is an S&OP process decision;
   the recommended action is to reduce manual intervention on this segment.
 
 ## Governing rules
 
-- **DMD-R7** — every consensus override is classified against the statistical baseline;
+- **DMD-R9** — a forecast is stated with its horizon and bucket; how overrides are classified is the project's S&OP design.
   that classification is the per-record input FVA aggregates.
 - **DMD-R6** — zero-actual periods are excluded from the MAPE terms.
 

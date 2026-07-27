@@ -73,8 +73,7 @@ is the same either way; the classification is not.
 
 ## Governing rules
 
-- Advisory output; executing a re-slot is labor work governed by WHS-R2 (task state
-  machine) and WHS-R4 (non-negative completion quantities).
+- Advisory output; executing a re-slot is labor work governed by the project's own task lifecycle, and WHS-R5 (task quantities conserve).
 
 ## Related
 

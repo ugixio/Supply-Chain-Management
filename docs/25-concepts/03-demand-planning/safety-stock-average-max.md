@@ -60,7 +60,7 @@ demand and lead time with no probability weighting at all.
 
 ## Governing rules
 
-- **SCM-R1** — inventory never goes negative without `backorderAllowed`.
+- **INV-R5** — a physical balance cannot be negative; whether a shortfall is refused or recorded for investigation is the project's decision.
 
 ## Related
 

@@ -75,9 +75,6 @@ principled alternative, when the data volume supports it.
 
 ## Governing rules
 
-- **DMD-R4** — forecast values are non-negative. **Note:** unlike `ensemble_forecast`,
-  `predict_quantiles` applies **no zero floor** — a low-demand q10 can come back negative
-  and the caller must clamp it before persisting a plan line.
 - **ADR-0002** — `torch` is BSD-3, OSI-compliant.
 
 ## Related

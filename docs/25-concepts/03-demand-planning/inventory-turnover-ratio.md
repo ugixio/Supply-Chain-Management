@@ -63,7 +63,7 @@ COGS = $6,000,000/year (600,000,000 cents), average inventory = $750,000 (75,000
 
 ## Governing rules
 
-- **SCM-R8** — Money is integer cents throughout the TypeScript signature.
+- **SCM-R14** — exact money, quantized only at defined boundaries.
 
 ## Related
 

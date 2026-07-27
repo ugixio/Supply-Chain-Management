@@ -54,7 +54,7 @@ return = 8 < 30 ⇒ visit ascending and turn back.
 ## Governing rules
 
 - None direct — travel estimation is advisory; executing the route is a labor task under
-  WHS-R2.
+  the project's task lifecycle.
 
 ## Related
 

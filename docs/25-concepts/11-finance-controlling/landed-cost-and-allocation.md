@@ -63,7 +63,7 @@ exactly).
 
 ## Governing rules
 
-- **SCM-R8** — integer cents (Decimal at P5); **SCM-R4** — capitalization journals;
+- **SCM-R14** — integer cents (Decimal at P5); **SCM-R4** — capitalization journals;
   FIN-R* valuation records.
 
 ## Related

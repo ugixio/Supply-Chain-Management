@@ -57,12 +57,7 @@ LPH history mean 90, 400 orders × 3 lines = 1,200 lines → `required_hours = 1
 
 ## Governing rules
 
-- **WHS-R3/WHS-R4** — the resulting tasks carry bounded priorities and non-negative
-  quantities; the forecast itself is advisory.
-
-## Related
-
-- CPT-0045 Labour productivity — supplies the historical LPH.
+- **WHS-R5** — task quantities conserve: completions never exceed assignments.
 - CPT-0040 Wave optimization — the workload the staff will execute.
 
 ## References

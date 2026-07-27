@@ -67,5 +67,5 @@ relations:
 
 - **PLT-R1** is the recorded decision (ADR-0032); its **runtime enforcement + refinement
   criteria** are built at W3 (Stage B). PLT-R2..R5 are enforced at the knowledge layer today
-  (G2/G4/G5/G6) and must be carried into the application layer as it is built. Each PLT-R gets
-  its test when its code lands (SCM-R13 discipline).
+  (G2/G4/G5/G6) and must be carried into the application layer as it is built. Each PLT-R gets its test when its code lands — a
+  build-time discipline, so it belongs to the `ENG-R*` family.

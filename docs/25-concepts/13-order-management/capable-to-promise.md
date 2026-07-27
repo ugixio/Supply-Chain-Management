@@ -56,7 +56,7 @@ stock 20.
 ## Governing rules
 
 - **ORD-R*** — a promise date on the order comes from a governed promising path;
-  SCM-R1 backorder discipline.
+  INV-R5 and the project's backorder policy.
 
 ## Related
 

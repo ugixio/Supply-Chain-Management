@@ -53,7 +53,7 @@ Balances: [100, 20, 110]. ATP: [100+150−180, 20+150−100, 110+0−40] = **[70
 
 ## Governing rules
 
-- **SCM-R1** — a promise that would drive projected stock negative needs backorder
+- **INV-R5** — a promise that would drive projected physical stock negative needs an explicit policy
   authority; ORD lifecycle consumes the result at order entry.
 
 ## Related

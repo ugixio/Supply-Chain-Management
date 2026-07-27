@@ -51,7 +51,7 @@ AP 3.1M → DPO 45.1. (Feeds CPT-0104: C2C = 38.7 days.)
 
 ## Governing rules
 
-- **SCM-R8** — money precision on the inputs.
+- **SCM-R14** — exact money; see CPT-0154 for the quantization and apportionment rules.
 
 ## Related
 

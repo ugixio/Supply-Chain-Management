@@ -54,7 +54,7 @@ relations:
 | CSDDD | EU Corporate Sustainability Due Diligence Directive 2024/1760. | 09-compliance |
 | EUDR / CBAM | EU Deforestation Regulation / Carbon Border Adjustment Mechanism. | 14-supplier-dev / 09-compliance |
 | ESG Scoring | Environment + Social + Governance composite supplier score. | 14-supplier-development |
-| Idempotency Key | Client-supplied key making a transaction safe to retry (SCM-R12). | cross (scm-core) |
+| Idempotency Key | Client-supplied key making a transaction safe to retry (retry safety — an engineering concern, ENG-R\*). | cross (scm-core) |
 | Global Context | The read-only, versioned SCM knowledge substrate (`docs/` SSOT + `CPT-*` + rules) surfaced as a wiki; consumed by projects. | platform (ADR-0030) |
 | Workspace | Top-level tenant space that contains Projects. | platform (ADR-0030) |
 | Project | A unit of work that references the Global Context by stable ID and owns its transactional data; never mutates the context. | platform (ADR-0030) |

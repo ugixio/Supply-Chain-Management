@@ -50,7 +50,7 @@ relations:
 - ADR-0016 — Department `IMPLEMENTATION.md` files are **business context, not target architecture**: their SAP/Superset stack is non-normative; their rules, KPIs and formulas are extracted into governed nodes and the originals archived. (accepted 2026-07-20)
 - ADR-0017 — The product is a full-stack app (Next.js · NestJS/GraphQL · PostgreSQL · Python), staged **wiki-of-concepts first**, transactional SCM later; the existing `src/departments` domain is preserved as the core. (accepted 2026-07-20)
 - ADR-0018 — Backend follows **Clean Architecture** (entities → use-cases → interface-adapters → frameworks), deployed as a **modular monolith** with one module per department. (accepted 2026-07-20)
-- ADR-0019 — Money becomes **arbitrary-precision Decimal** end-to-end (`decimal.js` / `decimal.Decimal` / `NUMERIC(19,4)`); **supersedes the integer-cent clause of ADR-0006 and rewrites SCM-R8**. (accepted 2026-07-20)
+- ADR-0019 — Money becomes **arbitrary-precision Decimal** end-to-end (`decimal.js` / `decimal.Decimal` / `NUMERIC(19,4)`); **supersedes the integer-cent clause of ADR-0006 and rewrites SCM-R14**. (accepted 2026-07-20)
 - ADR-0020 — The Python calculation core is a separate service reached over **gRPC** with a protobuf contract; decimals cross the wire as strings to preserve precision. (accepted 2026-07-20)
 - ADR-0021 — The Context Engineering layer the enterprise prompt asks for is **already instantiated** by the docs/ tier tree, gates and program area; it is mapped and gap-filled, never rebuilt in parallel. (accepted 2026-07-20)
 - ADR-0022 — **pnpm + Turborepo** is the monorepo toolchain; **supersedes ADR-0013** (npm). pnpm workspaces manage dependencies, Turbo orchestrates and caches tasks. (accepted 2026-07-20)
@@ -199,7 +199,7 @@ created (lifecycle via status flags ACTIVE/DISCONTINUED/BLOCKED).
 **Evidence:** `CLAUDE.md` §Code Standards; `src/shared/types.ts`.
 
 **Consequences:** (+) no floating-point money bugs; interoperable identifiers. (−) all
-arithmetic must round at defined points. Now citable as SCM-R8..R11
+arithmetic must round at defined points. Now citable as SCM-R14..R11
 (`30-foundation/scm-core/rule.md`).
 
 ---
@@ -215,7 +215,7 @@ are safe to retry.
 **Evidence:** `CLAUDE.md` §Critical Business Rules #3, §Code Standards.
 
 **Consequences:** (+) audit integrity + safe retries. (−) queries must filter soft-deleted
-rows. Citable as SCM-R3 / SCM-R12.
+rows. Citable as SCM-R3; retry safety is an engineering concern (`ENG-R*`).
 
 ---
 
@@ -832,10 +832,10 @@ rejected: forecloses the interactive-calculator stage of ADR-0017.
 
 **Status:** Accepted (owner-authorized 2026-07-20)
 **Supersedes (in part):** ADR-0006 (its integer-cent Money clause only)
-**Rewrites:** SCM-R8
+**Rewrites:** SCM-R14
 
 **Context:** Three incompatible money representations coexist: `Money.amount: number`
-(integer cents, SCM-R8), Python `float64` (numpy), and `NUMERIC` in `schema.sql`. Worse,
+(integer cents, SCM-R14), Python `float64` (numpy), and `NUMERIC` in `schema.sql`. Worse,
 `multiplyMoney` computes `Math.round(m.amount * factor)` — a float multiply **before**
 rounding — so landed-cost allocation, FX and tax already lose exactness. The owner
 requires exact financial precision and the product will carry FX, duties and pro-rata
@@ -852,7 +852,7 @@ dependency, unused.
 - **Rounding is explicit and banker's (`ROUND_HALF_EVEN`)** at defined boundaries
   (persistence, display, allocation remainder), never implicit.
 
-**SCM-R8 is rewritten** from "Money is integer cents" to "Money is arbitrary-precision
+**SCM-R14 is rewritten** from "Money is integer cents" to "Money is arbitrary-precision
 Decimal; float money arithmetic is forbidden; rounding is explicit `ROUND_HALF_EVEN` at
 defined boundaries." The rule ID is retained (append-only registry); its 8 department
 citations reference it by ID and stay valid.

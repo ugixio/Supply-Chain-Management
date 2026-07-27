@@ -44,7 +44,7 @@ relations:
 ## Assumptions and limits
 
 - Replay correctness depends on log immutability and idempotent writes
-  (SCM-R12) — a duplicated event silently doubles the balance; the idempotency key
+  (retry safety — an engineering concern, ENG-R\*) — a duplicated event silently doubles the balance; the idempotency key
   belongs to the write path, not this projection.
 - PY sorts by ISO timestamp string — same-timestamp events keep list order; make
   event ordering deterministic upstream (sequence numbers) for audit-grade replay.
@@ -60,8 +60,8 @@ A further issue −45 raises in PY (would be −5); TS would project −5 to the
 
 ## Governing rules
 
-- **SCM-R1** — no negative stock without backorder authority; **SCM-R4** — every
-  movement journals; **SCM-R12** — idempotent transactions; ADR-0005 event sourcing.
+- **INV-R5** — a physical balance cannot be negative; **SCM-R4** — every
+  movement journals; **ENG-R\*** — retry safety; ADR-0005 event sourcing.
 
 ## Related
 

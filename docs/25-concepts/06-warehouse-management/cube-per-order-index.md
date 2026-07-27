@@ -49,7 +49,7 @@ the golden zone by 500×.
 ## Governing rules
 
 - Slotting is advisory: no invariant constrains CPOI itself; placement decisions must
-  still respect WHS-R2 task state machines when executed as re-slotting moves.
+  still respect the project's own task lifecycle when executed as re-slotting moves.
 
 ## Related
 

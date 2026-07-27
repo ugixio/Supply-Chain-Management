@@ -60,7 +60,7 @@ s = 600 + 1.645·69.28 = 714 → S = 714 + 721 = **1,435**.
 
 ## Governing rules
 
-- **ADR-0028** exact z; **SCM-R1** — the policy triggers orders; it never authorizes
+- **ADR-0028** exact z; **INV-R5** — the policy triggers orders; it never authorizes
   negative stock.
 
 ## Related

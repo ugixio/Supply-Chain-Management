@@ -54,7 +54,7 @@ Doors process 21 trailers over 56 door-hours → `21/56×8 = 3.0` turns → benc
 
 ## Governing rules
 
-- **WHS-R2** — the DockAppointment state machine produces the arrival/departure events
+- **WHS-R5** — task quantities conserve; the task lifecycle itself is the project's design.
   these KPIs consume.
 
 ## Related

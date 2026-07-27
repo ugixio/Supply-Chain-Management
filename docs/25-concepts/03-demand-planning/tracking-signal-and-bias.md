@@ -74,9 +74,6 @@ mean error already shows a clear directional lean.
 
 ## Governing rules
 
-- **DMD-R4** — MAE/MAPE stored on a run are non-negative. Note `mean_error` and
-  `tracking_signal` are **signed by design** and are not covered by that rule.
-
 ## Related
 
 - CPT-0008 Accuracy metrics — MAD here is the same quantity as MAE there.

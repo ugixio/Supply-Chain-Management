@@ -74,8 +74,6 @@ this exact input because they test different lengths (full series vs train split
 
 ## Governing rules
 
-- **DMD-R4** — the resulting run's forecast, `mape` and `mae` are non-negative.
-
 ## Related
 
 - CPT-0001, CPT-0002, CPT-0004, CPT-0005 — the candidate algorithms.

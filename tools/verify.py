@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Doc gates — the executable form of docs/00-governance/knowledge-architecture.md §11.
 
-Implements gates G1-G7 + G9 over the tracked knowledge tree (ADR-0012, from the ugixio
+Implements gates G1-G7 + G9-G11 over the tracked knowledge tree (ADR-0012, from the ugixio
 context skeleton ADR-0001/0004). G8 (English-only) is a manual review gate. Python 3,
 standard library only.
 
@@ -68,6 +68,17 @@ CPT_IN_TITLE = re.compile(r"^#\s+.*\((CPT-\d{4})\)", re.M)
 # Sections a concept node must have, and must not have.
 REFERENCES_HEADING = "## References"
 IMPLEMENTATIONS_HEADING = "## Implementations"
+
+# --- G11 — retired rules stay retired -------------------------------------------------
+#
+# ADR-0037 retired 52 rule IDs that stated policy or an implementation detail. A retired ID is
+# never reassigned, so a citation of one is not a broken link that G4 can see — it silently
+# points at nothing, and a reader takes it as law. The retirement tables in the rule files are
+# the machine-readable source: only the FIRST column of a table row declares a retirement (an
+# ID named in the "why retired" prose is a live rule being pointed at, not a retired one).
+RETIRED_ROW = re.compile(r"^\|\s*\*\*((?:SCM|[A-Z]{3})-R\d+)\*\*\s*\|", re.M)
+RULE_ID = re.compile(r"\b((?:SCM|[A-Z]{3})-R\d+)\b")
+RETIRED_HEADING = "## Retired rules"
 
 
 def section_body(text: str, heading: str) -> str:
@@ -177,6 +188,7 @@ class Gates:
             "G6": "authority acyclicity", "G7": "status & supersession",
             "G9": "context budget & disclosure",
             "G10": "standards provenance (source cited, no owned code)",
+            "G11": "retired rules stay retired",
         }
         ok = True
         for gate in sorted(names, key=lambda name: int(name[1:])):
@@ -437,6 +449,36 @@ def main() -> int:
         if IMPLEMENTATIONS_HEADING in text:
             gates.fail("G10", f"{path}: carries '{IMPLEMENTATIONS_HEADING}' — the context "
                               f"defines concepts, it does not own their code (ADR-0037)")
+
+    # G11 — a retired rule ID is never cited as law (ADR-0037).
+    retired, retirement_home = {}, {}
+    for path, (_meta, text) in docs.items():
+        if RETIRED_HEADING not in text:
+            continue
+        table = text.split(RETIRED_HEADING, 1)[1]
+        for stop in ("## Project decisions", "## Anti-states", "## Inherited rules"):
+            table = table.split(stop, 1)[0]
+        for rule_id in RETIRED_ROW.findall(table):
+            retired[rule_id] = path
+            retirement_home[rule_id] = path
+    # Three homes may name a retired ID, because naming it there is the opposite of citing
+    # it as law: the rule file that declares the retirement, the id-registry (the allocation
+    # authority — a retirement is an allocation fact), and the ADRs (append-only history;
+    # rewriting an old decision to remove an ID would falsify the record).
+    declaring = {"docs/00-governance/id-registry.md"}
+    for path, (meta, text) in docs.items():
+        if path in declaring or meta.get("type") == "adr":
+            continue
+        for number, line in enumerate(text.splitlines(), 1):
+            for rule_id in set(RULE_ID.findall(line)):
+                if rule_id not in retired:
+                    continue
+                if retirement_home[rule_id] == path:
+                    continue        # the file that declares the retirement may name it
+                gates.fail("G11", f"{path}:{number} cites retired rule {rule_id} — it was "
+                                  f"retired in {retirement_home[rule_id]} and is never "
+                                  f"reassigned, so the citation resolves to nothing "
+                                  f"(ADR-0037)")
 
     return gates.report(len(docs))
 

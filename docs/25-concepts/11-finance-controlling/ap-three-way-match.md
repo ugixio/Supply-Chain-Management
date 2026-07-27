@@ -60,7 +60,7 @@ the same three documents are a clean match under one agreement and a discrepancy
 ## Governing rules
 
 - **FIN-R*** — no payment release on DISCREPANCY; **SCM-R3** — invoices soft-delete;
-  SCM-R8 money.
+  SCM-R14 exact money.
 
 ## Related
 

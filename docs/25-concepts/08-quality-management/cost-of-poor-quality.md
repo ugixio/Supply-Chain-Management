@@ -57,7 +57,7 @@ NCRs: scrap 120,000¢ + rework 45,000¢ + freight 30,000¢; prevention 20,000¢,
 
 ## Governing rules
 
-- **SCM-R8** — money as integer cents/Decimal; **SCM-R3** — NCR cost records soft-delete
+- **SCM-R14** — money as integer cents/Decimal; **SCM-R3** — NCR cost records soft-delete
   only.
 
 ## Related

@@ -441,8 +441,22 @@ mirror-coverage bar) · duplicated formulas across TS/Python with one past diver
   and its 12 Jest tests removed. Ten `CPT-*` nodes repointed to the single owner in the same
   commit. **Order matters and was corrected here:** deleting the duplicate first would have left
   the surviving implementation with no CI coverage at all.
-  **L3a remaining:** `Forecasting.ts` (207 lines — needs `statsmodels` in CI-light first) and
-  `SPCChart.ts` (356 lines). **L3b** (the 314 rule guards → Rust core) starts after L2b.
+  **L3b started 2026-07-26 — `crates/scm-core`, department 01, PurchaseOrder (194 lines):**
+  the first rules in the Rust core. `PurchaseOrder.ts`, its barrel exports and its 12 Jest tests
+  are deleted; 19 Rust tests replace them. The port **strengthened** the aggregate rather than
+  transliterating it: status is an `enum` (illegal transitions are exhaustive matches, not string
+  comparisons), line currencies are checked against the order currency (the TS node documented
+  mixed currency as "a data error the aggregate does not detect"), quantities must be positive
+  (UCC Art. 2), and creation is **pure** — identity and timestamps are inputs, so opening the
+  same order twice yields the same value. The total flows through `scm-money`, retiring the last
+  `Math.round` money path in dept 01. Two gate improvements landed with it: G10 attributes
+  `crates/*/src/dNN_*` to its department, and **G10 now fails on two nodes claiming one `CPT-*`
+  number** — which is how the duplicate CPT-0026 node was found and deleted.
+  Convention recorded: **calculations are free functions, lifecycle transitions are `impl`
+  methods**, mirroring the existing TypeScript split so G10 stays pointed at calculations.
+  **L3 remaining:** `Forecasting.ts` (207 lines — needs `statsmodels` in CI-light first) ·
+  `SPCChart.ts` (356) · the other 13 departments' rule guards, department by department ·
+  then **L2b** (napi-rs) once `apps/api` needs the core.
 - ⬜ **L4 · HOW** — **ClickHouse telemetry tier (ADR-0034/0036).** The ADR-0036 schema exactly:
   raw `MergeTree` on `(project_id, metric, ts)` partitioned `toYYYYMM(ts)`, per-column codecs,
   the four-level `AggregatingMergeTree` rollup cascade as **ingest-time materialized views**,

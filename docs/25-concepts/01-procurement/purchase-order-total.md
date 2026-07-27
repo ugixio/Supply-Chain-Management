@@ -5,7 +5,7 @@ type: concept
 owner: orchestrator
 status: active
 since: 2026-07-20
-updated: 2026-07-20
+updated: 2026-07-26
 relations:
   - { type: part-of, target: index-concepts-01-procurement }
   - { type: governed-by, target: index-adr }
@@ -27,21 +27,22 @@ relations:
 
 ## Inputs and outputs
 
-- **Input:** a `PurchaseOrder` with `lines[]` and a `currency`.
-- **Output:** `Money`. An empty PO returns `money(0, currency)` (not an error — the empty
-  guard is PRC-R1's job at creation, not here).
-- Currency is uniform across lines; `addMoney` throws on a currency mismatch (fail fast).
+- **Input:** the order's lines and its currency.
+- **Output:** `Money`. An empty line set totals zero rather than failing — the empty-order
+  guard is PRC-R1's job at creation, not the sum's.
+- **Currency is enforced, not assumed:** every line is checked against the order's currency
+  and a mismatch is refused (`LineCurrencyMismatch`). There is no FX conversion here.
 
 ## Assumptions and limits
 
-- **Money-precision (ADR-0019/ENG-R4):** the TS implementation uses
-  `multiplyMoney(unitPrice, quantity)`, which today computes `Math.round(amount · factor)`
-  — a float multiply before rounding. This is the live precision defect ADR-0019 exists to
-  remove; once Money is Decimal, this node's arithmetic becomes exact. **Not yet fixed** —
-  flagged, tracked at P5.
+- **Money precision — resolved at L3b.** The retired TypeScript computed
+  `Math.round(amount · factor)`, a float multiply before rounding. Each line extension now
+  goes through the exact money core (`multiply_cents`, `ROUND_HALF_EVEN`) and is quantized
+  **once**, so the figure SCM-R2 compares against the threshold cannot drift
+  (ADR-0019/0035, ENG-R4, CPT-0154).
 - No discount, tax or freight is included here — those are landed-cost concerns
   (finance, dept 11). This is the pre-tax goods value only.
-- **Does not apply when:** the PO carries mixed currencies (unsupported — would throw).
+- **Does not apply when:** the order mixes currencies — refused, not converted.
 
 ## Worked example
 
@@ -54,16 +55,18 @@ initializes `APPROVED`; at or above it, `PENDING_APPROVAL` (SCM-R2).
 
 ## Implementations
 
-- TS: [`calculatePOTotal`](../../../packages/domain/src/01-procurement/domain/PurchaseOrder.ts)
+- RS: [`purchase_order_total`](../../../crates/scm-core/src/d01_procurement/purchase_order.rs)
 
-> **Coverage gap:** no Python implementation — PO totalling is domain-side (TS) only.
+The TypeScript `calculatePOTotal` was deleted at L3b: business rules and the arithmetic they
+depend on belong to the Rust core (ADR-0035, ENG-R10). There is no Python implementation and
+none is wanted — this is a rule input, not a model.
 
 ## Governing rules
 
 - **SCM-R2 (PRC)** — a PO at or above the approval threshold enters `PENDING_APPROVAL`;
   this total is the value compared against the threshold.
-- **SCM-R8** — Money is Decimal (ADR-0019); float money arithmetic is forbidden — see the
-  limit above.
+- **SCM-R8 / ENG-R4** — money is exact decimal, quantized only at boundaries; the core is
+  its single owner (CPT-0154).
 
 ## Related
 

@@ -112,10 +112,17 @@ the safety-stock family collapsed to one owner: the surviving Python lane got 37
 only then were `SafetyStock.ts` and its 12 Jest tests deleted. Test totals rose through the
 deletion: **73 Jest + 68 pytest + 13 cargo**.
 
-**Next:** **L2b** (napi-rs binding, then retire the two money mirrors) · finish **L3a**
-(`Forecasting.ts` — needs `statsmodels` in CI-light; `SPCChart.ts`) · **L3b** (the 314 rule
-guards into the Rust core) · then L4 (ClickHouse per ADR-0036), L5 (Rust ingestion),
-L6 (Docker → Kubernetes) — with Track C (W3) pulled in as the workspace layer needs it.
+**L3b started:** `crates/scm-core` holds the first ported department — PurchaseOrder (dept 01),
+with SCM-R2's threshold rule, the state machine as an enum, and money through the exact core.
+`PurchaseOrder.ts` is deleted. The port also produced two gate improvements: G10 attributes
+`crates/*/src/dNN_*` to its department, and it now fails on two nodes claiming one `CPT-*`
+number (which surfaced and retired a duplicate CPT-0026).
+
+**Next:** continue **L3b** department by department (the 314 rule guards) · finish **L3a**
+(`Forecasting.ts` needs `statsmodels` in CI-light; `SPCChart.ts`) · **L2b** (napi-rs binding,
+then retire the two money mirrors) once `apps/api` needs the core · then L4 (ClickHouse per
+ADR-0036), L5 (Rust ingestion), L6 (Docker → Kubernetes) — with Track C (W3) pulled in as the
+workspace layer needs it.
 
 ## 6. New-technology decisions still pending (owner-gated, per the speed/security rule)
 

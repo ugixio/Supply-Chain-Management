@@ -13,7 +13,7 @@
  */
 
 // ── 01 Procurement & Strategic Sourcing ─────────────────────────────────────
-export * from './01-procurement/domain/PurchaseOrder';
+// PurchaseOrder now lives in the Rust core (crates/scm-core/src/d01_procurement/) — L3b.
 export * from './01-procurement/domain/Supplier';
 export * from './01-procurement/domain/Contract';
 export * from './01-procurement/domain/RFQ';

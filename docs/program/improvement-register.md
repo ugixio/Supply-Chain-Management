@@ -5,7 +5,7 @@ type: program
 owner: orchestrator
 status: draft
 since: 2026-07-19
-updated: 2026-07-19
+updated: 2026-07-27
 relations:
   - { type: part-of, target: index-program }
   - { type: governed-by, target: governance-root }
@@ -36,3 +36,5 @@ relations:
 | 2 | 2026-07-19 | first `npm install` of the repo (skeleton unification) | declared dev tooling was mutually uninstallable (`eslint ^9` + `@typescript-eslint ^7`) — nothing had ever verified the toolchain itself | dependency fix + committed lockfile + CI running the real commands (ADR-0013, U6) | done |
 | 3 | 2026-07-19 | v0.2 skeleton audit | structural completeness ≠ model impact: exemplars, context budgets, recorded corrections and a fast gate move AI results more than added rules | ADR-0012 (exemplar, G9 budgets, pitfalls, verify split, handoff) | done |
 | 4 | 2026-07-19 | cross-repo sync with the context-template skeleton | the instantiated gate script drifted from the skeleton's semantics: its rule-ID regex also matched the em-dash used by inherited-rule references (`templates/rule.md`), a latent G3 false-duplicate once per-department rule.md files land (U4) | regex aligned with the skeleton (definitions end in `:`); lesson: instantiate gate *configuration*, never gate *semantics* | done |
+| 5 | 2026-07-27 | ADR-0037 (the owner stopping a wrong direction) | the estate had been building a *fictitious company* for weeks while every gate stayed green — because the gates checked internal consistency (links, IDs, symbol coverage) and nothing checked whether a statement was **externally fixed**. Green gates certified that the invented policy was well-organized. | the inclusion test at the head of `CLAUDE.md`; `SCM-R*` reclassified with a §Project decisions section; G10 rewritten from code coverage to **standards provenance**. Note the residual honestly: no gate can tell a standard from a plausible invention — that judgement is named as a reviewer's job, not automated away. | done |
+| 6 | 2026-07-27 | PR #6 CI failure | `make verify-full` passed locally and CI failed on `pnpm install --frozen-lockfile`: a dependency was removed from a `package.json` without regenerating the lockfile, and the local gate never exercised the install step CI performs. **A gate that skips what CI does is not a gate.** | `deps-locked` target added to `verify-full`, running the exact CI invocation. Also removed two committed submodule gitlinks (`.claude/worktrees/…`) with no `.gitmodules`, which made every CI checkout emit a fatal error. | done |

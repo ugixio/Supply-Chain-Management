@@ -36,17 +36,18 @@ Three checks, each within a tolerance:
 
 - **Output:** `{matched, grn_qty_matched, qty_matched, price_matched, qty_variance_pct,
   price_variance_pct, variance_cents}`.
-- **Guards (fail fast):** `po_qty > 0`, `grn_qty > 0`, prices integer cents `≥ 0`.
-- `price_tol` defaults to **2%**, matching the AP convention in `Invoice.ts`.
+- **Guards (fail fast):** `po_qty > 0`, `grn_qty > 0`, prices `≥ 0`.
+- **Neither tolerance has a default here.** A tolerance that arrives by default is one nobody
+  agreed to — it must be passed in, from the contract that sets it.
 
 ## Assumptions and limits
 
 - **Quantity leg is "pay for what arrived":** invoice qty is matched against **GRN** qty,
   not PO qty — the received amount is the payable truth, which is why over/under receipt
   (CPT-0027/0029) feeds directly into payability.
-- **Money is integer cents here** (`po_price_cents`) — the pre-ADR-0019 model. When Money
-  becomes Decimal (P5), the cents parameters and `variance_cents` become Decimal; the
-  matching logic is unchanged.
+- **Money is exact** (SCM-R14): prices and variances are held in a minor-unit integer or an exact
+  decimal, never a float. The matching logic is independent of the representation — but a variance
+  computed through a float can report a mismatch that does not exist.
 - Price match degenerates safely: if `po_price = 0`, an invoiced 0 matches, anything else
   is 100% variance (no divide-by-zero).
 - **Does not apply when:** a service PO has no goods receipt — a two-way (PO↔invoice) match

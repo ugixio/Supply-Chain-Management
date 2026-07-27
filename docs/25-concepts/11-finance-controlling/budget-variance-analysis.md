@@ -32,10 +32,10 @@ relations:
   on one side reads 0).
 - **Output:** per-category rows, a total row, and a summary (favorable/unfavorable/
   on-budget counts + categories needing explanation). Zero budget with actual spend →
-  `variance_pct = None`, status ON_BUDGET — **recorded caveat:** an unbudgeted spend
-  category currently escapes both the status and the explanation trigger.
-- TS `requiresExplanation` applies the same 10% policy bar to a `BudgetVariance`
-  record.
+- **A zero budget with actual spend has no percentage variance**, and that is the case most worth
+  seeing: an unbudgeted category. If the percentage is undefined and the status derives from the
+  percentage, the category escapes the report entirely. Handle the absolute variance separately so
+  spend outside the budget cannot hide behind an undefined ratio.
 
 ## Assumptions and limits
 

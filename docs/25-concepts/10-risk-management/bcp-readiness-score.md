@@ -34,9 +34,9 @@ relations:
 ## Inputs and outputs
 
 - **Inputs:** validated ranges (percentages 0–100, counts ≥ 0).
-- **Output:** `{score, rating, components}` — the component breakdown shows what to
-  fix first. The TS `openCriticalFindings` selector supplies the findings input from
-  the drill aggregate.
+- **Output:** `{score, rating, components}` — the component breakdown shows what to fix first,
+  and is the part worth reporting: a single readiness number cannot distinguish an untested plan
+  from a tested one with open findings.
 
 ## Assumptions and limits
 

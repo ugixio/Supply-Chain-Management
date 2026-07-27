@@ -19,11 +19,15 @@ relations:
 ## Formula
 
     C2C = DIO + DSO − DPO      (days)
-    PY bands:  <0 EXCELLENT · ≤30 GOOD · ≤60 AVERAGE · >60 POOR
-    TS bands:  <0 EXCELLENT · <20 GOOD · <45 AVERAGE · ≥45 POOR
 
-TS `calculateWorkingCapitalMetrics` derives the full snapshot from period balances:
-DSO, DIO (via inventory turnover = COGS/inventory), DPO, C2C, turnover, gross margin%.
+The identity is the whole of it. **Classification bands over the result are project-chosen**
+(see §Project-chosen inputs) — the same 25-day cycle is unremarkable in one industry and
+excellent in another, so a band table published here would be a benchmark masquerading as a
+scale.
+
+The components can equally be derived from period balances (DSO from receivables against
+revenue, DIO from inventory against COGS, DPO from payables against COGS); what matters is that
+all three come from the same period on the same basis.
 
 | Symbol | Meaning | Unit |
 |---|---|---|
@@ -44,8 +48,9 @@ DSO, DIO (via inventory turnover = COGS/inventory), DPO, C2C, turnover, gross ma
 - Components must share the **same period and basis** (all annualized on 365, AR
   against revenue, inventory/AP against COGS) — mixing quarterly AR with annual COGS
   breaks the sum.
-- **Band divergence (recorded):** a 25-day cycle is GOOD in Python, AVERAGE in
-  TypeScript. Owner alignment pending (U15b-class).
+- **The sign is a regime change, not a better score.** A negative cycle means the operation is
+  funded by its suppliers. Ranking it on the same scale as a positive cycle hides that, so a
+  classification should treat the negative case separately rather than as "the best band".
 - C2C rewards stretching DPO — beyond contractual terms that is supplier financing
   with relationship and CSDDD-adjacent costs; read with the supplier lens
   (CPT-0067 ROWC).
@@ -58,9 +63,18 @@ DIO 58, DSO 32, DPO 45 → **C2C = 45 days**. Whether 45 days is good is not a p
 identity: it depends entirely on the industry and the business model, and a negative cycle —
 normal for some retailers — means suppliers are financing the operation.
 
+## Project-chosen inputs
+
+| Input | Why the project must choose it |
+|---|---|
+| Classification bands over the cycle (if any) | There is no standard scale; the meaningful comparison is against the business model's own history and its sector, not a published figure |
+| Treatment of a zero denominator | Zero, undefined, or refuse — see above; zero reads as excellence |
+| Annualization basis (365 / 360 / period days) | Conventions differ by industry and by lender; all three components must use the same one |
+
 ## Governing rules
 
-- **FIN-R*** — snapshots are period records (soft-delete, SCM-R3).
+- **SCM-R3** — a period snapshot is a financial record: corrected by a further entry, never
+  destroyed. **SCM-R9** — the period boundaries are ISO 8601 dates.
 
 ## Related
 

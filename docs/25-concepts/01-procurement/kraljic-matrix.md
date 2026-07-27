@@ -32,21 +32,22 @@ A 2×2 split at a threshold on each axis:
 
 ## Inputs and outputs
 
-- **TS (`updateKrajlicClassification`):** takes **pre-bucketed** `HIGH`/`LOW` on each axis
-  and returns the supplier with `krajlicQuadrant` set. The bucketing decision is made by
-  the caller.
-- **PY (`classify_kraljic` / `classify_portfolio`):** takes **continuous 0–10 scores** and
-  a `threshold`, and does the high/low split itself (`score ≥ threshold` = high).
-  `classify_portfolio` maps a list to `{supplier_id: quadrant}`.
+- **Inputs, in one of two shapes — and the choice decides who owns the cut:**
+  - **Pre-bucketed** `HIGH`/`LOW` per axis. The quadrant logic is then trivial, and the judgement
+    lives wherever the bucketing happened.
+  - **Continuous scores plus a threshold**, split here (`score ≥ threshold` = high). The judgement
+    is then explicit and reproducible, which is the reason to prefer it.
+- **Output:** the quadrant. Keep the scores that produced it: a quadrant with no scores behind it
+  cannot be re-segmented when the threshold changes.
 
 ## Assumptions and limits
 
-- **Cross-language divergence (input model):** TS consumes an already-decided HIGH/LOW;
-  Python decides it from scores. Same quadrant logic, different responsibility for the
-  cut. A caller must not assume the TS enum and the PY threshold agree unless the scoring
-  rubric is shared — it is not, at runtime. Flag: define one scoring rubric (backlog).
-- The threshold (5.0) is a **policy midpoint**, not a derived optimum; moving it re-segments
-  the portfolio and is a policy decision applied forward.
+- **One scoring rubric, or the quadrants are not comparable.** Two parts of a system that bucket
+  the same supplier from different rubrics will disagree about its quadrant, and both will be
+  internally consistent. The rubric is written down once, or the matrix is decoration.
+- **The threshold is a project decision, not a derived optimum.** A midpoint of the scale is a
+  convention, not an answer; moving it re-segments the portfolio, so it is applied forward from a
+  decision rather than tuned until the picture looks right.
 - Scores conflate several sub-factors (spend, criticality, risk drivers) into one number —
   the model is deliberately coarse; it guides strategy, it does not rank suppliers finely.
 - **Does not apply when:** you need a fine ranking within a quadrant — use RFQ scoring
@@ -54,18 +55,21 @@ A 2×2 split at a threshold on each axis:
 
 ## Worked example
 
-`profit_impact = 8, supply_risk = 3, threshold = 5`:
+*Illustrative — the scale and the cut below are examples, not recommendations.*
+
+`profit_impact = 8, supply_risk = 3` on a 0–10 scale, cut at 5:
 
     high_impact = 8 ≥ 5 = true;  high_risk = 3 ≥ 5 = false  ⇒  LEVERAGE
 
-The item matters to the P&L but is low-risk to source → drive it through competitive
-bidding. The TS side reaches the same quadrant if the caller passed `profitImpact=HIGH,
-supplyRisk=LOW`.
+The item matters to the P&L but is low-risk to source → competitive bidding is available as a
+strategy. Note how little it takes to move it: a supply-risk score of 5 instead of 3 puts the same
+item in the strategic quadrant, which is why the rubric behind the score matters more than the
+quadrant it lands in.
 
 ## Governing rules
 
-- **PRC / SUP** — supplier classification drives the sourcing strategy; the quadrant is a
-  supplier attribute, not a transaction.
+- **SUP-R5** — absence of evidence is not evidence: a supplier with no risk assessment is
+  *unscored*, not low-risk, and must not be bucketed as though it were.
 
 ## Related
 

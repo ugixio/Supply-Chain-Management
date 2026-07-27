@@ -19,7 +19,9 @@ relations:
 
     score_i = Σ_criteria ( weight_c · criterionScore_{i,c} )
 
-Ranked descending. Weights must sum to a fixed total (100 in TS, 1.0 in PY).
+Ranked descending. The weights **normalize** (PRC-R7) — whether the whole is expressed as `1.0`
+or as `100` is a presentation choice, but it must be one or the other consistently, because a
+score built on weights summing to 100 is not comparable with one built on weights summing to 1.
 
 | Symbol | Meaning | Unit |
 |---|---|---|
@@ -29,28 +31,32 @@ Ranked descending. Weights must sum to a fixed total (100 in TS, 1.0 in PY).
 
 ## Inputs and outputs
 
-- **PY (`evaluate_rfq`):** takes `QuoteEvaluation` (price/quality/delivery/sustainability
-  each 0–100, **supplied by the caller**) + `EvaluationWeights` (validated to sum to 1.0);
-  returns `[(supplier_id, score)]` sorted descending. A pure weighted dot product.
-- **TS (`evaluateQuotes`):** derives some scores itself — **price is relative** (lowest
-  quote = 100, others = min/quote ratio × 100), compliance is 0/100, and weights sum to
-  100. Returns `RFQEvaluation[]`.
+- **Inputs:** one score per criterion per supplier, plus the weights. **Where each criterion score
+  comes from is the decision that matters**, and there are two legitimate patterns:
+  - **Supplied** — the caller scores each criterion (an audit result, a delivery history) and the
+    formula is a pure weighted sum. Auditable, but only as good as the upstream scoring.
+  - **Derived** — the score is computed from the quote set itself, most commonly price as a ratio
+    to the cheapest quote. Self-contained, but the scale then depends on who else bid.
+- **Output:** the weighted total per supplier, and the per-criterion contributions. Report both:
+  the total alone cannot show that one supplier won on price while failing on delivery.
 
 ## Assumptions and limits
 
-- **Cross-language divergence (material — different algorithms):** these are **not** two
-  implementations of one function.
-  - PY takes all four criterion scores as inputs and weights them directly.
-  - TS **computes** the price score from the quote set (relative-to-cheapest), treats
-    compliance as a gate, and — critically — uses a **hard-coded quality placeholder
-    (75)** "pending a real SQE audit score". So the TS quality dimension is not yet real.
-  - Weight scales differ (100 vs 1.0). Do not port results between them.
-  - Flag (backlog U8/modeling): converge on one scoring contract; replace the TS quality
-    placeholder with an actual quality input.
-- **Scoring price relative to the best quote** means a single very cheap outlier compresses everyone else's
-  price score — intended (rewards the best price), but sensitive to an unrealistic low bid.
-- Weight validation is enforced (fail fast): PY raises if weights ≠ 1.0; TS RFQ creation
-  (PRC-R7) rejects criteria not summing to 100.
+- **Every criterion needs a real input.** A criterion carrying a constant — a fixed quality score
+  standing in for an audit that has not happened — contributes nothing to the ranking while
+  appearing to. Its weight is silently redistributed among the others, so the published weighting
+  is not the one being applied. Either source the input or drop the criterion.
+- **Derived and supplied scores do not mix comfortably.** A relative price score moves when the
+  bid set changes; an absolute audit score does not. Re-running an evaluation with one bid removed
+  changes the price scores of every remaining supplier, which is worth knowing before an award is
+  challenged.
+- **Scoring price relative to the best quote** means one very cheap outlier compresses everyone
+  else's price score — intended (it rewards the best price), but sensitive to an unrealistic low
+  bid that may later be withdrawn.
+- **A criterion that must not be traded away is a gate, not a weighted term** (CPT-0060): a
+  compliance failure that merely loses points can still be outvoted by a good price.
+- Weight normalization is enforced (PRC-R7) and should **fail fast** — an evaluation run on
+  weights that do not normalize produces a ranking nobody can reproduce.
 - **Does not apply when:** award depends on total cost over the life, not quote price — use
   TCO (CPT-0033) as the price input.
 
@@ -64,8 +70,9 @@ Two quotes, weights `price .4, quality .3, delivery .2, sustainability .1`:
 
 ## Governing rules
 
-- **PRC-R7** — RFQ evaluation-criteria weights must sum to exactly 100; the evaluation is
-  only valid under that invariant.
+- **PRC-R7** — the evaluation weights normalize to one whole; without that, two bids scored under
+  differently-scaled weightings are not comparable. Which criteria exist, and what each weighs, is
+  the project's sourcing strategy.
 
 ## Related
 

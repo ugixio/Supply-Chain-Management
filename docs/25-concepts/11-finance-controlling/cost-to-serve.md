@@ -30,9 +30,10 @@ relations:
 
 - **Inputs:** validated non-negative integer cents; positive revenue.
 - **Output:** total, margin (cents and %), profitability flag, element breakdown.
-- The TS `byElement` selector exposes the domain record's breakdown — note it carries
-  **two extra elements** (CUSTOMER_SUPPORT, CREDIT_RISK) the PY model does not sum
-  (recorded divergence: PY 5-element vs TS 7-element taxonomy).
+- **The element taxonomy is the project's, and the total must sum exactly the elements it
+  reports.** Two views of the same customer that include different cost elements produce two
+  different margins under one name — the failure is not the taxonomy but reporting a total whose
+  breakdown does not add up to it.
 
 ## Assumptions and limits
 

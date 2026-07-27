@@ -55,12 +55,6 @@ Building 10,000 m³, aisle loss 0.35 → usable 6,500 m³; used 5,200 m³ →
 `u = 0.80` (benchmark met). Locations 9,200/10,000 → fill 92% → above the 85–90 band and
 `storage_utilization` grades it OPTIMAL (≤ 95) but nearing congestion.
 
-## Implementations
-
-- PY: [`cubic_space_utilisation`](../../../services/calc/06_warehouse_management/warehouse_kpis.py)
-- PY: [`rack_location_utilisation`](../../../services/calc/06_warehouse_management/warehouse_kpis.py)
-- PY: [`storage_utilization`](../../../services/calc/06_warehouse_management/slotting.py)
-
 ## Governing rules
 
 - None direct; feeds capacity decisions that surface as slotting or wave planning work.

@@ -47,11 +47,6 @@ relations:
 Steps: 98%, 96%, 99% → `RTY = 0.98 × 0.96 × 0.99 = 0.9314 → 93.14%` — even with no
 step below 96%, ~7 of 100 units need rework somewhere.
 
-## Implementations
-
-- PY: [`first_pass_yield`](../../../services/calc/08_quality_management/quality.py)
-- PY: [`rolled_throughput_yield`](../../../services/calc/08_quality_management/quality.py)
-
 ## Governing rules
 
 - `isMeetingTarget` (CPT-0051) couples the FPY target with PPM — a supplier passes on

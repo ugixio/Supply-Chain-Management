@@ -54,13 +54,6 @@ relations:
 
 A 3.8% escalation — the blended effect of 3% CPI on 60% material and 5% PPI on 40% labour.
 
-## Implementations
-
-- PY: [`adjusted_price`](../../../services/calc/01_procurement/kraljic.py)
-
-> **Coverage gap:** no TypeScript implementation. Contract lifecycle (activate/expire) is
-> TS-side (CPT-0035), but the escalation arithmetic is Python-only.
-
 ## Governing rules
 
 - **PRC-R8** — a contract carries valid effective/expiry dates and lines; an escalation

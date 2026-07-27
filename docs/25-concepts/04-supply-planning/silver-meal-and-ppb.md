@@ -56,12 +56,6 @@ C(2)/2 = 105/2 = 52.5 ↓; C(3)/3 = 115/3 = 38.3 ↓; C(4)/4 = (115 + 3·90)/4 =
 96.25 ↑ → order t1 covers t1..t3 (90 units), new order at t4 — matching
 intuition: don't drag the big t4 demand three periods.
 
-## Implementations
-
-- PY: [`silver_meal`](../../../services/calc/04_supply_planning/mrp.py)
-- PY: [`part_period_balancing`](../../../services/calc/04_supply_planning/mrp.py)
-- PY: [`compare_lot_sizing_methods`](../../../services/calc/04_supply_planning/mrp.py)
-
 ## Governing rules
 
 - **SPL-R*** — heuristic choice is item policy, evidence from the comparator.

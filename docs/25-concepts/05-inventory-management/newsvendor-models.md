@@ -61,11 +61,6 @@ p = 24, c = 10, s = 4 → CR = 14/20 = 0.70 → z = 0.524; μ = 500, σ = 120 �
 **Q* = 563**; E[stockout] = 120·(0.3477 − 0.524·0.30) ≈ 22.9 → E[sales] ≈ 477 →
 E[profit] ≈ 24·477 + 4·86 − 10·563 = **6,162**.
 
-## Implementations
-
-- PY: [`newsvendor`](../../../services/calc/05_inventory_management/stock_balance.py)
-- PY: [`newsvendor_price_quantity_joint`](../../../services/calc/05_inventory_management/stock_balance.py)
-
 ## Governing rules
 
 - **ADR-0028** exact inverse normal for z.

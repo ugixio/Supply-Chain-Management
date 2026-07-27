@@ -55,19 +55,6 @@ relations:
 - RMSE = √((100 + 400)/2) = √250 = **15.81**
 - MAPE = ((10/100) + (20/120))/2 × 100 = (0.10 + 0.1667)/2 × 100 = **13.33%**
 
-## Implementations
-
-- TS: [`meanAbsoluteError`](../../../packages/domain/src/03-demand-planning/algorithms/Forecasting.ts)
-- TS: [`meanAbsolutePercentageError`](../../../packages/domain/src/03-demand-planning/algorithms/Forecasting.ts)
-- TS: [`rootMeanSquaredError`](../../../packages/domain/src/03-demand-planning/algorithms/Forecasting.ts)
-- PY: [`mae`](../../../services/calc/03_demand_planning/forecasting.py)
-- PY: [`mape`](../../../services/calc/03_demand_planning/forecasting.py)
-- PY: [`rmse`](../../../services/calc/03_demand_planning/forecasting.py)
-
-> **Unit inconsistency (open):** `mape()` returns a **percentage** (×100) but
-> `accuracy_suite()` reports `MAPE` as a **fraction** (no ×100). A caller mixing the two
-> is off by 100×. Recorded in `program/WORKFLOW.md`.
-
 ## Governing rules
 
 - **DMD-R4** — a demand-sensing run's `mape` and `mae` are non-negative.

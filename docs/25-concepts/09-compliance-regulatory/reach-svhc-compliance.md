@@ -56,11 +56,6 @@ relations:
 DEHP (CAS 117-81-7), 0.3% w/w in cable sheathing, 2.4 t/yr → above threshold →
 notify ECHA + inform downstream + (conservative) SDS → ACTION_REQUIRED.
 
-## Implementations
-
-- PY: [`assess_reach_compliance`](../../../services/calc/09_compliance_regulatory/compliance.py)
-- TS: [`assessREACHCompliance`](../../../packages/domain/src/09-compliance-regulatory/regulations/REACH.ts)
-
 ## Governing rules
 
 - **SCM-R5** — `reachSVHC = true` forces lot tracking; **CMP-R*** — evidence retention.

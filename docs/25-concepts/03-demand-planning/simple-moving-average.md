@@ -49,11 +49,6 @@ relations:
 - forecast = mean of the last 3 = (110+90+120)/3 = **106.67**
 - MAE over the valid window `[90, 120]` vs `[100.0, 106.67]` = (10 + 13.33)/2 = **11.67**
 
-## Implementations
-
-- TS: [`simpleMovingAverage`](../../../packages/domain/src/03-demand-planning/algorithms/Forecasting.ts)
-- PY: [`simple_moving_average`](../../../services/calc/03_demand_planning/forecasting.py)
-
 ## Governing rules
 
 - **DMD-R4** — a forecast value, MAPE or MAE is never negative.

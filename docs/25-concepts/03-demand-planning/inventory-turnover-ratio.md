@@ -57,14 +57,6 @@ COGS = $6,000,000/year (600,000,000 cents), average inventory = $750,000 (75,000
 
 → DIO = 365 / 8 = **45.6 days** (CPT-0020).
 
-## Implementations
-
-- PY: [`inventory_turnover_ratio`](../../../services/calc/03_demand_planning/safety_stock.py)
-
-TypeScript had a duplicate until L3a; it was **deleted, not ported** — planning
-mathematics is Python's exclusive lane (ENG-R8 / ADR-0033). Python is now the sole
-owner, covered by `services/calc/tests/test_safety_stock.py`.
-
 ## Governing rules
 
 - **SCM-R8** — Money is integer cents throughout the TypeScript signature.

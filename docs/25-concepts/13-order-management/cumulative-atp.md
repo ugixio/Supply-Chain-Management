@@ -51,10 +51,6 @@ on_hand 100; supply [0, 150, 0]; committed [80, 60, 40].
 Balances: [100, 20, 110]. ATP: [100+150−180, 20+150−100, 110+0−40] = **[70, 70, 70]** —
 70 units promisable in any bucket.
 
-## Implementations
-
-- PY: [`cumulative_atp`](../../../services/calc/13_order_management/order_metrics.py)
-
 ## Governing rules
 
 - **SCM-R1** — a promise that would drive projected stock negative needs backorder

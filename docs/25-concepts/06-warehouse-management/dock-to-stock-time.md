@@ -47,10 +47,6 @@ relations:
 
 Arrive 08:30 (8.5), putaway complete 10.25 → `DTS = 1.75 h = 105 min` → benchmark met.
 
-## Implementations
-
-- PY: [`dock_to_stock_time`](../../../services/calc/06_warehouse_management/warehouse_kpis.py)
-
 ## Governing rules
 
 - **SCM-R9 (dates ISO 8601/UTC)** — the float-hour input is a local simplification the

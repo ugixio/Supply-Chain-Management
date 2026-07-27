@@ -52,12 +52,6 @@ Picking grade (PY): `<60 BELOW_STANDARD · 60–120 RF_SCANNER · 120–200 VOIC
 Picker completes 540 lines in 6.0 h → `LPH = 90` → RF_SCANNER band.
 Receiving crew 960 units in 8 h → `UPH = 120` → benchmark met (world-class threshold).
 
-## Implementations
-
-- PY: [`picking_productivity`](../../../services/calc/06_warehouse_management/slotting.py)
-- PY: [`receiving_productivity`](../../../services/calc/06_warehouse_management/warehouse_kpis.py)
-- TS: [`linesPerHour`](../../../packages/domain/src/06-warehouse-management/domain/LaborTask.ts)
-
 ## Governing rules
 
 - **WHS-R4** — completion quantities are non-negative; the TS metric reads them.

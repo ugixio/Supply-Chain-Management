@@ -56,13 +56,6 @@ Daily 4-feature signal `[demand, price, lead_time, otd]`, seq_len 14 → windows
 train on 12 disruption-free months; calibrate at FPR 2% → threshold 0.031; a port-
 strike fortnight reconstructs at 0.11 → score 1.0, flagged across its windows.
 
-## Implementations
-
-- PY: [`build_sliding_windows`](../../../services/calc/10_risk_management/anomaly.py)
-- PY: [`train_autoencoder`](../../../services/calc/10_risk_management/anomaly.py)
-- PY: [`calibrate_threshold`](../../../services/calc/10_risk_management/anomaly.py)
-- PY: [`score_windows`](../../../services/calc/10_risk_management/anomaly.py)
-
 ## Governing rules
 
 - OSI-only (ADR-0002): PyTorch BSD-3. Alerts are advisory inputs to the risk register.

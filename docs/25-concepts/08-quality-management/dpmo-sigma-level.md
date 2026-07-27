@@ -51,12 +51,6 @@ relations:
 12 defects across 500 units × 8 opportunities → `12/4000 × 10⁶ = 3000 DPMO`;
 σ = Φ⁻¹(0.997) + 1.5 = 2.748 + 1.5 ≈ **4.248**.
 
-## Implementations
-
-- PY: [`calculate_dpmo`](../../../services/calc/08_quality_management/quality.py)
-- PY: [`dpmo_to_sigma_level`](../../../services/calc/08_quality_management/quality.py)
-- TS: [`calculateDPMO`](../../../packages/domain/src/08-quality-management/domain/InspectionRecord.ts)
-
 ## Governing rules
 
 - **ADR-0028** — canonical z-score is the exact inverse normal; no lookup tables.

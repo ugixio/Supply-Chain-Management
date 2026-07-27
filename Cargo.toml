@@ -1,15 +1,16 @@
-# Cargo workspace — the Rust core (ADR-0035, ENG-R10).
+# Cargo workspace.
 #
-# The core owns business rules, invariants, state machines, lifecycle/identity, exact
-# arithmetic and the per-event hot path. No I/O framework enters these crates: transport
-# lives in adapter crates (`napi-rs` toward NestJS, `tonic` toward the Python tools).
+# Rust owns the core lane (ADR-0033/0035, ENG-R10): rules, invariants, exact arithmetic, the
+# per-event hot path and ingestion. Today that means one crate — `scm-money` — because ADR-0037
+# deleted the invented supply-chain application the other crates served. The lane comes back into
+# use with the monitoring application (WORKFLOW Phase M): the telemetry ingester is core work.
 #
-# Crates are added one per migration slice (strangler — WORKFLOW Phase L), never as an
-# empty skeleton ahead of the work.
+# No I/O framework enters a core crate; transport belongs in an adapter crate.
+# Crates are added when there is work for them, never as an empty skeleton.
 
 [workspace]
 resolver = "3"
-members = ["crates/scm-money", "crates/scm-core"]
+members = ["crates/scm-money"]
 
 [workspace.package]
 edition = "2024"

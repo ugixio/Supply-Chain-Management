@@ -53,11 +53,6 @@ Expanding the recursion shows the geometric decay: the weight on A_{t−k} is α
 - fitted[2] = 0.3·110 + 0.7·100 = **103.0**
 - forecast = 0.3·90 + 0.7·103.0 = **99.1**
 
-## Implementations
-
-- TS: [`singleExponentialSmoothing`](../../../packages/domain/src/03-demand-planning/algorithms/Forecasting.ts)
-- PY: [`single_exponential_smoothing`](../../../services/calc/03_demand_planning/forecasting.py)
-
 ## Governing rules
 
 - **DMD-R4** — forecast values, MAPE and MAE are non-negative.

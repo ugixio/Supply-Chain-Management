@@ -54,13 +54,6 @@ DSO, DIO (via inventory turnover = COGS/inventory), DPO, C2C, turnover, gross ma
 DIO 58, DSO 32, DPO 45 → **C2C = 45 days** → AVERAGE (PY) / POOR (TS band edge —
 the divergence in action).
 
-## Implementations
-
-- PY: [`cash_to_cash_cycle`](../../../services/calc/11_finance_controlling/finance.py)
-- PY: [`classify_c2c`](../../../services/calc/11_finance_controlling/finance.py)
-- TS: [`calculateWorkingCapitalMetrics`](../../../packages/domain/src/11-finance-controlling/domain/CashFlowMetrics.ts)
-- TS: [`classifyCashCycle`](../../../packages/domain/src/11-finance-controlling/domain/CashFlowMetrics.ts)
-
 ## Governing rules
 
 - **FIN-R*** — snapshots are period records (soft-delete, SCM-R3).

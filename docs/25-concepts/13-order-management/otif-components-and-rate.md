@@ -55,13 +55,6 @@ Order: line A due 07-10 delivered 07-10 (100/100); line B due 07-10 delivered 07
 (50/50) → on_time false → OTIF false. Over 200 orders with 187 OTIF → 93.5% (below the
 98% bar).
 
-## Implementations
-
-- PY: [`is_on_time`](../../../services/calc/13_order_management/order_metrics.py)
-- PY: [`is_in_full`](../../../services/calc/13_order_management/order_metrics.py)
-- PY: [`is_otif`](../../../services/calc/13_order_management/order_metrics.py)
-- PY: [`otif_rate`](../../../services/calc/13_order_management/order_metrics.py)
-
 ## Governing rules
 
 - **ORD-R*** — sales-order lifecycle stamps the dates these tests read; SCM-R9 ISO

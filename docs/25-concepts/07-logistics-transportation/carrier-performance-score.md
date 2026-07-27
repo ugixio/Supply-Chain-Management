@@ -51,11 +51,6 @@ relations:
 OTD 94%, claims 1.2%, variance 0.8 days →
 `56.4 + (1 − 0.24)·25 + (1 − 0.2667)·15 = 56.4 + 19 + 11 = **86.4**`.
 
-## Implementations
-
-- PY: [`carrier_performance_score`](../../../services/calc/07_logistics_transportation/logistics.py)
-- TS: [`calculatePerformanceScore`](../../../packages/domain/src/07-logistics-transportation/domain/CarrierPerformance.ts)
-
 ## Governing rules
 
 - **LOG-R*** — carrier records period-stamped and soft-deleted (SCM-R3).

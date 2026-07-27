@@ -55,11 +55,6 @@ relations:
 Last drill 90 days ago (30), RTO met 80% (28), RPO met 60% (15), 1 open critical (0)
 → **73 = AMBER** — resolve the finding (+10) to reach GREEN before the next audit.
 
-## Implementations
-
-- PY: [`bcp_readiness_score`](../../../services/calc/10_risk_management/risk_model.py)
-- TS: [`openCriticalFindings`](../../../packages/domain/src/10-risk-management/domain/BCPDrill.ts)
-
 ## Governing rules
 
 - **RSK-R*** — drill lifecycle (plan→start→complete/fail, findings resolve) is

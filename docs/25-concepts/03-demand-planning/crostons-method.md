@@ -63,13 +63,6 @@ Otherwise both estimates carry forward unchanged. The forecast is:
 - t=4: z = 0.1·7 + 0.9·5 = **5.2**; p = 0.1·3 + 0.9·2 = **2.1**
 - forecast = 5.2 / 2.1 = **2.476** units/period
 
-## Implementations
-
-- PY: [`croston`](../../../services/calc/03_demand_planning/forecasting.py)
-
-> **Coverage gap:** no TypeScript implementation. Intermittent demand is therefore
-> unavailable to the TS domain layer — recorded as a follow-up in `program/WORKFLOW.md`.
-
 ## Governing rules
 
 - **DMD-R4** — forecast values are non-negative (guaranteed: inputs must be ≥ 0).

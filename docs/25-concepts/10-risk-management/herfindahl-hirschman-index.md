@@ -51,12 +51,6 @@ Spend shares 50%/30%/20% → `2500 + 900 + 400 = 3800` → **HIGH** — the 50% 
 a structural dependency; dual-sourcing to 35/35/30 drops HHI to 3350… still HIGH:
 concentration falls slowly, which is the point of the squared term.
 
-## Implementations
-
-- PY: [`herfindahl_hirschman_index`](../../../services/calc/10_risk_management/risk_model.py)
-- PY: [`hhi_risk_level`](../../../services/calc/10_risk_management/risk_model.py)
-- TS: [`herfindahlHirschmanIndex`](../../../packages/domain/src/10-risk-management/models/RiskModel.ts)
-
 ## Governing rules
 
 - **RSK-R*** — concentration findings feed the risk register with owner + strategy.

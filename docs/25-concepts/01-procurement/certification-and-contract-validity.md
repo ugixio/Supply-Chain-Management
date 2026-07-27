@@ -52,13 +52,6 @@ Today 2026-07-20, contract expiry 2026-09-30 → `daysLeft ≈ 72` → within (0
 `expiringSoon = true` (start the renewal). A cert with `expiresAt = 2026-07-01` → past →
 `isCertificationValid = false` (block use until renewed).
 
-## Implementations
-
-- TS: [`isCertificationValid`](../../../packages/domain/src/01-procurement/domain/Supplier.ts)
-- TS: [`isExpiringSoon`](../../../packages/domain/src/01-procurement/domain/Contract.ts)
-
-> **Coverage gap:** no Python implementation (pure date predicates, domain-side).
-
 ## Governing rules
 
 - **SCM-R9** — dates are ISO 8601, timestamps UTC; these predicates depend on that.

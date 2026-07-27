@@ -56,10 +56,6 @@ P0 = 1/(1 + 3.2 + 5.12 + 5.4613 + 21.8453) ≈ 0.02729.
 C = 21.8453 × 0.02729 ≈ 0.5962 → `Lq = 0.5962×0.8/0.2 ≈ 2.38` trucks,
 `Wq ≈ 0.298 h ≈ 18 min`.
 
-## Implementations
-
-- PY: [`mmc_queue`](../../../services/calc/06_warehouse_management/queueing.py)
-
 ## Governing rules
 
 - Advisory; executed door assignments follow the dock-appointment lifecycle (WHS-R2).

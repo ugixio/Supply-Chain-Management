@@ -59,11 +59,6 @@ Annual net 1,000 tCO₂e, even quarters → cumulative 250/500/750/1,000 →
 minimum holdings **125 / 250 / 375 / 1,000** certificates. A single import of
 226.92 tCO₂e with 20 tCO₂e-eq origin price → ⌈206.92⌉ = **207 certificates**.
 
-## Implementations
-
-- PY: [`certificates_required`](../../../services/calc/09_compliance_regulatory/cbam.py)
-- PY: [`quarterly_minimum_holding`](../../../services/calc/09_compliance_regulatory/cbam.py)
-
 ## Governing rules
 
 - **CMP-R*** — declaration evidence retention; SCM-R8 for the money leg (CPT-0102).

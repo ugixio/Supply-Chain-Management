@@ -54,14 +54,6 @@ n = 5 (A₂ = 0.577, D₄ = 2.114, d₂ = 2.326), X̄̄ = 10.02, R̄ = 0.45 →
 X̄ UCL/LCL = 10.02 ± 0.577×0.45 = **10.280 / 9.760**; R UCL = 0.951, LCL = 0;
 σ̂ = 0.45/2.326 = 0.1935.
 
-## Implementations
-
-- PY: [`xbar_r_control_limits`](../../../services/calc/08_quality_management/quality.py)
-
-> The TS `addSubgroup` (SPCChart.ts) applies the same constants incrementally as part of
-> the chart aggregate lifecycle; it is listed as an exclusion because the exported
-> symbol is the state transition, not the formula.
-
 ## Governing rules
 
 - Chart lifecycle (activate/deactivate/exclude-point) is state-machine law in the QMS

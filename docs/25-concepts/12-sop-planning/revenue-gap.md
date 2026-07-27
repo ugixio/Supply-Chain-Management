@@ -49,10 +49,6 @@ relations:
 Plan: 10,000 × 120 + 4,000 × 250 = 2.2M; budget 2.35M → **gap −150k** —
 the demand review either finds volume/mix or finance re-forecasts.
 
-## Implementations
-
-- PY: [`revenue_gap`](../../../services/calc/12_sop_planning/sop.py)
-
 ## Governing rules
 
 - **SOP-R*** — the executive S&OP records the gap decision (close/accept) per

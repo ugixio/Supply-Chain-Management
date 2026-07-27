@@ -1,22 +1,26 @@
 ---
 id: index-concepts
-title: "Concepts — the supply-chain calculation catalogue"
+title: "Concepts — the supply-chain standards catalogue"
 type: concept
 owner: orchestrator
 status: active
 since: 2026-07-20
-updated: 2026-07-20
+updated: 2026-07-27
 relations:
   - { type: part-of, target: index-docs }
   - { type: governed-by, target: index-adr }
   - { type: refines, target: glossary }
 ---
-# Concepts — the supply-chain calculation catalogue
+# Concepts — the supply-chain standards catalogue
 
-- **Belongs here:** one node per supply-chain **calculation or concept** (ADR-0015),
-  grouped by the department that owns its implementation. Each node carries the formula
-  with named symbols and units, its assumptions and non-applicability, a worked numeric
-  example, and verified links to the TypeScript and Python that compute it.
+- **Belongs here:** one node per supply-chain **concept** (ADR-0015, narrowed by ADR-0037),
+  grouped by the department it belongs to. A node carries what the concept *means*, the
+  formula where one is canonical, its named symbols and units, its assumptions and the cases
+  where it does not apply, and **the standard, regulation or identity that fixes it**.
+- **Never here (ADR-0037):** thresholds, targets, tolerances, weightings, rating bands, a
+  mandated method where several are legitimate, or a link to an implementation. Those are each
+  project's decision. Where a calculation needs values, the node names them under
+  **Project-chosen inputs** and leaves them unset.
 - **Authority (Tier 3):** these nodes define **what a term means**. They do not state
   law — invariants live in the Tier 4 `rule.md` of the owning department and are cited
   here by ID, never restated.
@@ -29,49 +33,43 @@ relations:
   not per-department.
 - **Template:** [program/templates/concept.md](../program/templates/concept.md).
 
-## What G10 cannot see
+## What the gate does and does not check
 
-G10 answers **"which code lacks a concept node"**. It is structurally blind to the
-opposite question — **"which domain concept lacks code"** — because it enumerates symbols
-found in `src/` and `python/`, and a concept nobody implemented has no symbol to find.
+**G10 checks provenance, not coverage.** It asserts that each node claims a unique `CPT-*`
+number, cites a source under `## References`, and carries no `## Implementations` section.
+Until ADR-0037 it asserted the opposite thing — that every public symbol in the application
+code had a node — which stopped meaning anything when that application was deleted.
 
-That second gap is real and material: extracting `03-demand-planning`'s business-context
-document (ADR-0016) surfaced **Forecast Value Added** (CPT-0024) and **safety-stock
-adequacy** (CPT-0025) — both required KPIs, neither implemented anywhere. A green G10 says
-the catalogue covers the code; it never says the code covers the domain. Concept nodes
-with `status: draft` and a `## Status — specified, NOT implemented` section carry that
-second kind of gap, and the U18 extraction is what finds them.
+What no gate can check is whether a node's *content* is genuinely externally fixed. A number
+copied out of a textbook example reads exactly like a standard. That judgement stays with the
+reviewer, and the anti-states in
+[30-foundation/scm-core/rule.md](../30-foundation/scm-core/rule.md) are the checklist for it.
 
-## Coverage status (read by gate G10)
+## Departments
 
-> `enforced` = every public calculation symbol in that department must have a concept
-> node or an explicit exclusion; G10 fails otherwise. `census` = G10 only reports the
-> gap, it does not fail. A department moves to `enforced` when its catalogue is complete.
-> The status keyword is parsed from the third column — keep the table shape.
-
-| # | Department | Coverage |
+| # | Department | |
 |---|---|---|
-| 03 | [03-demand-planning](03-demand-planning/_index.md) | enforced |
-| 01 | [01-procurement](01-procurement/_index.md) | enforced |
-| 02 | [02-supplier-management](02-supplier-management/_index.md) | enforced |
-| 04 | [04-supply-planning](04-supply-planning/_index.md) | enforced |
-| 05 | [05-inventory-management](05-inventory-management/_index.md) | enforced |
-| 06 | [06-warehouse-management](06-warehouse-management/_index.md) | enforced |
-| 07 | [07-logistics-transportation](07-logistics-transportation/_index.md) | enforced |
-| 08 | [08-quality-management](08-quality-management/_index.md) | enforced |
-| 09 | [09-compliance-regulatory](09-compliance-regulatory/_index.md) | enforced |
-| 10 | [10-risk-management](10-risk-management/_index.md) | enforced |
-| 11 | [11-finance-controlling](11-finance-controlling/_index.md) | enforced |
-| 12 | [12-sop-planning](12-sop-planning/_index.md) | enforced |
-| 13 | [13-order-management](13-order-management/_index.md) | enforced |
-| 14 | [14-supplier-development](14-supplier-development/_index.md) | enforced |
+| 03 | [03-demand-planning](03-demand-planning/_index.md)  |
+| 01 | [01-procurement](01-procurement/_index.md)  |
+| 02 | [02-supplier-management](02-supplier-management/_index.md)  |
+| 04 | [04-supply-planning](04-supply-planning/_index.md)  |
+| 05 | [05-inventory-management](05-inventory-management/_index.md)  |
+| 06 | [06-warehouse-management](06-warehouse-management/_index.md)  |
+| 07 | [07-logistics-transportation](07-logistics-transportation/_index.md)  |
+| 08 | [08-quality-management](08-quality-management/_index.md)  |
+| 09 | [09-compliance-regulatory](09-compliance-regulatory/_index.md)  |
+| 10 | [10-risk-management](10-risk-management/_index.md)  |
+| 11 | [11-finance-controlling](11-finance-controlling/_index.md)  |
+| 12 | [12-sop-planning](12-sop-planning/_index.md)  |
+| 13 | [13-order-management](13-order-management/_index.md)  |
+| 14 | [14-supplier-development](14-supplier-development/_index.md)  |
 
 ## How to extend
 
 1. Allocate the next `CPT-NNNN` in [id-registry §1](../00-governance/id-registry.md).
 2. Copy the template into `docs/25-concepts/<NN-dept>/<slug>.md`.
 3. Add its row to that department's `_index.md`.
-4. Run `make verify` — G10 checks the symbol links resolve and reprints the census.
+4. Run `make verify` — G10 checks the CPT number is unique and the source is cited.
 
 - **Governing refs:** `CLAUDE.md` · [ADR-0015](../10-decisions/README.md) ·
   [00-governance/knowledge-architecture.md](../00-governance/knowledge-architecture.md).

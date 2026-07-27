@@ -1,13 +1,17 @@
-//! U8 golden vectors — the **third** reader of `tests/golden/money.golden.json`.
+//! Golden vectors for the money core — `tests/golden/money.golden.json`.
 //!
-//! The same fixture is read by `tests/unit/golden-money.test.ts` (Jest) and
-//! `services/calc/tests/test_golden_money.py` (pytest). One file, three languages: a
-//! disagreement between the Rust core, the TypeScript that is being retired and the Python
-//! tools becomes a red build instead of a divergence discovered months later
-//! (ADR-0035 §5, ENG-R10.6).
+//! The fixture began as a cross-language contract, read by a Jest and a pytest suite as well as
+//! this one, to stop the three implementations from drifting apart. ADR-0037 deleted the other
+//! two along with the application that hosted them, so this is now the **only** reader.
 //!
-//! **These vectors must pass unchanged.** Editing the fixture to make this suite green is a
-//! rule violation, not a fix.
+//! The fixture is kept in its own file rather than inlined for two reasons that still hold: each
+//! vector carries a `why` explaining the case it protects (ties, the float trap, sum-preservation,
+//! two-step quantization), and a second language can pick it up unchanged if one ever needs the
+//! same arithmetic.
+//!
+//! **These vectors must pass unchanged.** Editing the fixture to make this suite green is a rule
+//! violation, not a fix — the vectors encode IEEE 754 tie behaviour and an apportionment identity
+//! (SCM-R14), neither of which is negotiable.
 
 #![allow(clippy::unwrap_used, clippy::expect_used)]
 

@@ -54,16 +54,6 @@ relations:
 SCAR issued 2026-07-01, ack due 2026-07-03, not acknowledged, now 2026-07-05 →
 `ack_overdue = true`, `days_open = 4`; 3 of 8 disciplines completed.
 
-## Implementations
-
-- TS: [`daysOpen`](../../../packages/domain/src/08-quality-management/domain/SCAR.ts)
-- TS: [`isAcknowledgementOverdue`](../../../packages/domain/src/08-quality-management/domain/SCAR.ts)
-- TS: [`isResponseOverdue`](../../../packages/domain/src/08-quality-management/domain/SCAR.ts)
-- TS: [`completedDisciplineCount`](../../../packages/domain/src/08-quality-management/domain/SCAR.ts)
-
-> `daysOpen` also exists on NCR (`NCR.ts`) with the same formula from `detectedDate`;
-> G10 matches the symbol name once.
-
 ## Governing rules
 
 - **SCM-R9** — ISO 8601/UTC dates; **SCM-R3** — NCR/SCAR records soft-delete only.

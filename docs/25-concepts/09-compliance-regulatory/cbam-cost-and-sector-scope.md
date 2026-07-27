@@ -56,11 +56,6 @@ HS-prefix → sector screen: 2523 CEMENT · 7201–7217 IRON_STEEL · 7601–761
 80,000¢ → **net 1,397,980¢ (€13,979.80)**. HS "7208.39" → 7208 ∈ 7201–7217 →
 IRON_STEEL, in scope.
 
-## Implementations
-
-- PY: [`cbam_compliance_cost`](../../../services/calc/09_compliance_regulatory/cbam.py)
-- PY: [`cbam_sector_from_hs_code`](../../../services/calc/09_compliance_regulatory/cbam.py)
-
 ## Governing rules
 
 - **SCM-R8** — integer-cent money (Decimal at P5); **CMP-R*** — declaration records.

@@ -61,10 +61,6 @@ CVRPTW: minimize Σ route distances subject to capacity per vehicle and
 (distances 148.2 + 121.7), one stop with an impossible 07:00–07:10 window dropped —
 signalling a window renegotiation, not a crash.
 
-## Implementations
-
-- PY: [`vrp_time_windows`](../../../services/calc/07_logistics_transportation/logistics.py)
-
 ## Governing rules
 
 - OSI-only (ADR-0002): OR-Tools Apache-2.0. Advisory; executed routes are LOG-R*

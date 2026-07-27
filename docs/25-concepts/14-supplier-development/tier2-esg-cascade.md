@@ -58,10 +58,6 @@ Tier-1 82; tier-2: (60% spend, 71), (40%, 55) → avg 64.6; coverage 70% →
 `0.6×82 + 0.4×64.6×0.7 = 49.2 + 18.1 = **67.3**`, penalty 0.30, gap list empty
 except coverage note if < 50.
 
-## Implementations
-
-- PY: [`tier2_esg_aggregation`](../../../services/calc/14_supplier_development/esg_scoring.py)
-
 ## Governing rules
 
 - **SDV-R*** — cascade records; CSDDD Art. 7–9 indirect business relationships

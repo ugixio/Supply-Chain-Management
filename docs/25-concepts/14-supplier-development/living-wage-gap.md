@@ -50,10 +50,6 @@ Standard 2,400/month, actual average 2,050 → `gap = (2400−2050)/2400 = 14.6%
 remediation plan territory; re-measure at the lowest job grade before declaring
 closure.
 
-## Implementations
-
-- PY: [`living_wage_gap`](../../../services/calc/14_supplier_development/esg_scoring.py)
-
 ## Governing rules
 
 - **SDV-R*** — remediation tracked on the record; CSDDD adequate-wage duty

@@ -5,7 +5,7 @@ type: concept
 owner: orchestrator
 status: active
 since: 2026-07-22
-updated: 2026-07-26
+updated: 2026-07-27
 relations:
   - { type: part-of, target: index-concepts }
   - { type: governed-by, target: index-adr }
@@ -13,19 +13,13 @@ relations:
 ---
 # Concepts — Finance & Controlling (11)
 
-> The calculation catalogue for `packages/domain/src/11-finance-controlling/` and
-> `services/calc/11_finance_controlling/`, plus the cross-cutting **money primitives** that
-> every department's cent arithmetic runs through (CPT-0154 — implemented in the Rust core,
-> `crates/scm-money`). Coverage is `enforced`. Law lives in
-> [40-contexts/11-finance-controlling/rule.md](../../40-contexts/11-finance-controlling/rule.md)
-> (`FIN-R*`); these nodes carry meaning and mathematics only.
-
-## What counts as a public calculation symbol
-
-`createInvoice` is a lifecycle constructor and `completionPct` (PeriodClose) is the
-close-checklist progress ratio — same arithmetic as CPT-0070, attached to the
-period-close state machine — both excluded. Matching, working-capital, costing,
-FX and investment mathematics are catalogued.
+> The concept catalogue for **Finance & Controlling (11)**: what each concept *means*,
+> the formula where one is canonical, its assumptions and limits, and the standard or
+> regulation that fixes it. Nodes **define**; they hold no threshold, target, weighting or
+> mandated method, and they own no code (ADR-0037). Values a project must choose are named
+> as project-chosen inputs and left unset.
+>
+> Departmental law lives in [40-contexts/11-finance-controlling/rule.md](../../40-contexts/11-finance-controlling/rule.md).
 
 ## Catalogue
 
@@ -54,20 +48,3 @@ FX and investment mathematics are catalogued.
 |---|---|---|
 | [CPT-0110](fx-revaluation.md) | FX revaluation (IAS 21) | Period-end retranslation |
 | [CPT-0112](npv-and-irr.md) | NPV & IRR | Capital project evaluation |
-
-## Not concepts (excluded from G10)
-
-> Lifecycle constructors / state-machine progress — governed by `rule.md` (FIN-R*).
-
-`createInvoice` · `completionPct`
-
-## Divergences surfaced (for the backlog)
-
-- **Three 3WM tolerance policies** (CPT-0103): PY dept 11 1%, TS invoice 2%, dept 01
-  0%/2% — one AP policy should govern (U8).
-- **C2C classification bands differ** (CPT-0104): PY GOOD ≤ 30 vs TS GOOD < 20;
-  zero denominators raise in PY, return 0 in TS.
-- **DIO duplicated** across depts 03 and 11 (CPT-0105 note) — dedup candidate.
-- **Cost-to-serve taxonomies differ** (CPT-0109): PY 5 elements vs TS 7
-  (customer support, credit risk).
-- **Unbudgeted spend escapes the explanation trigger** (CPT-0108) when budget = 0.

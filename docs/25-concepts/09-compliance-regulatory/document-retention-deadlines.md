@@ -51,12 +51,6 @@ relations:
 CSDDD assessment 2024-01-15 → retention to **2029-01-15**; on 2026-07-22 →
 915 days remaining.
 
-## Implementations
-
-- PY: [`retention_date`](../../../services/calc/09_compliance_regulatory/compliance.py)
-- PY: [`retention_expiry_date`](../../../services/calc/09_compliance_regulatory/compliance.py)
-- PY: [`days_to_retention_expiry`](../../../services/calc/09_compliance_regulatory/compliance.py)
-
 ## Governing rules
 
 - **SCM-R7** — CSDDD retention ≥ 5 years is the codified invariant this computes.

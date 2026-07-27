@@ -50,11 +50,6 @@ relations:
 probability 4, impact 4 → score 16 → PY **HIGH**, TS **CRITICAL** (the divergence in
 action).
 
-## Implementations
-
-- PY: [`calculate_risk_level`](../../../services/calc/10_risk_management/risk_model.py)
-- TS: [`calculateRiskLevel`](../../../packages/domain/src/10-risk-management/models/RiskModel.ts)
-
 ## Governing rules
 
 - **RSK-R*** — risk items carry score, level, strategy and owner; registers are

@@ -66,14 +66,6 @@ overall = 0.4·94.6 + 0.3·60.2 + 0.2·98.4 + 0.1·85 = **84.1** (APPROVED).
 - **PO variance:** TS multiplies variance% by 10 before inverting; PY expects a 0–1 rate.
 - **TS `dpmo` = `ppm`** (1 opportunity/unit simplification).
 
-## Implementations
-
-- PY: [`calculate_delivery_score`](../../../services/calc/02_supplier_management/scorecard.py)
-- PY: [`calculate_quality_score`](../../../services/calc/02_supplier_management/scorecard.py)
-- PY: [`calculate_commercial_score`](../../../services/calc/02_supplier_management/scorecard.py)
-- PY: [`calculate_overall_score`](../../../services/calc/02_supplier_management/scorecard.py)
-- TS: [`calculateKPIs`](../../../packages/domain/src/02-supplier-management/domain/SupplierScorecard.ts)
-
 ## Governing rules
 
 - **SUP-R*** (scorecard invariants) · **SCM-R3** — scorecards soft-delete only.

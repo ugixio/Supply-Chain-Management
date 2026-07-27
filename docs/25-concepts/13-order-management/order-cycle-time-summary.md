@@ -49,10 +49,6 @@ Order lines delivered +1, +3 days after request → min 1, max 3, avg 2.0, on_ti
 false (if no confirmed date) — one row of the frame; aggregate percentiles come from
 the caller.
 
-## Implementations
-
-- PY: [`order_cycle_time_summary`](../../../services/calc/13_order_management/order_metrics.py)
-
 ## Governing rules
 
 - **SCM-R9** — ISO dates; ORD lifecycle stamps the inputs.

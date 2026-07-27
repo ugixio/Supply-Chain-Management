@@ -60,16 +60,6 @@ relations:
 - sMAPE = (2/2) · [10/190 + 20/220] = 0.0526 + 0.0909 → mean of terms = **0.0718**
 - RMSE_model = 15.81; RMSE_naive = |120 − 100| = 20 → U2 = **0.79** → `BEATS_NAIVE`
 
-## Implementations
-
-- PY: [`wmape`](../../../services/calc/03_demand_planning/forecasting.py)
-- PY: [`smape`](../../../services/calc/03_demand_planning/forecasting.py)
-- PY: [`theil_u`](../../../services/calc/03_demand_planning/forecasting.py)
-- PY: [`accuracy_suite`](../../../services/calc/03_demand_planning/forecasting.py)
-
-> **Coverage gap:** no TypeScript implementations — the TS layer can only report the
-> three basic metrics of CPT-0008.
-
 ## Governing rules
 
 - **DMD-R4** — reported accuracy figures are non-negative.

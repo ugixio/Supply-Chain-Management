@@ -53,12 +53,6 @@ Utilisation `ρ = λ/μ` (must be < 1). Pollaczek–Khinchine mean queue length:
 λ = 4 trucks/h, μ = 5/h → ρ = 0.8. M/M/1: `Lq = 0.64/0.2 = 3.2`, `Wq = 0.8 h`.
 Same rates M/D/1: `Lq = 1.6`, `Wq = 0.4 h` — constant service halves the queue.
 
-## Implementations
-
-- PY: [`mm1_queue`](../../../services/calc/06_warehouse_management/queueing.py)
-- PY: [`md1_queue`](../../../services/calc/06_warehouse_management/queueing.py)
-- PY: [`mg1_queue`](../../../services/calc/06_warehouse_management/queueing.py)
-
 ## Governing rules
 
 - Advisory sizing mathematics; no domain invariant attaches until a recommendation is

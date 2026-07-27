@@ -5,7 +5,7 @@ type: concept
 owner: orchestrator
 status: active
 since: 2026-07-22
-updated: 2026-07-22
+updated: 2026-07-27
 relations:
   - { type: part-of, target: index-concepts }
   - { type: governed-by, target: index-adr }
@@ -13,17 +13,13 @@ relations:
 ---
 # Concepts — Logistics & Transportation (07)
 
-> The calculation catalogue for `packages/domain/src/07-logistics-transportation/`
-> and `services/calc/07_logistics_transportation/`. Coverage is `enforced`. Law
-> lives in
-> [40-contexts/07-logistics-transportation/rule.md](../../40-contexts/07-logistics-transportation/rule.md)
-> (`LOG-R*`); these nodes carry meaning and mathematics only.
-
-## What counts as a public calculation symbol
-
-`createShipment` and `addTrackingEvent` are shipment-lifecycle transitions —
-excluded. Pricing, emissions, customs, delivery KPIs, routing and mode selection are
-catalogued.
+> The concept catalogue for **Logistics & Transportation (07)**: what each concept *means*,
+> the formula where one is canonical, its assumptions and limits, and the standard or
+> regulation that fixes it. Nodes **define**; they hold no threshold, target, weighting or
+> mandated method, and they own no code (ADR-0037). Values a project must choose are named
+> as project-chosen inputs and left unset.
+>
+> Departmental law lives in [40-contexts/07-logistics-transportation/rule.md](../../40-contexts/07-logistics-transportation/rule.md).
 
 ## Catalogue
 
@@ -50,21 +46,3 @@ catalogued.
 | [CPT-0128](clarke-wright-savings.md) | Clarke–Wright savings | Quick capacitated routing |
 | [CPT-0129](vrp-time-windows.md) | VRPTW (OR-Tools) | Window-constrained routing |
 | [CPT-0130](transport-mode-selection.md) | Mode selection | Choosing road/sea/air/rail |
-
-## Not concepts (excluded from G10)
-
-> Lifecycle transitions — governed by `rule.md` (LOG-R*).
-
-`createShipment` · `addTrackingEvent`
-
-## Divergences surfaced (for the backlog)
-
-- **Two CO₂ factor tables in one module** (CPT-0123 vs CPT-0130): `EMISSION_FACTORS`
-  says SEA 0.010 / RAIL 0.028 / MULTIMODAL 0.045; `mode_selection`'s profiles say
-  0.008 / 0.022 / 0.030. Align on one source (GLEC v3).
-- **Minimum-charge floor is TS-only** (CPT-0124); PY freight cost has no floor and
-  an accessorial leg TS lacks.
-- **Hardcoded z = 1.645** in transit P95 (CPT-0127) vs ADR-0028 exact inverse
-  normal.
-- **`mode_selection` accepts `volume_m3` and ignores it** — no volumetric cost leg.
-- **Unknown transport mode silently prices as ROAD** in `calculate_co2_emissions`.

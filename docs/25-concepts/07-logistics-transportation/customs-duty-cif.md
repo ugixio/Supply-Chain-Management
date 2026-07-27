@@ -51,10 +51,6 @@ relations:
 FOB 100,000; insurance 800; freight 6,200 → CIF 107,000; MFN 6.5% →
 duty **6,955**; total landed 113,955.
 
-## Implementations
-
-- PY: [`customs_duty`](../../../services/calc/07_logistics_transportation/logistics.py)
-
 ## Governing rules
 
 - **LOG-R*** — customs declarations reference shipment records (SCM-R3 soft-delete).

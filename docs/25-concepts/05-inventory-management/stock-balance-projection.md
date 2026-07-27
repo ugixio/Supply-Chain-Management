@@ -53,11 +53,6 @@ relations:
 Events: receipt +100, issue −30, transfer-in +20, issue −50 → balance **40**.
 A further issue −45 raises in PY (would be −5); TS would project −5 to the map.
 
-## Implementations
-
-- PY: [`project_stock_balance`](../../../services/calc/05_inventory_management/stock_balance.py)
-- TS: [`projectStockBalance`](../../../packages/domain/src/05-inventory-management/domain/StockMovement.ts)
-
 ## Governing rules
 
 - **SCM-R1** — no negative stock without backorder authority; **SCM-R4** — every

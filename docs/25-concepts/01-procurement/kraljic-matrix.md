@@ -62,12 +62,6 @@ The item matters to the P&L but is low-risk to source → drive it through compe
 bidding. The TS side reaches the same quadrant if the caller passed `profitImpact=HIGH,
 supplyRisk=LOW`.
 
-## Implementations
-
-- TS: [`updateKrajlicClassification`](../../../packages/domain/src/01-procurement/domain/Supplier.ts)
-- PY: [`classify_kraljic`](../../../services/calc/01_procurement/kraljic.py)
-- PY: [`classify_portfolio`](../../../services/calc/01_procurement/kraljic.py)
-
 ## Governing rules
 
 - **PRC / SUP** — supplier classification drives the sourcing strategy; the quadrant is a

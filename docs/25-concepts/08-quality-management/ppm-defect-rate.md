@@ -49,12 +49,6 @@ relations:
 3 defective in 8,500 received → `3/8500 × 10⁶ = 352.94 PPM`; target 500 →
 variance −147.06 (good), meeting target if FPY bar also passes.
 
-## Implementations
-
-- PY: [`calculate_ppm`](../../../services/calc/08_quality_management/quality.py)
-- TS: [`ppmVarianceToTarget`](../../../packages/domain/src/08-quality-management/domain/QualityKPI.ts)
-- TS: [`isMeetingTarget`](../../../packages/domain/src/08-quality-management/domain/QualityKPI.ts)
-
 ## Governing rules
 
 - Feeds the supplier scorecard quality group (SUP rules) and QMS KPI records

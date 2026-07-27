@@ -54,11 +54,6 @@ relations:
 - t=1: level = 0.3·110 + 0.7·(100+10) = **110.0**; trend = 0.1·(110−100) + 0.9·10 = **10.0**
 - forecast = [110 + 1·10, 110 + 2·10] = **[120.0, 130.0]**
 
-## Implementations
-
-- TS: [`holtsLinearMethod`](../../../packages/domain/src/03-demand-planning/algorithms/Forecasting.ts)
-- PY: [`holts_linear_method`](../../../services/calc/03_demand_planning/forecasting.py)
-
 ## Governing rules
 
 - **DMD-R4** — forecast values, MAPE and MAE are non-negative. Note a long horizon on a

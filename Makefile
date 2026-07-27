@@ -1,20 +1,21 @@
 # Single command entry point (ADR-0012). Two speeds, one truth:
 #
-#   verify       FAST gate: doc gates + typecheck + unit tests + the Rust core tests — the
-#                AI runs this after EVERY layer, not only at the end.
-#   verify-full  The merge/CI gate: fast gate + the full jest suite + the Python money
-#                tests (U7 first enforced slice: services/calc/tests, stdlib-only — the
-#                heavy ML suite stays out of CI, risk register #6) + Rust fmt/clippy.
-#                eslint flat config still pending (U12).
+#   verify       FAST gate: doc gates + typecheck + the Rust tests — run after EVERY layer,
+#                not only at the end.
+#   verify-full  The merge/CI gate: the fast gate plus the lockfile check and Rust fmt/clippy.
 #
-# Toolchain: pnpm workspaces + Turborepo (ADR-0022) and a Cargo workspace for the Rust core
-# (ADR-0035). Never fork a second entry point: CI runs exactly `make verify-full`.
+# ADR-0037 deleted the invented SCM application, so the Jest and pytest targets went with the
+# code they tested. `typecheck` still guards the standards reference module in
+# `packages/shared`; `test-rs` guards `crates/scm-money`. Test targets come back when the
+# monitoring application has code worth testing — not before, and never as an empty runner.
+#
+# Never fork a second entry point: CI runs exactly `make verify-full`.
 
-.PHONY: verify verify-full doc-gates typecheck test-unit test test-py test-rs lint-rs
+.PHONY: verify verify-full doc-gates typecheck deps-locked test-rs lint-rs
 
-verify: doc-gates typecheck test-unit test-rs
+verify: doc-gates typecheck test-rs
 
-verify-full: verify test test-py lint-rs
+verify-full: verify deps-locked lint-rs
 
 doc-gates:
 	python3 tools/verify.py
@@ -22,18 +23,15 @@ doc-gates:
 typecheck:
 	pnpm -s exec tsc --noEmit
 
-test-unit:
-	pnpm -s exec jest tests/unit --silent
+# The lockfile must agree with every package.json — the exact invocation CI performs.
+# Added after a dependency was removed from a package.json without regenerating the lockfile:
+# the local gate passed (node_modules was already installed) and CI failed on the install step,
+# which the gate never exercised. A gate that skips what CI does is not a gate.
+deps-locked:
+	pnpm install --frozen-lockfile --ignore-scripts
 
-test:
-	pnpm -s exec jest --runInBand --silent
-
-test-py:
-	python3 -m pytest services/calc/tests -q
-
-# The Rust core (ADR-0035). Part of the FAST gate: its golden-vector suite reads the same
-# tests/golden fixture the Jest and pytest suites read, so a cross-language divergence in
-# money arithmetic fails here first (ENG-R10.6).
+# `crates/scm-money` — exact money arithmetic, the one piece of the old estate that carries no
+# policy (banker's rounding is IEEE 754; sum-preserving apportionment is a fixed method).
 test-rs:
 	cargo test --workspace --quiet
 

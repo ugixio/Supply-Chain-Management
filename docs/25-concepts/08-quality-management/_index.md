@@ -5,7 +5,7 @@ type: concept
 owner: orchestrator
 status: active
 since: 2026-07-22
-updated: 2026-07-22
+updated: 2026-07-27
 relations:
   - { type: part-of, target: index-concepts }
   - { type: governed-by, target: index-adr }
@@ -13,19 +13,13 @@ relations:
 ---
 # Concepts — Quality Management (08)
 
-> The calculation catalogue for `packages/domain/src/08-quality-management/` and
-> `services/calc/08_quality_management/`. Coverage is `enforced`. Law lives in
-> [40-contexts/08-quality-management/rule.md](../../40-contexts/08-quality-management/rule.md)
-> (`QMS-R*`); these nodes carry meaning and mathematics only.
-
-## What counts as a public calculation symbol
-
-The NCR and SCAR aggregates are **lifecycle/state machines** (detect→investigate→
-disposition→corrective action→verify→close; issue→acknowledge→8D→verify→close/escalate)
-— their transitions are excluded. The SPC chart's `addSubgroup` is likewise the chart
-aggregate's transition (it recomputes limits/Cp/Cpk incrementally using the mathematics
-of CPT-0053/0056/0058). What remains — sampling plans, defect rates, capability,
-quality costs, yields, control limits, run rules and cycle metrics — is catalogued.
+> The concept catalogue for **Quality Management (08)**: what each concept *means*,
+> the formula where one is canonical, its assumptions and limits, and the standard or
+> regulation that fixes it. Nodes **define**; they hold no threshold, target, weighting or
+> mandated method, and they own no code (ADR-0037). Values a project must choose are named
+> as project-chosen inputs and left unset.
+>
+> Departmental law lives in [40-contexts/08-quality-management/rule.md](../../40-contexts/08-quality-management/rule.md).
 
 ## Catalogue
 
@@ -53,25 +47,3 @@ quality costs, yields, control limits, run rules and cycle metrics — is catalo
 | [CPT-0054](cost-of-poor-quality.md) | Cost of Poor Quality | Money view of defects |
 | [CPT-0055](first-pass-and-rolled-yield.md) | FPY & RTY | Hidden-factory yield |
 | [CPT-0059](ncr-scar-cycle-metrics.md) | NCR/SCAR cycle metrics | SLA and 8D progress |
-
-## Not concepts (excluded from G10)
-
-> Aggregate lifecycle / state-machine transitions — governed by `rule.md` (QMS-R*), not
-> calculations. Listed so G10 coverage is exact.
-
-`createInspectionRecord` · `startInvestigation` · `setRootCause` · `setDisposition` ·
-`addCorrectiveAction` · `completeCorrectiveAction` · `verifyEffectiveness` · `setCosts` ·
-`close` · `voidNCR` · `softDelete` · `issue` · `acknowledge` · `submitContainment` ·
-`submitRootCause` · `submitCorrectiveAction` · `verify` · `reject` · `escalate` ·
-`addSubgroup` · `excludePoint` · `deactivate`
-
-## Divergences surfaced (for the backlog)
-
-- **σ estimator (CPT-0053)** — PY `process_capability` uses total sample σ (closer to
-  Pp/Ppk); TS `addSubgroup` uses within-subgroup R̄/d₂ (classical Cp/Cpk). Same names,
-  different estimators.
-- **AQL fidelity (CPT-0050)** — no ISO 2859-1 switching rules (normal↔tightened↔reduced);
-  PY hardcodes the AQL 1.0 table while TS carries 1.5/4.0 Ac/Re — align the families.
-- **C-chart approximation (CPT-0057)** — TS reuses p-chart limits for `C_CHART` type;
-  a real c-chart uses c̄ ± 3√c̄.
-- **DPMO rounding (CPT-0052)** — PY rounds 4 dp, TS returns raw float.

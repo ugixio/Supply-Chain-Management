@@ -48,10 +48,6 @@ relations:
 1.0 + 3.5 + 4.0 + 2.5 = **11.0 days**, with sourcing + manufacturing = 68% of the
 cycle — the compression target.
 
-## Implementations
-
-- PY: [`order_fulfillment_cycle_time`](../../../services/calc/02_supplier_management/scorecard.py)
-
 ## Governing rules
 
 - SCOR-DS metric definitions (ADR-0008 makes named standards first-class).

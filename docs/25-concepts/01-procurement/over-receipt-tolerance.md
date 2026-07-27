@@ -59,11 +59,6 @@ TS: the line's `requiresApproval` is `true`, `overReceiptPct = 6.0`, and `hasOve
 returns `true`. PY: `{status: "OVER_RECEIPT", variance_pct: 6.0, requires_approval: true}`.
 At `received = 104` both report within tolerance (104 ≤ 105).
 
-## Implementations
-
-- TS: [`hasOverReceipt`](../../../packages/domain/src/01-procurement/domain/GoodsReceipt.ts)
-- PY: [`receiving_tolerance_check`](../../../services/calc/01_procurement/receiving.py)
-
 ## Governing rules
 
 - **PRC-R3** — over-receipt beyond tolerance is flagged `requiresApproval` and never posts

@@ -61,13 +61,6 @@ handling 9,000 + non-rec tax 20,000 = **1,172,000¢**; 500 units → 2,344¢/uni
 Allocation BY_VALUE over lines 600k/300k/100k → 703,200 / 351,600 / 117,200¢ (sums
 exactly).
 
-## Implementations
-
-- PY: [`landed_cost`](../../../services/calc/11_finance_controlling/finance.py)
-- PY: [`allocate_landed_cost`](../../../services/calc/11_finance_controlling/finance.py)
-- TS: [`dutyAndTaxCents`](../../../packages/domain/src/11-finance-controlling/domain/LandedCost.ts)
-- TS: [`freightPerUnitCents`](../../../packages/domain/src/11-finance-controlling/domain/LandedCost.ts)
-
 ## Governing rules
 
 - **SCM-R8** — integer cents (Decimal at P5); **SCM-R4** — capitalization journals;

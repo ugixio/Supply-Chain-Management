@@ -48,10 +48,6 @@ relations:
 Costs 1.1M + 0.6M + 1.9M + 0.8M + 0.3M = 4.7M on 52M revenue → **9.04% →
 world_class**, with logistics 3.65% the dominant component.
 
-## Implementations
-
-- PY: [`sc_cost_as_pct_revenue`](../../../services/calc/11_finance_controlling/finance.py)
-
 ## Governing rules
 
 - **FIN-R*** — period cost records; SCM-R8 money.

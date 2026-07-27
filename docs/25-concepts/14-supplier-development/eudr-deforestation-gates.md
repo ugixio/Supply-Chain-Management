@@ -65,11 +65,6 @@ Cocoa, Côte d'Ivoire (code list: high-risk), certified, no geolocation →
 gate = REQUIRES_EVIDENCE. Under the official benchmark CI is standard-risk →
 certified suffices — the drift changes the verdict; parameter override shown.
 
-## Implementations
-
-- PY: [`deforestation_risk_gate`](../../../services/calc/14_supplier_development/esg_scoring.py)
-- PY: [`eudr_risk_classification`](../../../services/calc/14_supplier_development/esg_scoring.py)
-
 ## Governing rules
 
 - **SDV-R*/CMP-R*** — evidence retention (CPT-0096: EUDR 5 years); ADR-0008 named

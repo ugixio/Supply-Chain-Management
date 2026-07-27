@@ -58,11 +58,6 @@ relations:
 EOQ = √(2·10400·50/2) = 721 → **Q = 721**. (s,S) with R = 1: L' = 3 →
 s = 600 + 1.645·69.28 = 714 → S = 714 + 721 = **1,435**.
 
-## Implementations
-
-- PY: [`reorder_point_and_quantity`](../../../services/calc/05_inventory_management/stock_balance.py)
-- PY: [`sS_policy_parameters`](../../../services/calc/05_inventory_management/stock_balance.py)
-
 ## Governing rules
 
 - **ADR-0028** exact z; **SCM-R1** — the policy triggers orders; it never authorizes

@@ -55,10 +55,6 @@ Observed 3.2, LB(L=2, α=0.2) = 1.96 → excess 1.24. Orders show strong monthly
 (periodicity 0.6) → batching ≈ 0.37; corr = −0.4 → gaming ≈ 0.15; structural = 0.96 —
 batching is the lead suspect: attack order cycles before forecasting.
 
-## Implementations
-
-- PY: [`bullwhip_decomposition`](../../../services/calc/10_risk_management/risk_model.py)
-
 ## Governing rules
 
 - Advisory; interventions (VMI, batch-size changes) are planning/procurement decisions.

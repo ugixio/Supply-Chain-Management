@@ -53,11 +53,6 @@ n = 500: on-time 470 (94%), in-full 480 (96%), damage-free 495 (99%), docs 490 (
 → POI = 0.94×0.96×0.99×0.98 = **0.8755**. Worst factor on-time; to hit 0.95 target it
 would need 0.95/(0.8755/0.94) = 1.02 — impossible alone ⇒ multiple factors must move.
 
-## Implementations
-
-- PY: [`perfect_order_index`](../../../services/calc/13_order_management/perfect_order_and_agility.py)
-- PY: [`poi_gap_analysis`](../../../services/calc/13_order_management/perfect_order_and_agility.py)
-
 ## Governing rules
 
 - ADR-0029 — these metrics live in dept 13 (the old `07_order_management` dir is

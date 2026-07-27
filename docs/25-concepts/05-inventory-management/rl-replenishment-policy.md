@@ -56,12 +56,6 @@ Env calibrated to μ = 200/wk, L = 2; PPO 200k steps; benchmark over 10 episodes
 (s = 493, S = 1435): report mean cost per episode and fill rate for both — adopt RL
 only on a consistent cost win at equal-or-better service.
 
-## Implementations
-
-- PY: [`train_rl_policy`](../../../services/calc/05_inventory_management/rl_policy.py)
-- PY: [`predict_action`](../../../services/calc/05_inventory_management/rl_policy.py)
-- PY: [`benchmark_vs_classical`](../../../services/calc/05_inventory_management/rl_policy.py)
-
 ## Governing rules
 
 - OSI-only (ADR-0002): stable-baselines3 MIT; advisory — orders flow through

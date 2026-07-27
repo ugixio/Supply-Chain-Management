@@ -47,10 +47,6 @@ relations:
 Lane μ = 6.2 days, σ = 1.4 → `P95 = 6.2 + 1.645 × 1.4 = 8.50 days` — promise 9
 calendar days.
 
-## Implementations
-
-- PY: [`transit_time_p95`](../../../services/calc/07_logistics_transportation/logistics.py)
-
 ## Governing rules
 
 - **ADR-0028** — the z-score source this should adopt.

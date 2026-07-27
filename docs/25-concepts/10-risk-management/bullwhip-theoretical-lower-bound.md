@@ -52,10 +52,6 @@ Chen et al. (2000):
 L = 2, α = 0.3 → `LB = 1 + 2·0.6 + 0.36 = 2.56` — an observed ratio of 2.6 is nearly
 all structural; the fix is lead time or α, not more data sharing.
 
-## Implementations
-
-- PY: [`bullwhip_theoretical_lower_bound`](../../../services/calc/10_risk_management/risk_model.py)
-
 ## Governing rules
 
 - Advisory analytics feeding CPT-0076's decomposition.

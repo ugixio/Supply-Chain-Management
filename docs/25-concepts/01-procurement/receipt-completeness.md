@@ -50,12 +50,6 @@ PO line A ordered 100, line B ordered 40. A GRN received 106 of A and 40 of B:
 
 Had B received only 38, B fails (38 < 40) and the PO is not yet complete.
 
-## Implementations
-
-- TS: [`isFullyReceived`](../../../packages/domain/src/01-procurement/domain/GoodsReceipt.ts)
-
-> **Coverage gap:** no Python implementation.
-
 ## Governing rules
 
 - **PRC-R6** — GRN lifecycle is guarded; a PO closes only when its receipts reconcile.

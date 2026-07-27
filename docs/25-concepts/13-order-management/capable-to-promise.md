@@ -53,10 +53,6 @@ Request 120 by 07-30. ATP covers 120 first on 08-04 (too late). Lead time 6 days
 today 07-20 → production date 07-26 ≤ 07-30 → **CTP promise 07-26**, shortfall vs
 stock 20.
 
-## Implementations
-
-- PY: [`capable_to_promise`](../../../services/calc/13_order_management/order_metrics.py)
-
 ## Governing rules
 
 - **ORD-R*** — a promise date on the order comes from a governed promising path;

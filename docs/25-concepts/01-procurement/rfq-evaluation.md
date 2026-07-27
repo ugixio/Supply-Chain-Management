@@ -62,11 +62,6 @@ Two quotes, weights `price .4, quality .3, delivery .2, sustainability .1`:
     B (80,90,85,70): .4·80+.3·90+.2·85+.1·70 = 32+27+17+7 = 83.0
     ⇒ ranked [B 83.0, A 80.0] — B wins on the weighted blend despite a higher price.
 
-## Implementations
-
-- TS: [`evaluateQuotes`](../../../packages/domain/src/01-procurement/domain/RFQ.ts)
-- PY: [`evaluate_rfq`](../../../services/calc/01_procurement/kraljic.py)
-
 ## Governing rules
 
 - **PRC-R7** — RFQ evaluation-criteria weights must sum to exactly 100; the evaluation is

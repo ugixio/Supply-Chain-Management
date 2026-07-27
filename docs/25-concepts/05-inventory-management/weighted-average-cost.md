@@ -48,10 +48,6 @@ relations:
 
 Layers: 50 @ 1,000¢ + 150 @ 1,200¢ → WAC = (50,000 + 180,000)/200 = **1,150¢**.
 
-## Implementations
-
-- PY: [`weighted_average_cost`](../../../services/calc/05_inventory_management/stock_balance.py)
-
 ## Governing rules
 
 - **SCM-R8** money; **SCM-R4** — revaluation/issue journals.

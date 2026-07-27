@@ -54,31 +54,20 @@ PATH_BUDGETS = (
 TYPE_BUDGETS = {"skill": 1500, "rule": 1000, "concept": 700}
 ADR_INDEX_LINE = re.compile(r"^-\s+ADR-(\d{4})\s+—", re.M)
 
-# --- G10 — concept coverage (ADR-0015) ------------------------------------------------
+# --- G10 — standards provenance (ADR-0015 as narrowed by ADR-0037) --------------------
+#
+# G10 used to assert that every public symbol in the application code had a concept node.
+# ADR-0037 deleted that application: this repository is a *standards context*, not a
+# supply-chain product, so there is no code for the gate to police. What matters now is that
+# each concept node is traceable to something fixed outside this repository, and that no node
+# claims to own an implementation (a link into project code would invert the one-way rule,
+# ADR-0024).
 CONCEPTS_DIR = f"{DOCS_DIR}/25-concepts"
-# `- TS: [`symbolName`](relative/path.ts)` inside the `## Implementations` section.
-# `RS` is the Rust core (ADR-0035): as departments migrate, their symbols must stay linked
-# from their concept node exactly as the TS and PY ones do (ENG-R10.7).
-IMPL_BULLET = re.compile(
-    r"^\s*-\s*(TS|PY|RS):\s*\[`([A-Za-z_][A-Za-z0-9_]*)`\]\(([^)\s]+)\)"
-)
-# Coverage table rows in the concepts index: `| 03 | ... | enforced |`
-COVERAGE_ROW = re.compile(r"^\|\s*(\d{2})\s*\|[^|]*\|\s*(enforced|census)\s*\|", re.M)
-EXCLUSION_HEADING = "## Not concepts (excluded from G10)"
-BACKTICKED = re.compile(r"`([A-Za-z_][A-Za-z0-9_]*)`")
-# Public calculation symbols, by language.
-TS_EXPORT = re.compile(r"^export function (\w+)", re.M)
-PY_DEF = re.compile(r"^def (\w+)", re.M)
-RS_PUB_FN = re.compile(r"^pub fn (\w+)", re.M)
-# Department-scoped code, in any of the three languages. Rust department modules live at
-# `crates/<crate>/src/dNN_<key>/` — snake_case so the module name is Rust-legal, with the
-# stable department number preserved (ADR-0035). Language-agnostic crates (the money core)
-# are catalogued by their concept node instead of by path.
-DEPT_NUMBER = re.compile(
-    r"^(?:packages/domain/src|services/calc)/(\d{2})[-_]|^crates/[^/]+/src/d(\d{2})_"
-)
-# A concept node's CPT number, taken from its title: `# Title (CPT-0026)`.
+# A node's CPT number, taken from its title: `# Title (CPT-0026)`.
 CPT_IN_TITLE = re.compile(r"^#\s+.*\((CPT-\d{4})\)", re.M)
+# Sections a concept node must have, and must not have.
+REFERENCES_HEADING = "## References"
+IMPLEMENTATIONS_HEADING = "## Implementations"
 
 
 def section_body(text: str, heading: str) -> str:
@@ -96,57 +85,10 @@ def section_body(text: str, heading: str) -> str:
     return "\n".join(out)
 
 
-def defines_symbol(path: str, symbol: str) -> bool:
-    """True when `path` genuinely defines `symbol` (keeps the concept map from rotting)."""
-    try:
-        text = open(path, encoding="utf-8").read()
-    except OSError:
-        return False
-    if path.endswith(".ts"):
-        patterns = (rf"^export function {symbol}\b", rf"^export const {symbol}\b")
-    elif path.endswith(".rs"):
-        patterns = (
-            rf"^pub fn {symbol}\b",
-            rf"^pub const {symbol}\b",
-            rf"^pub struct {symbol}\b",
-            rf"^pub enum {symbol}\b",
-        )
-    else:
-        patterns = (rf"^def {symbol}\b", rf"^{symbol}\s*=")
-    return any(re.search(p, text, re.M) for p in patterns)
-
-
-def public_symbols(tracked):
-    """Public calculation symbols per department number: {'03': {('TS', name), ...}}."""
-    found = {}
-    for path in tracked:
-        match = DEPT_NUMBER.match(path)
-        if not match:
-            continue
-        if path.endswith(".ts") and not path.endswith(".d.ts"):
-            lang, pattern = "TS", TS_EXPORT
-        elif path.endswith(".py") and not path.endswith("__init__.py"):
-            lang, pattern = "PY", PY_DEF
-        elif path.endswith(".rs") and not path.endswith("/mod.rs"):
-            lang, pattern = "RS", RS_PUB_FN
-        else:
-            continue
-        try:
-            text = open(path, encoding="utf-8").read()
-        except OSError:
-            continue
-        number = match.group(1) or match.group(2)
-        for name in pattern.findall(text):
-            if name.startswith("_"):
-                continue
-            found.setdefault(number, set()).add((lang, name))
-    return found
-
-
 def is_allowlisted(path: str) -> bool:
     """Knowledge-architecture §3 — this repo's instantiated allowlist."""
-    if path in ("CLAUDE.md", "README.md", "services/calc/README.md",
-                "proto/README.md", "docs/standards/REGULATORY_FRAMEWORK.md"):
+    if path in ("CLAUDE.md", "README.md",
+                "docs/standards/REGULATORY_FRAMEWORK.md"):
         return True
     if path.startswith(".claude/") or path.startswith(".github/"):
         return True
@@ -234,7 +176,7 @@ class Gates:
             "G3": "ID uniqueness", "G4": "link integrity", "G5": "no orphans",
             "G6": "authority acyclicity", "G7": "status & supersession",
             "G9": "context budget & disclosure",
-            "G10": "concept coverage & symbol links",
+            "G10": "standards provenance (source cited, no owned code)",
         }
         ok = True
         for gate in sorted(names, key=lambda name: int(name[1:])):
@@ -461,69 +403,40 @@ def main() -> int:
                     gates.fail("G7", f"{path}: superseded-by '{target}' has status "
                                      f"'{target_status}' (needs active/archived)")
 
-    # G10 — concept coverage (ADR-0015): symbol links must resolve; enforced departments
-    # must have a concept node (or an explicit exclusion) for every public calculation.
-    covered, excluded, cpt_owner = {}, {}, {}
+    # G10 — standards provenance (ADR-0015 as narrowed by ADR-0037).
+    #
+    # A concept node earns its place by being traceable to something fixed outside this
+    # repository, and by NOT claiming to own code. Three checks:
+    #   1. one CPT number, one node — two files claiming an ID is how a concept silently forks;
+    #   2. every node cites a source (`## References`, non-empty);
+    #   3. no node carries an `## Implementations` section — implementations are a project's,
+    #      and a link into project code would invert the one-way rule (ADR-0024).
+    cpt_owner = {}
     for path, (meta, text) in docs.items():
-        if meta.get("type") != "concept":
+        if meta.get("type") != "concept" or not path.startswith(f"{CONCEPTS_DIR}/"):
             continue
-        dept = path.split("/")[2] if path.startswith(f"{CONCEPTS_DIR}/") else ""
-        number = dept[:2] if dept[:2].isdigit() else ""
-        if not path.endswith("_index.md"):
-            # One CPT number, one node. Two files claiming the same ID is how a concept
-            # silently forks: they drift, and a reader cannot tell which one is law.
-            for cpt in CPT_IN_TITLE.findall(text):
-                if cpt in cpt_owner:
-                    gates.fail("G10", f"{path}: {cpt} is already claimed by "
-                                      f"{cpt_owner[cpt]} — one concept, one node "
-                                      f"(id-registry §1)")
-                else:
-                    cpt_owner[cpt] = path
         if path.endswith("_index.md"):
-            for name in BACKTICKED.findall(section_body(text, EXCLUSION_HEADING)):
-                excluded.setdefault(number, set()).add(name)
             continue
-        base = os.path.dirname(path)
-        for line in section_body(text, "## Implementations").splitlines():
-            bullet = IMPL_BULLET.match(line)
-            if not bullet:
-                if line.strip().startswith("-"):
-                    gates.fail("G10", f"{path}: unparseable Implementations bullet "
-                                      f"{line.strip()!r} (see templates/concept.md)")
-                continue
-            lang, symbol, link = bullet.groups()
-            target = os.path.normpath(os.path.join(base, link))
-            if not os.path.exists(target):
-                continue  # G4 already reports the broken link; do not double-report
-            if not defines_symbol(target, symbol):
-                gates.fail("G10", f"{path}: {target} does not define '{symbol}'")
-            covered.setdefault(number, set()).add((lang, symbol))
 
-    census = []
-    concepts_index = docs.get(f"{CONCEPTS_DIR}/_index.md")
-    if concepts_index:
-        symbols = public_symbols(tracked)
-        for number, status in COVERAGE_ROW.findall(concepts_index[1]):
-            known = symbols.get(number, set())
-            gap = sorted(
-                name for lang, name in known
-                if (lang, name) not in covered.get(number, set())
-                and name not in excluded.get(number, set())
-            )
-            if not known:
-                continue
-            if status == "enforced" and gap:
-                gates.fail("G10", f"department {number} is 'enforced' but {len(gap)} "
-                                  f"public symbols have no concept node: "
-                                  f"{', '.join(gap[:8])}"
-                                  f"{' …' if len(gap) > 8 else ''}")
-            elif gap:
-                census.append(f"  dept {number}: {len(known) - len(gap)}/{len(known)} "
-                              f"symbols documented ({len(gap)} to catalogue)")
-    if census:
-        print("INFO G10 census (departments in 'census' mode — reported, not failed):")
-        for line in census:
-            print(line)
+        numbers = CPT_IN_TITLE.findall(text)
+        if not numbers:
+            gates.fail("G10", f"{path}: title carries no CPT number "
+                              f"(expected '# Title (CPT-NNNN)')")
+        for cpt in numbers:
+            if cpt in cpt_owner:
+                gates.fail("G10", f"{path}: {cpt} is already claimed by "
+                                  f"{cpt_owner[cpt]} — one concept, one node "
+                                  f"(id-registry §1)")
+            else:
+                cpt_owner[cpt] = path
+
+        if not section_body(text, REFERENCES_HEADING).strip():
+            gates.fail("G10", f"{path}: no '{REFERENCES_HEADING}' content — a node must cite "
+                              f"the standard, regulation or identity that fixes it (ADR-0037)")
+
+        if IMPLEMENTATIONS_HEADING in text:
+            gates.fail("G10", f"{path}: carries '{IMPLEMENTATIONS_HEADING}' — the context "
+                              f"defines concepts, it does not own their code (ADR-0037)")
 
     return gates.report(len(docs))
 

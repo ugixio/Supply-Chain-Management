@@ -55,10 +55,6 @@ relations:
 Base [1000, 1100, 1200], cv 0.2 → P10 ≈ [744, 818, 892], P90 ≈ [1256, 1382,
 1508] — the supply review pre-books overtime options against P90's Q3.
 
-## Implementations
-
-- PY: [`monte_carlo_demand_scenarios`](../../../services/calc/12_sop_planning/sop.py)
-
 ## Governing rules
 
 - **SOP-R*** — scenarios attached to the cycle record.

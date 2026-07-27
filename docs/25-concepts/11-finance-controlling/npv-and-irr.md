@@ -53,11 +53,6 @@ relations:
 Flows (¢): −10,000,000; +3,000,000 × 5 years; r = 10% →
 NPV = −10M + 3M×3.7908 = **+1,372,360¢** → accept; IRR ≈ 15.24% > hurdle.
 
-## Implementations
-
-- PY: [`npv`](../../../services/calc/11_finance_controlling/finance.py)
-- PY: [`irr`](../../../services/calc/11_finance_controlling/finance.py)
-
 ## Governing rules
 
 - **SCM-R8** — money precision; decision records for capital approvals (FIN-R*).

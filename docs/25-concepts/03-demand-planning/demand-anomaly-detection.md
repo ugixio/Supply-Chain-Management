@@ -65,10 +65,6 @@ Only the IQR test fires, so `is_anomaly = False`. This is masking in action: the
 outlier inflated σ enough to hide itself from the Z-test, and the AND rule let it through.
 Raise sensitivity by lowering `z_threshold`, or pre-clean with a robust estimator.
 
-## Implementations
-
-- PY: [`detect_demand_anomalies`](../../../services/calc/03_demand_planning/demand_sensing.py)
-
 ## Governing rules
 
 - **SCM-R3** — soft-delete only. Demand history judged anomalous is flagged and excluded

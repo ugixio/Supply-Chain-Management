@@ -55,10 +55,6 @@ CL = 10, σ = 0.2; last 3 means: 10.45, 10.05, 10.5 → z = 2.25, 0.25, 2.5 →
 two of last three beyond +2σ ⇒ **Rule 2 violation** at the last index (mean shift
 suspected) while no single point breaches 3σ.
 
-## Implementations
-
-- PY: [`western_electric_rules`](../../../services/calc/08_quality_management/quality.py)
-
 ## Governing rules
 
 - An out-of-control signal obliges investigation before capability is quoted

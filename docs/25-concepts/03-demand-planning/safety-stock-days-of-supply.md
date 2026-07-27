@@ -59,14 +59,6 @@ D̄ = 50 units/day, LT_avg = 7 days, LT_max = 10 days, planner cover = 5 days:
 
 Same SKU, same data, two different buffers — because they are two different methods.
 
-## Implementations
-
-- PY: [`safety_stock_days`](../../../services/calc/03_demand_planning/safety_stock.py)
-
-TypeScript had a duplicate until L3a; it was **deleted, not ported** — planning
-mathematics is Python's exclusive lane (ENG-R8 / ADR-0033). Python is now the sole
-owner, covered by `services/calc/tests/test_safety_stock.py`.
-
 ## Governing rules
 
 - **SCM-R1** — inventory never goes negative without `backorderAllowed`; safety stock is

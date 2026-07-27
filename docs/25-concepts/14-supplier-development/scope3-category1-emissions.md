@@ -58,11 +58,6 @@ relations:
 120 t steel + 3 t aluminium → `120,000/1000 × 1.85 + 3,000/1000 × 8.24 =
 222 + 24.72 = 246.72 tCO2e`.
 
-## Implementations
-
-- PY: [`calculate_scope3_cat1`](../../../services/calc/14_supplier_development/esg_scoring.py)
-- PY: [`scope3_category1_intensity`](../../../services/calc/14_supplier_development/esg_scoring.py)
-
 ## Governing rules
 
 - **SDV-R*** — emissions on the sustainability record; SCM-R8 for the spend leg.

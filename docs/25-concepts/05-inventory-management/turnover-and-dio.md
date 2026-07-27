@@ -39,11 +39,6 @@ relations:
 COGS 25.1M / avg inventory 4.0M → ITR 6.275 → DIO 58.2 days (same numbers as the
 CPT-0105 worked example, by construction).
 
-## Implementations
-
-- PY: [`inventory_turnover_ratio`](../../../services/calc/05_inventory_management/stock_balance.py)
-- PY: [`days_inventory_outstanding`](../../../services/calc/05_inventory_management/stock_balance.py)
-
 ## Governing rules
 
 - SSOT: semantics at CPT-0016/0017; referenced, not restated.

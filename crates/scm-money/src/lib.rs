@@ -1,16 +1,22 @@
-//! Exact money arithmetic for the SCM core.
+//! Exact money arithmetic.
 //!
-//! Money is **integer minor units** (cents). Every computation runs in exact decimal and
-//! quantizes with **`ROUND_HALF_EVEN`** at defined boundaries only — never a binary float,
-//! never an implicit round mid-calculation (SCM-R8 as rewritten by ADR-0019; ENG-R4).
+//! Money is **integer minor units**. Every computation runs in exact decimal and quantizes with
+//! **`roundTiesToEven`** at defined boundaries only — never a binary float, never an implicit
+//! round mid-calculation (SCM-R14, ENG-R4).
 //!
-//! This crate is the single owner of that arithmetic (ADR-0035, ENG-R10): it replaces the
-//! mirrored `decimal.js` implementation in `@scm/shared` and the `decimal.Decimal` one in
-//! `services/calc/shared`, which existed only because rules and models lived in two
-//! languages. Its correctness contract is the shared golden fixture
-//! `tests/golden/money.golden.json` (U8) — the same file the Jest and pytest suites read.
+//! # Why this crate survives ADR-0037
 //!
-//! No I/O, no framework, no async: the core is pure (ENG-R10.1).
+//! It carries **no policy**. Banker's rounding is fixed by IEEE 754-2019 §4.3.3, and
+//! largest-remainder apportionment is a fixed method whose defining property — the parts sum
+//! exactly to the whole — is an arithmetic identity, not a preference. There is no threshold,
+//! target or tolerance anywhere in it, so it passes the inclusion test that deleted the rest of
+//! the former application. Exact money arithmetic with no float ingress does not vary between
+//! projects.
+//!
+//! If the monitoring application turns out never to handle money, this crate should be deleted
+//! too rather than kept for its own sake.
+//!
+//! No I/O, no framework, no async: it is pure (ENG-R10).
 
 use std::error::Error;
 use std::fmt;
@@ -18,14 +24,14 @@ use std::fmt;
 use rust_decimal::prelude::ToPrimitive;
 use rust_decimal::{Decimal, RoundingStrategy};
 
-/// The one rounding mode for money in this system (ADR-0019 / ENG-R4).
+/// The one rounding mode for money: IEEE 754-2019 `roundTiesToEven` (SCM-R14, ENG-R4).
 ///
-/// Banker's rounding: ties go to the even neighbour, so a long run of quantizations does
-/// not drift upward the way `ROUND_HALF_UP` does.
+/// Ties go to the even neighbour, so a long run of quantizations does not drift upward the way
+/// half-up does.
 pub const MONEY_ROUNDING: RoundingStrategy = RoundingStrategy::MidpointNearestEven;
 
-/// Failures that money arithmetic can report. Typed, never stringly — these map onto the
-/// gRPC error codes declared in the proto contract (ADR-0035).
+/// Failures that money arithmetic can report. Typed rather than stringly, so a caller can match
+/// on the cause instead of parsing a message.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum MoneyError {
     /// A divisor was zero or negative. Division by a non-positive divisor has no

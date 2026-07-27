@@ -48,10 +48,6 @@ Previous smoothed 82.0, this period 61.0 (bad month), α = 0.3 →
 `S_t = 0.3×61 + 0.7×82 = 76.3` — still APPROVED; two more such months would cross into
 CONDITIONAL, correctly distinguishing trend from accident.
 
-## Implementations
-
-- PY: [`smooth_score`](../../../services/calc/02_supplier_management/scorecard.py)
-
 ## Governing rules
 
 - **SUP-R*** — rating decisions use governed scores; smoothing parameters are decision-

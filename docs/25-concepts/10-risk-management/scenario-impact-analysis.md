@@ -54,10 +54,6 @@ Per scenario:
 Revenue 500,000,000¢; scenario "port strike": p = 0.2, impact 40%, 14 days →
 worst case = 500M × 0.4 × 14/365 = 7,671,232¢; expected = 1,534,246¢/year.
 
-## Implementations
-
-- PY: [`scenario_impact_analysis`](../../../services/calc/10_risk_management/risk_model.py)
-
 ## Governing rules
 
 - **SCM-R8** — integer-cent money; **RSK-R*** — scenarios live in the governed

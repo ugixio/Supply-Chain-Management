@@ -58,12 +58,6 @@ EU company, 6,200 employees, €2.1B → PHASE_1 under the implemented model —
 in scope under Omnibus (above the single band). EU company, 1,200 emp, €500M →
 PHASE_3 as implemented, but **out of scope** under the 2026 amendment.
 
-## Implementations
-
-- PY: [`determine_csddd_phase`](../../../services/calc/09_compliance_regulatory/compliance.py)
-- TS: [`determineCSDDDPhase`](../../../packages/domain/src/09-compliance-regulatory/regulations/CSDDD.ts)
-- TS: [`hasCriticalImpacts`](../../../packages/domain/src/09-compliance-regulatory/regulations/CSDDD.ts)
-
 ## Governing rules
 
 - **SCM-R7 / CMP-R*** — 5-year document retention (CPT-0096) attaches once in scope.

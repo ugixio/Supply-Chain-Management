@@ -57,10 +57,6 @@ Net reqs [10, 0, 60, 30], EOQ 50: t1 order 50 (excess 40); t3: excess 40 < 60 �
 order 50 (excess 30); t4: 30 ≤ 30 → covered. Orders [50, 0, 50, 0] — 10 fewer
 than L4L's three orders, more holding.
 
-## Implementations
-
-- PY: [`apply_lot_sizing`](../../../services/calc/04_supply_planning/mrp.py)
-
 ## Governing rules
 
 - **SPL-R*** — lot rule is item-master policy, changed by decision.

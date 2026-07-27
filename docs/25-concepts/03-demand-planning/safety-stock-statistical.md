@@ -57,14 +57,6 @@ The √LT arises because the variances of LT independent daily demands add:
 - z = 1.65 (TS table) → ss = ⌈1.65 × 20 × √9⌉ = ⌈1.65 × 20 × 3⌉ = ⌈99.0⌉ = **99 units**
 - With the Python table (z = 1.645): 98.7 units — see CPT-0003 on the divergence.
 
-## Implementations
-
-- PY: [`safety_stock_statistical`](../../../services/calc/03_demand_planning/safety_stock.py)
-
-TypeScript had a duplicate until L3a; it was **deleted, not ported** — planning
-mathematics is Python's exclusive lane (ENG-R8 / ADR-0033). Python is now the sole
-owner, covered by `services/calc/tests/test_safety_stock.py`.
-
 ## Governing rules
 
 - **SCM-R1** — inventory never goes negative without `backorderAllowed`.

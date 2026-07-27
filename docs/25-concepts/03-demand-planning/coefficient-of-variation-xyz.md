@@ -62,15 +62,6 @@ Both implementations use identical thresholds, matching `CLAUDE.md`.
 
 Both land in X here; a series with CV near 0.10 would not.
 
-## Implementations
-
-- PY: [`coefficient_of_variation`](../../../services/calc/03_demand_planning/safety_stock.py)
-- PY: [`classify_xyz`](../../../services/calc/03_demand_planning/safety_stock.py)
-
-TypeScript had a duplicate until L3a; it was **deleted, not ported** — planning
-mathematics is Python's exclusive lane (ENG-R8 / ADR-0033). Python is now the sole
-owner, covered by `services/calc/tests/test_safety_stock.py`.
-
 ## Governing rules
 
 - **SCM-R11** — SKU codes are immutable; a reclassification changes the class field, never

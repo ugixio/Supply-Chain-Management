@@ -55,13 +55,6 @@ A → wave 1 (7L,50U). B: 7+5 = 12 > 10 ⇒ opens wave 2 (5L,40U). C: wave 1 giv
 wave 2 gives (9L,70U) ✓. D: wave 1 fits lines (10L) but 50+60 = 110 > 100; wave 2 gives
 12 lines ⇒ opens wave 3. Result: `[A] [B,C] [D]` — 3 waves.
 
-## Implementations
-
-- PY: [`optimize_wave`](../../../services/calc/06_warehouse_management/wave_optimizer.py)
-
-> The TS `planPickingWave`/`releaseWave` lifecycle consumes a wave produced here; it does
-> not re-derive the batching.
-
 ## Governing rules
 
 - **WHS-R1** — a wave is never planned or released with zero orders.

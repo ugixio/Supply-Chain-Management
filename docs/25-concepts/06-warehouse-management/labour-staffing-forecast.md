@@ -55,10 +55,6 @@ LPH history mean 90, 400 orders × 3 lines = 1,200 lines → `required_hours = 1
 `required_workers = ⌈13.33/8⌉ = 2`; 3 available → utilization 66.67%, surplus +1,
 `capacity_lines = 3×90×8 = 2,160`.
 
-## Implementations
-
-- PY: [`labor_forecast`](../../../services/calc/06_warehouse_management/wave_optimizer.py)
-
 ## Governing rules
 
 - **WHS-R3/WHS-R4** — the resulting tasks carry bounded priorities and non-negative

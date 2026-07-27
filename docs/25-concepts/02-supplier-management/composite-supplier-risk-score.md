@@ -56,10 +56,6 @@ financial 60, geo 70, single-source, util 95%, 2 flags →
 `0.35·40 + 0.25·70 + 0.15·100 + 0.15·(10/15·100) + 0.10·40 = 14 + 17.5 + 15 + 10 + 4 = 60.5`
 → **HIGH**, driven by geography + single-source (visible in `components`).
 
-## Implementations
-
-- PY: [`supplier_risk_score`](../../../services/calc/02_supplier_management/scorecard.py)
-
 ## Governing rules
 
 - **SCM-R6** — XUAR suppliers need clearance documentation regardless of this score.

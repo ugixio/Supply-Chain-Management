@@ -60,11 +60,6 @@ OH 50, SS 20, gross [40, 60, 30], receipts [0, 0, 0], L4L, LT 1:
 t1: avail 50, net = 40+20−50 = 10 → receipt 10 (release t0), OH 20.
 t2: net = 60+20−20 = 60 → receipt 60 (release t1). t3: net 30 → receipt 30.
 
-## Implementations
-
-- PY: [`run_mrp`](../../../services/calc/04_supply_planning/mrp.py)
-- TS: [`runMRP`](../../../packages/domain/src/04-supply-planning/domain/MaterialRequirement.ts)
-
 ## Governing rules
 
 - **SPL-R*** — MRP records lifecycle; planned orders become POs only through the

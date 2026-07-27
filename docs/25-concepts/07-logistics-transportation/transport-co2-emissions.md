@@ -51,10 +51,6 @@ relations:
 3,200 km road, 18 t → `3,200 × 18 × 0.062 = 3,571.2 kgCO₂e`; the same load by rail:
 1,612.8 — the classic modal-shift argument, quantified.
 
-## Implementations
-
-- PY: [`calculate_co2_emissions`](../../../services/calc/07_logistics_transportation/logistics.py)
-
 ## Governing rules
 
 - Reported figures feed ESG records (dept 14 Scope 3 Cat 1 is purchasing;

@@ -5,7 +5,7 @@ type: governance
 owner: orchestrator
 status: active
 since: 2026-07-19
-updated: 2026-07-26
+updated: 2026-07-27
 relations:
   - { type: part-of, target: index-governance }
   - { type: governed-by, target: knowledge-architecture }
@@ -19,7 +19,9 @@ relations:
 
 1. Take the next free number/key from the family table.
 2. Record the allocation in the same commit that uses it.
-3. Retired IDs stay listed as retired — never reassigned.
+3. Retired IDs stay listed as retired — never reassigned. **SCM-R1, R2, R5, R8, R11, R12 and
+   R13 are retired** (ADR-0037): they stated company policy or an engineering convention as
+   supply-chain law. They remain listed in their owning file so old citations resolve.
 
 ## 1. Rule-ID families — LIVE
 
@@ -27,7 +29,7 @@ relations:
 
 | Prefix | Area | Owning doc | Highest allocated |
 |---|---|---|---|
-| SCM | Cross-department core rules | `docs/30-foundation/scm-core/rule.md` | SCM-R13 |
+| SCM | Cross-department core rules (externally-fixed only) | `docs/30-foundation/scm-core/rule.md` | SCM-R14 |
 | PRC | 01-procurement | `docs/40-contexts/01-procurement/rule.md` | PRC-R8 |
 | SUP | 02-supplier-management | `docs/40-contexts/02-supplier-management/rule.md` | SUP-R4 |
 | DMD | 03-demand-planning | `docs/40-contexts/03-demand-planning/rule.md` | DMD-R8 |
@@ -52,7 +54,7 @@ relations:
 
 | Prefix | Area | Owning doc | Highest allocated |
 |---|---|---|---|
-| CPT | Supply-chain concepts & calculations | `docs/25-concepts/` (per-node files) | CPT-0154 |
+| CPT | Supply-chain concepts (definitions, no parameters — ADR-0037) | `docs/25-concepts/` (per-node files) | CPT-0154 |
 
 Allocated so far: **CPT-0001 … CPT-0154**. CPT-0001..0025 = dept 03 (demand-planning);
 CPT-0026..0035 = dept 01 (procurement); CPT-0036..0049 = dept 06 (warehouse management);
@@ -66,12 +68,15 @@ CPT-0113..0122 = dept 05 (inventory management);
 CPT-0123..0131 = dept 07 (logistics & transportation);
 CPT-0132..0138 = dept 14 (supplier development);
 CPT-0139..0146 = dept 04 (supply planning);
-**CPT-0147..0153 = dept 12 (S&OP planning)** — **all 14 departments `enforced`**
-(U14 rollout complete 2026-07-22; see
-[25-concepts/_index.md](../25-concepts/_index.md)). CPT-0024/0025 are `draft`
-(specified in the business-context document but not implemented, ADR-0016).
-**CPT-0154 = money quantization & sum-preserving allocation** (dept 11 catalogue; the
-cross-cutting primitive implemented in the Rust core — L2, ADR-0035).
+**CPT-0147..0153 = dept 12 (S&OP planning)**; **CPT-0154 = money quantization &
+sum-preserving allocation** (dept 11 catalogue). See
+[25-concepts/_index.md](../25-concepts/_index.md).
+
+> **Pending under ADR-0037:** the catalogue was written when nodes were allowed to carry
+> parameters and link to implementations. The implementation links are gone; the **parameter
+> sweep is outstanding** — nodes may still state a threshold, target or weighting that the
+> inclusion test forbids. Each node is corrected as it is next touched, and no gate can detect
+> this for you (see 25-concepts/_index.md "What the gate does and does not check").
 
 ## 2. Rule-ID families — RESERVED (future areas)
 
@@ -83,7 +88,7 @@ cross-cutting primitive implemented in the Rust core — L2, ADR-0035).
 ## 3. Decision (ADR) numbers
 
 - Format: `ADR-NNNN`, strictly increasing, allocated at proposal time.
-- Allocated: **ADR-0001 … ADR-0036** (see `docs/10-decisions/README.md`).
+- Allocated: **ADR-0001 … ADR-0037** (see `docs/10-decisions/README.md`).
   0001–0009 retroactive; 0010–0013 proposed at skeleton adoption; 0014 (MIT) accepted;
   0015 (concepts) / 0016 (business-context extraction) proposed; **0017–0021 proposed —
   the full-stack product decisions** (staging, Clean Architecture, Decimal money, gRPC
@@ -109,13 +114,17 @@ cross-cutting primitive implemented in the Rust core — L2, ADR-0035).
   TypeScript-owns-domain-logic clause of **ADR-0001** and **narrows ADR-0033**'s
   business-rules lane (owner: framework-free TypeScript → Rust), rewriting ENG-R1/ENG-R2 in
   part via **ENG-R10**. ADR-0030 **extends** (does not supersede) ADR-0017's staging;
-  ADR-0036 **extends** ADR-0034/0031/0035.
+  ADR-0036 **extends** ADR-0034/0031/0035; **ADR-0037** supersedes the two-language
+  SCM-application premise of **ADR-0001** and narrows ADR-0015/0016/0035 — the context carries
+  only externally-fixed standards, so the invented application was deleted.
 
 ## 4. Department / module keys
 
-The 14 department keys are fixed by the existing tree (`src/departments/NN-<key>/`,
-mirrored in `python/NN_<key>/` and `.claude/skills/<key>/`). They are stable IDs: never
-renumbered, never reused. New departments append (15+) via an ADR.
+The 14 department keys are fixed by `docs/25-concepts/NN-<key>/`,
+`docs/40-contexts/NN-<key>/` and `.claude/skills/<key>/`. They are stable IDs: never
+renumbered, never reused. New departments append (15+) via an ADR. *(The code trees they once
+mirrored — `packages/domain/src/NN-<key>/`, `services/calc/NN_<key>/` — were deleted by
+ADR-0037; the keys are unaffected.)*
 
 ## 5. Doc `id` conventions
 
@@ -126,4 +135,5 @@ renumbered, never reused. New departments append (15+) via an ADR.
 ## 6. Gate-invariant IDs (fixed)
 
 `G1`–`G8` name the knowledge-architecture §11 invariants. New gates append (G9+).
-Allocated: **G1–G10** (G9 context budget, ADR-0012; G10 concept coverage, ADR-0015).
+Allocated: **G1–G10** (G9 context budget, ADR-0012; G10 **standards provenance** — was concept
+coverage under ADR-0015, rewritten by ADR-0037 when the code it policed was deleted).

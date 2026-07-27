@@ -56,10 +56,6 @@ Two SKUs forecast 60 and 55; the total series independently forecasts 100 —
 incoherent (115 ≠ 100). With equal variances, MinT lands total ≈ 110, SKUs
 ≈ 57.5/52.5 — every level moved toward the evidence, and the sum is exact.
 
-## Implementations
-
-- PY: [`mint_reconcile`](../../../services/calc/12_sop_planning/sop.py)
-
 ## Governing rules
 
 - **SOP-R*** — the published S&OP numbers are the reconciled set (one-number

@@ -51,11 +51,6 @@ Revenue 10.0M, SC cost 8.8M → profit 1.2M. Fixed assets 5.0M, WC 3.0M →
 `ROPA = 1.2/8.0 = 15%`. Inventory 2.2M + AR 1.5M − AP 0.7M = 3.0M →
 `ROWC = 1.2/3.0 = 40%`.
 
-## Implementations
-
-- PY: [`return_on_physical_assets`](../../../services/calc/02_supplier_management/scorecard.py)
-- PY: [`return_on_working_capital`](../../../services/calc/02_supplier_management/scorecard.py)
-
 ## Governing rules
 
 - **SCM-R8** — money precision (Decimal migration applies to inputs).

@@ -56,11 +56,6 @@ secondary 0.6 · ammonia 2.09 · urea 0.709 · hydrogen SMR 9.0 · electricity 0
 120 t of BOF crude steel, no verified data → per_tonne 1.891 →
 **total = 226.92 tCO₂e** (direct only).
 
-## Implementations
-
-- PY: [`calculate_embedded_emissions`](../../../services/calc/09_compliance_regulatory/cbam.py)
-- PY: [`eu_default_emissions`](../../../services/calc/09_compliance_regulatory/cbam.py)
-
 ## Governing rules
 
 - **CMP-R*** — CBAM declarations and evidence retained; ADR-0008 named regulations

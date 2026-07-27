@@ -54,10 +54,6 @@ Spec 10.0 ± 0.3 (LSL 9.7, USL 10.3); sample μ = 10.05, σ = 0.075 →
 `Cp = 0.6/0.45 = 1.333` · `Cpu = 0.25/0.225 = 1.111` · `Cpl = 0.35/0.225 = 1.556` →
 **Cpk = 1.111** — potentially capable, but off-centre eats the margin.
 
-## Implementations
-
-- PY: [`process_capability`](../../../services/calc/08_quality_management/quality.py)
-
 ## Governing rules
 
 - Advisory analytics; acting on capability (blocking a supplier line) flows through NCR

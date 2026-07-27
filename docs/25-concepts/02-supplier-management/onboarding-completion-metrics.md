@@ -47,11 +47,6 @@ relations:
 10 items, 8 complete → 80.0%; the 2 open items are `required` (ISO 28000 cert, bank
 verification) → approval blocked despite 80%.
 
-## Implementations
-
-- TS: [`completionPct`](../../../packages/domain/src/02-supplier-management/domain/SupplierOnboarding.ts)
-- TS: [`pendingRequiredItems`](../../../packages/domain/src/02-supplier-management/domain/SupplierOnboarding.ts)
-
 ## Governing rules
 
 - **SUP-R*** — onboarding approval requires all required items (the state machine

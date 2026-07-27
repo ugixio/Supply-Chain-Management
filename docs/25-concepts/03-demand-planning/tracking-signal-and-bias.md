@@ -71,13 +71,6 @@ band, so the classification does not flip on rounding noise for large-volume SKU
 Note the two disagree by design: TS has not yet breached its control limit, while the
 mean error already shows a clear directional lean.
 
-## Implementations
-
-- PY: [`tracking_signal`](../../../services/calc/03_demand_planning/forecasting.py)
-- PY: [`forecast_bias`](../../../services/calc/03_demand_planning/forecasting.py)
-
-> **Coverage gap:** no TypeScript implementation — bias monitoring is Python-only.
-
 ## Governing rules
 
 - **DMD-R4** — MAE/MAPE stored on a run are non-negative. Note `mean_error` and

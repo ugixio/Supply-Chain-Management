@@ -5,7 +5,7 @@ type: rule
 owner: orchestrator
 status: active
 since: 2026-07-20
-updated: 2026-07-20
+updated: 2026-07-27
 relations:
   - { type: part-of, target: index-contexts }
   - { type: governed-by, target: index-adr }
@@ -13,28 +13,49 @@ relations:
 ---
 # Rules — Finance & Controlling
 
-> Invariants enforced in `src/departments/11-finance-controlling/` (landed cost, cost-to-serve,
-> budget variance, period close). Know-how lives in the allowlisted homes (`README.md`,
-> `IMPLEMENTATION.md`, `.claude/skills/finance-controlling/`). IDs append-only (family
-> `FIN`). This department is the strictest consumer of the money convention `SCM-R8`.
+> **A rule lives here only if something outside this repository fixes it** — a standards body, a
+> regulator, or an arithmetic identity (ADR-0037). Anything an organization can reasonably choose
+> is a **project decision** and is listed as such, never as an invariant. IDs are append-only
+> (family `FIN`); a retired ID stays listed so old citations resolve. Cross-department rules
+> (`SCM-R*`) are inherited, referenced never restated.
 
-## Invariants (NEVER violated — each verifiable by test)
+## Invariants (externally fixed — NEVER violated)
 
-- **FIN-R1:** Every monetary input across finance (landed-cost components, cost-to-serve
-  inputs, budget and actual amounts) must be an integer number of cents; a non-integer
-  monetary value is rejected (`LandedCost.ts`, `CostToServe.ts`, `BudgetVariance.ts`).
-- **FIN-R2:** Landed-cost quantity is strictly positive and each cost component is
-  non-negative.
-- **FIN-R3:** Period close is guarded — its state transitions validate the period status
-  before closing/reopening (`PeriodClose.ts`).
+- **FIN-R4:** Inventory is measured at the **lower of cost and net realisable value**, and cost
+  comprises purchase price, conversion, and the costs of bringing the item to its present location
+  and condition. **LIFO is not permitted.** *Source:* IAS 2 §§9–11, 25 (and IAS 2 §16 for what is
+  excluded — abnormal waste, most storage, most selling costs).
+- **FIN-R5:** Only **non-recoverable** taxes capitalize into inventory cost. Recoverable VAT or
+  GST is a receivable, not a cost of the goods, and capitalizing it overstates both inventory and
+  later cost of sales. *Source:* IAS 2 §11.
+- **FIN-R6:** An apportionment of a cost across lines **sums exactly to the cost apportioned** —
+  no currency unit is created or destroyed by rounding the parts. *An arithmetic identity;* see
+  SCM-R14 and CPT-0154.
 
-## Anti-states (the system must never allow)
+## Retired rules
 
-- A monetary value carried as a float or fractional cent (FIN-R1 / SCM-R8).
-- A negative landed-cost component or a non-positive costed quantity (FIN-R2).
+> Retired because they stated **project policy or an implementation detail** of code this
+> repository no longer contains (ADR-0037). Listed permanently so citations resolve.
+
+| ID | Was | Why retired |
+|---|---|---|
+| **FIN-R1** | "Every monetary input across finance is non-negative integer cents" | Money representation is an engineering concern (**ENG-R4**), and non-negativity is false in general: credits, reversals and adjustments are legitimately negative. |
+| **FIN-R2** | "Landed-cost quantity is strictly positive and each component is non-negative" | Field checks. The durable part is that per-unit cost needs a positive quantity, which is division, not policy. |
+| **FIN-R3** | "Period close is guarded — transitions validate the period status" | An invented lifecycle. |
+
+## Project decisions (the questions this department must answer for itself)
+
+- The **cost formula** among those IAS 2 permits: FIFO or weighted average, specific
+  identification where items are not interchangeable — applied consistently for similar items.
+- The **allocation basis** for landed cost: by value, by quantity, by weight, or mixed per
+  component (duty by value, freight by weight is often the accurate answer).
+- The **chart of accounts** and which accounts a movement maps to.
+- **Variance bands** — what counts as on-budget, and what must be explained.
+- The **close calendar** and its checklist.
+- **Standard cost revision frequency**, where standard costing is used.
 
 ## Inherited rules (referenced, not restated)
 
-- **SCM-R8** — Money is integer cents (this department's central invariant).
-- **SCM-R3** — invoices and financial records are soft-deleted only.
-- **SCM-R9** — accounting dates ISO 8601 / UTC.
+- **SCM-R4** — every inventory movement has its double-entry consequence.
+- **SCM-R14** — exact money, apportionment sums to the whole, ties to even.
+- **SCM-R3** — a posted entry is reversed, never deleted.

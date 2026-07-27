@@ -5,7 +5,7 @@ type: rule
 owner: orchestrator
 status: active
 since: 2026-07-20
-updated: 2026-07-20
+updated: 2026-07-27
 relations:
   - { type: part-of, target: index-contexts }
   - { type: governed-by, target: index-adr }
@@ -13,58 +13,52 @@ relations:
 ---
 # Rules — Procurement
 
-> The department's law: invariants the code in `src/departments/01-procurement/` already
-> enforces, made citable and testable. IDs are append-only (family `PRC`, id-registry §1).
-> Know-how lives in the allowlisted homes (`README.md`, `IMPLEMENTATION.md`,
-> `.claude/skills/procurement/SKILL.md`) — not restated here. Cross-department rules
+> **A rule lives here only if something outside this repository fixes it** — a standards body, a
+> regulator, or an arithmetic identity (ADR-0037). Anything an organization can reasonably choose
+> is a **project decision** and is listed as such, never as an invariant. IDs are append-only
+> (family `PRC`); a retired ID stays listed so old citations resolve. Cross-department rules
 > (`SCM-R*`) are inherited, referenced never restated.
 
-## Invariants (NEVER violated — each verifiable by test)
+## Invariants (externally fixed — NEVER violated)
 
-- **PRC-R1:** A purchase order must have at least one line item; creating an empty PO is
-  rejected (`PurchaseOrder.ts` createPurchaseOrder).
-- **PRC-R2:** The PO status machine is strict — a PO is approved only from `DRAFT` /
-  `PENDING_APPROVAL`, rejected only from `PENDING_APPROVAL`, sent to the supplier only
-  from `APPROVED`, and cancelled only from a non-terminal state. No transition skips a
-  state.
-- **PRC-R3:** A goods-receipt line receiving beyond `OVER_RECEIPT_TOLERANCE_PCT`
-  (default 5%) of the ordered quantity is flagged `requiresApproval`; over-receipt past
-  tolerance never posts silently (`GoodsReceipt.ts`).
-- **PRC-R4:** GRN inspection reconciles exactly: for every line
-  `acceptedQty + rejectedQty === receivedQty`. A mismatch is rejected (three-way-match
-  integrity).
-- **PRC-R5:** A GRN cannot be `POSTED` while any line is uninspected (`acceptedQty`
-  unset) — receipts post only against fully inspected quantities.
-- **PRC-R6:** GRN lifecycle is guarded: only `POSTED` GRNs can be reversed or closed, a
-  reversal requires a non-empty reason, and a GRN is soft-deleted only from
-  `CLOSED` / `REVERSED`.
-- **PRC-R7:** RFQ evaluation-criteria weights must sum to exactly 100 (`RFQ.ts`).
-- **PRC-R8:** A contract activates only from `DRAFT`, must carry at least one line item,
-  and its expiry date is strictly after its effective date (`Contract.ts`).
+- **PRC-R1:** A purchase order states a **quantity** for every line. An order without a stated
+  quantity is not an enforceable agreement to buy. *Source:* US UCC Article 2 (§2-201 requires the
+  quantity term; the others may be supplied by the code).
+- **PRC-R4:** Inspection **conserves** what arrived: for each received line,
+  `accepted + rejected = received`. Nothing evaporates between the dock and the ledger, and a
+  difference is missing information rather than a smaller receipt. *An arithmetic identity.*
+- **PRC-R7:** Evaluation weights in a quotation comparison are **normalized** — they sum to one
+  whole. Without that, two bids scored under differently-scaled weightings are not comparable.
+  *An arithmetic identity;* the scale (1.0 or 100) and the criteria are the project's.
+- **PRC-R8:** A contract's expiry is strictly **after** its effective date. An interval that ends
+  before it starts has no duration. *An identity.*
 
-## Mandatory validations
+## Retired rules
 
-- Received and ordered quantities on a GRN line must be `> 0`.
-- Accepted and rejected quantities on inspection must be `>= 0`.
+> Retired because they stated **project policy or an implementation detail** of code this
+> repository no longer contains (ADR-0037). Listed permanently so citations resolve.
 
-## Policies
+| ID | Was | Why retired |
+|---|---|---|
+| **PRC-R2** | "The PO status machine is strict — approved only from `DRAFT`/`PENDING_APPROVAL`…" | The named states and the transitions between them were one company's workflow. Whether an order needs approval at all, and what its states are called, is a project's design. |
+| **PRC-R3** | "Receiving beyond `OVER_RECEIPT_TOLERANCE_PCT` (default 5%) is flagged" | The tolerance is a contract term, and the default was invented. What survives is the *question*, below. |
+| **PRC-R5** | "A GRN cannot be `POSTED` while any line is uninspected" | Whether receipt requires inspection at all depends on the goods and the supplier relationship — many organizations post on receipt and inspect by sample. |
+| **PRC-R6** | "Only `POSTED` GRNs can be reversed or closed…" | A lifecycle guard over invented states. The durable part — a financial record is corrected by a further entry, never erased — is **SCM-R3**. |
 
-- `PO_APPROVAL_THRESHOLD_CENTS` (default $5,000) and `OVER_RECEIPT_TOLERANCE_PCT`
-  (default 5%) are configurable defaults; changing them is a policy decision, applied
-  forward, not retroactively.
+## Project decisions (the questions this department must answer for itself)
 
-## Anti-states (the system must never allow)
-
-- A PO sent to a supplier without passing `APPROVED` (violates PRC-R2 / SCM-R2).
-- A posted GRN whose inspected quantities do not reconcile (PRC-R4).
-- A hard-deleted PO, GRN or contract (SCM-R3).
+- The **approval threshold** and its levels, or whether purchase approval exists as a step.
+- The **over- and under-receipt tolerance** — a term of the supply contract, per supplier or per
+  category.
+- Whether receipt requires **inspection** before it posts, and on what sampling basis.
+- The **document lifecycle**: which states exist, and which transitions are legal.
+- The **evaluation criteria** for comparing quotations, and their weights (PRC-R7 fixes only that
+  they normalize).
 
 ## Inherited rules (referenced, not restated)
 
-- **SCM-R2** — a PO at or above the approval threshold enters `PENDING_APPROVAL`; the
-  boundary is "at or above" (see the procurement pitfall in the SKILL).
-- **SCM-R3** — POs, GRNs and contracts are financial records: soft-delete only.
-- **SCM-R6** — a supplier with XUAR operations must supply a UFLPA clearance document
-  reference before transacting (enforced in `Supplier.ts` createSupplier).
-- **SCM-R8 / R9 / R10** — Money is integer cents; dates ISO 8601 / UTC; quantities use
-  GS1 UOM codes.
+- **SCM-R3** — orders, receipts and contracts are financial records: corrected by reversal, never
+  destroyed.
+- **SCM-R6** — UFLPA: goods with a Xinjiang nexus are presumed made with forced labour.
+- **SCM-R9 / R10 / R14** — ISO 8601 dates; GS1 units; exact money with sum-preserving
+  apportionment.

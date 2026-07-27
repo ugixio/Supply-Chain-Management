@@ -466,8 +466,39 @@ mirror-coverage bar) · duplicated formulas across TS/Python with one past diver
   cannot see. Prose edits get read back; only structural edits get scripted.
   **C1c remaining:** a **Project-chosen inputs** section on every node that needs values — about
   a dozen have one now, out of 154.
-- ⬜ **C2 · WHAT** — Sweep the **department rule files** (`docs/40-contexts/*/rule.md`, families
-  `PRC-*` … `SDV-*`) with the same test. `SCM-R*` is done.
+- ✅ **C2 · WHAT** — **All 14 department rule families swept and rewritten (2026-07-27).** This was
+  where the bulk of the remaining problem sat, as suspected: the families had been extracted from
+  the `throw` guards of the deleted code, so most "invariants" were invented workflows or field
+  checks citing `.ts` files. Of **70** rules, **45 retired**, **25 survived**, **13 new IDs**
+  allocated for externally-fixed statements that had never been written down.
+  **What the sweep surfaced as genuinely fixed and previously unstated:** IAS 2's
+  lower-of-cost-and-NRV rule and its **LIFO prohibition** (FIN-R4) · that only *non-recoverable*
+  tax capitalizes into inventory cost (FIN-R5) · the Incoterms **sea-only** restriction on FAS/FOB/
+  CFR/CIF, so naming one for an air movement is an error not a shorthand (LOG-R1) · dangerous-goods
+  declaration per mode, a criminal matter rather than a data-quality one (LOG-R3) · chargeable
+  weight as the greater of actual and volumetric (LOG-R4) · that an **ISO 2859-1 plan is read from
+  the table, never interpolated**, because its operating-characteristic curve only holds for the
+  tabulated combinations (QMS-R5) · that accepting a *sample* is not accepting a lot (QMS-R6) ·
+  that a defect rate needs its **opportunity base** or PPM and DPMO get compared (QMS-R7) · that
+  EUDR country risk is **read from the Commission benchmark**, so a hardcoded list is wrong the
+  moment it is revised (SDV-R6) · that **absence of evidence is not evidence of compliance** — an
+  unevidenced supplier is *unknown*, and flooring it at a mid-range score converts silence into
+  adequacy (SDV-R5) · that a BOM must be **acyclic** or explosion never terminates (SPL-R1) · that
+  a reorder point **contains** its safety stock by definition (INV-R1) · that a perfect-order rate,
+  being a conjunction, is at most its worst component (ORD-R6) · and that an **ordinal product
+  stays ordinal**, so risk scores may not be averaged (RSK-R5).
+  **What was retired, by kind:** ~20 invented status machines and lifecycle guards · ~15 field
+  range checks (`confidencePct ∈ [0,100]`, priority `∈ [1,5]`, horizon `∈ [1,52]`) · 4 money
+  representation rules that belong to **ENG-R4** · the over-receipt tolerance and the
+  mandated-safety-stock-method rules, which were policy.
+  **Two corrections made during the sweep:** an ID must never be redefined — I first reused
+  `SUP-R2` for a new statement and had to reallocate it as `SUP-R5` (same for CMP-R1 → CMP-R4,
+  SDV-R3 → SDV-R6) — and my first count of the retirements was wrong; the registry now carries the
+  verified figures.
+- ⬜ **C2b · WHAT** — Several retired rules named a principle worth keeping *somewhere*: FIFO/FEFO
+  picking discipline, corrective-action effectiveness verification, immutability of a committed
+  plan. Each belongs to a concept node or a project's own process, not to a rule file — place them
+  deliberately rather than letting them vanish.
 - ⬜ **C3 · WHAT** — Retire citations of the retired `SCM-R1/R2/R5/R8/R11/R12/R13` across the
   estate (~40 files), and the prose that still describes deleted code trees.
 - ⬜ **C4 · WHAT** — Rewrite `docs/20-product-model/product-statement.md` and the department

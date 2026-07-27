@@ -15,9 +15,8 @@ relations:
 - **Belongs here:** one directory per department for its normative knowledge — `rule.md`
   (hard rules, stable IDs) and `specs/<key>.md` (unit-of-work specs). The departments'
   **know-how already exists in allowlisted homes** and is NOT moved (knowledge-architecture
-  §3): `src/departments/NN-<key>/README.md` (domain treatment), `IMPLEMENTATION.md`
-  (analytics playbook), `.claude/skills/<key>/SKILL.md` (agent skill),
-  `python/NN_<key>/` (models).
+  §3): the department's `.claude/skills/<key>/SKILL.md` (practice) and its concept nodes in
+  `docs/25-concepts/NN-<key>/` (meaning). No code tree backs these any more (ADR-0037).
 - **Knowledge map (existing homes ✓ · gaps ⬜):**
 
 | # | Department | Live rules | specs |
@@ -53,4 +52,4 @@ relations:
   - Cross-department rules live in `30-foundation/scm-core/rule.md` (SCM-Rx), inherited
     by every department — referenced, never restated.
   - Departments never read each other's internals; shared concepts live in `src/shared/`
-    + `python/shared/` and are governed by SCM-Rx.
+    and are governed by the `SCM-R*` family.

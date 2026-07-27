@@ -20,7 +20,7 @@ relations:
 ## Status — specified, NOT implemented
 
 **No implementation exists in TypeScript or Python.** This node is extracted from
-`03-demand-planning/IMPLEMENTATION.md` §10 (ADR-0016), where FVA is a required KPI with a
+the department's own planning specification, where FVA is a required KPI with a
 dashboard page, an S&OP escalation path and a governance action. Implementing it is
 backlog U18.
 

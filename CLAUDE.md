@@ -129,7 +129,7 @@ Dependencies stay OSI-licensed, commercially usable and modifiable (ADR-0002).
 
 ## Gates
 
-`make verify` — doc gates G1–G10, typecheck, Rust tests. Run after **every** layer.
+`make verify` — doc gates G1–G11, typecheck, Rust tests. Run after **every** layer.
 `make verify-full` — the merge gate: adds `cargo fmt --check` and `clippy -D warnings`.
 
 G1 no stray docs · G2 front-matter · G3 unique IDs · G4 link integrity · G5 no orphans ·

@@ -66,9 +66,9 @@ relations:
 
 | Prefix | Area | Owning doc | Highest allocated |
 |---|---|---|---|
-| CPT | Supply-chain concepts (definitions, no parameters — ADR-0037) | `docs/25-concepts/` (per-node files) | CPT-0154 |
+| CPT | Concepts — supply-chain and platform (definitions, no parameters — ADR-0037) | `docs/25-concepts/` (per-node files) | CPT-0160 |
 
-Allocated so far: **CPT-0001 … CPT-0154**. CPT-0001..0025 = dept 03 (demand-planning);
+Allocated so far: **CPT-0001 … CPT-0160**. CPT-0001..0025 = dept 03 (demand-planning);
 CPT-0026..0035 = dept 01 (procurement); CPT-0036..0049 = dept 06 (warehouse management);
 CPT-0050..0059 = dept 08 (quality management);
 CPT-0060..0070 = dept 02 (supplier management);
@@ -81,8 +81,10 @@ CPT-0123..0131 = dept 07 (logistics & transportation);
 CPT-0132..0138 = dept 14 (supplier development);
 CPT-0139..0146 = dept 04 (supply planning);
 **CPT-0147..0153 = dept 12 (S&OP planning)**; **CPT-0154 = money quantization &
-sum-preserving allocation** (dept 11 catalogue). See
-[25-concepts/_index.md](../25-concepts/_index.md).
+sum-preserving allocation** (dept 11 catalogue);
+**CPT-0155..0160 = platform delivery metrics** for the monitoring application (group
+`00-platform`, Phase M1) — one estate-wide family rather than a second catalogue, as the product
+statement fixes. See [25-concepts/_index.md](../25-concepts/_index.md).
 
 > **Swept under ADR-0037 (Phases C1a/C1b, 2026-07-27):** implementation links removed from all
 > nodes; every numeric threshold, target, weighting and rating band removed or attributed to the
@@ -90,8 +92,9 @@ sum-preserving allocation** (dept 11 catalogue). See
 > gate can check remains true — a number copied from a textbook example reads exactly like a
 > standard — so the anti-states in
 > [30-foundation/scm-core/rule.md](../30-foundation/scm-core/rule.md) stay the reviewer's
-> checklist. **Outstanding:** a `Project-chosen inputs` section on every node that needs values
-> (Phase C1c).
+> checklist. **Phase C1c/C1d complete:** 58 of 154 nodes carry a `Project-chosen inputs` table (the
+> rest are pure identities with no free parameter), and the per-language divergence sections — which
+> had been concealing rating bands and tolerances — are gone.
 
 ## 2. Rule-ID families — RESERVED (future areas)
 

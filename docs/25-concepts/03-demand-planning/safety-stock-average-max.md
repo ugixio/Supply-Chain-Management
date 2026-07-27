@@ -25,14 +25,16 @@ relations:
 | LT_max, LT_avg | Maximum and average lead time | days |
 | ss | Safety stock | units |
 
-Both implementations compute this identically. **Argument order differs** — TS takes
-`(maxLeadTimeDays, maxDailyDemand, avgLeadTimeDays, avgDailyDemand)`, Python takes
-`(avg_demand, max_demand, avg_lt, max_lt)`. Positional calls are not portable between
-them.
+Four arguments of two kinds, all positive and easy to transpose. **Pass them by name.** A
+demand/lead-time swap produces a plausible number rather than an error — `D_max · LT_max` is
+symmetric in appearance but not in meaning — so the mistake survives review and shows up as a
+buffer that is wrong in the wrong direction.
 
 ## Inputs and outputs
 
-- **Output:** integer units in TS (`Math.ceil`), float in Python.
+- **Output:** units. Whether the result is rounded, and when, is the caller's decision — but round
+  **once, at the end**: rounding the two products separately before subtracting can shift the
+  buffer by a unit in either direction.
 - No guard rejects `D_max < D̄` or `LT_max < LT_avg`; either produces a negative safety
   stock that the function returns without complaint.
 

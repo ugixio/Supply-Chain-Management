@@ -45,12 +45,14 @@ Per period t (Orlicky's logic):
   promise.
 - Safety stock inside the netting means MRP replans to restore the floor —
   standard, but it makes safety stock consume lot-sizing attention every run.
-- Multi-level correctness requires processing in low-level-code order
-  (CPT-0140) — the PY runner nets per SKU; the orchestration must feed parents
-  before components.
-- **Release-offset boundary:** an early-horizon requirement can demand a release
-  *before period 0* (past-due); PY offsets within the bucket array, TS subtracts
-  calendar days — both need the caller to catch releases in the past.
+- **Multi-level correctness requires low-level-code order** (CPT-0140). A netting routine that
+  works one SKU at a time is correct only if something upstream feeds it parents before their
+  components — otherwise a component is netted against demand its parent has not yet generated,
+  and the plan is quietly short.
+- **A release can fall before the horizon starts.** Offsetting an early requirement by its lead
+  time produces a past-due release, and whether it is offset in period buckets or in calendar days
+  the caller must still surface it: a release scheduled in the past is not a plan, it is a
+  shortage that already happened.
 - **Does not apply when:** demand is independent and stationary — (r,Q)/(s,S)
   (CPT-0120) is simpler and self-correcting.
 

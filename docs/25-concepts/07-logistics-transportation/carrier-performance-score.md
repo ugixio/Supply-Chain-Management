@@ -30,9 +30,11 @@ relations:
 
 ## Inputs and outputs
 
-- **Output:** score, 4 dp. TS and PY implement the identical formula (the PY
-  docstring states it deliberately mirrors the TS) — a rare already-converged
-  pair; pin it with a U8 golden vector before it drifts.
+- **Output:** the composite score, and the component scores it was built from — a single number
+  cannot show whether a carrier lost points on transit reliability or on damage.
+- Where the same composite is computed in more than one place, pin it with a shared golden vector
+  (`tests/golden/`): a weighted sum is exactly the kind of formula that drifts silently when one
+  copy gains a component.
 
 ## Assumptions and limits
 

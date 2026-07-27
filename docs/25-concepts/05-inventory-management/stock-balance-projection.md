@@ -46,17 +46,24 @@ relations:
 - Replay correctness depends on log immutability and idempotent writes
   (retry safety — an engineering concern, ENG-R\*) — a duplicated event silently doubles the balance; the idempotency key
   belongs to the write path, not this projection.
-- PY sorts by ISO timestamp string — same-timestamp events keep list order; make
-  event ordering deterministic upstream (sequence numbers) for audit-grade replay.
-- Full-log replay is O(N) — a snapshot+delta strategy is the standard optimization
-  once logs grow (not implemented; P7 territory).
+- **Timestamps are not an ordering.** Two movements sharing an instant replay in whatever order the
+  list happened to hold them, and the balance can differ between runs if any movement is refused on
+  a negative check. Audit-grade replay needs a monotonic sequence number, not only a timestamp
+  (SCM-R9 fixes the format, not the ordering).
+- Full-log replay is O(N); the standard optimization once logs grow is a periodic snapshot plus the
+  delta since. The snapshot is derived, never authoritative — it must be reproducible from the log.
 - **Does not apply when:** computing *available-to-promise* — reservations matter
   there (CPT-0085), not here.
 
 ## Worked example
 
 Events: receipt +100, issue −30, transfer-in +20, issue −50 → balance **40**.
-A further issue −45 raises in PY (would be −5); TS would project −5 to the map.
+
+A further issue of −45 would take the balance to −5, and **where that is caught is a design
+decision** (INV-R5): refusing the movement keeps the log always-valid but requires the writer to
+know the balance first, while letting the projection report −5 surfaces the gap that already exists
+upstream. A *reader* of an event log can honestly only do the latter — it cannot refuse a movement
+that was already recorded.
 
 ## Governing rules
 

@@ -30,8 +30,9 @@ relations:
 ## Inputs and outputs
 
 - **Inputs:** `SKUMetrics` records (ACV + demand history).
-- **Output:** `{sku_id: 'AX'…'CZ'}`. TS `updateABCXYZ` writes the result to the item
-  master (a governed setter, excluded from the catalogue).
+- **Output:** one cell per SKU, `AX`…`CZ`. Persisting it on the item master is a deliberate step,
+  not a side effect of computing it: the stored class is what policy reads, so it needs the same
+  reclassification discipline as the ABC dimension alone (CPT-0019).
 
 ## Assumptions and limits
 

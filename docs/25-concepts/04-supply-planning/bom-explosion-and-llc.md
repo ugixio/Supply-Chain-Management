@@ -56,7 +56,9 @@ elsewhere → LLC(tube) = 2; net it after frames.
 
 ## Governing rules
 
-- **SPL-R*** — BOM master data governed on the aggregate (`BillOfMaterials.ts`).
+- **SPL-R1** — a bill of materials is **acyclic**. Without that, requirement explosion never
+  terminates: it is a property of the graph, not a validation preference.
+- **SPL-R5** — netting conserves: what is required equals what is on hand plus what is planned.
 
 ## Related
 

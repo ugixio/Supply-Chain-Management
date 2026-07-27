@@ -17,11 +17,11 @@ relations:
 
 ## Formula — two different ones
 
-**The implementations do not compute the same thing.** This is a genuine divergence, not
-a rounding difference:
+**Two different formulas share this name.** Both are legitimate; they answer different questions,
+and a project must say which it means:
 
-    TypeScript:  ss = ⌈ D̄ · safetyDays ⌉
-    Python:      ss = D̄ · (LT_max − LT_avg)
+    (a) chosen cover:      ss = D̄ · cover_days
+    (b) lead-time spread:  ss = D̄ · (LT_max − LT_avg)
 
 | Symbol | Meaning | Unit |
 |---|---|---|
@@ -29,10 +29,11 @@ a rounding difference:
 | cover_days | days of demand the buffer is meant to cover — **project-chosen** | days |
 | LT_max, LT_avg | maximum and average lead time, when the cover is derived from lead-time spread | days |
 
-The TypeScript version buffers against a **freely chosen number of days**. The Python
-version buffers against **lead-time overrun only** — its cover is derived, not chosen,
-and it collapses to **zero** when lead time is perfectly stable. The two answer different
-questions and are not interchangeable. Recorded under U8 in `program/WORKFLOW.md`.
+Form **(a)** buffers against a **freely chosen** number of days — the planner's judgement, and it
+never collapses to zero. Form **(b)** buffers against **lead-time overrun only** — its cover is
+derived rather than chosen, which makes it defensible, but it goes to **zero** when lead time is
+perfectly stable, leaving no buffer for demand variability at all. The two are not
+interchangeable, and reporting one under the other's name is how a buffer silently disappears.
 
 ## Inputs and outputs
 

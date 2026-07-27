@@ -28,11 +28,14 @@ relations:
 
 ## Inputs and outputs
 
-- **TS `isOnTimeDelivery`:** tri-state boolean (`null` = in transit) — undelivered
-  shipments are excluded rather than failed, the opposite of CPT-0082's OTIF
-  treatment (recorded divergence: shipment-level OTD is measured on completions;
-  order-level OTIF punishes pending).
-- **PY `otd_rate`:** pre-counted numerator/denominator → percentage (4 dp).
+- **A shipment in transit is neither on time nor late, and the choice of how to treat it changes the
+  metric.** Three-valued at the shipment level — on time, late, or *not yet determined* — excludes
+  undelivered shipments from the rate. Order-level OTIF (CPT-0082) does the opposite and counts a
+  pending order as a miss. Both are defensible: one measures completed deliveries, the other
+  measures promises kept so far. **Excluding in-transit shipments flatters the rate**, so the basis
+  must be stated wherever the number is published — and the two figures will not reconcile.
+- **Output:** the rate, plus the counts behind it. A percentage with no denominator hides how few
+  deliveries it is based on.
 
 ## Assumptions and limits
 

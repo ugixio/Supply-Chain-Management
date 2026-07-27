@@ -12,9 +12,14 @@ relations:
 ---
 # FEFO Picking Order (CPT-0036)
 
-> First-Expired-First-Out — the lot sequencing rule that picks the lot closest to expiry
-> first, so shelf life is consumed before it is lost. Mandatory for food, pharma and any
-> lot-tracked item with `shelfLifeDays`.
+> First-Expired-First-Out — the lot sequencing discipline that picks the lot closest to expiry
+> first, so shelf life is consumed before it is lost.
+>
+> **What is externally fixed is the prohibition, not the method**: goods past their expiry may not
+> be placed on the market where date marking is law (food, pharmaceuticals, and any regime with a
+> use-by obligation). FEFO is the sequencing that makes complying with that cheap. **Whether a
+> project picks FEFO, FIFO or a specific lot is its decision** — the picking sequence is named as a
+> project decision in the warehouse and inventory rule files.
 
 ## Formula
 
@@ -30,16 +35,22 @@ relations:
 - **Inputs:** available lots with `expiry_date` and quantity.
 - **Output:** the same lots, re-ordered — earliest expiry first; ties broken by lot id so
   two runs over the same data always agree.
-- TS additionally **filters out** lots with `quantityAvailable ≤ 0` and sends lots with
-  **no expiry date to the back** of the sequence.
+- Two cases the sequence must handle explicitly: a lot with **nothing available** (excluded — it is
+  not a candidate) and a lot with **no expiry date**. Sending undated lots to the back is the safe
+  default, because treating a missing date as "expires first" ships unknown stock preferentially,
+  and treating it as "never expires" is a claim nobody made.
 
 ## Assumptions and limits
 
-- Expiry is the only freshness criterion — no account of customer-specific minimum
-  remaining shelf life (a common retail contract term; extend before serving such
-  customers).
-- **Does not apply when:** items are not lot-tracked (plain FIFO by receipt date is the
-  fallback) or when a customer order pins a specific lot.
+- Expiry alone is not always sufficient: many retail contracts require a **minimum remaining shelf
+  life on arrival**, so a lot that is legal to ship can still be a breach of contract. That
+  threshold is a contract term the project supplies.
+- **The discipline only holds if deviations are recorded.** A picker who takes the nearest pallet
+  instead of the earliest-expiring one produces a plan/actual gap that is invisible unless the
+  chosen sequence and the executed sequence are both kept — and adherence cannot be measured
+  otherwise.
+- **Does not apply when:** items are not lot-tracked (receipt-date FIFO is the usual fallback) or
+  when the order pins a specific lot.
 
 ## Worked example
 

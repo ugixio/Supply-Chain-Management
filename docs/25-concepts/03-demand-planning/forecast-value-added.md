@@ -17,12 +17,12 @@ relations:
 > forecasting process against the step before it, and frequently shows that manual
 > overrides destroy accuracy rather than add to it.
 
-## Status — specified, NOT implemented
+## Why this node exists
 
-**No implementation exists in TypeScript or Python.** This node is extracted from
-the department's own planning specification, where FVA is a required KPI with a
-dashboard page, an S&OP escalation path and a governance action. Implementing it is
-backlog U18.
+FVA asks the question a forecasting function is least likely to ask itself: **does any of this beat
+a naive baseline?** Effort is not evidence — a sophisticated model, a consensus meeting and a set
+of judgemental overrides can each make accuracy worse, and none of them will say so. FVA is the
+comparison that finds out, so it is catalogued even though it is the metric most commonly absent.
 
 This gap is invisible to gate G10, which reports code lacking a concept node — never a
 concept lacking code. See the note in `25-concepts/_index.md`.

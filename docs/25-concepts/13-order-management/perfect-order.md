@@ -21,8 +21,9 @@ relations:
     perfect(order) ⇔ OTIF(order) ∧ damage_free ∧ invoice_accurate
     POR% = |perfect orders| / |orders| × 100
 
-TS (`calculatePerfectOrderRate`) evaluates over **delivered/closed** orders only,
-reading the `isPerfectOrder` flag stamped by `markDelivered`.
+Whether an order was perfect can only be settled once it is closed — the invoice and any damage
+claim come after delivery. Stamping the verdict at closure and counting the stamps is equivalent to
+re-deriving it, provided the stamp is never applied to an open order.
 
 | Symbol | Meaning | Unit |
 |---|---|---|
@@ -32,10 +33,11 @@ reading the `isPerfectOrder` flag stamped by `markDelivered`.
 ## Inputs and outputs
 
 - **Inputs:** the orders in scope, each with the elements the definition counts.
-- **The basis must be closed orders only** — counting in-flight orders as imperfect penalizes
-  the metric for work not yet finished. An empty basis has no rate (returning zero would read as
-  total failure,
-  TS returns 0).
+- **The basis must be closed orders only** — counting in-flight orders as imperfect penalizes the
+  metric for work not yet finished.
+- **An empty basis has no rate.** A period with no closed orders is missing data, and returning
+  zero reads as total failure — the worst possible misreport, since it is indistinguishable from
+  every order failing.
 
 ## Assumptions and limits
 
@@ -46,8 +48,8 @@ reading the `isPerfectOrder` flag stamped by `markDelivered`.
   making AND-counted POR *higher* than the multiplied index).
 - Documentation accuracy is folded into `invoice_accurate` here; SCOR's four-factor
   version tracks docs separately (CPT-0084).
-- **Does not apply when:** orders are open — TS correctly excludes them; PY expects
-  the caller to pass a closed population.
+- **Does not apply when:** orders are still open — they are excluded, not failed, and the caller is
+  responsible for passing a closed population.
 
 ## Worked example
 

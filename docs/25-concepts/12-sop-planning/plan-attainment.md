@@ -31,9 +31,11 @@ relations:
 
 ## Assumptions and limits
 
-- Measure against the **frozen** plan version (the MPS as committed at the fence),
-  not the endlessly revised one — otherwise attainment is definitionally ~100%
-  and CPT-0146's stability index hides the churn this metric would have caught.
+- **Measure against the plan as committed, not as it now stands** (SOP-R5). This is not a
+  preference: a baseline that can still be edited makes the measurement unfalsifiable, and
+  attainment tends to 100% by construction while the churn moves out of sight. Whether a plan may
+  be revised at all is a project decision; that the *committed version stays identifiable* is what
+  makes attainment mean anything.
 - Aggregate PA can mask mix misses (110% of product A, 80% of B → 95% total);
   compute per item/family and roll up with a min- or mix-weighted view.
 - Count *good* output — scrap inflates attainment if gross output is used
@@ -48,7 +50,8 @@ the gap analysis goes to the S&OP supply review.
 
 ## Governing rules
 
-- **SOP-R*** — attainment reported per cycle on the published plan.
+- **SOP-R5** — attainment is measured against the plan as it stood when it was committed.
+  **SOP-R4** — that plan is the one plan demand, supply and finance all left the cycle with.
 
 ## Related
 

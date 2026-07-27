@@ -33,7 +33,8 @@ relations:
 ## Inputs and outputs
 
 - **Input:** `SupplierUFLPA` record.
-- **Output:** the four-level risk literal. TS `assessUFLPARisk` mirrors the ladder.
+- **Output:** the risk level, and the ladder step that produced it. A level with no stated basis
+  cannot be defended to a customs officer, which is the only audience that matters here.
 
 ## Assumptions and limits
 

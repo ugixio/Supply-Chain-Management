@@ -41,9 +41,10 @@ Sort by ACV descending, accumulate share `p`:
 - ACV ranks by **money**, not criticality — a cheap part that stops the line is C by
   ACV and critical by consequence; pair with a criticality dimension (Kraljic,
   CPT-0031) for control policy.
-- Cumulative-share classification is boundary-sensitive: SKUs near a break-point flip
-  class on small demand changes — hysteresis on reclassification avoids churn (not
-  implemented; the TS `updateABCXYZ` setter is where it would live).
+- Cumulative-share classification is boundary-sensitive: a SKU near a break-point flips class on a
+  small demand change, and each flip changes its control policy. Hysteresis — requiring a margin,
+  or a sustained period, before reclassifying — is what stops the churn, and it belongs wherever
+  the class is written rather than wherever it is computed.
 - **Does not apply when:** new SKUs with no history (classify provisionally by plan).
 
 ## Worked example

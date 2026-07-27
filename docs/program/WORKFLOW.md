@@ -401,8 +401,26 @@ mirror-coverage bar) · duplicated formulas across TS/Python with one past diver
 > a project's development produces the signal, and every metric is defined as a `CPT-*` node before
 > it is computed.
 
-- ⬜ **M1 · WHAT** — Define the delivery metrics as concept nodes: what each measures, from which
-  signal, with which units. **No targets** — a project sets its own (ADR-0037).
+- 🟩 **M1 · WHAT — the delivery metrics defined (2026-07-27).** Six nodes, **CPT-0155..0160**, in a
+  new `00-platform` group of the *same* catalogue — one place a project looks up what a number means,
+  as the product statement fixes, rather than a second catalogue for the platform.
+  **The four keys** (deployment frequency, lead time for changes, change failure rate,
+  failed-deployment recovery time) plus **Little's Law** and **flow efficiency**.
+  **The trap these metrics attract is the same one ADR-0037 corrected**, and it is named at the head
+  of the group: published delivery benchmarks come with performance bands — "elite", "high" — derived
+  from a survey population. *"Elite teams deploy on demand"* is a survey finding in exactly the way
+  *"world-class OTD ≥ 95%"* is a textbook illustration. **No node carries a band.**
+  **A second trap, named per node: these metrics are gameable in isolation**, and the gaming looks
+  like improvement. Deployment frequency rises if one change ships as five. Change failure rate falls
+  if the denominator inflates — the worked example shows the *same* 18 remediations reading as 4.5% or
+  22.5% purely from batch size. Lead time shortens if the start event moves later. Recovery time
+  shortens if detection gets *worse*. So each node states what it can be traded against, and the four
+  keys are documented as **two pairs** rather than four numbers.
+  **Little's Law is the one statement here that cannot be argued with** — an identity, given
+  stationarity — and it carries the consequence that matters: at fixed throughput, cycle time is
+  proportional to WIP, so starting more work in parallel makes items finish *later*, arithmetically.
+  Registry updated (the CPT family is no longer "supply-chain" only); the catalogue index now lists
+  **groups** rather than departments.
 - ⬜ **M2 · HOW** — The ClickHouse telemetry tier exactly as ADR-0036 fixes it: sort key
   `(project_id, metric, ts)`, monthly partitions, per-column codecs, the `AggregatingMergeTree`
   rollup cascade, raw TTL with long rollup retention, split-privilege users with quotas.

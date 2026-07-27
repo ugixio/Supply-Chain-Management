@@ -13,8 +13,9 @@ relations:
 ---
 # Concepts — the supply-chain standards catalogue
 
-- **Belongs here:** one node per supply-chain **concept** (ADR-0015, narrowed by ADR-0037),
-  grouped by the department it belongs to. A node carries what the concept *means*, the
+- **Belongs here:** one node per **concept** (ADR-0015, narrowed by ADR-0037) — the fourteen
+  supply-chain departments, plus **platform delivery metrics (00)** for the monitoring application.
+  One catalogue, not two: a project consults one place for what a number means. A node carries what the concept *means*, the
   formula where one is canonical, its named symbols and units, its assumptions and the cases
   where it does not apply, and **the standard, regulation or identity that fixes it**.
 - **Never here (ADR-0037):** thresholds, targets, tolerances, weightings, rating bands, a
@@ -45,10 +46,11 @@ copied out of a textbook example reads exactly like a standard. That judgement s
 reviewer, and the anti-states in
 [30-foundation/scm-core/rule.md](../30-foundation/scm-core/rule.md) are the checklist for it.
 
-## Departments
+## Groups
 
-| # | Department | |
+| # | Group | |
 |---|---|---|
+| 00 | [00-platform](00-platform/_index.md) | delivery metrics — the monitoring application |
 | 03 | [03-demand-planning](03-demand-planning/_index.md)  |
 | 01 | [01-procurement](01-procurement/_index.md)  |
 | 02 | [02-supplier-management](02-supplier-management/_index.md)  |
@@ -67,8 +69,8 @@ reviewer, and the anti-states in
 ## How to extend
 
 1. Allocate the next `CPT-NNNN` in [id-registry §1](../00-governance/id-registry.md).
-2. Copy the template into `docs/25-concepts/<NN-dept>/<slug>.md`.
-3. Add its row to that department's `_index.md`.
+2. Copy the template into `docs/25-concepts/<NN-group>/<slug>.md`.
+3. Add its row to that group's `_index.md`.
 4. Run `make verify` — G10 checks the CPT number is unique and the source is cited.
 
 - **Governing refs:** `CLAUDE.md` · [ADR-0015](../10-decisions/README.md) ·

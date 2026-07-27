@@ -47,10 +47,6 @@ relations:
 2/10 net 30 → d = 0.02, 20 days early → `EAR = (0.02/0.98) × (365/20) = 0.3724 →
 37.24%` — take it unless cash costs more than 37% annually.
 
-## Implementations
-
-- PY: [`dynamic_discounting_ear`](../../../services/calc/11_finance_controlling/finance.py)
-
 ## Governing rules
 
 - **FIN-R*** — payment-term decisions recorded against invoices (soft-deleted,

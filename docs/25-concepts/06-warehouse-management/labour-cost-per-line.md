@@ -46,10 +46,6 @@ relations:
 
 $54,000 labour (5,400,000¢) over 120,000 lines → `45¢/line` → benchmark met.
 
-## Implementations
-
-- PY: [`labour_cost_per_line`](../../../services/calc/06_warehouse_management/warehouse_kpis.py)
-
 ## Governing rules
 
 - **SCM-R8** — money enters as integer cents (Decimal after ADR-0019/P5).

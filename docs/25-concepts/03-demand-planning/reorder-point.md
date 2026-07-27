@@ -55,14 +55,6 @@ D̄ = 50 units/day, LT = 9 days, ss = 193 units (from CPT-0015):
 
 When the inventory position drops to 643, place an order of EOQ size.
 
-## Implementations
-
-- PY: [`reorder_point`](../../../services/calc/03_demand_planning/safety_stock.py)
-
-TypeScript had a duplicate until L3a; it was **deleted, not ported** — planning
-mathematics is Python's exclusive lane (ENG-R8 / ADR-0033). Python is now the sole
-owner, covered by `services/calc/tests/test_safety_stock.py`.
-
 ## Governing rules
 
 - **SCM-R1** — never allow negative inventory without `backorderAllowed`; the ROP is the

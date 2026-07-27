@@ -58,10 +58,6 @@ with method-of-moments parameters from the arithmetic mean/std:
 Two risks: (p=0.1, μ=1M, σ=0.5M), (p=0.05, μ=5M, σ=3M). Expected loss ≈ 0.35M, but
 VaR_95 lands near 2.5M and VaR_99 near 8M — the reserve question EAL cannot answer.
 
-## Implementations
-
-- PY: [`monte_carlo_var`](../../../services/calc/10_risk_management/risk_model.py)
-
 ## Governing rules
 
 - Advisory quantification for the risk register (RSK-R*).

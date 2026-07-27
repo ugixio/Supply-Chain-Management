@@ -54,13 +54,6 @@ relations:
 rate 250¢/kg, surcharge 18% → 534.4 × 250 × 1.18 = 157,648¢ → above a 50,000¢
 minimum ⇒ **157,648¢**.
 
-## Implementations
-
-- PY: [`chargeable_weight_air`](../../../services/calc/07_logistics_transportation/logistics.py)
-- PY: [`freight_cost`](../../../services/calc/07_logistics_transportation/logistics.py)
-- TS: [`calculateFreightCost`](../../../packages/domain/src/07-logistics-transportation/domain/TransportLane.ts)
-- TS: [`isValid`](../../../packages/domain/src/07-logistics-transportation/domain/TransportLane.ts)
-
 ## Governing rules
 
 - **SCM-R8** — TS integer cents; **LOG-R*** — shipments priced off valid lanes only.

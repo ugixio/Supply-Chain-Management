@@ -60,14 +60,6 @@ Requested 120 CMRTs, collected 84 → 70% (< 75%, inadequate; gap 36). One suppl
 declares RW origin → NOT_FOUND_DRC_CONFLICT_FREE → enhanced due diligence; FY 2025
 Form SD due **2026-05-31**.
 
-## Implementations
-
-- PY: [`rcoi_response_rate`](../../../services/calc/09_compliance_regulatory/compliance.py)
-- PY: [`classify_mineral_source`](../../../services/calc/09_compliance_regulatory/compliance.py)
-- PY: [`form_sd_filing_deadline`](../../../services/calc/09_compliance_regulatory/compliance.py)
-- PY: [`ipsa_required`](../../../services/calc/09_compliance_regulatory/compliance.py)
-- PY: [`supplier_cmrt_coverage`](../../../services/calc/09_compliance_regulatory/compliance.py)
-
 ## Governing rules
 
 - **CMP-R*** — evidence retention (CPT-0096) applies to CMRTs and RCOI records.

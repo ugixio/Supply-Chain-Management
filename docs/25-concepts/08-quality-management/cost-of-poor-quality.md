@@ -55,12 +55,6 @@ Per-NCR mapping (`copq_by_category` / TS `totalCopqCents`):
 NCRs: scrap 120,000¢ + rework 45,000¢ + freight 30,000¢; prevention 20,000¢, appraisal
 60,000¢ → COPQ = 275,000¢. Revenue 50,000,000¢ → **0.55%** of revenue.
 
-## Implementations
-
-- PY: [`copq`](../../../services/calc/08_quality_management/quality.py)
-- PY: [`copq_by_category`](../../../services/calc/08_quality_management/quality.py)
-- TS: [`totalCopqCents`](../../../packages/domain/src/08-quality-management/domain/NCR.ts)
-
 ## Governing rules
 
 - **SCM-R8** — money as integer cents/Decimal; **SCM-R3** — NCR cost records soft-delete

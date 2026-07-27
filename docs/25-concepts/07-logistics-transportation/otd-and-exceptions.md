@@ -51,12 +51,6 @@ relations:
 184 of 195 delivered shipments on time → `94.36%` — just under the 95% bar; the 11
 misses join the exception review queue.
 
-## Implementations
-
-- PY: [`otd_rate`](../../../services/calc/07_logistics_transportation/logistics.py)
-- TS: [`isOnTimeDelivery`](../../../packages/domain/src/07-logistics-transportation/domain/Shipment.ts)
-- TS: [`isException`](../../../packages/domain/src/07-logistics-transportation/domain/TrackingEvent.ts)
-
 ## Governing rules
 
 - **LOG-R*** — shipment lifecycle stamps the dates; SCM-R9 ISO dates.

@@ -51,10 +51,6 @@ RTO 24h, RPO 4h, MTPD 72h → valid (24 ≤ 72, 4 ≤ 24).
 RTO 96h, MTPD 72h → violation: recovery exceeds tolerance — re-engineer the recovery
 strategy or renegotiate the MTPD with the business.
 
-## Implementations
-
-- PY: [`validate_bcp_objectives`](../../../services/calc/10_risk_management/risk_model.py)
-
 ## Governing rules
 
 - **RSK-R*** — every BCP carries validated objectives before activation.

@@ -5,7 +5,7 @@ type: concept
 owner: orchestrator
 status: active
 since: 2026-07-22
-updated: 2026-07-22
+updated: 2026-07-27
 relations:
   - { type: part-of, target: index-concepts }
   - { type: governed-by, target: index-adr }
@@ -13,17 +13,13 @@ relations:
 ---
 # Concepts — Supplier Management (02)
 
-> The calculation catalogue for `packages/domain/src/02-supplier-management/` and
-> `services/calc/02_supplier_management/`. Coverage is `enforced`. Law lives in
-> [40-contexts/02-supplier-management/rule.md](../../40-contexts/02-supplier-management/rule.md)
-> (`SUP-R*`); these nodes carry meaning and mathematics only.
-
-## What counts as a public calculation symbol
-
-The onboarding aggregate is a **state machine** (initiate → checklist → submit →
-approve/reject/hold) — its transitions are excluded. Everything else — scorecard
-mathematics, ratings, segmentation, risk models (composite, NLP, GNN) and SCOR
-KPIs — is catalogued.
+> The concept catalogue for **Supplier Management (02)**: what each concept *means*,
+> the formula where one is canonical, its assumptions and limits, and the standard or
+> regulation that fixes it. Nodes **define**; they hold no threshold, target, weighting or
+> mandated method, and they own no code (ADR-0037). Values a project must choose are named
+> as project-chosen inputs and left unset.
+>
+> Departmental law lives in [40-contexts/02-supplier-management/rule.md](../../40-contexts/02-supplier-management/rule.md).
 
 ## Catalogue
 
@@ -52,21 +48,3 @@ KPIs — is catalogued.
 |---|---|---|
 | [CPT-0066](order-fulfillment-cycle-time.md) | OFCT (RS.1.1) | End-to-end responsiveness |
 | [CPT-0067](return-on-physical-assets-and-working-capital.md) | ROPA & ROWC (AM.1.2/1.3) | Asset-side SC performance |
-
-## Not concepts (excluded from G10)
-
-> Aggregate lifecycle / state-machine transitions — governed by `rule.md` (SUP-R*), not
-> calculations. Listed so G10 coverage is exact.
-
-`initiate` · `completeChecklistItem` · `submitForApproval` · `approve` · `reject` ·
-`hold` · `softDelete` · `createScorecard`
-
-## Divergences surfaced (for the backlog)
-
-- **PPM→score curve (CPT-0060)** — PY logarithmic vs TS linear; same PPM, different
-  quality score. The PY docstring's own example ("500 → ~85") contradicts its formula
-  (~32.5).
-- **PPM/DPMO duplicated** across depts 02 and 08 with different rounding (CPT-0063) —
-  dedup candidate.
-- **TS `dpmo = ppm`** — 1-opportunity simplification loses the DPMO distinction.
-- **PO-variance scaling** — TS `100 − variance%·10` vs PY `1 − rate`; unaligned.

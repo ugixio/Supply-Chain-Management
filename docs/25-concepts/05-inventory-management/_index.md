@@ -5,7 +5,7 @@ type: concept
 owner: orchestrator
 status: active
 since: 2026-07-22
-updated: 2026-07-22
+updated: 2026-07-27
 relations:
   - { type: part-of, target: index-concepts }
   - { type: governed-by, target: index-adr }
@@ -13,17 +13,13 @@ relations:
 ---
 # Concepts — Inventory Management (05)
 
-> The calculation catalogue for `packages/domain/src/05-inventory-management/` and
-> `services/calc/05_inventory_management/`. Coverage is `enforced`. Law lives in
-> [40-contexts/05-inventory-management/rule.md](../../40-contexts/05-inventory-management/rule.md)
-> (`INV-R*`); these nodes carry meaning and mathematics only.
-
-## What counts as a public calculation symbol
-
-`createStockMovement`, `createInventoryItem`, `discontinueItem` and `updateABCXYZ`
-are lifecycle transitions/setters on the event-sourced aggregates (ADR-0005) —
-excluded. Projections, classifications, valuation, replenishment policies and the RL
-agent are catalogued.
+> The concept catalogue for **Inventory Management (05)**: what each concept *means*,
+> the formula where one is canonical, its assumptions and limits, and the standard or
+> regulation that fixes it. Nodes **define**; they hold no threshold, target, weighting or
+> mandated method, and they own no code (ADR-0037). Values a project must choose are named
+> as project-chosen inputs and left unset.
+>
+> Departmental law lives in [40-contexts/05-inventory-management/rule.md](../../40-contexts/05-inventory-management/rule.md).
 
 ## Catalogue
 
@@ -51,20 +47,3 @@ agent are catalogued.
 | [CPT-0120](rq-and-ss-policies.md) | (r,Q) & (s,S) policies | Continuous/periodic replenishment |
 | [CPT-0121](newsvendor-models.md) | Newsvendor (+ price-setting) | Single-period buys |
 | [CPT-0122](rl-replenishment-policy.md) | RL policy (PPO/DQN) | Learned ordering, benchmarked |
-
-## Not concepts (excluded from G10)
-
-> Lifecycle transitions / governed setters — `rule.md` (INV-R*) territory.
-
-`createStockMovement` · `createInventoryItem` · `discontinueItem` · `updateABCXYZ`
-
-## Divergences surfaced (for the backlog)
-
-- **Negative-stock semantics (CPT-0113)** — PY replay raises on negative balance;
-  TS projection reports it. Writer-guard vs reader-projection: document as intended,
-  or align (U8).
-- **Turnover/DIO triplicated** across depts 03/05/11 (CPT-0116) — dedup candidate.
-- **(r,Q) hardcodes 52 periods/year** in EOQ annualization (CPT-0120).
-- **FIFO rounds per draw** (CPT-0118) — cent-drift property needs a golden vector.
-- **RL PPO env factory** reuses one env instance — vectorization is nominal
-  (CPT-0122).

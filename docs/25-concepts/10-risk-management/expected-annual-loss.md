@@ -51,11 +51,6 @@ PY: P = 0.15, impact 2,000,000 → EAL = 300,000/year.
 TS: scenario 10% probability, impact (2%, 5%, 12%) of 100M¢ revenue →
 PERT mean = (2+20+12)/6 = 5.67% → EAL = 0.10 × 0.0567 × 100M = 566,667¢.
 
-## Implementations
-
-- PY: [`expected_annual_loss`](../../../services/calc/10_risk_management/risk_model.py)
-- TS: [`expectedAnnualLoss`](../../../packages/domain/src/10-risk-management/models/RiskModel.ts)
-
 ## Governing rules
 
 - **SCM-R8** — TS output in integer cents context (Decimal at P5).

@@ -53,11 +53,6 @@ Revenue 180,000¢; costs 6,000 + 9,500 + 4,200 + 26,000 + 7,800 = 53,500¢ →
 margin 126,500¢ = **70.3%**, profitable. A returns-heavy customer with 62,000¢
 returns instead flips to −2%.
 
-## Implementations
-
-- PY: [`cost_to_serve`](../../../services/calc/11_finance_controlling/finance.py)
-- TS: [`byElement`](../../../packages/domain/src/11-finance-controlling/domain/CostToServe.ts)
-
 ## Governing rules
 
 - **FIN-R*** — CTS records per period/customer; SCM-R8 money.

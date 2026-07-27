@@ -56,15 +56,6 @@ level seeded from the season-1 mean. A 12-step forecast reuses the last 12 smoot
 seasonal indices in order — so `forecast[0]` reflects the same month position as
 `data[12]`.
 
-## Implementations
-
-- TS: [`holtWinters`](../../../packages/domain/src/03-demand-planning/algorithms/Forecasting.ts)
-- PY: [`holt_winters`](../../../services/calc/03_demand_planning/forecasting.py)
-
-> **Cross-language note:** the TypeScript version is a hand-rolled additive recursion; the
-> Python version delegates to `statsmodels.tsa.holtwinters.ExponentialSmoothing`. They are
-> not guaranteed to agree numerically (initialisation differs). Tracked as backlog U8.
-
 ## Governing rules
 
 - **DMD-R4** — forecast values, MAPE and MAE are non-negative.

@@ -54,10 +54,6 @@ MPS [500, 300] units; H = [[0.2, 0.5], [0.4, 0.1]] h/unit →
 load = [500·0.2 + 300·0.4, 500·0.5 + 300·0.1] = **[220, 280] hours** — if line 2
 demonstrates 250 h, the plan is infeasible before MRP runs.
 
-## Implementations
-
-- PY: [`rccp_load`](../../../services/calc/12_sop_planning/sop.py)
-
 ## Governing rules
 
 - **SOP-R*** — an S&OP cycle publishes a capacity-checked plan; CPT-0087's CTP

@@ -51,11 +51,6 @@ Picks in aisles {0, 2, 5}, depth 30 m → `3 × 2 × 30 = 180 m`.
 Sequence: aisle 0 ascending, aisle 2 descending, aisle 5: deepest pick at slot 4 →
 return = 8 < 30 ⇒ visit ascending and turn back.
 
-## Implementations
-
-- PY: [`s_shape_travel_distance`](../../../services/calc/06_warehouse_management/slotting.py)
-- PY: [`batch_pick_sequence`](../../../services/calc/06_warehouse_management/wave_optimizer.py)
-
 ## Governing rules
 
 - None direct — travel estimation is advisory; executing the route is a labor task under

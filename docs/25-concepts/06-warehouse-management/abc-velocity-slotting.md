@@ -62,13 +62,6 @@ S2 80%→PRIMARY, S3 95%→SECONDARY, S4 100%→BULK.
 same SKU list slots differently per language. Convergence is a U8/U15b-class owner call;
 until then Python is the analytical reference, TS the domain-side recommendation.
 
-## Implementations
-
-- PY: [`assign_abc_velocity_zones`](../../../services/calc/06_warehouse_management/slotting.py)
-- PY: [`calculate_slotting`](../../../services/calc/06_warehouse_management/slotting.py)
-- PY: [`slotting_effectiveness`](../../../services/calc/06_warehouse_management/warehouse_kpis.py)
-- TS: [`calculateSlotting`](../../../packages/domain/src/06-warehouse-management/domain/Warehouse.ts)
-
 ## Governing rules
 
 - Advisory output; executing a re-slot is labor work governed by WHS-R2 (task state

@@ -53,12 +53,6 @@ E: base 50 + SBTi 10 + renewables 30% → 6 + recycling 60% → 10 + EUDR 5 + ge
 waste 2.4 t → −5 = **81**. S: base 50 + policy 10 + UFLPA 10 + ISO 10 + LTIFR 0.6
 → 5, one fatality → −25 = **60**. G: 40 + 10×4 = **80**.
 
-## Implementations
-
-- PY: [`score_environmental`](../../../services/calc/14_supplier_development/esg_scoring.py)
-- PY: [`score_social`](../../../services/calc/14_supplier_development/esg_scoring.py)
-- PY: [`score_governance`](../../../services/calc/14_supplier_development/esg_scoring.py)
-
 ## Governing rules
 
 - **SDV-R*** — sustainability records lifecycle; SCM-R6 UFLPA documentation feeds

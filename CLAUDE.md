@@ -1,332 +1,152 @@
-# Supply Chain Management — Claude Code Guide
+# Supply Chain Management — Development Contract
 
-## Project Overview
-Enterprise Supply Chain Management system aligned with **SCOR Digital Standard (SCOR-DS)**,
-**ISO 28000:2022**, **Incoterms® 2020**, and major international regulations.
+## What this repository is
 
-Covers: Procurement · Inventory (event-sourced) · Logistics · Demand Forecasting ·
-Supplier Management · Quality Control · Warehouse Management · Compliance · Risk
+A **Global Context**: the source a project consults to learn **which supply-chain departments it
+needs and how to implement them**. It is not a supply-chain product and holds no company's data
+(ADR-0037).
 
----
+The one application built here is **monitoring** — real-time dashboards and delivery metrics over
+a project's development progress (ADR-0031/0034/0036). Everything else in this repository is
+knowledge: standards, department definitions, concepts, and the rules that keep all of it honest.
 
-## Architecture
+## The inclusion test — apply it to every change
 
-```
-src/
-├── shared/           # Types (Money, UOM, Incoterms), Event Store (CQRS/Event Sourcing)
-├── procurement/      # Purchase Orders (approval workflow), Supplier master (Kraljic)
-├── inventory/        # Inventory Item master (ABC-XYZ), Stock Movements (event log)
-├── demand-planning/  # Forecasting (SMA/SES/Holt/Holt-Winters), Safety Stock, EOQ
-├── supplier-management/ # Supplier Scorecard (OTD/OTIF/PPM/DPMO)
-├── logistics/        # Shipments, Incoterms 2020, Customs, Hazmat (IMDG/ADR)
-├── quality/          # Incoming Inspection (AQL ISO 2859-1), NCR, DPMO
-├── warehouse/        # WMS, FEFO lot picking, ABC Velocity Slotting, CPOI
-├── compliance/       # CSDDD 2024, UFLPA 2021, EU REACH 1907/2006
-└── risk/             # Risk matrix (5×5), HHI, Bullwhip effect, EAL
-```
+> A statement belongs here only if something **outside** this repository fixes it: a standards
+> body (GS1, ISO, ICC, UN/CEFACT, ASCM), a regulator (CSDDD, UFLPA, REACH, UCC), or an arithmetic
+> identity. **If an organization can reasonably choose it, it is project policy and does not
+> belong here.**
 
-**Patterns**: Event Sourcing + CQRS (inventory movements) · Saga-ready aggregates ·
-Domain-Driven Design bounded contexts · Immutable domain objects
+Policy has a recognizable shape: a threshold, a target, a tolerance, a weighting, a rating band, a
+service level, or a mandate to use one legitimate method over another. The context names the
+decision and the standard that constrains it, then **stops** — see
+`docs/30-foundation/scm-core/rule.md` §Project decisions.
 
----
+This test is why ~25,700 lines of invented application code were deleted, and it is the first
+thing to check when adding anything.
 
-## Domain Context
+## Anti-patterns (all of these happened here)
 
-### Key KPIs to Track
-- **OTD** (On-Time Delivery) — world-class ≥ 95%
-- **OTIF** (On-Time In-Full) — Walmart standard: 98%
-- **PPM/DPMO** — automotive <500 PPM; food ≤1000 PPM
-- **Inventory Turnover Ratio** = COGS / Avg Inventory
-- **DIO** (Days Inventory Outstanding) = 365 / Turnover Ratio
-- **Fill Rate** — orders fulfilled without backorder
-- **Bullwhip Ratio** = Var(orders) / Var(demand) — target ≈ 1.0
+- **Policy dressed as law.** A USD 5,000 approval threshold, a 5% receipt tolerance and a
+  40/30/20/10 scorecard weighting were once stated as binding rules. Every future project would
+  have inherited one company's habits as though they were standards.
+- **Invented data wearing a standard's name.** The unit list read `KG`, `L`, `M`. The real UN/ECE
+  Rec 20 codes are `KGM`, `LTR`, `MTR` — the invented shorthand was silently non-conformant.
+- **A default hidden in a signature.** `over_tolerance_pct: float = 5.0` is worse than a named
+  constant: it gets inherited without anyone deciding.
+- **A textbook example read as a specification.** "World-class OTD ≥ 95%" is an illustration, not
+  a requirement. Numbers from a reference get quoted as targets unless the node says otherwise.
 
-### SCOR-DS Process Mapping
-| SCOR | Module |
-|------|--------|
-| Plan | `demand-planning/`, `risk/` |
-| Source | `procurement/` |
-| Deliver | `logistics/`, `warehouse/` |
-| Return | `inventory/` (RETURN_FROM_CUSTOMER) |
-| Enable | `compliance/`, `supplier-management/` |
-
----
-
-## Tech Stack (mandatory — OSI open source only)
-
-### Languages
-- **TypeScript** — all domain logic, aggregates, business rules (`src/departments/`)
-- **Python ≥ 3.11** — all mathematical models, algorithms, and ML (`python/`)
-
-### Python Libraries (all OSI-licensed)
-
-| Category | Library | License | Use |
-|----------|---------|---------|-----|
-| Numerics | `numpy` | BSD-3 | Arrays, linear algebra |
-| Numerics | `scipy` | BSD-3 | Stats, optimization, signal |
-| Data | `pandas` | BSD-3 | Time series, DataFrames |
-| Stats | `statsmodels` | BSD-3 | ARIMA, regression, SPC |
-| ML | `scikit-learn` | BSD-3 | Classification, clustering, anomaly |
-| ML | `xgboost` | Apache-2.0 | Gradient boosting |
-| ML | `lightgbm` | MIT | Gradient boosting (fast) |
-| Deep Learning | `torch` (PyTorch) | BSD-3 | LSTM, Autoencoder, GNN |
-| Deep Learning | `tensorflow` | Apache-2.0 | LSTM, CNN, Keras API |
-| Forecasting | `prophet` | MIT | Time series with seasonality |
-| Forecasting | `statsforecast` | Apache-2.0 | SMA, ETS, ARIMA at scale |
-| RL | `stable-baselines3` | MIT | PPO, DQN, SAC agents |
-| RL | `ray[rllib]` | Apache-2.0 | Distributed RL |
-| Optimization | `pulp` | MIT | Linear programming |
-| Optimization | `scipy.optimize` | BSD-3 | Non-linear optimization |
-| Optimization | `ortools` | Apache-2.0 | VRP, scheduling (Google OR-Tools) |
-| Graph | `networkx` | BSD-3 | Graph analysis, HHI, cascade |
-| Graph | `torch-geometric` | MIT | Graph Neural Networks |
-| NLP | `transformers` | Apache-2.0 | BERT, DistilBERT (HuggingFace) |
-| NLP | `spacy` | MIT | NLP pipeline, NER |
-| Computer Vision | `ultralytics` | AGPL-3.0 | YOLOv8 |
-| Computer Vision | `opencv-python` | Apache-2.0 | Image processing |
-| Geo/Satellite | `rasterio` | BSD-3 | Raster satellite imagery |
-| Geo/Satellite | `geopandas` | BSD-3 | Geospatial data |
-| OCR | `pytesseract` | Apache-2.0 | OCR (wraps Tesseract OSI) |
-| Simulation | `simpy` | MIT | Discrete event simulation (Digital Twin) |
-
-### Prohibited (non-OSI or proprietary)
-- ❌ AWS Textract → use `pytesseract` + `pdfplumber`
-- ❌ Google Earth Engine (commercial) → use `rasterio` + Copernicus open API
-- ❌ AnyLogic (commercial) → use `simpy`
-- ❌ Neo4j (SSPL, non-OSI from v4+) → use `networkx` + `torch-geometric`
-- ❌ Elasticsearch v7.11+ (SSPL) → use `opensearch-py` (Apache-2.0)
-- ❌ SageMaker → use local PyTorch / TensorFlow
-
-### Node.js / TypeScript Libraries
-All existing dependencies in `package.json` are OSI-compliant (MIT/BSD/Apache).
-
----
-
-## Project Structure
+## Layout
 
 ```
-Supply-Chain-Management/
-├── src/
-│   ├── shared/          # Shared types, Event Store
-│   └── departments/     # 14 departments (TypeScript domain logic)
-│       ├── 01-procurement/
-│       │   ├── domain/       # PurchaseOrder.ts, Supplier.ts, Contract.ts, RFQ.ts
-│       │   └── README.md
-│       └── ... (02-14)
-├── python/              # Python mathematical models and ML
-│   ├── shared/          # Common utilities (dates, money, logging)
-│   ├── 01_procurement/
-│   ├── 02_supplier_management/
-│   └── ... (03-14)
-├── tests/               # TypeScript unit tests (Jest)
-└── requirements.txt     # Python OSI dependencies
+docs/              The context itself — tiered knowledge; map: docs/_index.md
+  00-governance/     Knowledge architecture, ID registry, risk register
+  10-decisions/      ADRs (append-only; the index is the entry point)
+  20-product-model/  What this project is; the node model; glossary
+  25-concepts/       CPT-NNNN concept nodes, per department
+  30-foundation/     Cross-cutting rules (SCM-R*, PLT-*)
+  40-contexts/       Per-department rules (PRC-*, DMD-*, INV-* …)
+  50-engineering/    ENG-R* build-time rules
+  program/           Backlog, operating model, evaluation protocol, templates
+apps/              web · api — the monitoring application (not yet built)
+packages/shared/   @scm/shared — standards reference data only
+crates/scm-money   Exact money arithmetic; no policy
+tools/verify.py    The doc gates
 ```
 
----
+## Standards this context carries
 
-## Code Standards
-- **Money**: integer cents only — `Money.amount` is always `number` (integer). No floats.
-- **Dates**: ISO 8601 (YYYY-MM-DD); timestamps in UTC (`ISOTimestamp`)
-- **Quantities**: UOM codes per GS1 — see `UOM` constant in `shared/types.ts`
-- **SKU codes**: immutable once created — use `status` flags (ACTIVE/DISCONTINUED/BLOCKED)
-- **Inventory transactions**: idempotent via `idempotencyKey` — safe to retry
-- **Deletes**: soft-delete only (`isDeleted: boolean`) — never hard-delete financial records
-- **Python**: type hints mandatory (`def foo(x: float) -> float:`), docstrings for public functions
-- **Python tests**: `pytest` (MIT) — mirror TypeScript test coverage
+| Standard / law | Scope |
+|---|---|
+| ISO 8601-1:2019 | Dates and instants (SCM-R9) |
+| ISO 4217 | Currency codes and minor units |
+| ISO 3166-1 | Country codes |
+| UN/ECE Rec 20 · GS1 Gen. Specs. v23 | Units of measure; GTIN, GLN, SSCC, GSIN and their check digit (SCM-R10) |
+| Incoterms® 2020 (ICC) | The eleven trade rules; DPU replaced DAT; four are sea-only |
+| SCOR Digital Standard (ASCM) | Plan · Source · Make · Deliver · Return · Enable |
+| UN/EDIFACT | ORDERS, DESADV, INVOIC, RECADV message semantics |
+| ISO 2859-1 | AQL sampling plans — the *plan* is fixed, the AQL level is a project's choice |
+| ISO 9001:2015 · ISO 28000:2022 | Quality and supply-chain security management |
+| EU CSDDD 2024/1760 (amended by 2026/470) | Due diligence; ≥ 5-year retention (SCM-R7) |
+| US UFLPA (Pub. L. 117-78) | Xinjiang forced-labour presumption (SCM-R6) |
+| EU REACH 1907/2006 | Substance obligations |
+| US UCC Article 2 | Sale of goods; a quantity must be stated |
+| IEEE 754-2019 §4.3.3 | `roundTiesToEven` — the money rounding rule (SCM-R14) |
 
----
+Full reference: `docs/standards/REGULATORY_FRAMEWORK.md`.
 
-## Language Policy
+## Rules (cited by ID, never restated)
 
-> **All code, comments, docstrings, commit messages, README files, and documentation
-> in this repository must be written in English.**
-> This applies to every contribution — TypeScript, Python, Markdown, and configuration files.
-> No Spanish (or any other language) is permitted in source files or documentation.
+- **`SCM-R*`** — `docs/30-foundation/scm-core/rule.md`. Externally-fixed statements only. Retired
+  IDs stay listed as retired so old citations still resolve.
+- **`ENG-R*`** — `docs/50-engineering/rule.md`. Build-time law: dependency direction, exact money
+  (ENG-R4/R5), generated artefacts, exclusive technology lanes (ENG-R8), the six-check
+  best-option gate (ENG-R9), the Rust core boundary (ENG-R10).
+- **`PLT-*`** — `docs/30-foundation/platform/rule.md`. Prompt-refinement gate, read-only project
+  reference, everything-connected, node/edge typing.
+- Per-department families live in `docs/40-contexts/<NN-dept>/rule.md`.
 
----
+## Concept nodes
 
-## Critical Business Rules
-1. **Never allow negative inventory** without `backorderAllowed = true`
-2. **POs at or above threshold** (`PO_APPROVAL_THRESHOLD_CENTS`, default $5,000; SCM-R2) → `PENDING_APPROVAL`
-3. **Soft-delete only** on POs, Invoices, Stock Movements, Shipments, Scorecards
-4. **All stock movements** generate a journal entry (debit/credit GL accounts)
-5. **Lot tracking** required for `storageCondition !== AMBIENT` or `reachSVHC = true`
-6. **UFLPA**: suppliers with XUAR operations must provide `clearanceDocumentRef`
-7. **CSDDD**: document retention minimum 5 years from assessment date (Art.23)
+One node per concept (`CPT-NNNN`, `docs/25-concepts/`). A node states meaning, the canonical
+formula where one exists, symbols and units, assumptions and non-applicability, **project-chosen
+inputs**, and the source that fixes it. It holds **no** parameter value and links to **no**
+implementation. Gate **G10** enforces: unique CPT number, a cited source, no `## Implementations`.
 
----
+## Technology lanes (ADR-0033/0035; ENG-R8/R10)
 
-## International Standards & Regulations
+Each technology owns one responsibility and no other may perform it:
 
-| Standard / Law | Scope | Code Location |
-|---------------|-------|---------------|
-| ISO 28000:2022 | Supply chain security management | `Supplier.certifications` |
-| ISO 9001:2015 | Quality management (§8.4, §8.5.2, §8.6, §8.7) | `InspectionRecord.ts` |
-| GS1 Gen. Specs. v23 | GTIN, GLN, SSCC, UOM codes | `shared/types.ts`, all domains |
-| Incoterms® 2020 | Trade terms (11 rules, DPU replaces DAT) | `INCOTERMS_2020` constant |
-| UN/EDIFACT | ORDERS, DESADV, INVOIC, RECADV | Domain object mapping |
-| ISO 2859-1 | AQL sampling for incoming inspection | `InspectionRecord.ts` |
-| EU CSDDD 2024/1760 | Supply chain due diligence (phased from 2027) | `compliance/CSDDD.ts` |
-| LkSG (Germany 2023) | ≥1,000 employees in Germany | `CSDDDDueDiligence` fields |
-| UK Modern Slavery Act 2015 §54 | ≥£36m turnover, annual statement | `Supplier.modernSlaveryStatements` |
-| US UFLPA (Pub.L. 117-78) | Xinjiang forced labour presumption | `compliance/UFLPA.ts` |
-| EU REACH 1907/2006 | Chemical substance management | `compliance/REACH.ts` |
-| C-TPAT (US CBP) | Customs supply chain security | `SecurityCertification` type |
-| AEO (EU) | Authorised Economic Operator | `SecurityCertification` type |
-| WTO TFA Art.7 | Pre-arrival processing, trusted traders | `Shipment.aeoShipperCertified` |
-| Basel Convention | Hazardous waste transboundary movement | `ShipmentLine.hazmatClass` |
-| US UCC Article 2 | Sale of goods — quantity required | `POLineItem.quantity` |
+| Lane | Owner |
+|---|---|
+| Presentation | **Next.js** (talks only to NestJS) |
+| The only counterpart the frontend has | **NestJS + GraphQL** |
+| Core: rules, invariants, exact arithmetic, hot path, ingestion | **Rust** |
+| Models, statistics, optimization, ML | **Python** |
+| Transactional truth | **PostgreSQL** |
+| Project telemetry at scale (never truth) | **ClickHouse** |
+| Images · orchestration | **Docker** · **Kubernetes** |
 
-Full regulatory reference: `docs/standards/REGULATORY_FRAMEWORK.md`
+TypeScript is not a lane owner: it lives inside NestJS and Next.js, plus the standards module.
+Dependencies stay OSI-licensed, commercially usable and modifiable (ADR-0002).
 
----
+## Working agreements
 
-## Key Algorithms Implemented
+- **Improve the prompt first.** A request is refined before it is executed; the original and the
+  improved form are both retained (PLT-R1, ADR-0032).
+- **Ask before adopting a new language or framework**, with its speed and security trade-offs.
+  A library inside an existing lane does not need a decision.
+- **Plan⇄context first (ADR-0010).** A change that introduces or renames a concept lands in the
+  model, the ADR and the rules **before** it lands in code.
+- **Run the ENG-R9 six checks before writing code** — lane, best practice, security, speed,
+  scalability, licence — and state the result at handoff.
+- **English only** in code, comments, documentation, configuration and commit messages.
+- **Before acting**, read `docs/program/evaluation.md` (reasoning protocol, decision ladder,
+  self-review). Corrections land as known-pitfalls entries; risks in
+  `docs/00-governance/risk-register.md`; structural lessons in
+  `docs/program/improvement-register.md`.
 
-### Demand Forecasting (`src/demand-planning/algorithms/Forecasting.ts`)
-| Algorithm | Use Case | Parameters |
-|-----------|----------|-----------|
-| SMA | Stable, no trend/season | period |
-| SES (Holt 1957) | Stationary demand | α |
-| Holt's Method | Trending demand | α, β |
-| Holt-Winters (1960) | Trend + seasonal | α, β, γ, m |
+## Gates
 
-Accuracy metrics: **MAE**, **MAPE**, **RMSE** — always compute when evaluating.
+`make verify` — doc gates G1–G10, typecheck, Rust tests. Run after **every** layer.
+`make verify-full` — the merge gate: adds `cargo fmt --check` and `clippy -D warnings`.
 
-### Safety Stock (`src/demand-planning/algorithms/SafetyStock.ts`)
-- **Method 3** (recommended): `ss = z · σ_D · √LT` (Holt/Chopra & Meindl Ch.11)
-- **Method 4** (most accurate): `ss = z · √(LT·σ_D² + D̄²·σ_LT²)` — accounts for lead time variability
-- **EOQ**: `√(2·D·S/H)` — Harris (1913)
-- **XYZ classification**: CV < 10% = X, 10-25% = Y, > 25% = Z
+G1 no stray docs · G2 front-matter · G3 unique IDs · G4 link integrity · G5 no orphans ·
+G6 authority acyclicity · G7 status and supersession · G8 English-only (manual) ·
+G9 context budget · G10 standards provenance.
 
-### Supplier Scorecard Weighting
-```
-40% Delivery  (OTD 35% + OTIF 45% + RFT 20%)
-30% Quality   (PPM score 60% + NCR rate 40%)
-20% Commercial (Invoice accuracy 70% + PO variance 30%)
-10% Soft metrics (manually assessed)
-```
-Rating: PREFERRED ≥90 | APPROVED ≥75 | CONDITIONAL ≥60 | PROBATION ≥45 | DISQUALIFIED <45
-
-### Kraljic Matrix (`src/procurement/domain/Supplier.ts`)
-| | Low Supply Risk | High Supply Risk |
-|--|----------------|-----------------|
-| **High Profit Impact** | LEVERAGE (bid) | STRATEGIC (partner) |
-| **Low Profit Impact** | NON_CRITICAL (automate) | BOTTLENECK (stockpile) |
-
----
-
-## Skills to Use
-
-| Task | Skill |
-|------|-------|
-| Research SCM patterns, algorithms, regulation updates | `/deep-research` |
-| Domain-aware SCM code review (money, idempotency, soft-deletes) | `/scm-review` |
-| Demand forecasting help (algorithm selection, accuracy metrics) | `/forecast` |
-| Inventory logic audit (negative stock, locking, lot tracking) | `/inventory-audit` |
-| Supplier integration review (auth, retry, EDI compliance) | `/supplier-check` |
-| General code quality review before merging | `/code-review` |
-| Security audit (auth, APIs, credential handling) | `/security-review` |
-| Verify feature works end-to-end | `/verify` |
-
----
-
-## Recommended Workflows
-
-### Adding a new inventory transaction type
-1. Add to `MovementType` union in `StockMovement.ts`
-2. Add GL account mapping in `getJournalAccounts()`
-3. Update `projectStockBalance()` INBOUND array if applicable
-4. Write integration test covering rollback scenario
-5. Run `/scm-review` and `/code-review`
-
-### Adding a new supplier integration (EDI/API)
-1. `/deep-research` — research supplier EDI standard (UN/EDIFACT message type)
-2. Check `SecurityCertification` for AEO/C-TPAT status
-3. Run `assessUFLPARisk()` for XUAR supply chain mapping
-4. Implement adapter with exponential backoff + idempotency
-5. Run `/supplier-check` + `/security-review`
-
-### Onboarding a new regulated product
-1. Set `lotTracked: true`, `shelfLifeDays` in `InventoryItem`
-2. Run `assessREACHCompliance()` for chemical content
-3. Assign `storageCondition` appropriately
-4. Set `reachSVHC: true` if SVHC identified
-5. Update FEFO picking in warehouse module
-
-### Demand forecasting changes
-1. `/deep-research` to validate algorithm selection
-2. Run `holtWinters()` or appropriate algorithm
-3. Compute MAE, MAPE, RMSE — document in PR
-4. Backtest: need ≥2 years history for seasonal models (Holt-Winters)
-5. Flag SKUs with CV > 0.5 as high-variance
-
----
-
-## Testing Requirements
-- Unit tests for all business rule validations (`tests/unit/`)
-- Integration tests for inventory transaction flows — always test rollback
-- Load tests before deploying to high-volume warehouses
-- Contract tests for supplier/carrier API integrations
-
-Run tests: `npm test` | Unit only: `npm run test:unit`
-
----
+**Definition of Done:** `make verify-full` green · touched rules keep their tests · spec and model
+updated first if a concept changed · knowledge placed per
+`docs/00-governance/knowledge-architecture.md` (no stray `.md`) · self-review run · commit message
+proposed (Conventional Commits, ADR-0011).
 
 ## References
-- Chopra & Meindl, *Supply Chain Management* 6th Ed. (Pearson, 2016)
-- Ballou, R.H., *Business Logistics/Supply Chain Management* 5th Ed. (Pearson, 2004)
-- Christopher, M., *Logistics and Supply Chain Management* 6th Ed. (FT Publishing, 2022)
-- APICS Dictionary 16th Ed. (ASCM, 2024)
-- ICC Incoterms® 2020 (ICC, 2019)
-- ISO 28000:2022, ISO 9001:2015, ISO 2859-1:1999
-- GS1 General Specifications v23.0
-- SCOR Digital Standard (ASCM, 2019)
-- EU Directive 2024/1760 (CSDDD) | US Pub.L. 117-78 (UFLPA) | EU REACH 1907/2006
 
----
+Cited for **definitions**, never for target values:
 
-## Governance & Knowledge Architecture (adopted 2026-07-19, ADR-0010)
-
-> This file is the **development contract** (Tier 1): if anything conflicts with a
-> request, this file wins. The rest of the project's knowledge is governed by the tiered
-> tree under `docs/` — map: `docs/_index.md`.
-
-- **Decisions** → `docs/10-decisions/README.md`. ADR-0001..0009 record this repo's
-  existing de-facto decisions (retroactive); new decisions are appended there and are
-  never reverted without a superseding ADR. Open decisions are listed at the bottom of
-  that file.
-- **Stable rule IDs** → the Critical Business Rules and Code Standards above are now
-  also citable as **SCM-R1..R13** in `docs/30-foundation/scm-core/rule.md` (the stable-ID
-  home; a dedup pass is backlog item U3). Per-department rule families are reserved in
-  `docs/00-governance/id-registry.md`.
-- **Knowledge rules** → `docs/00-governance/knowledge-architecture.md` (single source of
-  truth; references, never copies; append-only decisions; conversation is never the
-  source of truth; allowlist for the knowledge that lives next to code — department
-  READMEs, IMPLEMENTATION playbooks, `.claude/skills`).
-- **Plan⇄context discipline** → any change that introduces or renames a product concept
-  lands in the model/ADR/rules FIRST, then in code.
-- **Backlog & operating model** → `docs/program/WORKFLOW.md` (ordered backlog with
-  statuses; unification follow-ups U2..U12) and `docs/program/operating-model.md`
-  (knowledge layers; the `.claude/skills` are the area-skill layer; §4 communication
-  contract). Task/spec/ADR/rule/manifest templates: `docs/program/templates/`.
-- **Concepts (ADR-0015)** → `docs/25-concepts/` is the **calculation catalogue**: one node
-  per SCM concept/formula (`CPT-NNNN`), carrying the formula, units, assumptions, worked
-  example and verified links to the TS/Python that computes it. **Start here** to learn
-  what the system knows about a calculation — before reading code. Concept nodes define
-  *meaning*; `rule.md` states *law* and stays the SSOT for invariants.
-- **Gates (ADR-0012, ADR-0015)** → `make verify` (FAST: doc gates G1–G7+G9+G10 +
-  typecheck + unit tests — run after every layer) · `make verify-full` (the merge/CI
-  gate). G10 prints the live **coverage census**: which public calculation symbols still
-  lack a concept node. Load the decision INDEX at the top of
-  `docs/10-decisions/README.md`, not every ADR body.
-- **Before acting** → `docs/program/evaluation.md` (reasoning protocol, decision ladder,
-  self-review). Corrections land as Known-pitfalls entries in the department's SKILL.md
-  (operating-model §4.7). Risks → `docs/00-governance/risk-register.md`; structural
-  lessons → `docs/program/improvement-register.md`.
-
-**Definition of Done (every task):** `make verify-full` green (typecheck + tests + doc
-gates; pytest when Python is touched — U7) · touched rules (SCM-Rx / dept families) keep
-their tests · spec/model updated FIRST if a concept changed · knowledge placed per the
-architecture (no stray `.md`) · self-review run (`docs/program/evaluation.md` §3) ·
-commit message proposed (Conventional Commits, ADR-0011 proposed).
+- APICS Dictionary 16th Ed. (ASCM, 2024) — terminology.
+- SCOR Digital Standard (ASCM, 2019) — process taxonomy.
+- ICC Incoterms® 2020 (ICC, 2019); GS1 General Specifications v23.
+- Chopra & Meindl, *Supply Chain Management* 6th Ed.; Christopher, *Logistics and Supply Chain
+  Management* 6th Ed.

@@ -60,14 +60,6 @@ Three checks, each within a tolerance:
     ⇒ matched = false (the over-receipt must be approved before payment)
     variance_cents = 106·1250 − 106·1250 = 0
 
-## Implementations
-
-- PY: [`three_way_match_status`](../../../services/calc/01_procurement/receiving.py)
-
-> **Coverage gap:** the TS domain has `performThreeWayMatch` on the invoice side; the
-> full status calculation is Python-only here. Aligning the two is backlog (U8 golden
-> vectors when both compute the same result).
-
 ## Governing rules
 
 - **PRC-R4** — a posted GRN's inspected quantities reconcile exactly; the three-way match

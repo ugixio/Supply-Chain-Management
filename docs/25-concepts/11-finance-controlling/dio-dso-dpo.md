@@ -49,15 +49,6 @@ relations:
 Avg inventory 4.0M, COGS 25.1M → DIO 58.2. AR 2.2M, revenue 31.4M → DSO 25.6.
 AP 3.1M → DPO 45.1. (Feeds CPT-0104: C2C = 38.7 days.)
 
-## Implementations
-
-- PY: [`days_inventory_outstanding`](../../../services/calc/11_finance_controlling/finance.py)
-- PY: [`days_sales_outstanding`](../../../services/calc/11_finance_controlling/finance.py)
-- PY: [`days_payable_outstanding`](../../../services/calc/11_finance_controlling/finance.py)
-
-> Dept 03's `days_inventory_outstanding` (CPT-0016) computes DIO from the turnover
-> ratio; this is the balance-sheet form. Same concept, two homes — dedup candidate.
-
 ## Governing rules
 
 - **SCM-R8** — money precision on the inputs.

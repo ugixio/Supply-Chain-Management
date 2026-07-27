@@ -377,102 +377,58 @@ mirror-coverage bar) · duplicated formulas across TS/Python with one past diver
   (AI/ML/Data/Backend/Frontend/DevOps/…): materialize a branch's standards/skills **only when a
   real project in that branch needs them** (no speculative pre-build — knowledge-architecture).
 
-### Phase L — Exclusive lanes, Rust core & scale tier (ADR-0033/0034/0035/0036; owner-directed 2026-07-22)
+### Phase L — VOID (superseded by ADR-0037)
 
-> The owner set **exclusive technology lanes** (ENG-R8) and the **best-option verification gate**
-> (ENG-R9), adopted **ClickHouse**, **Docker** and **Kubernetes** (ADR-0034), and then made the
-> load-bearing call: **Rust is the complete core and Python is the tools layer** (ADR-0035) —
-> TypeScript leaves the core entirely and survives only inside NestJS and Next.js. Monitoring
-> scale is fixed at **tens of thousands of continuous telemetry series for project supervision**
-> (ADR-0036).
->
-> **Shape of the work.** L2–L3 are one **strangler migration**, not a rewrite: the Rust core grows
-> department by department behind unchanged public behaviour, each ported unit proves itself
-> against its existing tests **and** the U8 golden vectors before the TypeScript original is
-> deleted, and `main` stays green throughout (**ENG-R10.6**; no long-lived rewrite branch).
-> Nothing is built before its lane and its six ENG-R9 checks are stated.
+> Phase L existed to migrate an invented supply-chain application into a Rust core. **ADR-0037
+> deleted that application**, so most of the phase has nothing left to migrate. Recorded here
+> rather than erased, because the reasoning matters: the lanes and the scale tier survive and now
+> apply to the **monitoring** application; the department ports do not.
 
-- ✅ **L0 · orchestrator** — Consolidate the lane direction into governance. **Landed 2026-07-22:**
-  ADR-0033 (exclusive lane map + communication rule), ADR-0034 (ClickHouse/Docker/Kubernetes;
-  broker + cache still gated on measured volume), **ENG-R8** (lanes) and **ENG-R9** (six-check
-  best-option gate) in `50-engineering/rule.md` with lane-trespassing anti-states, ENG-R9 wired
-  into `evaluation.md` §1.5 so it runs *before* code, product-statement §3 lane table,
-  id-registry (ADR→0034, ENG→R9).
-- ✅ **L1 · orchestrator** — Consolidate the **core + telemetry** direction. **Resolved by the
-  owner (2026-07-22) and landed:** volume = **tens of thousands, telemetry only, for project
-  supervision** → **ADR-0036** (raw table + sort key `(project_id, metric, ts)`, monthly
-  partitions, `Delta`/`ZSTD` + `Gorilla` codecs, `LowCardinality` labels, `AggregatingMergeTree`
-  rollup cascade raw→1m→1h→1d, short raw TTL + long rollup retention, batched async inserts);
-  core = **Rust complete** → **ADR-0035** (supersedes ADR-0001's TS-domain clause, narrows
-  ADR-0033) plus **ENG-R10** (Rust core boundary), ENG-R1/R2 annotated as narrowed,
-  product-statement §3 rewritten (TypeScript is no longer a lane owner), id-registry
-  (ADR→0036, ENG→R10). *The old L1 question — event-vs-telemetry and order of magnitude — is
-  answered; no schema tuning is left blocked.*
-- 🟦 **L2 · WHAT+HOW** — **Rust core, slice 1: the money core** (the first port ADR-0035 names).
-  **L2a landed 2026-07-26:** `crates/scm-money` — one `rust_decimal` implementation
-  (`ROUND_HALF_EVEN` quantization at boundaries only; `multiply_cents` · `divide_cents` ·
-  `net_of_fee_cents` · sum-preserving largest-remainder `allocate_cents` · `Money` with a
-  currency guard), typed `MoneyError` (overflow **reported, never wrapped**), `unsafe_code`
-  forbidden and clippy denying truncating casts, floats and `unwrap`. **Acceptance met:
-  `tests/golden/money.golden.json` passes unchanged from a third reader (`cargo test`)**
-  alongside Jest and pytest — 13 Rust tests. Toolchain landed: Cargo workspace, `make test-rs`
-  in the FAST gate + `make lint-rs` (fmt + `clippy -D warnings`) in the merge gate, cargo cache
-  in CI. `tools/verify.py` now parses `RS:` implementation bullets, resolves `pub fn`/`pub
-  const`/`pub struct`/`pub enum` and scans `crates/*/src/NN-*` for department coverage, so
-  **G10 protects the catalogue across the port** (ENG-R10.7). The primitives are catalogued as
-  **CPT-0154** with all twelve RS/TS/PY links verified.
-  **L2b remaining:** the **napi-rs** binding plus its cross-compilation matrix, `@scm/shared`
-  and `services/calc/shared` delegating to the core, then deleting the two mirrors (107 + 70
-  lines) once every call site is on the binding.
-- 🟦 **L3 · WHAT+HOW** — **Collapse the duplication as the core absorbs it** (the 49 concepts
-  implemented twice — source of ~30 documented divergences). Two directions, one lane map:
-  *(a)* the **703 lines of TypeScript mathematics** (`Forecasting.ts` 207, `SafetyStock.ts` 140,
-  `SPCChart.ts` 356) are **deleted, not ported** — mathematics is Python's lane; *(b)* the
-  **314 invariant guards** across the 14 departments are **ported into the Rust core** and their
-  Python duplicates deleted (stock-balance guard, FEFO, risk matrix, three-way match,
-  UFLPA/REACH/CSDDD, OTD). Department by department, each with its tests and golden vectors green
-  before deletion. Each removal updates its `CPT-*` node in the same commit (G10 enforces it).
-  Blocks on P6 for the paths the core must still reach.
-  **L3a landed 2026-07-26 — the safety-stock family (140 lines):** the surviving lane was
-  covered *first* (`services/calc/tests/test_safety_stock.py`, 37 tests; `numpy` + `scipy`
-  joined the CI-light requirements so Python's mathematics is testable in the merge gate), the
-  **ADR-0028 z-score resolution landed** (`get_z_score` is now the exact `norm.ppf`; the coarse
-  lookup table is deleted), and only then were `algorithms/SafetyStock.ts`, its barrel export
-  and its 12 Jest tests removed. Ten `CPT-*` nodes repointed to the single owner in the same
-  commit. **Order matters and was corrected here:** deleting the duplicate first would have left
-  the surviving implementation with no CI coverage at all.
-  **L3b started 2026-07-26 — `crates/scm-core`, department 01, PurchaseOrder (194 lines):**
-  the first rules in the Rust core. `PurchaseOrder.ts`, its barrel exports and its 12 Jest tests
-  are deleted; 19 Rust tests replace them. The port **strengthened** the aggregate rather than
-  transliterating it: status is an `enum` (illegal transitions are exhaustive matches, not string
-  comparisons), line currencies are checked against the order currency (the TS node documented
-  mixed currency as "a data error the aggregate does not detect"), quantities must be positive
-  (UCC Art. 2), and creation is **pure** — identity and timestamps are inputs, so opening the
-  same order twice yields the same value. The total flows through `scm-money`, retiring the last
-  `Math.round` money path in dept 01. Two gate improvements landed with it: G10 attributes
-  `crates/*/src/dNN_*` to its department, and **G10 now fails on two nodes claiming one `CPT-*`
-  number** — which is how the duplicate CPT-0026 node was found and deleted.
-  Convention recorded: **calculations are free functions, lifecycle transitions are `impl`
-  methods**, mirroring the existing TypeScript split so G10 stays pointed at calculations.
-  **L3 remaining:** `Forecasting.ts` (207 lines — needs `statsmodels` in CI-light first) ·
-  `SPCChart.ts` (356) · the other 13 departments' rule guards, department by department ·
-  then **L2b** (napi-rs) once `apps/api` needs the core.
-- ⬜ **L4 · HOW** — **ClickHouse telemetry tier (ADR-0034/0036).** The ADR-0036 schema exactly:
-  raw `MergeTree` on `(project_id, metric, ts)` partitioned `toYYYYMM(ts)`, per-column codecs,
-  the four-level `AggregatingMergeTree` rollup cascade as **ingest-time materialized views**,
-  raw TTL + rollup retention, **split-privilege users** (INSERT-only ingest vs SELECT-only queries
-  with row/memory/time quotas), TLS, rebuild-from-truth procedure + a drift check. Read path
-  exclusively through NestJS; every supervision metric documented as a `CPT-*` node
-  (ADR-0031/0015) matching the view that computes it.
-- ⬜ **L5 · HOW** — **Rust ingestion workers** — the connector path (normalize → validate →
-  deduplicate → **batch** insert; `async_insert` or client-side batching, never row-by-row).
-  Ingestion is core work (ADR-0035): NestJS may only serve the frontend and Python's lane is
-  mathematics. OpenTelemetry spans propagate from the gateway through the core (ADR-0035).
-- ⬜ **L6 · HOW** — **Docker** images for every service (non-root, minimal base, pinned digests,
-  no secrets in layers; multi-stage for the Rust core so only the artefact ships) + Compose for
-  local composition. **Kubernetes** afterwards, once ≥2 long-running services exist: ClickHouse
-  via an operator with persistent volumes, config/secrets, network policy restricting the frontend
-  to NestJS only.
+- ✅ **L0/L1** — the lane map (ENG-R8/R9/R10) and the telemetry data model (ADR-0036) stand. They
+  govern the monitoring platform.
+- ✅ **L2a** — `crates/scm-money` survives ADR-0037 as the one piece carrying no policy.
+- ⛔ **L2b, L3a, L3b** — void. The `napi-rs` binding had nothing to bind; the department rule ports
+  had nothing to port. `crates/scm-core` (PurchaseOrder) was deleted three commits after it
+  landed: it faithfully reproduced a USD 5,000 approval threshold that never belonged in a
+  standards context.
+- ⬜ **L4/L5/L6** — the ClickHouse telemetry tier, the Rust ingestion workers and the
+  Docker/Kubernetes packaging **remain live**, as the monitoring application's infrastructure.
+  They are renumbered under Phase M when that work starts.
+
+### Phase M — Monitoring, the only application (ADR-0031/0034/0036)
+
+> The single application this repository builds. Nothing here is invented: a metric exists because
+> a project's development produces the signal, and every metric is defined as a `CPT-*` node before
+> it is computed.
+
+- ⬜ **M1 · WHAT** — Define the delivery metrics as concept nodes: what each measures, from which
+  signal, with which units. **No targets** — a project sets its own (ADR-0037).
+- ⬜ **M2 · HOW** — The ClickHouse telemetry tier exactly as ADR-0036 fixes it: sort key
+  `(project_id, metric, ts)`, monthly partitions, per-column codecs, the `AggregatingMergeTree`
+  rollup cascade, raw TTL with long rollup retention, split-privilege users with quotas.
+- ⬜ **M3 · HOW** — The Rust ingestion worker: normalize → validate → deduplicate → **batch**
+  insert. Ingestion is core work (ENG-R10).
+- ⬜ **M4 · HOW** — NestJS + GraphQL as the only counterpart the frontend has; Next.js dashboards.
+- ⬜ **M5 · HOW** — Docker images (non-root, pinned digests, multi-stage) then Kubernetes once two
+  long-running services exist.
+
+### Phase C — Clean the context after ADR-0037
+
+> The deletion is done; making the remaining knowledge consistent with it is not.
+
+- ⬜ **C1 · WHAT** — **Sweep the 154 concept nodes for policy.** Remove every threshold, target,
+  tolerance, weighting, rating band and mandated method; add a **Project-chosen inputs** section
+  naming what the project must decide. Judgement work, node by node — no gate can find these.
+  Two nodes are already done as the pattern: CPT-0003 (service-level z-score) and the department
+  index headers.
+- ⬜ **C2 · WHAT** — Sweep the **department rule files** (`docs/40-contexts/*/rule.md`, families
+  `PRC-*` … `SDV-*`) with the same test. `SCM-R*` is done.
+- ⬜ **C3 · WHAT** — Retire citations of the retired `SCM-R1/R2/R5/R8/R11/R12/R13` across the
+  estate (~40 files), and the prose that still describes deleted code trees.
+- ⬜ **C4 · WHAT** — Rewrite `docs/20-product-model/product-statement.md` and the department
+  `README`/`SKILL` files, which still describe a product being built.
+- ⬜ **C5 · WHAT** — Re-check `docs/standards/REGULATORY_FRAMEWORK.md` against current law; it is
+  now one of the most load-bearing documents in the repository.
 
 ### Phase 1 — Product evolution (owner-defined)
 - ⬜ Resolve the open decisions in `10-decisions/README.md` (runtime/persistence, API

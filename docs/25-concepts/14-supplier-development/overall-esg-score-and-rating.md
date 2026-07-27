@@ -48,11 +48,6 @@ relations:
 
 E 81, S 60, G 80 → `0.4·81 + 0.4·60 + 0.2·80 = 72.4` → **A**.
 
-## Implementations
-
-- PY: [`overall_esg_score`](../../../services/calc/14_supplier_development/esg_scoring.py)
-- PY: [`score_to_rating`](../../../services/calc/14_supplier_development/esg_scoring.py)
-
 ## Governing rules
 
 - **SDV-R*** — ratings recorded per period on the sustainability record (SCM-R3).

@@ -56,10 +56,6 @@ No — C requested 10, share 8.33 < 10 ⇒ C not auto-filled; no request below i
 all get ratio: A 66.7, B 25, C 8.3 (equals pro-rata here). With C=5: C filled 5, then
 95/110 ratio for A, B → A 69.1, B 25.9.
 
-## Implementations
-
-- PY: [`fair_share_allocation`](../../../services/calc/13_order_management/order_metrics.py)
-
 ## Governing rules
 
 - **ORD-R*** — allocations feed `OrderAllocation` records (policies match

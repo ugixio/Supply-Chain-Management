@@ -52,10 +52,6 @@ relations:
 Subgroups: 4/200, 7/250, 5/220, 6/230 → p̄ = 22/900 = 0.02444; n̄ = 225;
 σ_p = √(0.02444×0.97556/225) = 0.01029 → UCL = 0.0553, LCL = 0 (clamped).
 
-## Implementations
-
-- PY: [`p_chart_control_limits`](../../../services/calc/08_quality_management/quality.py)
-
 ## Governing rules
 
 - Chart point exclusion/deactivation are QMS lifecycle transitions; limit semantics live

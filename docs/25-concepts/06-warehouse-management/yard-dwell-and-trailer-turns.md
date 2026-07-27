@@ -52,11 +52,6 @@ relations:
 Arrive 06:00, depart 11:30 → dwell 5.5 h → benchmark missed, detention risk.
 Doors process 21 trailers over 56 door-hours → `21/56×8 = 3.0` turns → benchmark met.
 
-## Implementations
-
-- PY: [`yard_dwell_time`](../../../services/calc/06_warehouse_management/warehouse_kpis.py)
-- PY: [`trailer_turn_rate`](../../../services/calc/06_warehouse_management/warehouse_kpis.py)
-
 ## Governing rules
 
 - **WHS-R2** — the DockAppointment state machine produces the arrival/departure events

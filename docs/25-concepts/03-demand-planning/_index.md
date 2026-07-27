@@ -5,7 +5,7 @@ type: concept
 owner: orchestrator
 status: active
 since: 2026-07-20
-updated: 2026-07-26
+updated: 2026-07-27
 relations:
   - { type: part-of, target: index-concepts }
   - { type: governed-by, target: index-adr }
@@ -13,27 +13,13 @@ relations:
 ---
 # Concepts — Demand Planning (03)
 
-> The calculation catalogue for `packages/domain/src/03-demand-planning/` and
-> `services/calc/03_demand_planning/`. This is the **exemplar** department for ADR-0015:
-> coverage is `enforced`, so every public calculation symbol below has a node.
-> Law lives in [40-contexts/03-demand-planning/rule.md](../../40-contexts/03-demand-planning/rule.md)
-> (`DMD-R*`); these nodes carry meaning and mathematics only.
+> The concept catalogue for **Demand Planning (03)**: what each concept *means*,
+> the formula where one is canonical, its assumptions and limits, and the standard or
+> regulation that fixes it. Nodes **define**; they hold no threshold, target, weighting or
+> mandated method, and they own no code (ADR-0037). Values a project must choose are named
+> as project-chosen inputs and left unset.
 >
-> **Lane note (L3a, 2026-07-26):** the safety-stock family (CPT-0003, CPT-0013..0020) is now
-> **Python-only** — `algorithms/SafetyStock.ts` was deleted, not ported (mathematics is
-> Python's lane, ENG-R8). That closed its TS/PY divergences at once, ADR-0028 included:
-> `get_z_score` is now the exact Φ⁻¹. Coverage moved with ownership
-> (`services/calc/tests/test_safety_stock.py`).
-
-## What counts as a public calculation symbol
-
-G10 reads **top-level `export function`** in TypeScript and **module-level `def`** in
-Python (leading-underscore names excluded). This is a deliberate convention, not an
-accident of the regex: domain aggregates in this repo publish their lifecycle through a
-namespace object (`export const DemandPlan = { create, approve, … }`), so state
-transitions stay out of the catalogue while the algorithm modules — `Forecasting.ts`,
-`forecasting.py`, `safety_stock.py` — are fully in it. Lifecycle transitions are governed by
-`rule.md`. G10 also reads `pub fn` in the Rust core (ADR-0035), so coverage survives the port.
+> Departmental law lives in [40-contexts/03-demand-planning/rule.md](../../40-contexts/03-demand-planning/rule.md).
 
 ## Catalogue
 

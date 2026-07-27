@@ -46,13 +46,6 @@ SKU volume 500 cm³, 250 orders/month → `CPOI = 500 / 250 = 2.0`.
 A 10,000 cm³ SKU with 10 orders/month → `CPOI = 1000` — the first SKU outranks it for
 the golden zone by 500×.
 
-## Implementations
-
-- PY: [`calculate_cpoi`](../../../services/calc/06_warehouse_management/slotting.py)
-
-> The TS `calculateSlotting` computes the same ratio inline (m³/picks) as part of
-> CPT-0038; only Python exposes CPOI as a standalone symbol.
-
 ## Governing rules
 
 - Slotting is advisory: no invariant constrains CPOI itself; placement decisions must

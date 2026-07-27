@@ -49,10 +49,6 @@ relations:
 3 lost-time injuries over 2,400,000 hours → `3 × 10⁶ / 2.4 × 10⁶ = 1.25` — above
 world-class, below the penalty band.
 
-## Implementations
-
-- PY: [`ltifr`](../../../services/calc/14_supplier_development/esg_scoring.py)
-
 ## Governing rules
 
 - **SDV-R*** — safety metrics on the sustainability record; audit verification.

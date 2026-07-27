@@ -66,12 +66,6 @@ inspection_rate=0.02, risk_premium_rate=0.03`:
 A rival at unit_price 9.50 but risk_premium 0.08 would show purchase 114,000 yet a larger
 risk term — TCO reveals which is actually cheaper.
 
-## Implementations
-
-- PY: [`calculate_tco`](../../../services/calc/01_procurement/kraljic.py)
-
-> **Coverage gap:** no TypeScript implementation.
-
 ## Governing rules
 
 - **SCM-R8** — monetary outputs are Decimal (ADR-0019); float is the tracked exception.

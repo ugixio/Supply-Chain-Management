@@ -5,7 +5,7 @@ type: concept
 owner: orchestrator
 status: active
 since: 2026-07-22
-updated: 2026-07-22
+updated: 2026-07-27
 relations:
   - { type: part-of, target: index-concepts }
   - { type: governed-by, target: index-adr }
@@ -13,18 +13,13 @@ relations:
 ---
 # Concepts — Supplier Development (14)
 
-> The calculation catalogue for `packages/domain/src/14-supplier-development/` and
-> `services/calc/14_supplier_development/`. Coverage is `enforced`. Law lives in
-> [40-contexts/14-supplier-development/rule.md](../../40-contexts/14-supplier-development/rule.md)
-> (`SDV-R*`); these nodes carry meaning and mathematics only. EUDR facts
-> re-verified 2026-07 — **drift recorded on CPT-0137** (application now
-> 30 Dec 2026; official country benchmark contradicts the hardcoded list).
-
-## What counts as a public calculation symbol
-
-`createSustainabilityRecord` is a lifecycle constructor — excluded. ESG scoring,
-emissions accounting, safety/wage metrics, EUDR gates and the tier-2 cascade are
-catalogued.
+> The concept catalogue for **Supplier Development (14)**: what each concept *means*,
+> the formula where one is canonical, its assumptions and limits, and the standard or
+> regulation that fixes it. Nodes **define**; they hold no threshold, target, weighting or
+> mandated method, and they own no code (ADR-0037). Values a project must choose are named
+> as project-chosen inputs and left unset.
+>
+> Departmental law lives in [40-contexts/14-supplier-development/rule.md](../../40-contexts/14-supplier-development/rule.md).
 
 ## Catalogue
 
@@ -49,10 +44,6 @@ catalogued.
 | ID | Concept | Use when |
 |---|---|---|
 | [CPT-0137](eudr-deforestation-gates.md) | EUDR gates & risk class | Deforestation due diligence |
-
-## Not concepts (excluded from G10)
-
-`createSustainabilityRecord`
 
 ## Divergences & regulatory drift (for the backlog)
 

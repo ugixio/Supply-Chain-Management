@@ -58,14 +58,6 @@ Compare CPT-0014 on the same SKU (σ_D = 20, 95%): ⌈1.65 × 20 × √7⌉ = **
 Average-Max buffer is 5× larger — the price of covering the joint worst case of both
 demand and lead time with no probability weighting at all.
 
-## Implementations
-
-- PY: [`safety_stock_average_max`](../../../services/calc/03_demand_planning/safety_stock.py)
-
-TypeScript had a duplicate until L3a; it was **deleted, not ported** — planning
-mathematics is Python's exclusive lane (ENG-R8 / ADR-0033). Python is now the sole
-owner, covered by `services/calc/tests/test_safety_stock.py`.
-
 ## Governing rules
 
 - **SCM-R1** — inventory never goes negative without `backorderAllowed`.

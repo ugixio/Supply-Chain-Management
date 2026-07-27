@@ -50,10 +50,6 @@ relations:
 CRITICAL grievance received 2026-07-20T08:00Z; now 2026-07-22 → 48+ h elapsed >
 24 h → acknowledgement overdue; resolution due 2026-08-19 (28 days remain).
 
-## Implementations
-
-- PY: [`grievance_resolution_sla`](../../../services/calc/09_compliance_regulatory/compliance.py)
-
 ## Governing rules
 
 - **CMP-R*** — grievance mechanism availability and record-keeping; SCM-R9 UTC

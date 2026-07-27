@@ -69,25 +69,6 @@ wrong on the credit note.
 Allocation of `1,172,000¢` by value over `600k / 300k / 100k` → `703,200 / 351,600 / 117,200`
 (exact). Allocation of `−10¢` over three equal weights → `−3 / −3 / −4`.
 
-## Implementations
-
-- RS: [`multiply_cents`](../../../crates/scm-money/src/lib.rs)
-- RS: [`divide_cents`](../../../crates/scm-money/src/lib.rs)
-- RS: [`net_of_fee_cents`](../../../crates/scm-money/src/lib.rs)
-- RS: [`allocate_cents`](../../../crates/scm-money/src/lib.rs)
-- TS: [`multiplyCents`](../../../packages/shared/src/types.ts)
-- TS: [`divideCents`](../../../packages/shared/src/types.ts)
-- TS: [`netOfFeeCents`](../../../packages/shared/src/types.ts)
-- TS: [`allocateMoney`](../../../packages/shared/src/types.ts)
-- PY: [`multiply_cents`](../../../services/calc/shared/types.py)
-- PY: [`divide_cents`](../../../services/calc/shared/types.py)
-- PY: [`net_of_fee_cents`](../../../services/calc/shared/types.py)
-- PY: [`allocate_cents`](../../../services/calc/shared/types.py)
-
-RS is the surviving owner (ADR-0035, ENG-R10); TS and PY are deleted with their call sites, not
-before. All three are proved equal by one fixture, `tests/golden/money.golden.json`, read by
-Jest, pytest and `cargo test` (U8).
-
 ## Governing rules
 
 - **SCM-R8** — money is arbitrary-precision decimal, integer minor units at rest (ADR-0019).

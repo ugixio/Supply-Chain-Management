@@ -56,15 +56,6 @@ Article "Sanctions hit <supplier> smelter; force majeure declared" → NEGATIVE 
 categories {SANCTION, FORCE_MAJEURE} → `risk = min(1, 0.5·0.93 + 0.25 + 0.10) = 0.815`.
 Ten such articles, neg_rate 0.9 → **CRITICAL** alert.
 
-## Implementations
-
-- PY: [`load_finbert`](../../../services/calc/02_supplier_management/nlp_risk.py)
-- PY: [`analyse_article_batch`](../../../services/calc/02_supplier_management/nlp_risk.py)
-- PY: [`extract_entities`](../../../services/calc/02_supplier_management/nlp_risk.py)
-- PY: [`score_article`](../../../services/calc/02_supplier_management/nlp_risk.py)
-- PY: [`monitor_supplier`](../../../services/calc/02_supplier_management/nlp_risk.py)
-- PY: [`quick_risk_scan`](../../../services/calc/02_supplier_management/nlp_risk.py)
-
 ## Governing rules
 
 - OSI-only stack (ADR-0002): FinBERT Apache-2.0, spaCy MIT.

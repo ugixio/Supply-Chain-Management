@@ -48,11 +48,6 @@ relations:
 Ordered 12,400 units, shipped 12,090 → fill 97.5%. Of 3,100 lines, 87 backordered →
 2.81% — both just below world-class.
 
-## Implementations
-
-- PY: [`fill_rate`](../../../services/calc/13_order_management/order_metrics.py)
-- PY: [`backorder_ratio`](../../../services/calc/13_order_management/order_metrics.py)
-
 ## Governing rules
 
 - **SCM-R1** — backorders exist only where `backorderAllowed`; otherwise unmet lines

@@ -72,11 +72,6 @@ Note the TS dispatcher, given `hasSeasonality = true` and m = 12, would also rej
 Holt-Winters here — `24 ≥ 24` is true, so it would **accept** it. The two disagree on
 this exact input because they test different lengths (full series vs train split).
 
-## Implementations
-
-- TS: [`selectAlgorithm`](../../../packages/domain/src/03-demand-planning/algorithms/Forecasting.ts)
-- PY: [`select_algorithm`](../../../services/calc/03_demand_planning/forecasting.py)
-
 ## Governing rules
 
 - **DMD-R4** — the resulting run's forecast, `mape` and `mae` are non-negative.

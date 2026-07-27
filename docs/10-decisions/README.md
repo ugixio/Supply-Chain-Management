@@ -68,6 +68,7 @@ relations:
 - ADR-0034 — **Scale tier for monitoring:** **ClickHouse** owns analytics/time-series at scale (never the source of truth — rebuildable, one-way like ENG-R7) · **Docker** owns images · **Kubernetes** owns orchestration. Broker and cache stay gated on measured volume. (Accepted — owner-directed 2026-07-22)
 - ADR-0035 — **Rust is the complete core; it replaces the TypeScript domain.** Business rules, invariants, state machines, exact arithmetic, the hot path and ingestion all move to Rust; **Python is the tools layer** (models, statistics, optimization, ML) reached over the schema-first gRPC contract; TypeScript survives **only inside NestJS and Next.js** as framework code, never as core logic. **Supersedes the TypeScript-domain clause of ADR-0001**, narrows ADR-0033. Migration is incremental (strangler), guarded by the U8 golden vectors. (Accepted — owner-directed 2026-07-22)
 - ADR-0036 — **Telemetry data model at tens-of-thousands scale:** continuous project-supervision telemetry in ClickHouse — `(project_id, metric, ts)` sort key, monthly partitions, `Delta`+`ZSTD` / `Gorilla` codecs, `LowCardinality` labels, `AggregatingMergeTree` rollup cascade (raw→1m→1h→1d), short raw TTL with long rollup retention, batched async inserts from the Rust ingester. Resolves the L1 volume question. (Accepted — owner-directed 2026-07-22)
+- ADR-0037 — **The Global Context holds only externally-fixed standards; the fictitious SCM application is retired.** The context is the source a project consults to learn *which departments it needs and how to implement them* — nothing more. It carries what a standards body, a regulator or an arithmetic identity fixes; it never carries what an organization chooses (thresholds, targets, weightings, rating bands, method mandates). Consequently **~25,700 lines of invented application code are deleted** (`packages/domain`, `services/calc`, `crates/scm-core`), concept nodes become **definitions without parameters**, and the **only application built here is the monitoring project**. Supersedes the two-language-SCM-application premise of ADR-0001; narrows ADR-0015 (nodes define, they do not own code) and ADR-0035 (the Rust core serves the monitoring platform, not 14 departments of invented rules). (Accepted — owner-directed 2026-07-27)
 
 ---
 
@@ -1549,6 +1550,96 @@ workload, which fixes several ClickHouse design choices that were left open in A
   exactly the failure mode ClickHouse materialized views exist to avoid.
 - *Store only rollups, discard raw immediately* — rejected: incident investigation needs recent
   raw detail; the short raw TTL is the compromise.
+
+---
+
+## ADR-0037 — The Global Context holds only externally-fixed standards
+
+**Status:** Accepted (owner-directed 2026-07-27)
+**Supersedes:** the premise of **ADR-0001** that this repository builds a two-language SCM
+application (TypeScript domain + Python calculation) across 14 departments.
+**Narrows:** **ADR-0015** — concept nodes are *definitions*, not owners of implementations ·
+**ADR-0035** — the Rust core serves the monitoring platform, not 14 departments of invented
+rules · **ADR-0016** — business context extracted from `IMPLEMENTATION.md` is reference
+material, never law.
+**Unaffected:** ADR-0002 (OSI-only), ADR-0010/0012 (knowledge architecture, gates),
+ADR-0024/0026 (one-way read model, wiki front end), ADR-0031/0034/0036 (monitoring, its
+scale tier and its data model), ADR-0033 (lanes) as applied to the monitoring platform.
+
+**Context.** The estate had drifted into building a *fictitious supply-chain company*: 12,058
+lines of invented aggregates in `packages/domain`, 12,958 in `services/calc`, and a starting
+port of both into `crates/scm-core`. Their content was not standards but **policy** — a
+USD 5,000 purchase-order approval threshold, a 5% over-receipt tolerance, a 0.25 carrying rate,
+a 0.95 risk confidence level, a Kraljic axis threshold of 5.0, supplier-scorecard weightings of
+40/30/20/10 with rating bands at 90/75/60/45. Every one of those is a number a company picks and
+a different project picks differently. Several were stated as law in `CLAUDE.md` and in
+`SCM-R*`, which made a single company's habits binding on every future project.
+
+The owner's direction (2026-07-27) settles what this repository is: **the context a project
+consults to learn which supply-chain departments it needs and how to implement them.** It must
+contain no invented data and no rule that could constrain a future project wrongly. The only
+application built here is the **monitoring** project; the context supports development, it does
+not simulate a business.
+
+**Decision.**
+
+1. **The inclusion test.** The Global Context carries a statement only if it is fixed **outside**
+   this repository — by a standards body (GS1, ISO, ICC, UN/CEFACT, ASCM/SCOR), by a regulator
+   (CSDDD, UFLPA, REACH, UCC), or by an arithmetic/accounting identity (double-entry, an
+   apportionment that must sum to the whole). If an organization can reasonably choose it, it is
+   **project policy** and does not belong here.
+2. **Concept nodes define; they do not parameterize.** A `CPT-*` node states what a concept *is* —
+   its meaning, its formula where one is canonical, its units, its assumptions and limits, and the
+   source that fixes it. It states **no** threshold, target, band, weighting or mandated method.
+   Where a calculation needs values, the node names them as **project-chosen inputs** and stops.
+3. **Nodes stop owning code.** The `## Implementations` section is removed from every node: the
+   context does not ship the implementation, and a link into a project's code would make the
+   context depend on a project (violating the one-way rule, ADR-0024).
+4. **The fictitious application is deleted**, not archived and not ported: `packages/domain`,
+   `services/calc`, `crates/scm-core`, their tests, the `proto/` contract that existed to connect
+   them, and the TypeScript money mirror. Keeping it as "reference" would leave invented policy
+   inside the context wearing a disclaimer, which is exactly the failure mode being corrected.
+5. **`crates/scm-money` is kept, deliberately and narrowly.** It contains no policy: banker's
+   rounding is IEEE 754 `roundTiesToEven`, and sum-preserving largest-remainder apportionment is a
+   fixed method. Exact money arithmetic with no float ingress is an engineering standard that does
+   not vary between projects. If the monitoring platform turns out never to handle money, it
+   should be deleted too rather than kept for its own sake.
+6. **`SCM-R*` is reclassified.** The family had three kinds of statement mixed together: genuine
+   external standards, engineering conventions misfiled as supply-chain law, and company policy.
+   Only the first kind survives as `SCM-R*`; engineering conventions move to `ENG-R*`; policy is
+   deleted from the rules and, where it is instructive, recorded as an **example of a decision a
+   project makes** — never as an invariant.
+7. **The gates follow.** G10 stops asserting that every public code symbol has a concept node —
+   there is no application code for it to police. It now asserts what matters for a standards
+   context: **every concept node cites its external source, and no node claims an
+   implementation.**
+
+**Consequences.**
+- (+) The context can no longer impose one company's policy on a future project. That was the
+  concrete risk the owner named, and it is removed at the root rather than documented.
+- (+) ~25,700 lines stop needing maintenance, tests, CI time and cross-language reconciliation.
+  The ~30 documented TS/PY divergences disappear with the duplicated code that produced them.
+- (+) What remains is honest about its own authority: standards and definitions, with provenance.
+- (−) **The largest deletion in the project's history**, including work landed in this session
+  (the `crates/scm-core` port) and the U7/U8 Python and cross-language test mechanisms, which had
+  nothing left to guard. Accepted deliberately: the work was in the wrong direction, and carrying
+  it forward would cost more than discarding it.
+- (−) The concept catalogue must be swept for policy numbers node by node — 153 nodes, a
+  judgement pass that cannot be scripted. Tracked as the immediate follow-up; until it completes,
+  the catalogue still contains parameters this decision forbids.
+- (−) `make verify` temporarily has no TypeScript tests to run, because the only TypeScript left
+  is the standards reference module and two app scaffolds.
+
+**Alternatives considered.**
+- *Keep the application as a reference implementation, marked non-authoritative* — rejected by the
+  owner and on the merits: a disclaimer does not stop a future reader from copying a threshold, and
+  the estate has already shown that documented caveats get read as specifications.
+- *Keep the formulas, drop only the numbers* — this is what **is** being done for the nodes, but it
+  does not save the code: an implementation with its parameters removed is not usable by a project
+  that must choose them anyway.
+- *Move the application into a separate project inside the workspace* — rejected: it would still be
+  invented data with no real requirement behind it, and the workspace's projects are meant to be
+  real work.
 
 ---
 

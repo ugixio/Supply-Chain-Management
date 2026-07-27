@@ -5,7 +5,7 @@ type: concept
 owner: orchestrator
 status: active
 since: 2026-07-22
-updated: 2026-07-22
+updated: 2026-07-27
 relations:
   - { type: part-of, target: index-concepts }
   - { type: governed-by, target: index-adr }
@@ -13,15 +13,13 @@ relations:
 ---
 # Concepts — Supply Planning (04)
 
-> The calculation catalogue for `packages/domain/src/04-supply-planning/` and
-> `services/calc/04_supply_planning/`. Coverage is `enforced`. Law lives in
-> [40-contexts/04-supply-planning/rule.md](../../40-contexts/04-supply-planning/rule.md)
-> (`SPL-R*`); these nodes carry meaning and mathematics only.
-
-## What counts as a public calculation symbol
-
-All 12 public symbols are calculations (the MPS/BOM/capacity aggregates expose no
-top-level lifecycle exports) — no exclusions in this department.
+> The concept catalogue for **Supply Planning (04)**: what each concept *means*,
+> the formula where one is canonical, its assumptions and limits, and the standard or
+> regulation that fixes it. Nodes **define**; they hold no threshold, target, weighting or
+> mandated method, and they own no code (ADR-0037). Values a project must choose are named
+> as project-chosen inputs and left unset.
+>
+> Departmental law lives in [40-contexts/04-supply-planning/rule.md](../../40-contexts/04-supply-planning/rule.md).
 
 ## Catalogue
 
@@ -47,18 +45,3 @@ top-level lifecycle exports) — no exclusions in this department.
 | ID | Concept | Use when |
 |---|---|---|
 | [CPT-0146](mps-stability-index.md) | MPS stability index | Measuring plan nervousness |
-
-## Not concepts (excluded from G10)
-
-*(none — all public symbols catalogued)*
-
-## Divergences surfaced (for the backlog)
-
-- **EOQ lot rule under-covers** (CPT-0142): the in-run EOQ rule places one EOQ per
-  trigger without ⌈nr/EOQ⌉ multiples; TS `runMRP` does round to lot multiples —
-  same department, two coverage behaviors.
-- **TS release date** subtracts calendar days (may land on weekends); PY offsets
-  buckets — planning-calendar handling is undefined in both.
-- **`mps_stability_index` divides by zero** on an all-zero original schedule.
-- **PPB implemented twice** (`_apply_ppb` in-run vs `part_period_balancing`
-  standalone with the closer-to-EPP tie rule) — subtle behavioral differences.

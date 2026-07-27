@@ -73,12 +73,6 @@ For right-skewed demand — the common case — the normal assumption **understa
 tail, so the classical formula under-buffers exactly where it hurts. This is the
 principled alternative, when the data volume supports it.
 
-## Implementations
-
-- PY: [`make_dataset`](../../../services/calc/03_demand_planning/deep_forecast.py)
-- PY: [`train_forecaster`](../../../services/calc/03_demand_planning/deep_forecast.py)
-- PY: [`predict_quantiles`](../../../services/calc/03_demand_planning/deep_forecast.py)
-
 ## Governing rules
 
 - **DMD-R4** — forecast values are non-negative. **Note:** unlike `ensemble_forecast`,

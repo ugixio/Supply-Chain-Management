@@ -56,11 +56,6 @@ A tier-1 with strong own KPIs (raw score 0.2) but 3 of 4 upstream nodes above 0.
 `upstream_exposure = 0.75`, `combined = 0.7·0.2 + 0.3·0.75 = 0.365` → MEDIUM — invisible
 to a per-supplier scorecard.
 
-## Implementations
-
-- PY: [`train_gnn`](../../../services/calc/02_supplier_management/gnn_risk.py)
-- PY: [`score_supplier_network`](../../../services/calc/02_supplier_management/gnn_risk.py)
-
 ## Governing rules
 
 - OSI-only (ADR-0002): PyTorch BSD-3; PyG optional (`torch-geometric` MIT).

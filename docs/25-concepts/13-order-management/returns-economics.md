@@ -67,17 +67,6 @@ refund = round(9,000 × 0.85) = 7,650¢; fees withheld 1,350¢.
 Reverse cost: 800 + 300 + 250 + 7,650 = 9,000¢ → 117.6% of the refund — this return
 destroyed more value than it credited.
 
-## Implementations
-
-- PY: [`return_rate`](../../../services/calc/13_order_management/order_metrics.py)
-- PY: [`refund_amount`](../../../services/calc/13_order_management/order_metrics.py)
-- PY: [`reverse_logistics_cost`](../../../services/calc/13_order_management/order_metrics.py)
-- TS: [`calculateRefundCents`](../../../packages/domain/src/13-order-management/domain/ReturnAuthorization.ts)
-
-> Cross-language agreement is enforced, not assumed: both symbols are pinned by the U8
-> golden vectors in `tests/golden/money.golden.json` (read by `tests/unit/golden-money.test.ts`
-> and `services/calc/tests/test_golden_money.py`).
-
 ## Governing rules
 
 - **SCM-R8** — integer-cent money (Decimal at P5); **SCM-R3** — return records

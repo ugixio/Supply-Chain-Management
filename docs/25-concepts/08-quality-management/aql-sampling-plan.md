@@ -54,12 +54,6 @@ normal-inspection table (General Inspection Level II). Disposition:
 Lot of 1,000 → row (501–1200): `n = 80, Ac = 5, Re = 6`. 4 defects → ACCEPT;
 6 defects → REJECT.
 
-## Implementations
-
-- PY: [`get_aql_sample`](../../../services/calc/08_quality_management/quality.py)
-- PY: [`lot_disposition`](../../../services/calc/08_quality_management/quality.py)
-- TS: [`getAQLSampleSize`](../../../packages/domain/src/08-quality-management/domain/InspectionRecord.ts)
-
 ## Governing rules
 
 - **QMS-R*** (incoming inspection invariants) — the inspection record lifecycle consumes

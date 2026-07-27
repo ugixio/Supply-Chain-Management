@@ -55,11 +55,6 @@ relations:
 Supplier operates in XUAR, ships HS 610910 (T-shirts), holds clearance docs → HIGH:
 importable only with the evidence package ready for CBP detention review.
 
-## Implementations
-
-- PY: [`assess_uflpa_risk`](../../../services/calc/09_compliance_regulatory/compliance.py)
-- TS: [`assessUFLPARisk`](../../../packages/domain/src/09-compliance-regulatory/regulations/UFLPA.ts)
-
 ## Governing rules
 
 - **SCM-R6** — XUAR suppliers must provide `clearanceDocumentRef` (the rule this

@@ -57,11 +57,6 @@ relations:
 CSDDD 80, UFLPA 60, REACH 90, LKSG 70 → weights 0.30/0.25/0.20/0.10 (Σ = 0.85) →
 overall = (24 + 15 + 18 + 7)/0.85 = **75.3 → MEDIUM**.
 
-## Implementations
-
-- PY: [`compliance_risk_score`](../../../services/calc/09_compliance_regulatory/compliance.py)
-- PY: [`due_diligence_score`](../../../services/calc/09_compliance_regulatory/compliance.py)
-
 ## Governing rules
 
 - **CMP-R*** — assessed evidence retained per CPT-0096; SCM-R6 UFLPA documentation.

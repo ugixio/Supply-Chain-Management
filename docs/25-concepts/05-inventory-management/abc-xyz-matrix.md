@@ -52,11 +52,6 @@ relations:
 SKU: ACV ranks A; history μ = 100, σ = 8 → CV 0.08 → X → **AX**: automate
 replenishment, cycle-count frequently, safety stock from CPT-0012.
 
-## Implementations
-
-- PY: [`classify_xyz`](../../../services/calc/05_inventory_management/stock_balance.py)
-- PY: [`classify_abc_xyz`](../../../services/calc/05_inventory_management/stock_balance.py)
-
 ## Governing rules
 
 - **INV-R*** — item-master classification changes flow through `updateABCXYZ`

@@ -53,11 +53,6 @@ relations:
 Freight: budget 120,000¢, actual 138,000¢ → +15% UNFAVORABLE, explanation required.
 Packaging: 50,000 → 49,200 → −1.6% ON_BUDGET.
 
-## Implementations
-
-- PY: [`budget_variance_analysis`](../../../services/calc/11_finance_controlling/finance.py)
-- TS: [`requiresExplanation`](../../../packages/domain/src/11-finance-controlling/domain/BudgetVariance.ts)
-
 ## Governing rules
 
 - **FIN-R*** — variance records and explanations retained (SCM-R3).

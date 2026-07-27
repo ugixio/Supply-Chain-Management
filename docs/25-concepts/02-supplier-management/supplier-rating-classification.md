@@ -46,14 +46,6 @@ relations:
 Smoothed score 58.7 → CONDITIONAL → `requires_corrective_action_plan = true`; the CAP
 follows the SCAR 8D lifecycle (CPT-0059).
 
-## Implementations
-
-- PY: [`get_rating`](../../../services/calc/02_supplier_management/scorecard.py)
-- PY: [`requires_corrective_action_plan`](../../../services/calc/02_supplier_management/scorecard.py)
-
-> TS `classifyRating` implements the same bands but is module-private inside
-> `SupplierScorecard.ts` (reached via `calculateKPIs`, CPT-0060).
-
 ## Governing rules
 
 - **SUP-R*** — rating thresholds are the department's stated law; CLAUDE.md §Scorecard

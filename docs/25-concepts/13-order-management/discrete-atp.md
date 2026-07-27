@@ -52,10 +52,6 @@ P3 supply 0 committed 20 · P4 supply 80 committed 60.
 Buckets: P1 (carries on-hand): 40 − 30 = 10 · P2: 100 − (50+20) = 30 · P4: 80 − 60 = 20.
 Cumulative: 10, 40, 40, 60.
 
-## Implementations
-
-- PY: [`discrete_atp`](../../../services/calc/13_order_management/order_metrics.py)
-
 ## Governing rules
 
 - Same promising discipline as CPT-0085 (SCM-R1 backorder authority).

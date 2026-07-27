@@ -51,14 +51,6 @@ relations:
 Var(orders) = 3,600, Var(demand) = 1,600 → `BWE = 2.25` → MODERATE — investigate
 demand-signal sharing (VMI), batch sizes and lead times before adding safety stock.
 
-## Implementations
-
-- PY: [`bullwhip_ratio`](../../../services/calc/10_risk_management/risk_model.py)
-- TS: [`bullwhipRatio`](../../../packages/domain/src/10-risk-management/models/RiskModel.ts)
-
-> `risk_model.py` defines `bullwhip_ratio` twice; the later rich-dict version shadows
-> the simple float one at import time (recorded cleanup candidate).
-
 ## Governing rules
 
 - SCOR-DS lists bullwhip ≈ 1.0 as the target (CLAUDE.md KPI table, cited).

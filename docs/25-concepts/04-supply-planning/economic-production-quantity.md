@@ -51,10 +51,6 @@ D = 48,000/yr, P = 120,000/yr, S = 900, H = 3 →
 `EPQ = √(2·48,000·900 / (3·(1 − 0.4))) = √(86.4M/1.8) = 6,928` units;
 run ≈ 21 days of production, max inventory 4,157.
 
-## Implementations
-
-- PY: [`epq`](../../../services/calc/04_supply_planning/mrp.py)
-
 ## Governing rules
 
 - **SPL-R*** — run quantities feed the MPS (CPT-0146 stability watches the

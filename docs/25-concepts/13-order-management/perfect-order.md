@@ -53,12 +53,6 @@ reading the `isPerfectOrder` flag stamped by `markDelivered`.
 POR = 89%. Factor rates (92%, ~96%, ~97%) multiplied would predict ≈ 85.7% — the
 gap is failure correlation.
 
-## Implementations
-
-- PY: [`is_perfect_order`](../../../services/calc/13_order_management/order_metrics.py)
-- PY: [`perfect_order_rate`](../../../services/calc/13_order_management/order_metrics.py)
-- TS: [`calculatePerfectOrderRate`](../../../packages/domain/src/13-order-management/domain/SalesOrder.ts)
-
 ## Governing rules
 
 - **ORD-R*** — `markDelivered` stamps the component flags; ADR-0029 places

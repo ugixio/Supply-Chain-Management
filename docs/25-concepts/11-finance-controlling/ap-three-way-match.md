@@ -56,11 +56,6 @@ PO 100 @ 1,250¢; GRN 100; invoice 100 @ 1,280¢, tol 1% → price diff 2.4% > 1
 **PRICE_MISMATCH** (PY). Same input at TS 2% tolerance → still variance (2.4% > 2%)
 → PRICE_VARIANCE, invoice → DISCREPANCY.
 
-## Implementations
-
-- PY: [`three_way_match`](../../../services/calc/11_finance_controlling/finance.py)
-- TS: [`performThreeWayMatch`](../../../packages/domain/src/11-finance-controlling/domain/Invoice.ts)
-
 ## Governing rules
 
 - **FIN-R*** — no payment release on DISCREPANCY; **SCM-R3** — invoices soft-delete;

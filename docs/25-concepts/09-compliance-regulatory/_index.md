@@ -5,7 +5,7 @@ type: concept
 owner: orchestrator
 status: active
 since: 2026-07-22
-updated: 2026-07-22
+updated: 2026-07-27
 relations:
   - { type: part-of, target: index-concepts }
   - { type: governed-by, target: index-adr }
@@ -13,19 +13,13 @@ relations:
 ---
 # Concepts — Compliance & Regulatory (09)
 
-> The calculation catalogue for `packages/domain/src/09-compliance-regulatory/` and
-> `services/calc/09_compliance_regulatory/`. Coverage is `enforced`. Law lives in
-> [40-contexts/09-compliance-regulatory/rule.md](../../40-contexts/09-compliance-regulatory/rule.md)
-> (`CMP-R*`); these nodes carry meaning and mathematics only. Regulatory facts were
-> re-verified against current EU/US sources on 2026-07-22 — **drift findings are
-> recorded on the nodes** (Omnibus I rewrote the CSDDD scope; the CBAM Omnibus
-> changed de-minimis, sale timing and holding rate).
-
-## What counts as a public calculation symbol
-
-`createDueDiligenceRecord` is a lifecycle constructor — excluded. Scope tests,
-risk classifications, retention/SLA clocks, scoring and the CBAM arithmetic are
-catalogued.
+> The concept catalogue for **Compliance & Regulatory (09)**: what each concept *means*,
+> the formula where one is canonical, its assumptions and limits, and the standard or
+> regulation that fixes it. Nodes **define**; they hold no threshold, target, weighting or
+> mandated method, and they own no code (ADR-0037). Values a project must choose are named
+> as project-chosen inputs and left unset.
+>
+> Departmental law lives in [40-contexts/09-compliance-regulatory/rule.md](../../40-contexts/09-compliance-regulatory/rule.md).
 
 ## Catalogue
 
@@ -48,12 +42,6 @@ catalogued.
 | [CPT-0100](cbam-embedded-emissions.md) | Embedded emissions | Quantifying import CO₂e |
 | [CPT-0101](cbam-certificates-and-holding.md) | Certificates & quarterly holding | Surrender/holding obligations |
 | [CPT-0102](cbam-cost-and-sector-scope.md) | Cost & HS sector scope | Pricing the liability; scoping goods |
-
-## Not concepts (excluded from G10)
-
-> Lifecycle constructors — governed by `rule.md` (CMP-R*), not calculations.
-
-`createDueDiligenceRecord`
 
 ## Divergences & regulatory drift (for the backlog)
 

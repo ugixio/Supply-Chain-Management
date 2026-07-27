@@ -50,12 +50,6 @@ Continuing CPT-0006 (`demand = [0, 5, 0, 0, 7]`, `alpha = 0.1`):
 - correction = 1 − 0.1/2 = **0.95**
 - SBA forecast = 2.476 × 0.95 = **2.352** units/period
 
-## Implementations
-
-- PY: [`sba_croston`](../../../services/calc/03_demand_planning/forecasting.py)
-
-> **Coverage gap:** no TypeScript implementation (inherited from CPT-0006).
-
 ## Governing rules
 
 - **DMD-R4** — forecast values are non-negative.

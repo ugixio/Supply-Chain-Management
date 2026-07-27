@@ -51,10 +51,6 @@ Planned order: 60 units of SKU-A, week 32 → pegged to SO-1001 (40) and depende
 demand from parent P-9 (20) — cancelling SO-1001 frees 40 of the 60 before it
 becomes a PO.
 
-## Implementations
-
-- PY: [`pegging`](../../../services/calc/04_supply_planning/mrp.py)
-
 ## Governing rules
 
 - **SPL-R*** — planned-order changes traceable to demand (audit trail discipline).

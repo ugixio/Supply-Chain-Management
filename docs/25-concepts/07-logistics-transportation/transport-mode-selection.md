@@ -56,10 +56,6 @@ Per mode, from profile (cost/t-km, speed km/h, kgCO₂e/t-km):
 feasible at 960$; RAIL 3.3 d at 4,800$ → RAIL typically wins the blend
 (cheap-enough, fast-enough, low CO₂).
 
-## Implementations
-
-- PY: [`mode_selection`](../../../services/calc/07_logistics_transportation/logistics.py)
-
 ## Governing rules
 
 - Advisory; the executed choice prices via CPT-0124 and reports via CPT-0123.

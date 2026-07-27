@@ -1,71 +1,91 @@
 ---
 id: rule-scm-core
-title: "Rules — SCM Core (cross-department) SCM-R1..R13"
+title: "Rules — SCM Core (externally-fixed standards) SCM-R1..R13"
 type: rule
 owner: orchestrator
 status: active
 since: 2026-07-19
-updated: 2026-07-19
+updated: 2026-07-27
 relations:
   - { type: part-of, target: index-foundation }
   - { type: governed-by, target: index-adr }
 ---
-# Rules — SCM Core (cross-department)
+# Rules — SCM Core (externally-fixed standards)
 
-> The stable-ID home for the rules previously stated only in `CLAUDE.md` (§Critical
-> Business Rules, §Code Standards). Extracted at skeleton adoption (ADR-0010) with intent
-> preserved; from now on THIS file is the single edit point and other docs cite the IDs
-> (`CLAUDE.md` dedup = WORKFLOW U3). IDs are append-only: frozen once allocated, new ones
-> appended, never renumbered. Skill counterpart:
-> `.claude/skills/supply-chain-core/SKILL.md`.
+> **A rule lives here only if something outside this repository fixes it** — a standards body,
+> a regulator, or an arithmetic identity (ADR-0037). Anything an organization can reasonably
+> choose is **project policy** and is stated as such in §Project decisions, never as an
+> invariant. IDs are append-only: frozen once allocated, never renumbered, and a **retired ID
+> stays listed as retired** so citations elsewhere resolve.
 
-## Invariants (NEVER violated — each verifiable by test)
+## Invariants (externally fixed — NEVER violated)
 
-- **SCM-R1:** Inventory balance never goes negative unless the item has
-  `backorderAllowed = true`.
-- **SCM-R2:** A purchase order at or above the approval threshold
-  (`PO_APPROVAL_THRESHOLD_CENTS`, default $5,000) enters `PENDING_APPROVAL` and cannot
-  bypass approval.
-- **SCM-R3:** Financial records (POs, invoices, stock movements, shipments, scorecards)
-  are soft-deleted only (`isDeleted`); a hard delete never happens (ADR-0007).
-- **SCM-R4:** Every stock movement generates its double-entry GL journal mapping
-  (debit/credit accounts) — no movement without a journal entry (ADR-0005).
-- **SCM-R5:** Lot tracking is mandatory when `storageCondition !== AMBIENT` or
-  `reachSVHC = true`.
+- **SCM-R3:** A financial record — an order, an invoice, a stock movement, a shipment — is
+  **never destroyed**. Corrections are made by a further entry (reversal, credit note,
+  adjustment) that leaves the original readable. *Source:* the audit-trail requirement common to
+  IFRS/IAS record-keeping, tax law and SOX §802; the technique (soft-delete flag, append-only
+  log) is a project's choice, the prohibition is not.
+- **SCM-R4:** Every inventory movement has a **double-entry** accounting consequence: what is
+  debited equals what is credited. *Source:* double-entry bookkeeping; IAS 2 for what
+  capitalizes into inventory cost. Which GL accounts a movement maps to is a project's chart of
+  accounts, not a standard.
+- **SCM-R6:** Goods with any tie to Xinjiang (XUAR) are **presumed made with forced labour** and
+  may not enter US commerce without clear-and-convincing rebuttal evidence. *Source:* UFLPA,
+  US Pub. L. 117-78. What evidence a project collects and how it stores it is its own design.
+- **SCM-R7:** In-scope due-diligence documentation is retained **at least 5 years** from the
+  assessment date. *Source:* EU CSDDD, Directive (EU) 2024/1760 Art. 23 (as amended by Omnibus I,
+  Directive (EU) 2026/470). Longer retention is a project's choice; shorter is unlawful.
+- **SCM-R9:** Dates are **ISO 8601** (`YYYY-MM-DD`) and instants are **UTC**. *Source:*
+  ISO 8601-1:2019.
+- **SCM-R10:** Quantities carry a **GS1 unit-of-measure code**, and a quantity without its unit
+  is not a quantity. *Source:* GS1 General Specifications v23 / UN/ECE Rec. 20.
+- **SCM-R14:** An apportionment of a monetary total across parts **sums exactly to the total** —
+  no cent is created or lost by rounding the parts independently. Rounding of money is
+  **explicit, at defined boundaries only, and ties resolve to even** (`roundTiesToEven`).
+  *Source:* IEEE 754-2019 §4.3.3 for the tie rule; the sum-preservation requirement is an
+  arithmetic identity, not a preference. *(See CPT-0154.)*
 
-## Mandatory validations (compliance)
+## Retired rules
 
-- **SCM-R6:** A supplier with XUAR operations must provide `clearanceDocumentRef`
-  before transacting (UFLPA).
-- **SCM-R7:** CSDDD due-diligence documents are retained ≥ 5 years from assessment date
-  (Art. 23).
+> Retired because they stated **company policy or an implementation convention** as though it
+> were a supply-chain standard (ADR-0037). Listed permanently so old citations resolve, and so
+> the mistake is not repeated by re-allocating the ID.
 
-## Data conventions (ADR-0006; SCM-R8 rewritten by ADR-0019)
+| ID | Was | Why retired |
+|---|---|---|
+| **SCM-R1** | "Inventory never negative unless `backorderAllowed`" | The physical truth (you cannot ship what you do not have) is real, but the flag, the exception and where the check sits are design choices. A project that models allocation or consignment stock reasonably differs. → §Project decisions. |
+| **SCM-R2** | "A PO at or above `PO_APPROVAL_THRESHOLD_CENTS` (default $5,000) enters `PENDING_APPROVAL`" | Pure policy: the amount, the existence of an approval step, and the status names are each a company's choice. → §Project decisions. |
+| **SCM-R5** | "Lot tracking mandatory when `storageCondition !== AMBIENT` or `reachSVHC`" | The *obligation* to trace comes from law (EU 178/2002 for food, REACH for SVHC, GDP/GMP for pharma) and is stated per department; this particular trigger condition was invented. |
+| **SCM-R8** | "Money is arbitrary-precision Decimal, `ROUND_HALF_EVEN`, string over gRPC" | An engineering standard, not a supply-chain one. The externally-fixed part is now **SCM-R14**; the implementation obligations are **ENG-R4/ENG-R5**. |
+| **SCM-R11** | "SKU codes immutable; lifecycle via status flags" | A sound data-modelling convention, but a convention. → §Project decisions. |
+| **SCM-R12** | "Inventory transactions carry an `idempotencyKey`" | An engineering concern (**ENG-R\***, retry safety), not supply-chain law. |
+| **SCM-R13** | "Python type hints and docstrings; pytest mirrors Jest" | A code standard, and for a codebase this repository no longer has. |
 
-- **SCM-R8:** Money is **arbitrary-precision Decimal** (`decimal.js` in TS,
-  `decimal.Decimal` in Python, `NUMERIC(19,4)` in Postgres, **string** across gRPC).
-  Float arithmetic never touches a monetary value. Rounding is **explicit and banker's
-  (`ROUND_HALF_EVEN`)**, applied only at defined boundaries (persistence, display,
-  allocation remainder) — never implicitly mid-calculation. *(Was "integer cents" under
-  ADR-0006; rewritten by ADR-0019. The ID is retained; department citations by ID stay
-  valid. Migration is backlog — until it lands, `Money.amount: number` remains in code and
-  this rule states the target, so a reviewer treats new float-money paths as violations.)*
-- **SCM-R9:** Dates are ISO 8601 (`YYYY-MM-DD`); timestamps are UTC (`ISOTimestamp`).
-- **SCM-R10:** Quantity units use GS1 UOM codes (`UOM` constant, `shared/types.ts`).
-- **SCM-R11:** SKU codes are immutable once created; lifecycle is expressed via status
-  flags (ACTIVE / DISCONTINUED / BLOCKED), never by editing the code.
-- **SCM-R12:** Inventory transactions carry an `idempotencyKey` and are safe to retry —
-  a retry never duplicates (ADR-0007).
+## Project decisions (recorded as examples, never as law)
 
-## Engineering conventions
+> These are the questions a project **must answer for itself**. The context's job is to make the
+> question explicit and name the standard that constrains the answer — not to answer it.
 
-- **SCM-R13:** Python code carries mandatory type hints and docstrings on public
-  functions; Python tests (pytest) mirror TypeScript test coverage (ADR-0009).
+| Decision | Constrained by | Typical range (illustrative only) |
+|---|---|---|
+| Purchase-order approval threshold and levels | internal control policy; SOX for listed filers | varies by spend and delegation of authority |
+| Over- and under-receipt tolerance | the supply contract | commonly a low single-digit percentage |
+| Negative-stock policy (allow backorder, allocate, refuse) | fulfilment model | — |
+| Cycle service level and safety-stock method | service commitments, cost of capital | — |
+| Inventory carrying rate | cost of capital, storage, obsolescence | — |
+| Supplier-scorecard criteria, weights and rating bands | the sourcing strategy | — |
+| Quality target (PPM/DPMO) and AQL level | the customer contract; **the plan** then follows ISO 2859-1 | — |
+| Lot/serial granularity | the traceability law that applies to the goods | — |
 
-## Anti-states (the system must never allow)
+**Nothing in the table above is a default this context supplies.** Where a project needs a
+starting point, it takes it from its own contracts and its own regulator, not from here.
 
-- Negative stock without backorder authorization (violates SCM-R1).
-- A stock movement without its journal entry or outside the event log (SCM-R4, ADR-0005).
-- A hard-deleted financial record (SCM-R3).
-- A retried transaction that duplicated its effect (SCM-R12).
-- Monetary drift from float arithmetic (SCM-R8).
+## Anti-states (the context must never allow)
+
+- A **threshold, target, weighting or rating band** stated as an invariant anywhere in `docs/`.
+- A rule whose source is "this is how we did it" rather than a citable standard, regulation or
+  identity.
+- A concept node that mandates *which* method a project must use, where more than one is
+  legitimate (EOQ vs. periodic order quantity vs. dynamic lot-sizing).
+- Money apportioned so the parts no longer sum to the whole (SCM-R14).
+- A financial record destroyed rather than reversed (SCM-R3).

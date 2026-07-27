@@ -50,10 +50,6 @@ Original [100, 100, 100, 100]; revised [100, 60, 140, 100] →
 churn = 40 + 40 = 80 → `SI = 1 − 80/400 = 0.80` — below the 0.85 bar; find the
 driver before the shop floor does.
 
-## Implementations
-
-- PY: [`mps_stability_index`](../../../services/calc/04_supply_planning/mrp.py)
-
 ## Governing rules
 
 - **SPL-R*** — MPS changes inside the frozen fence require authorization (the

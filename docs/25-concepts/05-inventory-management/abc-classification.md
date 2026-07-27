@@ -50,10 +50,6 @@ Sort by ACV descending, accumulate share `p`:
 
 ACVs 500k/300k/150k/50k (total 1M): cumulative 50%→A, 80%→A, 95%→B, 100%→C.
 
-## Implementations
-
-- PY: [`classify_abc`](../../../services/calc/05_inventory_management/stock_balance.py)
-
 ## Governing rules
 
 - **INV-R*** — classification stamps the item master via governed update

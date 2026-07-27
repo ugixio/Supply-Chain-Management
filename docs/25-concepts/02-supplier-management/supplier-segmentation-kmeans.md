@@ -57,10 +57,6 @@ otherwise generic `SEGMENT_<rank>` labels).
 score/OTD and lowest PPM is labelled STRATEGIC; each supplier record returns with its
 segment attached.
 
-## Implementations
-
-- PY: [`segment_suppliers`](../../../services/calc/02_supplier_management/scorecard.py)
-
 ## Governing rules
 
 - Advisory analytics; supplier status changes flow through the onboarding/scorecard

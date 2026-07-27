@@ -46,10 +46,6 @@ relations:
 Planned 12,000; produced 11,340 good units → **94.5%** — just under the bar;
 the gap analysis goes to the S&OP supply review.
 
-## Implementations
-
-- PY: [`plan_attainment`](../../../services/calc/12_sop_planning/sop.py)
-
 ## Governing rules
 
 - **SOP-R*** — attainment reported per cycle on the published plan.

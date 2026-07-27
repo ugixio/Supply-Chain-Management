@@ -42,11 +42,6 @@ Identical to CPT-0051/CPT-0052:
 
 See CPT-0051/CPT-0052 — same arithmetic.
 
-## Implementations
-
-- PY: [`calculate_ppm`](../../../services/calc/02_supplier_management/scorecard.py)
-- PY: [`calculate_dpmo`](../../../services/calc/02_supplier_management/scorecard.py)
-
 ## Governing rules
 
 - Same as CPT-0051/0052; feeds the quality dimension of CPT-0060.

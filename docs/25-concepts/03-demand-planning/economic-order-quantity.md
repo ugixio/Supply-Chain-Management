@@ -65,14 +65,6 @@ D = 12,000 units/year, S = $50 (5,000 cents), H = $6/unit/year (600 cents):
 Check: 12,000/448 ≈ 27 orders/year; ordering cost ≈ $1,340, holding ≈ $1,344 — the two
 costs balance, as the derivation requires.
 
-## Implementations
-
-- PY: [`economic_order_quantity`](../../../services/calc/03_demand_planning/safety_stock.py)
-
-TypeScript had a duplicate until L3a; it was **deleted, not ported** — planning
-mathematics is Python's exclusive lane (ENG-R8 / ADR-0033). Python is now the sole
-owner, covered by `services/calc/tests/test_safety_stock.py`.
-
 ## Governing rules
 
 - **SCM-R8** — Money is integer cents; the TS signature takes cents.

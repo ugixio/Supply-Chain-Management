@@ -53,10 +53,6 @@ EUR AP of −50,000¢ (owed), original 1.08, closing 1.11 →
 original −54,000¢, revalued −55,500¢ → **loss 1,500¢** (the payable grew in
 target terms).
 
-## Implementations
-
-- PY: [`period_end_fx_revaluation`](../../../services/calc/11_finance_controlling/finance.py)
-
 ## Governing rules
 
 - **SCM-R4** — the resulting journal (FX gain/loss ↔ balance) posts double-entry;

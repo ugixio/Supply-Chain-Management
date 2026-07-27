@@ -54,11 +54,6 @@ relations:
 qty 0.5 m (scrap 5%) → 102 × 2 × 1.05 = 214.2 m tube. Tube also used at level 1
 elsewhere → LLC(tube) = 2; net it after frames.
 
-## Implementations
-
-- PY: [`bom_explosion`](../../../services/calc/04_supply_planning/mrp.py)
-- PY: [`low_level_code`](../../../services/calc/04_supply_planning/mrp.py)
-
 ## Governing rules
 
 - **SPL-R*** — BOM master data governed on the aggregate (`BillOfMaterials.ts`).

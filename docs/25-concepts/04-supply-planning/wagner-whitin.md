@@ -55,10 +55,6 @@ order t1 covering t1 (cost 100) + order t3 covering t3..t4
 (100 + 1·10 = 110) → total **210**; merging t3..t4 into t1 would cost
 100 + 90·2 + 10·3 = 310 — the DP rejects it.
 
-## Implementations
-
-- PY: [`wagner_whitin`](../../../services/calc/04_supply_planning/mrp.py)
-
 ## Governing rules
 
 - **SPL-R*** — lot-plan outputs feed planned orders (PRC approval before spend).

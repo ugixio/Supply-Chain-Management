@@ -53,14 +53,6 @@ Lines: 10 × $12.50 and 4 × $30.00, currency USD (amounts in cents):
 If `PO_APPROVAL_THRESHOLD_CENTS` = 500,000 ($5,000), this PO is below threshold and
 initializes `APPROVED`; at or above it, `PENDING_APPROVAL` (SCM-R2).
 
-## Implementations
-
-- RS: [`purchase_order_total`](../../../crates/scm-core/src/d01_procurement/purchase_order.rs)
-
-The TypeScript `calculatePOTotal` was deleted at L3b: business rules and the arithmetic they
-depend on belong to the Rust core (ADR-0035, ENG-R10). There is no Python implementation and
-none is wanted — this is a rule input, not a model.
-
 ## Governing rules
 
 - **SCM-R2 (PRC)** — a PO at or above the approval threshold enters `PENDING_APPROVAL`;

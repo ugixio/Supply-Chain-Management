@@ -51,12 +51,6 @@ Lines: 106 × 1250¢ and 40 × 3000¢:
 If the PO ordered 100 of the first line, this GRN shows an over-receipt (CPT-0027) and the
 extra 6 units are valued here at their real received amount.
 
-## Implementations
-
-- TS: [`totalReceivedValueCents`](../../../packages/domain/src/01-procurement/domain/GoodsReceipt.ts)
-
-> **Coverage gap:** no Python implementation.
-
 ## Governing rules
 
 - **SCM-R8** — Money is Decimal (ADR-0019); the per-line float round is the tracked

@@ -55,10 +55,6 @@ relations:
 λ = 8/h, E[S] = 0.4 h → μ = 2.5/h, `c_min = ⌈8/(2.5×0.8)⌉ = 4`.
 c = 4 → ρ = 0.8 ≤ 0.8 but Wq ≈ 0.30 h ≤ 0.5 ✓ → **4 doors**, ~18 min mean wait.
 
-## Implementations
-
-- PY: [`dock_door_recommendation`](../../../services/calc/06_warehouse_management/queueing.py)
-
 ## Governing rules
 
 - Sizing is advisory; individual appointments follow the DockAppointment state machine

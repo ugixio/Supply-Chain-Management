@@ -54,11 +54,6 @@ relations:
 Layers: 60 @ 1,000¢ (Jan), 80 @ 1,100¢ (Feb). Issue 90 →
 60×1,000 + 30×1,100 = **93,000¢ COGS**; remaining: 50 @ 1,100¢.
 
-## Implementations
-
-- PY: [`fifo_valuation`](../../../services/calc/05_inventory_management/stock_balance.py)
-- TS: [`valuationSnapshot`](../../../packages/domain/src/05-inventory-management/domain/InventoryValuation.ts)
-
 ## Governing rules
 
 - **SCM-R1** — no over-issue; **SCM-R4** — COGS journals; **SCM-R8** — integer cents;

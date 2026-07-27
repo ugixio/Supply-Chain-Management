@@ -46,11 +46,6 @@ relations:
 Lots `(L2, 2026-09-01)`, `(L1, 2026-08-01)`, `(L3, 2026-08-01)` →
 sequence `L1, L3, L2` — the two August lots go first, ordered by lot id.
 
-## Implementations
-
-- PY: [`fefo_sort`](../../../services/calc/06_warehouse_management/slotting.py)
-- TS: [`fefoSort`](../../../packages/domain/src/06-warehouse-management/domain/Warehouse.ts)
-
 ## Governing rules
 
 - **SCM-R5** — lot tracking is mandatory for non-ambient storage and SVHC items; FEFO is

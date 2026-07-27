@@ -65,14 +65,6 @@ D̄ = 50 units/day, σ_D = 20 units/day, LT = 9 days, σ_LT = 2 days, 95% (z = 1
 Against CPT-0014's 99 units on the same SKU: ignoring σ_LT would have under-buffered by
 95 units — nearly half the requirement.
 
-## Implementations
-
-- PY: [`safety_stock_combined`](../../../services/calc/03_demand_planning/safety_stock.py)
-
-TypeScript had a duplicate until L3a; it was **deleted, not ported** — planning
-mathematics is Python's exclusive lane (ENG-R8 / ADR-0033). Python is now the sole
-owner, covered by `services/calc/tests/test_safety_stock.py`.
-
 ## Governing rules
 
 - **SCM-R1** — inventory never goes negative without `backorderAllowed`.

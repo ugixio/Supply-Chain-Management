@@ -46,10 +46,6 @@ relations:
 Average inventory 4.0M at 25% → **1.0M/year** — the budget line that safety-stock
 increases must justify against service gains.
 
-## Implementations
-
-- PY: [`carrying_cost`](../../../services/calc/05_inventory_management/stock_balance.py)
-
 ## Governing rules
 
 - **FIN-R*/INV-R*** — the rate is a governed parameter, not per-analyst.

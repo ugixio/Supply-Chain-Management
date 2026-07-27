@@ -56,12 +56,6 @@ Base 10,000/mo, max in 30 days 12,300 (+23%), achieved in 24 days → AG.1.1 met
 gap 0. Downside: reduced to 7,000 penalty-free → 30%. VaR: P 0.15 × 40M¢ = 6M¢
 expected; mitigation 2.5M¢ → net 3.5M¢, 6M > 5M ⇒ INCREASE_MITIGATION.
 
-## Implementations
-
-- PY: [`upside_supply_flexibility`](../../../services/calc/13_order_management/perfect_order_and_agility.py)
-- PY: [`downside_supply_adaptability`](../../../services/calc/13_order_management/perfect_order_and_agility.py)
-- PY: [`overall_value_at_risk`](../../../services/calc/13_order_management/perfect_order_and_agility.py)
-
 ## Governing rules
 
 - ADR-0029 notes the fine split of these agility/VaR functions to dept 10 remains a

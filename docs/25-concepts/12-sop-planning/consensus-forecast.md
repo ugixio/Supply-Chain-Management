@@ -59,11 +59,6 @@ weights 0.526/0.263/0.211; forecasts for June [1000, 1200, 900] →
 consensus = 526 + 316 + 190 = **1,032**. In the meeting, sales overrides to
 1,100 + launch lift 150 → TS consensus 1,250 (reason logged).
 
-## Implementations
-
-- PY: [`consensus_forecast`](../../../services/calc/12_sop_planning/sop.py)
-- TS: [`calculateConsensus`](../../../packages/domain/src/12-sop-planning/domain/ConsensusItem.ts)
-
 ## Governing rules
 
 - **SOP-R*** — consensus items carry override reasons; DMD-R7 override

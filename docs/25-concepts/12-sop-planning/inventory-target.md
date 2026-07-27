@@ -49,10 +49,6 @@ SS 93, EOQ 721 (the CPT-0120 example) → `target = 93 + 360.5 = 453.5 units` �
 at 200/week demand ≈ 2.3 weeks of supply; multiply by unit cost for the
 working-capital plan (CPT-0104).
 
-## Implementations
-
-- PY: [`inventory_target`](../../../services/calc/12_sop_planning/sop.py)
-
 ## Governing rules
 
 - **SOP-R*** — the published plan carries inventory targets per family.

@@ -54,10 +54,6 @@ Depot D, stops A(10,0), B(0,10), d(A,B) = 14.14 →
 `S_AB = 10 + 10 − 14.14 = 5.86` — merging A and B into one route saves 5.86 vs two
 out-and-back trips, if combined demand fits the truck.
 
-## Implementations
-
-- PY: [`clarke_wright_savings`](../../../services/calc/07_logistics_transportation/logistics.py)
-
 ## Governing rules
 
 - Advisory routing; executed routes become shipments under LOG-R* lifecycles.

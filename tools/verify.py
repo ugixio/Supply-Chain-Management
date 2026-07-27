@@ -84,7 +84,14 @@ RETIRED_HEADING = "## Retired rules"
 # resolves to nothing: it survived every other gate because it is not a broken link, not a
 # duplicate, and not a retired ID. 47 of them were citing lifecycle rules that had been retired
 # with the deleted application, so the wildcard was hiding exactly what it looked like it covered.
-RULE_WILDCARD = re.compile(r"\*\*((?:SCM|[A-Z]{3})-R)\\?\*\*\*")
+#
+# What it flags is the **bold citation form** — `**FIN-R***` — which is how a rule is cited as law
+# in a Governing-rules bullet. Naming a family as a set is legitimate ("the SCM-R* family", a
+# layout tree, a rule file's own title) and is plain text, so it is not flagged.
+#
+# `[^*]*` before the family matters: the first version required `**` immediately before it and so
+# missed `**SCM-R7 / CMP-R***`, where the bold span opened on the *other* rule in the sentence.
+RULE_WILDCARD = re.compile(r"\*\*[^*]*\b((?:SCM|[A-Z]{3})-R)\\?\*\*\*")
 
 
 def section_body(text: str, heading: str) -> str:

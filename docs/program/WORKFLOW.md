@@ -616,8 +616,33 @@ mirror-coverage bar) · duplicated formulas across TS/Python with one past diver
   Average-Max and combined-variability examples. Correcting the combined example changed its
   conclusion (93 units of under-buffering, not 95).
   `templates/concept.md` aligned to the table form so new nodes inherit it.
-- ⬜ **C5 · WHAT** — Re-check `docs/standards/REGULATORY_FRAMEWORK.md` against current law; it is
-  now one of the most load-bearing documents in the repository.
+- 🟩 **C5 · WHAT — the regulatory framework was stating superseded law (2026-07-27).** Verified
+  against the instruments themselves, not against the repository's own summaries — and the document
+  was **wrong about CSDDD on three separate points**:
+  it published the original three-phase scope (2027/2028/2029 at 5,000/3,000/1,000 employees), which
+  **Directive (EU) 2026/470** replaced with a **single band — >5,000 employees ∧ >€1.5bn, from
+  26 Jul 2029** (transposition 26 Jul 2028; roughly 13,000 undertakings became roughly 6,000);
+  it stated penalties of **up to 5%** of worldwide turnover, now capped at **3%**;
+  and it did not record that the **harmonised EU-wide civil liability regime was deleted**, so
+  exposure now genuinely differs by Member State.
+  **The catalogue was better than its own reference document** — CPT-0093 already recorded the
+  Omnibus supersession — but it was *structured around the superseded test*, with the current law in
+  a drift note underneath. A project reading its Formula section would have implemented the wrong
+  directive. Current law now leads; the old phasing is kept below it, labelled as superseded and
+  marked do-not-implement.
+  **Rewritten around what the document is for:** the reference list behind the `CLAUDE.md` standards
+  table, with a **verification date per entry** and a warning that the EU entries have changed three
+  times in eighteen months. Added the instruments the catalogue cites but the framework had never
+  listed — CBAM, EUDR, CSRD, IAS 2, ISO 2859-1, UN/ECE Rec 20, the ISO date/currency/country
+  standards, IEEE 754 and the per-mode dangerous-goods regimes. Removed every `src/…` implementation
+  reference and field name, and dropped the Gartner and McKinsey sections: a consultancy maturity
+  model is not a standard, since an organisation can reasonably decline to use one.
+  **Two more surviving thresholds found in passing:** the 85% space-utilization band C1a reported
+  removing (still in an output description) and a 5%-of-exposure recommendation band in the SCOR
+  agility node.
+  **G12 had a blind spot of its own**, found while fixing a citation it should have caught:
+  `**SCM-R7 / CMP-R***` escaped because the bold span opened on the *other* rule in the sentence.
+  Narrowed to the bold citation form and widened to catch that shape; verified against both.
 
 ### Phase 1 — Product evolution (owner-defined)
 - ⬜ Resolve the open decisions in `10-decisions/README.md` (runtime/persistence, API

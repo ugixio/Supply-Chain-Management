@@ -5,7 +5,7 @@ type: concept
 owner: orchestrator
 status: active
 since: 2026-07-22
-updated: 2026-07-22
+updated: 2026-07-27
 relations:
   - { type: part-of, target: index-concepts-14-supplier-development }
   - { type: governed-by, target: index-adr }
@@ -31,11 +31,15 @@ relations:
 
 - **Application delayed to 30 Dec 2026** (large operators; 30 Jun 2027 micro/small)
   by the amendment published OJ 23 Dec 2025, with simplification of data duties.
-- **The official country benchmark (Commission, May 2025) contradicts the
-  hardcoded list:** only Belarus, Myanmar, North Korea and Russia are HIGH-risk;
-  Brazil, Indonesia, Malaysia are **standard**-risk (the code's "illustrative
-  tropical" set treats them as high). Override via the `high_risk_countries`
-  parameter until the constant is updated.
+- **The country classification is read from the Commission's benchmarking, never hardcoded**
+  (SDV-R6). The benchmark in force at the May 2025 implementing act lists only Belarus, Myanmar,
+  North Korea and Russia as high-risk, while Brazil, Indonesia and Malaysia are **standard**-risk —
+  the opposite of what an "illustrative tropical" list assumes. A hardcoded set is wrong in the
+  direction of *under*-diligence the moment the benchmark is revised, and it is revised.
+- **The Commission adopted further measures on 13 July 2026**: a delegated act updating and
+  simplifying the product scope, plus an implementing act governing the information system for
+  due-diligence statements. **Re-check the product annex** — an in-scope commodity list from before
+  that date may no longer match.
 - **Cutoff semantics:** the regulation's cutoff applies to *deforestation after
   2020-12-31*, not to production date — the code's `production_date ≤ cutoff →
   non-compliant` is a conservative proxy that mis-fails long-standing plantations
@@ -75,6 +79,8 @@ certified suffices — the drift changes the verdict; parameter override shown.
 - CPT-0093 CSDDD scope · CPT-0132 E pillar (`deforestation_free_compliant`).
 
 ## References
+
+> Verified against the revised EUDR and the 13 July 2026 measures on **2026-07-27**.
 
 - EU Regulation 2023/1115 + amending Regulation (OJ 23 Dec 2025); Commission
   country benchmark (May 2025, update planned 2026); Global Forest Watch.

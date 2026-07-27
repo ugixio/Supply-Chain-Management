@@ -5,7 +5,7 @@ type: concept
 owner: orchestrator
 status: active
 since: 2026-07-22
-updated: 2026-07-22
+updated: 2026-07-27
 relations:
   - { type: part-of, target: index-concepts-09-compliance-regulatory }
   - { type: governed-by, target: index-adr }
@@ -45,9 +45,10 @@ relations:
   2026-07.
 - Equal quarterly import distribution is a conservative approximation when
   per-quarter data is missing — feed actual quarterly cumulative emissions when known.
-- **Timing (Omnibus):** certificate *sales* begin February 2027 for 2026 imports; the
-  annual declaration/surrender deadline is 30 September of the following year. The
-  2026 liability accrues before any cash-out is possible — accrue the cost (CPT-0102).
+- **Timing (Omnibus):** certificate *sales* begin February 2027 for 2026 imports, so the **quarterly
+  holding obligation first bites in 2027** — there is nothing to hold in 2026. The annual
+  declaration and surrender deadline is 30 September of the following year. 2026 liability therefore
+  accrues before any cash-out is possible: it is a cost to accrue, not to pay (CPT-0102).
 - Deduction requires an *effective* carbon price actually paid (documented); rebated
   or waived prices don't count.
 - **Does not apply when:** below the 50 t/yr de-minimis, or goods originate in
@@ -69,6 +70,8 @@ minimum holdings **125 / 250 / 375 / 1,000** certificates. A single import of
 - CPT-0100 Embedded emissions · CPT-0102 Compliance cost.
 
 ## References
+
+> Verified against the 2025 simplification package on **2026-07-27**.
 
 - EU Reg. 2023/956 Art. 9, 22; Implementing Reg. 2023/1782; CBAM Omnibus Regulation
   (in force 20 Oct 2025) — 50% holding, Feb-2027 sales, 30-Sep declaration.

@@ -5,7 +5,7 @@ type: concept
 owner: orchestrator
 status: active
 since: 2026-07-22
-updated: 2026-07-22
+updated: 2026-07-27
 relations:
   - { type: part-of, target: index-concepts-09-compliance-regulatory }
   - { type: governed-by, target: index-adr }
@@ -15,27 +15,26 @@ relations:
 > Decides when (and whether) a company falls under the EU Corporate Sustainability Due
 > Diligence Directive, from employee count and turnover.
 
-## Formula (as implemented — original Directive 2024/1760 phasing)
+## Formula — current law
 
-    EU company:      PHASE_1: >5,000 emp ∧ >€1.5B · PHASE_2: >3,000 ∧ >€900M
-                     (high-risk sector: >1,500 ∧ >€450M → PHASE_2)
-                     PHASE_3: >1,000 ∧ >€450M
-    Non-EU company:  same turnover bands on net EU turnover, no employee test
-    else NOT_IN_SCOPE
+Directive (EU) 2024/1760 **as amended by Directive (EU) 2026/470** ("Omnibus I", OJ 26 Feb 2026, in
+force 18 Mar 2026). There is **one band and one date**, not a phase-in:
 
-A due-diligence record flags whether it contains any identified
-impact with severity CRITICAL/SEVERE.
+    EU undertaking:      IN_SCOPE ⇔ employees > 5,000 ∧ net worldwide turnover > €1.5B
+                                    (both tests)
+    Non-EU undertaking:  IN_SCOPE ⇔ net turnover generated in the EU > €1.5B
+                                    (no employee test)
+    otherwise            NOT_IN_SCOPE
 
-## Regulatory drift — RECORDED (verified 2026-07)
+Applies from **26 July 2029**; Member State transposition by **26 July 2028**.
 
-**Omnibus I (Directive (EU) 2026/470, OJ 26 Feb 2026, in force 18 Mar 2026) supersedes
-this phasing:** scope collapses to a **single band — >5,000 employees ∧ >€1.5B net
-turnover** (non-EU: >€1.5B net EU turnover, no employee test); tiered phases are
-replaced by a single application date (**26 Jul 2029**; transposition by 26 Jul 2028;
-Art. 16 reporting from FY 2030). The implementation models the *original* 2024/1760
-Art. 37 phase-in and therefore **over-includes** companies that the amended directive
-now leaves out of scope. Update is a backlog item; until then treat PHASE_2/PHASE_3
-outputs as "was in scope pre-Omnibus; re-check".
+## Superseded phasing (kept so a pre-Omnibus assessment can be read)
+
+The original Art. 37 phase-in ran **>5,000 ∧ >€1.5B** from 2027, **>3,000 ∧ >€900M** from 2028 and
+**>1,000 ∧ >€450M** from 2029, with a high-risk-sector shortcut. **Do not implement it.** Anything
+built on it **over-includes** companies the amended directive leaves out of scope — roughly 13,000
+undertakings became roughly 6,000 — and an assessment produced under the old test is not evidence
+about the current one.
 
 ## Inputs and outputs
 
@@ -60,9 +59,13 @@ PHASE_3 as implemented, but **out of scope** under the 2026 amendment.
 
 ## Governing rules
 
-- **SCM-R7 / CMP-R*** — 5-year document retention (CPT-0096) attaches once in scope.
+- **SCM-R7** — once in scope, due-diligence documentation is retained at least five years
+  (CPT-0096). **CMP-R2** — the scope determination itself records its provenance: which figures were
+  used, from which financial year, and under which version of the directive.
 
 ## References
+
+> Verified against Directive (EU) 2026/470 on **2026-07-27**.
 
 - EU Directive 2024/1760 (CSDDD), Art. 2/37; **Directive (EU) 2026/470 (Omnibus I)** —
   amended scope & dates; LkSG (Germany) as the national forerunner.

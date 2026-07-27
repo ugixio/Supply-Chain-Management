@@ -103,9 +103,6 @@ def is_allowlisted(path: str) -> bool:
         return True
     if path.startswith(".claude/") or path.startswith(".github/"):
         return True
-    # Component docs live next to the code they document (ADR-0023 monorepo layout).
-    if re.fullmatch(r"packages/domain/src/[^/]+/(README|IMPLEMENTATION)\.md", path):
-        return True
     # App/package/service scaffolds may carry their own README (framework convention).
     if re.fullmatch(r"(apps|packages|services)/[^/]+/README\.md", path):
         return True
@@ -466,7 +463,19 @@ def main() -> int:
     # authority — a retirement is an allocation fact), and the ADRs (append-only history;
     # rewriting an old decision to remove an ID would falsify the record).
     declaring = {"docs/00-governance/id-registry.md"}
-    for path, (meta, text) in docs.items():
+    # EVERY tracked Markdown file is checked, not only the governed tree. G11 first shipped over
+    # front-matter documents alone and reported green while the skills tree cited three retired
+    # rules: a gate over part of the estate certifies only the part it can see. `.claude/**` is
+    # the worst place to leave uncovered, because those files instruct the next session's work.
+    checked = dict(docs)
+    for path in tracked:
+        if path in checked or not path.endswith(".md"):
+            continue
+        try:
+            checked[path] = ({}, open(path, encoding="utf-8").read())
+        except OSError:
+            continue
+    for path, (meta, text) in checked.items():
         if path in declaring or meta.get("type") == "adr":
             continue
         for number, line in enumerate(text.splitlines(), 1):

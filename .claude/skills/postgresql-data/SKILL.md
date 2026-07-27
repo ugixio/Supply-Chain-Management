@@ -2,16 +2,16 @@
 description: >
   PostgreSQL for this project — schema design, migrations, exact NUMERIC money precision
   (ADR-0019), indexing, transactions, the one-way knowledge read model (ADR-0024), and the
-  event-sourced inventory store (ADR-0005). Use for any DB schema, migration, or data-access
-  adapter in packages/infrastructure.
+  append-only event store (ADR-0005). Use for any DB schema, migration, or data-access adapter.
 ---
 
 # PostgreSQL — data layer
 
-> Persistence lives in `packages/infrastructure` behind ports declared by use-cases
-> (see `clean-architecture`). There are two distinct data concerns: the **knowledge read
-> model** (Stage A, disposable projection of `docs/`) and the **transactional store**
-> (Stage C). Do not conflate them.
+> PostgreSQL owns **transactional truth** and nothing else (ENG-R8): not a queue, not a
+> high-volume time-series store. Persistence lives in an adapter behind a port declared by the
+> core (see `clean-architecture`). Two distinct data concerns: the **knowledge read model**
+> (a disposable one-way projection of `docs/`, ADR-0024) and the **transactional store**. Do not
+> conflate them.
 
 ## Money & numeric precision (ADR-0019 — the hard rule)
 
@@ -38,8 +38,9 @@ description: >
 
 - Schema changes are **migrations**, versioned and forward-only in CI; never edit a shipped
   migration. One migration = one coherent change, reversible where practical.
-- The department `schema.sql` files (now under `packages/domain/src/*/`) are the design
-  reference; the runtime schema is built by migrations in `packages/infrastructure`.
+- The per-department `schema.sql` drafts were deleted with the reference implementation
+  (ADR-0037). A project owns its own schema; what this context supplies is the *meaning* a column
+  must carry — the concept nodes and the department rules — not the DDL.
 
 ## The knowledge read model (ADR-0024 — Stage A)
 
@@ -54,7 +55,7 @@ description: >
 
 - An append-only `event(aggregate_id, seq, type, payload JSONB, occurred_at)` table with a
   unique `(aggregate_id, seq)`; the in-memory `EventStore` becomes an adapter over it.
-- Movements carry `idempotency_key` unique per aggregate (SCM-R12) — a retry never
+- Movements carry `idempotency_key` unique per aggregate — a retry never
   double-applies. Every state-based department stays state-based.
 
 ## Access & security

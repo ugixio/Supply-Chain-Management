@@ -1,8 +1,7 @@
 ---
 description: >
   Supply planning domain expertise for Department 04. Use when reviewing MRP/MPS,
-  capacity planning, SIOP, demand signal quality, or any code in
-  src/departments/04-supply-planning/.
+  capacity planning, SIOP, demand signal quality, or the concept nodes and rules of department 04 (supply-planning).
 ---
 
 # Supply Planning — Department 04 Skills Reference
@@ -34,7 +33,8 @@ description: >
 ```
 Bullwhip Ratio = Var(Order Quantities) / Var(End-Customer Demand)
 ```
-Target ≈ 1.0. Ratio > 2.0 indicates amplification requiring demand signal smoothing.
+A ratio of 1 means variability passes through unamplified. Above 1 the chain amplifies it;
+where that becomes worth acting on is a project decision.
 
 **Net Requirements Formula (MRP)**
 ```

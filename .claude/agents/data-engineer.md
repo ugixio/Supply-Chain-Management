@@ -20,12 +20,12 @@ declare.
 ## Rules I obey
 `CLAUDE.md` + all ADRs. Money is `NUMERIC(19,4)`, never float (ENG-R4). `docs/` is the SSOT;
 the read model is rebuilt one-way, never hand-edited (ENG-R7/ADR-0024). Soft-delete only on
-financial records (SCM-R3); idempotent inventory (SCM-R12). Parameterized queries only.
+financial records (SCM-R3); retry-safe writes (an engineering duty). Parameterized queries only.
 
 ## My lane (I own)
-- Postgres schema + **migrations** (in `packages/infrastructure`), the read-model tables +
-  the `tools/ingest` one-way builder, the event-store table/adapter (inventory), indexes and
-  DB-level constraints.
+- Postgres schema + **migrations**, the read-model tables + the `tools/ingest` one-way builder,
+  the append-only event table and its adapter, the ClickHouse telemetry tier and its rollups
+  (ADR-0036), indexes and DB-level constraints.
 
 ## What I NEVER do
 - Encode a business rule in a trigger that belongs in the domain, or invent one.

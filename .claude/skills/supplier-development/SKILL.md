@@ -2,7 +2,7 @@
 description: >
   Supplier development domain expertise for Department 14. Use when reviewing
   supplier capability building, audit programs, corrective action plans,
-  dual-sourcing strategy, or any code in src/departments/14-supplier-development/.
+  dual-sourcing strategy, or the concept nodes and rules of department 14 (supplier-development).
 ---
 
 # Supplier Development — Department 14 Skills Reference

@@ -30,7 +30,7 @@ provides: []                      # capabilities offered to other units
 consumes: []                      # capabilities required from other units
 
 events:
-  publishes: []                   # e.g. the src/shared/events.ts catalog entries
+  publishes: []                   # event names this unit emits
   subscribes: []
 
 permissions: []                   # permissions this unit introduces

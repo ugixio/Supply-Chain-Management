@@ -2,8 +2,7 @@
 description: >
   Order management domain expertise for Department 13. Use when reviewing customer
   orders, order entry accuracy (SCOR RL.2.3), projected order intake, Holt-Winters
-  demand forecast, backlog identity, book-to-bill, or any code in
-  src/departments/13-order-management/.
+  demand forecast, backlog identity, book-to-bill, or the concept nodes and rules of department 13 (order-management).
 ---
 
 # Order Management — Department 13 Skills Reference

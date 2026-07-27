@@ -47,9 +47,10 @@ relations:
 
 - **Rules:**
   - A department `rule.md` is created from `docs/program/templates/rule.md` with its
-    reserved prefix (id-registry §2), extracting the invariants currently embedded in
-    that department's code/README — backlog item U4 in `program/WORKFLOW.md`.
+    reserved prefix (id-registry §2). A new rule is admitted only against the inclusion test:
+    the standard, regulation or identity that fixes it is cited, or it belongs in
+    **Project decisions** instead (ADR-0037).
   - Cross-department rules live in `30-foundation/scm-core/rule.md` (SCM-Rx), inherited
     by every department — referenced, never restated.
-  - Departments never read each other's internals; shared concepts live in `src/shared/`
-    and are governed by the `SCM-R*` family.
+  - Departments never read each other's internals; cross-cutting concepts are governed by the
+    `SCM-R*` family and inherited.

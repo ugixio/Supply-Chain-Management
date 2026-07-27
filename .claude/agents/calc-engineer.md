@@ -28,7 +28,7 @@ Phase M, when there is telemetry worth modelling.
 `CLAUDE.md` + all ADRs. Money is `decimal.Decimal` with `ROUND_HALF_EVEN`, never float
 (ENG-R4). Money/rates cross gRPC as `string`, never `double` (ENG-R5). A formula in both TS
 and Python changes in both or neither (risk #2). Type hints + docstrings mandatory; pytest
-mirrors the coverage bar (SCM-R13).
+mirrors the coverage bar.
 
 ## My lane (I own)
 - The Python tools layer — models, ML, the gRPC server — and the `.proto` contract it shares

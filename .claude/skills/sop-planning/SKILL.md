@@ -2,7 +2,7 @@
 description: >
   S&OP / SIOP planning domain expertise for Department 12. Use when reviewing
   Sales & Operations Planning cycles, consensus forecast, demand-supply balancing,
-  S&OP KPIs, demand signal quality, or any code in src/departments/12-sop-planning/.
+  S&OP KPIs, demand signal quality, or the concept nodes and rules of department 12 (sop-planning).
 ---
 
 # S&OP Planning — Department 12 Skills Reference
@@ -176,8 +176,10 @@ function computeFVA(statisticalMAPE: number, consensusMAPE: number): number {
   return statisticalMAPE - consensusMAPE;  // positive = adjustment added value
 }
 
-function isAdjustmentWorthwhile(fva: number, threshold: number = 1.0): boolean {
-  return fva >= threshold;  // only keep adjustments that improve MAPE by ≥ 1pp
+// No default on `threshold`: how much improvement justifies the adjustment effort is the
+// project's decision, and a default in a signature gets inherited without anyone deciding.
+function isAdjustmentWorthwhile(fva: number, threshold: number): boolean {
+  return fva >= threshold;
 }
 ```
 

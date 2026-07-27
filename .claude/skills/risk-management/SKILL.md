@@ -2,7 +2,7 @@
 description: >
   Risk management domain expertise for Department 10. Use when reviewing risk matrices,
   HHI concentration, bullwhip effect, EAL (Expected Annual Loss), supply chain
-  disruption models, or any code in src/departments/10-risk-management/.
+  disruption models, or the concept nodes and rules of department 10 (risk-management).
 ---
 
 # Risk Management — Department 10 Skills Reference
@@ -47,7 +47,8 @@ HHI < 1,500: competitive | 1,500–2,500: moderate | > 2,500: highly concentrate
 **Bullwhip Ratio** (Lee, Padmanabhan & Whang 1997)
 ```
 Bullwhip Ratio = Var(Order Quantities) / Var(End-Customer Demand)
-Target ≈ 1.0 | > 2.0: significant amplification
+A ratio of 1 means demand variability passes through unamplified; above 1 the chain is
+amplifying it. Where amplification becomes actionable is a project decision.
 ```
 
 **KPIs (ISO 31000:2018; APICS)**

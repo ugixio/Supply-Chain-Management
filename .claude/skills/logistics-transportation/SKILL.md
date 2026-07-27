@@ -2,7 +2,7 @@
 description: >
   Logistics and transportation domain expertise for Department 07. Use when reviewing
   shipments, Incoterms 2020, customs declarations, hazmat (IMDG/ADR), carrier
-  selection, freight cost, or any code in src/departments/07-logistics-transportation/.
+  selection, freight cost, or the concept nodes and rules of department 07 (logistics-transportation).
 ---
 
 # Logistics & Transportation — Department 07 Skills Reference
@@ -91,7 +91,8 @@ FROM shipments GROUP BY transport_mode, incoterm_rule ORDER BY avg_cost_usd DESC
 - Features: weight, volume, urgency, distance, commodity value, hazmat flag
 - Decision: road/rail/sea/air selection
 - Rule-based + ML: LightGBM classifier trained on 3 years historical mode choices
-- Accuracy target: > 90% agreement with expert decisions
+- Agreement with expert decisions is the validation measure; the level that counts as usable is
+  a project decision
 
 **Carbon Footprint Calculation** (GHG Protocol — Scope 3, Category 4)
 ```

@@ -42,7 +42,7 @@ description: >
   no secrets in code or logs, parameterized queries (never string-built SQL), deny-by-
   default authorization. Validate and encode at every boundary. Never log money-affecting
   or PII data at info level.
-- **Money is exact.** No float ever touches a monetary value (SCM-R8/ENG-R4). See
+- **Money is exact.** No float ever touches a monetary value (SCM-R14/ENG-R4). See
   `python-precision-grpc` and `postgresql-data` for the Decimal/NUMERIC contract.
 - **Errors are typed and meaningful.** No silent `catch {}`; either handle, wrap with
   context, or rethrow. A swallowed error is a future 3 a.m. page.

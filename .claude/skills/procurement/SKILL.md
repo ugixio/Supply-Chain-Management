@@ -2,7 +2,7 @@
 description: >
   Procurement domain expertise for Department 01. Use when reviewing purchase orders,
   supplier contracts, RFQs, approval workflows, Kraljic matrix classification,
-  spend analysis, or any procurement TypeScript code in src/departments/01-procurement/.
+  spend analysis, or the concept nodes and rules of department 01 (procurement).
 ---
 
 # Procurement — Department 01 Skills Reference
@@ -25,7 +25,7 @@ description: >
 | Supplier On-Time Delivery (OTD) | ≥ 95% | On-time receipts / Total receipts × 100 |
 | Spend Under Management | ≥ 80% | Managed spend / Total addressable spend × 100 |
 | Cost Savings vs. Budget | ≥ 3% annual | (Budget price − Actual price) × Qty |
-| PO Approval Threshold | $5,000 (configurable) | `PO_APPROVAL_THRESHOLD_CENTS` constant |
+| PO approval threshold | **project-chosen** — from the delegation of authority, not from here | — |
 
 **Kraljic Matrix** (Kraljic 1983, Harvard Business Review)
 | | Low Supply Risk | High Supply Risk |
@@ -82,7 +82,8 @@ FROM po_line_items GROUP BY supplier_id ORDER BY variance_usd DESC;
 **Spend Clustering (Strategic Sourcing)**
 - K-means on: annual spend, supplier count, criticality score, lead time variability
 - Output: cluster assignment → Kraljic quadrant recommendation
-- Silhouette score target > 0.4; elbow method for k selection
+- Silhouette score assesses cluster separation and the elbow method suggests k; neither has a
+  universal cut-off — inspect the clusters, do not trust a number
 
 ## Machine Learning
 
@@ -165,9 +166,11 @@ def reorder_point(avg_daily_demand: float, lead_time_days: float,
     return avg_daily_demand * lead_time_days + safety_stock
 ```
 
-## TypeScript
+## Aggregates a procurement implementation typically needs
 
-**Domain Objects in `src/departments/01-procurement/`**
+*Shapes, not code — ADR-0037 deleted the reference implementation. A project builds these in its
+own repository, with its own policy values.*
+
 - `PurchaseOrder.ts` — PO aggregate; `POStatus` union; approval workflow; three-way match
 - `Supplier.ts` — Supplier master; `KraljicQuadrant`; certifications (ISO 28000, C-TPAT, AEO)
 - `Contract.ts` — Framework agreements; price schedules; Incoterms 2020
@@ -228,6 +231,7 @@ type POEvent =
 
 <!-- Fed by orchestrator corrections (docs/program/operating-model.md §4.7). Read before writing. -->
 
-- Reading the approval threshold as "above" (`>`) → **SCM-R2 is "at or above" (`>=`)**: a
-  PO totaling exactly `PO_APPROVAL_THRESHOLD_CENTS` enters `PENDING_APPROVAL`, never
-  auto-approves. The boundary test in `tests/unit/purchaseorder.test.ts` pins this.
+- **Boundary direction on any threshold.** Whether a limit means "above" (`>`) or "at or above"
+  (`>=`) is part of the policy a project sets, and the order sized *exactly* to the limit is the
+  one an approver most wants to see. State the comparison in the rule text, and pin it with a
+  test at the boundary value — reading it the other way was a real defect here.

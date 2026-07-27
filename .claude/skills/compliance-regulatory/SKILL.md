@@ -2,7 +2,7 @@
 description: >
   Compliance and regulatory domain expertise for Department 09. Use when reviewing
   CSDDD, UFLPA, EU REACH, human rights due diligence, forced labour screening,
-  SVHC substances, or any code in src/departments/09-compliance-regulatory/.
+  SVHC substances, or the concept nodes and rules of department 09 (compliance-regulatory).
 ---
 
 # Compliance & Regulatory — Department 09 Skills Reference

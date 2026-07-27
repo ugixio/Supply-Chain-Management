@@ -55,8 +55,6 @@ Expanding the recursion shows the geometric decay: the weight on A_{t−k} is α
 
 ## Governing rules
 
-- **DMD-R4** — forecast values, MAPE and MAE are non-negative.
-
 ## Related
 
 - CPT-0004 Holt's Linear Method — SES plus a trend component.

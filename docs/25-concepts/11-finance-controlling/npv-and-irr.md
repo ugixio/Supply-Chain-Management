@@ -43,7 +43,7 @@ relations:
   such projects by NPV at the hurdle rate instead.
 - IRR assumes reinvestment at IRR itself — optimistic for high-IRR projects (MIRR is
   the fix; not implemented).
-- NPV in integer cents keeps SCM-R8 discipline; intermediate float discounting is
+- NPV in integer cents keeps the SCM-R14 discipline; intermediate float discounting is
   acceptable because rounding happens once.
 - **Does not apply when:** comparing different-length projects without a common
   horizon (equivalent-annual-annuity needed).
@@ -55,7 +55,7 @@ NPV = −10M + 3M×3.7908 = **+1,372,360¢** → accept; IRR ≈ 15.24% > hurdle
 
 ## Governing rules
 
-- **SCM-R8** — money precision; decision records for capital approvals (FIN-R*).
+- **SCM-R14** — exact money; see CPT-0154 for the quantization and apportionment rules.
 
 ## Related
 

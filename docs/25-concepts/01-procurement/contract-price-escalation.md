@@ -58,7 +58,7 @@ A 3.8% escalation — the blended effect of 3% CPI on 60% material and 5% PPI on
 
 - **PRC-R8** — a contract carries valid effective/expiry dates and lines; an escalation
   applies within the contract's active window.
-- **SCM-R8** — Decimal money (ADR-0019).
+- **SCM-R14** — Decimal money (ADR-0019).
 
 ## Related
 

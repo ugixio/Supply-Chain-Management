@@ -70,7 +70,7 @@ costs balance, as the derivation requires.
 
 ## Governing rules
 
-- **SCM-R8** — Money is integer cents; the TS signature takes cents.
+- **SCM-R14** — exact money, quantized only at defined boundaries.
 
 ## Related
 

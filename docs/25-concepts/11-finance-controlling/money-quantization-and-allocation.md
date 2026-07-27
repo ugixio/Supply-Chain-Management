@@ -49,7 +49,7 @@ relations:
 
 - **One rounding mode, at boundaries only.** `ROUND_HALF_EVEN`: ties go to the even neighbour,
   so a long run of quantizations does not drift upward the way half-up does. Intermediate
-  values are never rounded (SCM-R8 per ADR-0019, ENG-R4).
+  values are never rounded (SCM-R14, ENG-R4).
 - **Quantization order is part of the definition.** Where a document states a gross and then
   deducts a fee, the gross quantizes first (**two-step**); one-step
   `qty × price × (1 − fee)` differs and is wrong wherever the gross is externally visible —
@@ -71,7 +71,7 @@ Allocation of `1,172,000¢` by value over `600k / 300k / 100k` → `703,200 / 35
 
 ## Governing rules
 
-- **SCM-R8** — money is arbitrary-precision decimal, integer minor units at rest (ADR-0019).
+- **SCM-R14** — exact money: apportionment sums to the whole, ties resolve to even.
 - **ENG-R4** — no float holds or computes money; rounding explicit, at boundaries only.
   **ENG-R5** — money crosses the wire as a string.
 - **ENG-R10** — the Rust core is the single owner; ports pass these vectors unchanged.

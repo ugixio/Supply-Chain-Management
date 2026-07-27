@@ -52,8 +52,6 @@ Continuing CPT-0006 (`demand = [0, 5, 0, 0, 7]`, `alpha = 0.1`):
 
 ## Governing rules
 
-- **DMD-R4** — forecast values are non-negative.
-
 ## Related
 
 - CPT-0006 Croston's Method — the estimator this corrects; SBA is the default choice.

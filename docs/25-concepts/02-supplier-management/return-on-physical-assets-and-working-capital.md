@@ -53,7 +53,7 @@ Revenue 10.0M, SC cost 8.8M → profit 1.2M. Fixed assets 5.0M, WC 3.0M →
 
 ## Governing rules
 
-- **SCM-R8** — money precision (Decimal migration applies to inputs).
+- **SCM-R14** — exact money; see CPT-0154 for the quantization and apportionment rules.
 
 ## Related
 

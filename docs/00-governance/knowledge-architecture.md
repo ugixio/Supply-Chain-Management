@@ -72,7 +72,7 @@ meta / non-authority   00-governance/ (registries) · program/
 ## 4. Single source of truth (SSOT)
 
 - Each fact, rule or decision has exactly one authoritative home; elsewhere it is
-  **referenced, never copied** — a rule by its stable ID (e.g. `SCM-R1`), a doc by its
+  **referenced, never copied** — a rule by its stable ID (e.g. `INV-R5`), a doc by its
   `id`, an ADR by its number.
 - If two docs disagree, the higher-tier one wins and the lower is corrected or superseded.
 - New content first checks whether an authoritative home already exists (§6).

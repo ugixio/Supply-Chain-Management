@@ -58,7 +58,7 @@ IRON_STEEL, in scope.
 
 ## Governing rules
 
-- **SCM-R8** — integer-cent money (Decimal at P5); **CMP-R*** — declaration records.
+- **SCM-R14** — integer-cent money (Decimal at P5); **CMP-R*** — declaration records.
 
 ## Related
 

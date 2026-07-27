@@ -68,7 +68,7 @@ risk term — TCO reveals which is actually cheaper.
 
 ## Governing rules
 
-- **SCM-R8** — monetary outputs are Decimal (ADR-0019); float is the tracked exception.
+- **SCM-R14** — exact money.
 
 ## Related
 

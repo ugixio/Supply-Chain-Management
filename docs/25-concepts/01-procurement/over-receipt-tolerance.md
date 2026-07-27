@@ -61,8 +61,8 @@ At `received = 104` both report within tolerance (104 ≤ 105).
 
 ## Governing rules
 
-- **PRC-R3** — over-receipt beyond tolerance is flagged `requiresApproval` and never posts
-  silently; this concept is the arithmetic PRC-R3 constrains.
+- **PRC-R1** — a line states its quantity; the tolerance it is judged against is a contract term.
+  silently; this concept is the arithmetic a receipt tolerance is applied to.
 
 ## Related
 

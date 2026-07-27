@@ -58,7 +58,7 @@ c = 4 → ρ = 0.8 ≤ 0.8 but Wq ≈ 0.30 h ≤ 0.5 ✓ → **4 doors**, ~18 mi
 ## Governing rules
 
 - Sizing is advisory; individual appointments follow the DockAppointment state machine
-  (WHS-R2).
+  (the project's own task lifecycle).
 
 ## Related
 

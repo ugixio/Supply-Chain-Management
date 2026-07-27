@@ -59,7 +59,7 @@ minimum ⇒ **157,648¢**.
 
 ## Governing rules
 
-- **SCM-R8** — TS integer cents; **LOG-R*** — shipments priced off valid lanes only.
+- **SCM-R14** — exact money, quantized only at defined boundaries.
 
 ## Related
 

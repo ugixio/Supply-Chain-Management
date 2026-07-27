@@ -58,7 +58,7 @@ notify ECHA + inform downstream + (conservative) SDS → ACTION_REQUIRED.
 
 ## Governing rules
 
-- **SCM-R5** — `reachSVHC = true` forces lot tracking; **CMP-R*** — evidence retention.
+- **CMP-R3** — a Candidate List substance above 0.1% w/w triggers REACH duties; **CMP-R*** — evidence retention.
 
 ## Related
 

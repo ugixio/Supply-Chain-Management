@@ -60,7 +60,7 @@ relations:
 
 ## Governing rules
 
-- **SDV-R*** — emissions on the sustainability record; SCM-R8 for the spend leg.
+- **SDV-R*** — emissions on the sustainability record; SCM-R14 for the spend leg.
 
 ## Related
 

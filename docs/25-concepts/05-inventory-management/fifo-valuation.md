@@ -30,7 +30,7 @@ relations:
 ## Inputs and outputs
 
 - **Inputs:** cost layers; positive issue quantity — **raises if the issue exceeds
-  total remaining** (SCM-R1: no negative inventory).
+  total remaining** (INV-R5: a physical balance cannot be negative).
 - **Output:** `{cogs_cents, remaining_layers, layers_consumed}` — the consumed-draws
   list is the journal detail (SCM-R4).
 - TS `valuationSnapshot` reports the aggregate's point-in-time summary (method,
@@ -56,7 +56,7 @@ Layers: 60 @ 1,000¢ (Jan), 80 @ 1,100¢ (Feb). Issue 90 →
 
 ## Governing rules
 
-- **SCM-R1** — no over-issue; **SCM-R4** — COGS journals; **SCM-R8** — integer cents;
+- **INV-R5** — no issue below zero physical stock; **SCM-R4** — COGS journals; **SCM-R14** — integer cents;
   **SCM-R3** — valuation records soft-delete.
 
 ## Related

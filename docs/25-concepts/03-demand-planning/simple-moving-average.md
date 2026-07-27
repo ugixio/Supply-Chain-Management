@@ -51,8 +51,6 @@ relations:
 
 ## Governing rules
 
-- **DMD-R4** — a forecast value, MAPE or MAE is never negative.
-
 ## Related
 
 - CPT-0002 Single Exponential Smoothing — the weighted successor to a flat window.

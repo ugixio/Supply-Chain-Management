@@ -56,7 +56,7 @@ worst case = 500M × 0.4 × 14/365 = 7,671,232¢; expected = 1,534,246¢/year.
 
 ## Governing rules
 
-- **SCM-R8** — integer-cent money; **RSK-R*** — scenarios live in the governed
+- **SCM-R14** — integer-cent money; **RSK-R*** — scenarios live in the governed
   register with owners.
 
 ## Related

@@ -51,7 +51,7 @@ Ordered 12,400 units, shipped 12,090 → fill 97.5%. Of 3,100 lines, 87 backorde
 
 ## Governing rules
 
-- **SCM-R1** — backorders exist only where `backorderAllowed`; otherwise unmet lines
+- **INV-R5** — a physical balance cannot be negative; whether unmet demand becomes a backorder is the project's fulfilment policy
   are lost sales (measure separately).
 
 ## Related

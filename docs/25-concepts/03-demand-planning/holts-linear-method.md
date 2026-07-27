@@ -56,10 +56,6 @@ relations:
 
 ## Governing rules
 
-- **DMD-R4** — forecast values, MAPE and MAE are non-negative. Note a long horizon on a
-  negative trend can drive `level + h·trend` below zero; callers must floor at zero
-  before persisting a demand plan line.
-
 ## Related
 
 - CPT-0002 SES — the level equation Holt extends.

@@ -55,7 +55,7 @@ returns instead flips to −2%.
 
 ## Governing rules
 
-- **FIN-R*** — CTS records per period/customer; SCM-R8 money.
+- **FIN-R*** — CTS records per period/customer; SCM-R14 exact money.
 
 ## Related
 

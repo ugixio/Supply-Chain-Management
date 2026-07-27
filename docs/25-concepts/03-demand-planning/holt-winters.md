@@ -58,8 +58,6 @@ seasonal indices in order — so `forecast[0]` reflects the same month position 
 
 ## Governing rules
 
-- **DMD-R4** — forecast values, MAPE and MAE are non-negative.
-
 ## Related
 
 - CPT-0004 Holt's Linear Method — the level/trend core this extends.

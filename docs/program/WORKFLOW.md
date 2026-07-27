@@ -33,9 +33,9 @@ standards; per-department README/IMPLEMENTATION/SKILL; regulatory framework doc;
 English-only enforced; OSI-only policy with named substitutes.
 
 **Gaps found (now the backlog below):** no decision log (→ retroactive ADRs landed,
-review pending) · rules had no stable IDs (→ SCM-R1..R13 landed; per-department pending)
+review pending) · rules had no stable IDs (→ the cross-department family landed; per-department pending)
 · no LICENSE file despite `package.json` "MIT" · no lockfile · no CI / no `verify` gate ·
-no git tags · thin tests (4 TS unit files; **zero Python test files** vs the SCM-R13
+no git tags · thin tests (4 TS unit files; **zero Python test files** vs the then-stated
 mirror-coverage bar) · duplicated formulas across TS/Python with one past divergence
 (commit `a12c114`) · no runtime/persistence/API decision recorded.
 
@@ -49,13 +49,13 @@ mirror-coverage bar) · duplicated formulas across TS/Python with one past diver
 - ✅ **U1 · orchestrator** — Skeleton added on branch `feat/context-skeleton`: tier tree,
   knowledge-architecture (instantiated allowlist), id-registry (SCM live; 14 families
   reserved), out-of-scope (seeded from the prohibited-tech policy), ADR-0001..0009
-  retroactive + 0010/0011 proposed, glossary (seeded), scm-core rule.md (SCM-R1..R13),
+  retroactive + 0010/0011 proposed, glossary (seeded), scm-core rule.md (13 cross-department rules),
   40-contexts knowledge map, program area + 6 templates, additive `CLAUDE.md` governance
   section. **Nothing existing was moved, renamed or rewritten.**
 - ⬜ **U2 · human** — Review & ratify ADR-0001..0009 (retroactive), decide ADR-0010/0011,
   and merge the branch.
 - ⬜ **U3 · orchestrator** — Dedup pass: `CLAUDE.md` §Critical Business Rules /
-  §Code Standards cite SCM-R1..R13 instead of restating (SSOT).
+  §Code Standards cite the rule IDs instead of restating them (SSOT).
 - ✅ **U4 · WHAT lane** — Per-department `rule.md` × 14: extract each department's
   invariants from its code/README into its reserved family (PRC, SUP, DMD, …).
   **Landed 2026-07-20 (branch `feat/per-department-rules`):** all 14 `rule.md` created
@@ -82,7 +82,7 @@ mirror-coverage bar) · duplicated formulas across TS/Python with one past diver
   `ncrRate` using the wrong metrics group; REACH compliance reading an excluded input
   field — now conservative, see U11). Result: typecheck 0 errors, 40/40 tests green.
   **Still open inside U6 → follow-ups:** eslint flat config (U12) · pytest gate (U7).
-- 🟦 **U7 · HOW lane** — Test debt: Python test suite (SCM-R13 currently unmet); extend
+- 🟦 **U7 · HOW lane** — Test debt: Python test suite (the mirror-coverage bar, since retired); extend
   TS unit coverage beyond the 4 existing files; every SCM-Rx gets its test.
   **Started 2026-07-22 (with P5 slice 3):** the pytest suite is now real and **enforced** —
   `services/calc/tests/test_money.py` runs in `make verify-full` and CI via `make test-py`
@@ -214,7 +214,7 @@ mirror-coverage bar) · duplicated formulas across TS/Python with one past diver
   5. When a department is fully extracted, stamp its `IMPLEMENTATION.md` as archived with
      a pointer to the governed nodes, and narrow the allowlist.
 
-  **Landed for 03-demand-planning:** DMD-R5..R8 extracted (forecastability, APE
+  **Landed for 03-demand-planning:** four further rules extracted (forecastability, APE
   zero-handling, override classification, SS adequacy bands) · CPT-0024 **Forecast Value
   Added** and CPT-0025 **safety-stock coverage/adequacy** created — **both required KPIs
   with zero implementation anywhere in the repo** · the service-level→z validation
@@ -492,15 +492,36 @@ mirror-coverage bar) · duplicated formulas across TS/Python with one past diver
   representation rules that belong to **ENG-R4** · the over-receipt tolerance and the
   mandated-safety-stock-method rules, which were policy.
   **Two corrections made during the sweep:** an ID must never be redefined — I first reused
-  `SUP-R2` for a new statement and had to reallocate it as `SUP-R5` (same for CMP-R1 → CMP-R4,
-  SDV-R3 → SDV-R6) — and my first count of the retirements was wrong; the registry now carries the
+  a retired ID for a new statement and had to reallocate it — three times over — and my first
+  count of the retirements was wrong. The reallocations are recorded in the id-registry, which is
+  the one place allowed to name a retired ID; the registry now carries the
   verified figures.
 - ⬜ **C2b · WHAT** — Several retired rules named a principle worth keeping *somewhere*: FIFO/FEFO
   picking discipline, corrective-action effectiveness verification, immutability of a committed
   plan. Each belongs to a concept node or a project's own process, not to a rule file — place them
   deliberately rather than letting them vanish.
-- ⬜ **C3 · WHAT** — Retire citations of the retired `SCM-R1/R2/R5/R8/R11/R12/R13` across the
-  estate (~40 files), and the prose that still describes deleted code trees.
+- ✅ **C3 · WHAT** — **Stale rule citations swept, and mechanized so it cannot recur (2026-07-27).**
+  ADR-0037 and Phase C2 retired **52** rule IDs; the estate carried **141 citations** of them across
+  82 files. A citation of a retired ID is invisible to G4 — it is not a broken link, it silently
+  resolves to nothing and reads as law — so this was worth a gate, not just a pass.
+  **New gate G11:** no document cites a withdrawn rule ID. The retirement tables are the
+  machine-readable source, read from the **first column only** (an ID named in the *why retired*
+  prose is a live rule being pointed at). Exempt, on principle rather than convenience: the rule
+  file that declares the retirement, the **id-registry** (a retirement is an allocation fact), and
+  the **ADRs** (append-only history — editing an old decision to remove an ID would falsify it).
+  **Substitutions were judged, not blanket-renamed** — a money rule split into an identity and a
+  code duty; an inventory rule kept its physical impossibility and shed its policy exception;
+  non-negativity bullets were deleted outright because a mean of absolute values is non-negative by
+  arithmetic; invented lifecycles became "the project's own lifecycle". The full old→new map lives
+  in the **id-registry**, which is the allocation authority and the one place allowed to name a
+  withdrawn ID.
+  **I repeated my own recorded mistake.** I ran broad regex substitutions over prose again and
+  corrupted five places — including, with some irony, the registry line that *declares* the
+  retirements, which came out asserting that a live inventory rule had been retired. Caught by
+  reading the diff, fixed by hand. **G11 then caught 36 citations the sweep had missed**, and
+  finally caught this very backlog entry naming withdrawn IDs while explaining them. That is the
+  argument for the gate: the script was neither sufficient nor safe, and only the gate was
+  reliable.
 - ⬜ **C4 · WHAT** — Rewrite `docs/20-product-model/product-statement.md` and the department
   `README`/`SKILL` files, which still describe a product being built.
 - ⬜ **C5 · WHAT** — Re-check `docs/standards/REGULATORY_FRAMEWORK.md` against current law; it is

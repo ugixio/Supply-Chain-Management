@@ -27,7 +27,7 @@ relations:
 
 ## Inputs and outputs
 
-- **Inputs:** cost as integer cents (SCM-R8 pre-Decimal convention); lines > 0 (raises
+- **Inputs:** cost as integer cents (minor units; SCM-R14); lines > 0 (raises
   otherwise).
 - **Output:** `{cents_per_line, dollars_per_line, benchmark_cents_per_line: 50,
   benchmark_met}` — benchmark ≤ $0.50/line for ambient pick-to-carton; value-added
@@ -48,7 +48,7 @@ $54,000 labour (5,400,000¢) over 120,000 lines → `45¢/line` → benchmark me
 
 ## Governing rules
 
-- **SCM-R8** — money enters as integer cents (Decimal after ADR-0019/P5).
+- **SCM-R14** — exact money, quantized only at defined boundaries.
 
 ## Related
 

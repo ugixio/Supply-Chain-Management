@@ -45,7 +45,7 @@ compares mean episode cost/service.
 - PPO's vectorized env factory reuses the same env instance (the `_make_env`
   fallback) — parallelism is nominal, not true independent envs (recorded
   implementation quirk).
-- Actions are unconstrained by business rules — SCM-R1/SCM-R2 checks live outside
+- Actions are unconstrained by business rules — rule checks live outside
   the agent; never wire `predict_action` directly to purchase orders.
 - **Does not apply when:** demand history is too thin to calibrate a simulator —
   classical policies with conservative parameters win.
@@ -59,7 +59,7 @@ only on a consistent cost win at equal-or-better service.
 ## Governing rules
 
 - OSI-only (ADR-0002): stable-baselines3 MIT; advisory — orders flow through
-  governed PO/inventory lifecycles (SCM-R1/R2).
+  governed PO/inventory lifecycles (the project's own order and inventory rules).
 
 ## Related
 

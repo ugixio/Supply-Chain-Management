@@ -48,9 +48,9 @@ sequence `L1, L3, L2` — the two August lots go first, ordered by lot id.
 
 ## Governing rules
 
-- **SCM-R5** — lot tracking is mandatory for non-ambient storage and SVHC items; FEFO is
+- **CMP-R3** — REACH duties above 0.1% w/w, and the traceability law that applies to the goods; FEFO is
   only computable where that rule holds.
-- **SCM-R1** — a FEFO pick still may not drive stock negative without backorder authority.
+- **INV-R5** — a FEFO pick still may not drive physical stock negative.
 
 ## Related
 

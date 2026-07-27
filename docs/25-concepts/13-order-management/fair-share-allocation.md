@@ -59,7 +59,7 @@ all get ratio: A 66.7, B 25, C 8.3 (equals pro-rata here). With C=5: C filled 5,
 ## Governing rules
 
 - **ORD-R*** — allocations feed `OrderAllocation` records (policies match
-  `OrderAllocation.ts`); SCM-R1 — never allocate below zero stock.
+  `OrderAllocation.ts`); ORD-R5 — allocation conserves available stock.
 
 ## Related
 

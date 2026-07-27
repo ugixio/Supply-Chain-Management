@@ -59,7 +59,7 @@ PERT mean = (2+20+12)/6 = 5.67% → EAL = 0.10 × 0.0567 × 100M = 566,667¢.
 
 ## Governing rules
 
-- **SCM-R8** — TS output in integer cents context (Decimal at P5).
+- **SCM-R14** — exact money, quantized only at defined boundaries.
 
 ## Related
 

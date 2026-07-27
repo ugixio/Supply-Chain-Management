@@ -125,7 +125,7 @@ sum-preserving allocation** (dept 11 catalogue). See
   the tools layer; telemetry data model at tens-of-thousands scale), **Accepted
   (owner-directed 2026-07-22)**.
   Supersession chain: **ADR-0019** supersedes the ADR-0006 money clause and rewrites
-  SCM-R8; **ADR-0022** supersedes ADR-0013 (npm → pnpm); **ADR-0035** supersedes the
+  SCM-R14; **ADR-0022** supersedes ADR-0013 (npm → pnpm); **ADR-0035** supersedes the
   TypeScript-owns-domain-logic clause of **ADR-0001** and **narrows ADR-0033**'s
   business-rules lane (owner: framework-free TypeScript → Rust), rewriting ENG-R1/ENG-R2 in
   part via **ENG-R10**. ADR-0030 **extends** (does not supersede) ADR-0017's staging;
@@ -150,5 +150,44 @@ ADR-0037; the keys are unaffected.)*
 ## 6. Gate-invariant IDs (fixed)
 
 `G1`–`G8` name the knowledge-architecture §11 invariants. New gates append (G9+).
-Allocated: **G1–G10** (G9 context budget, ADR-0012; G10 **standards provenance** — was concept
-coverage under ADR-0015, rewritten by ADR-0037 when the code it policed was deleted).
+Allocated: **G1–G11** (G9 context budget, ADR-0012; G10 **standards provenance** — was concept
+coverage under ADR-0015, rewritten by ADR-0037 when the code it policed was deleted; **G11
+retired rules stay retired**, added at Phase C3 because a citation of a retired ID is invisible to
+G4 — it is not a broken link, it silently resolves to nothing and reads as law).
+
+### What replaced a retired rule (Phase C3)
+
+> A retired ID is never reassigned, so a reader who meets an old citation needs to know where the
+> durable part went. This table is that map. It lives here because the registry is the allocation
+> authority and one of G11's three exempt homes.
+
+| Retired | Where the durable part went |
+|---|---|
+| SCM-R8 | Split: **SCM-R14** carries the arithmetic identity (apportionment sums to the whole, ties to even); **ENG-R4/R5** carry the code duty (no float, string on the wire). |
+| SCM-R1 | **INV-R5** — a physical balance cannot be negative. The `backorderAllowed` exception was policy and is now a project decision. |
+| SCM-R2 | Nothing. An approval threshold is policy; **PRC-R1** (a line states its quantity) is what remains. |
+| SCM-R5 | **CMP-R3** for the REACH trigger; the traceability obligation otherwise follows the law that applies to the goods. |
+| SCM-R11 | Nothing — identifier stability is a data-modelling decision. |
+| SCM-R12 | The `ENG-R*` family — retry safety is an engineering concern. |
+| SCM-R13 | The `ENG-R*` family — a code standard for a codebase this repository no longer has. |
+| DMD-R4 | Nothing. A mean of absolute values is non-negative by arithmetic; the rule restated it. |
+| DMD-R5 / R7 / R8 | Project decisions (minimum history, override classification, safety-stock method). **DMD-R9** states what survives: a forecast carries its horizon and bucket. |
+| PRC-R3 | A project decision (the tolerance is a contract term). |
+| PRC-R5 / R6 | **PRC-R4** — inspection conserves what arrived. |
+| WHS-R1 / R2 / R3 / R4 | **WHS-R5** — task quantities conserve. The lifecycles and scales were the project's. |
+| SUP-R2 | **SUP-R5** — an evaluation records its basis (ISO 9001 §8.4.1). |
+| CMP-R1 | **CMP-R4** — an exception has an expiry. |
+| SDV-R1 / R2 / R3 | **SDV-R4/R5/R6** — evidence and dating, unknown ≠ compliant, and EUDR's benchmark-read duty. |
+| FIN-R1 / R2 / R3 | **FIN-R4/R5/R6** (IAS 2 measurement, non-recoverable tax, apportionment) and **ENG-R4**. |
+| QMS-R1..R4 | **QMS-R5/R6/R7** (ISO 2859-1 table, sample ≠ lot, opportunity base) and **ENG-R4**. |
+| RSK-R1 / R3 / R4 | Project decisions (scale, justification, recovery objectives). **RSK-R5/R6** state the measurement facts. |
+| ORD-R1..R4 | **ORD-R5/R6/R7** (allocation conserves, perfect order is a conjunction, a credit cannot exceed the charge). |
+| SOP-R1 / R2 / R3 | **SOP-R4/R5** (consensus is one plan; attainment is measured against the committed plan). |
+| SPL-R3 / R4 | Project decisions (approving an infeasible plan, the horizon). **SPL-R5** states netting conservation. |
+| INV-R2 / R3 | **INV-R4** — a balance is the sum of its movements. Sign conventions are the project's. |
+| LOG-R2 | The OTD concept node (CPT-0123) — it is a measurement definition, not an invariant. |
+
+**G11's exemptions are principled, not conveniences.** Three homes may name a retired ID, because
+naming it there is the opposite of citing it as law: the rule file that **declares** the
+retirement, **this registry** (a retirement is an allocation fact), and the **ADRs** (append-only
+history — editing an old decision to remove an ID would falsify the record).

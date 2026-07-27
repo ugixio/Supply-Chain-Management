@@ -57,7 +57,7 @@ where `ADU` is the **trailing 90-day** average daily demand.
 - Adequacy inherits every CPT-0015 assumption — normality, independence of demand and lead
   time. Where the model is wrong, the flag is confidently wrong.
 - **Strategic buffers are legitimate exceptions.** Pre-build for a plant shutdown, a
-  pre-Brexit stockpile or a single-source hedge will read `over-stocked`. Per DMD-R8 these
+  pre-Brexit stockpile or a single-source hedge will read `over-stocked`. These
   must be annotated, not silently normalised — and never auto-corrected.
 - Coverage is undefined at ADU = 0; a dead SKU shows infinite days of cover.
 
@@ -72,8 +72,8 @@ held:
 
 ## Governing rules
 
-- **DMD-R8** — the 0.8× / 1.5× adequacy bands and the annotation requirement.
-- **SCM-R1** — inventory never goes negative without `backorderAllowed`; a persistent
+- **DMD-R9** — a forecast, and any comparison against it, is stated with its horizon and bucket.8× / 1.5× adequacy bands and the annotation requirement.
+- **INV-R5** — a physical balance cannot be negative; a persistent
   `under-stocked` flag is the leading indicator that this rule is about to be tested.
 
 ## Related

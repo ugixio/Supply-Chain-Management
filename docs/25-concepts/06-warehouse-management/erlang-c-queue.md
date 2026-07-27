@@ -58,7 +58,7 @@ C = 21.8453 × 0.02729 ≈ 0.5962 → `Lq = 0.5962×0.8/0.2 ≈ 2.38` trucks,
 
 ## Governing rules
 
-- Advisory; executed door assignments follow the dock-appointment lifecycle (WHS-R2).
+- Advisory; executed door assignments follow the dock-appointment lifecycle (the project's own task lifecycle).
 
 ## Related
 

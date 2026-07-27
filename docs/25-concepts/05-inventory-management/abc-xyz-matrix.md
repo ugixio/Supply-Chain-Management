@@ -55,7 +55,7 @@ replenishment, cycle-count frequently, safety stock from CPT-0012.
 ## Governing rules
 
 - **INV-R*** — item-master classification changes flow through `updateABCXYZ`
-  (SCM-R11: SKU immutable, classification mutable via status/fields).
+  (an identifier's stability is a data-modelling decision; the classification is a field).
 
 ## Related
 

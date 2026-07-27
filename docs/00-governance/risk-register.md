@@ -32,7 +32,7 @@ relations:
 
 | # | Risk | Likelihood | Impact | Owner | Mitigation / response | Status | Review trigger |
 |---|---|---|---|---|---|---|---|
-| 1 | Zero Python test files while `python/` holds half the estate's logic (SCM-R13 mirror-coverage bar unmet) | high | high | orchestrator | backlog U7 (pytest suite); until then Python changes need reviewer scrutiny | open | U7 done |
+| 1 | Zero Python test files while `python/` holds half the estate's logic (the mirror-coverage bar, since retired) | high | high | orchestrator | backlog U7 (pytest suite); until then Python changes need reviewer scrutiny | open | U7 done |
 | 2 | Formulas duplicated across TS and Python have already diverged once (commit `a12c114`) and can diverge again | medium | high | orchestrator | golden test vectors shared by both languages (backlog U8); evaluation.md §1.4 both-or-neither rule | open | U8 done |
 | 3 | Default branch on GitHub is `claude/bold-cannon-l7wtso`, not a stable main line | high | medium | human | set `main` as default and protect it when the unification branch merges (ADR-0011) | open | branch merge |
 | 4 | `python/` contains two order-management packages (`07_order_management/` and `13_order_management/`) with overlapping names — numbering collision with `07_logistics_transportation` | medium | medium | orchestrator | WHAT-lane review: consolidate or rename to match the 14-department taxonomy (ADR-0004) | open | first task touching either package |

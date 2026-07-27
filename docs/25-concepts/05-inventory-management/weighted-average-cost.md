@@ -38,7 +38,7 @@ relations:
 - WAC smooths price volatility into margins; FIFO (CPT-0118) shows it sooner. Method
   choice is per item class and sticky (IAS 2 §25–26: same formula for similar
   inventories; changes are accounting-policy changes).
-- One rounding at the end (good for SCM-R8); issuing at the rounded WAC then
+- One rounding at the end (good for SCM-R14); issuing at the rounded WAC then
   re-deriving value can drift a cent per issue — the valuation aggregate should carry
   value, not re-multiply.
 - **Does not apply when:** items are specifically identified (serialized high-value —
@@ -50,7 +50,7 @@ Layers: 50 @ 1,000¢ + 150 @ 1,200¢ → WAC = (50,000 + 180,000)/200 = **1,150�
 
 ## Governing rules
 
-- **SCM-R8** money; **SCM-R4** — revaluation/issue journals.
+- **SCM-R14** money; **SCM-R4** — revaluation/issue journals.
 
 ## Related
 

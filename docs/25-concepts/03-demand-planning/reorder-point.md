@@ -57,7 +57,7 @@ When the inventory position drops to 643, place an order of EOQ size.
 
 ## Governing rules
 
-- **SCM-R1** — never allow negative inventory without `backorderAllowed`; the ROP is the
+- **INV-R5** — a physical balance cannot be negative; the ROP is the
   control that makes that achievable.
 
 ## Related

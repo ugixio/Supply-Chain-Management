@@ -41,7 +41,7 @@ Per balance:
   historical cost are *not* retranslated; don't feed inventory balances through this.
 - Gains/losses go to P&L (IAS 21.28); net investment hedges and OCI treatment are out
   of scope.
-- Rounding at cent level per balance (SCM-R8) — sub-cent drift across many balances
+- Rounding at cent level per balance (SCM-R14) — sub-cent drift across many balances
   is possible vs a whole-portfolio rounding; immaterial but note for reconciliation.
 - Rate convention is *direct* quotation (target per foreign) — inverting by mistake
   is the classic error; the positive-rate guard won't catch it.
@@ -56,7 +56,7 @@ target terms).
 ## Governing rules
 
 - **SCM-R4** — the resulting journal (FX gain/loss ↔ balance) posts double-entry;
-  SCM-R8 money.
+  SCM-R14 exact money.
 
 ## Related
 

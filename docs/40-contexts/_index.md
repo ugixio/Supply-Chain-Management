@@ -20,26 +20,31 @@ relations:
   `python/NN_<key>/` (models).
 - **Knowledge map (existing homes ✓ · gaps ⬜):**
 
-| # | Department | README | IMPL | SKILL | Python | rule.md (family) | specs |
-|---|---|---|---|---|---|---|---|
-| 01 | procurement | ✓ | ✓ | ✓ | ✓ | ✓ (PRC-R1..R8) | ⬜ |
-| 02 | supplier-management | ✓ | ✓ | ✓ | ✓ | ✓ (SUP-R1..R4) | ⬜ |
-| 03 | demand-planning | ✓ | ✓ | ✓ | ✓ | ✓ (DMD-R1..R4) | ⬜ |
-| 04 | supply-planning | ✓ | ✓ | ✓ | ✓ | ✓ (SPL-R1..R4) | ⬜ |
-| 05 | inventory-management | ✓ | ✓ | ✓ | ✓ | ✓ (INV-R1..R3) | ⬜ |
-| 06 | warehouse-management | ✓ | ✓ | ✓ | ✓ | ✓ (WHS-R1..R4) | ⬜ |
-| 07 | logistics-transportation | ✓ | ✓ | ✓ | ✓ | ✓ (LOG-R1..R3) | ⬜ |
-| 08 | quality-management | ✓ | ✓ | ✓ | ✓ | ✓ (QMS-R1..R4) | ⬜ |
-| 09 | compliance-regulatory | ✓ | ✓ | ✓ | ✓ | ✓ (CMP-R1..R3) | ⬜ |
-| 10 | risk-management | ✓ | ✓ | ✓ | ✓ | ✓ (RSK-R1..R4) | ⬜ |
-| 11 | finance-controlling | ✓ | ✓ | ✓ | ✓ | ✓ (FIN-R1..R3) | ⬜ |
-| 12 | sop-planning | ✓ | ✓ | ✓ | ✓ | ✓ (SOP-R1..R3) | ⬜ |
-| 13 | order-management | ✓ | ✓ | ✓ | ✓ | ✓ (ORD-R1..R4) | ⬜ |
-| 14 | supplier-development | ✓ | ✓ | ✓ | ✓ | ✓ (SDV-R1..R3) | ⬜ |
+| # | Department | Live rules | specs |
+|---|---|---|---|
+| 01 | procurement | 4 | ⬜ |
+| 02 | supplier-management | 1 | ⬜ |
+| 03 | demand-planning | 2 | ⬜ |
+| 04 | supply-planning | 3 | ⬜ |
+| 05 | inventory-management | 3 | ⬜ |
+| 06 | warehouse-management | 2 | ⬜ |
+| 07 | logistics-transportation | 3 | ⬜ |
+| 08 | quality-management | 3 | ⬜ |
+| 09 | compliance-regulatory | 3 | ⬜ |
+| 10 | risk-management | 3 | ⬜ |
+| 11 | finance-controlling | 3 | ⬜ |
+| 12 | sop-planning | 2 | ⬜ |
+| 13 | order-management | 3 | ⬜ |
+| 14 | supplier-development | 3 | ⬜ |
 
-> **rule.md × 14 landed at U4 (2026-07-20)**, each extracting the invariants its department's
-> code already enforces. `specs/` stay ⬜ — created per unit of work when a change is made
-> (not speculatively). Every rule ID needs a test (SCM-R13) — coverage is HOW-lane backlog (U7).
+> **Swept at Phase C2 (2026-07-27, ADR-0037).** The families were first extracted at U4 from the
+> `throw` guards of an application this repository no longer contains, so most of what they called
+> invariants were invented workflows or field checks. Each file now holds only what a standards
+> body, a regulator or an arithmetic identity fixes, a **Retired rules** table explaining every
+> removal, and a **Project decisions** section naming what the department must answer for itself.
+> Counts above are live rules per family; the retirement tables carry the rest.
+>
+> `specs/` stay ⬜ — created per unit of work, never speculatively.
 
 - **Rules:**
   - A department `rule.md` is created from `docs/program/templates/rule.md` with its

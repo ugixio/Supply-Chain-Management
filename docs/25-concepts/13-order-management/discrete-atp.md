@@ -54,7 +54,7 @@ Cumulative: 10, 40, 40, 60.
 
 ## Governing rules
 
-- Same promising discipline as CPT-0085 (SCM-R1 backorder authority).
+- Same promising discipline as CPT-0085 (INV-R5 and the project's backorder policy).
 
 ## Related
 

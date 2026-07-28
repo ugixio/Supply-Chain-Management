@@ -27,6 +27,20 @@ relations:
   (traceability). No path executes an unrefined prompt. Enforcement surface is the platform
   runtime (assumption A4, owner-confirmable). This is the incoming-quality control on
   instructions — the SCM incoming-inspection analogue (dept 08) applied to the input itself.
+- **PLT-R6 — Improvement-recommendation gate (ADR-0038):** two obligations, one standing and one
+  triggered.
+  **(a) The search is always on.** Every task carries a search for a better implementation *within
+  the lanes already adopted* — algorithmic complexity, compute and memory cost, data-structure and
+  boundary choice, clean-code and structural quality, security. Finding nothing is a valid result;
+  **not looking is not**. A recommendation may never introduce a new language, framework, service or
+  out-of-lane dependency: that is **ADR-0002 / ENG-R8** and takes its own decision.
+  **(b) What the request left open is chosen, not guessed.** When a detail is absent whose two
+  plausible readings would produce **different work**, it is presented as a **selectable list of
+  recommended options** — each stating what it means and what it costs, recommendation first — never
+  guessed and never buried in prose. Selected options are implemented in the same turn under the
+  normal gates; declined ones are recorded in `program/improvement-register.md` as `accepted-as-is`
+  with the reason, so the same recommendation is not re-proposed. Extends **PLT-R1** from refining
+  the prompt to resolving what the prompt left open.
 - **PLT-R2 — Projects reference the Global Context read-only:** a Project **never mutates** a
   Global Context node. Project-specific change lives only in the project's **overlay**
   (project-scoped nodes + parameter/threshold overrides); reads resolve *global node, then
@@ -51,6 +65,13 @@ relations:
 
 - An unrefined prompt reaching execution (PLT-R1).
 - A project writing to, or forking-and-editing, Global Context knowledge (PLT-R2).
+- Guessing a detail whose absence changes the result, or asking for it in prose when a selectable
+  list is required (PLT-R6).
+- A recommendation list padded with options that could not honestly be taken, or one that smuggles in
+  a new technology (PLT-R6 / ENG-R8).
+- Re-proposing a recommendation already recorded as declined (PLT-R6).
+- Handing back a choice that is the implementer's — which loop, which name, which library inside an
+  adopted lane — as though it were the owner's (PLT-R6).
 - A node reachable from nothing, or an edge pointing at a missing node (PLT-R3).
 - A node without a declared type, or an untyped/free-text relation (PLT-R4).
 - A project with no branch, two top-level branches, or no link to the Global Context (PLT-R5).
@@ -67,5 +88,11 @@ relations:
 
 - **PLT-R1** is the recorded decision (ADR-0032); its **runtime enforcement + refinement
   criteria** are built at W3 (Stage B). PLT-R2..R5 are enforced at the knowledge layer today
-  (G2/G4/G5/G6) and must be carried into the application layer as it is built. Each PLT-R gets its test when its code lands — a
-  build-time discipline, so it belongs to the `ENG-R*` family.
+  (G2/G4/G5/G6) and must be carried into the application layer as it is built. Each PLT-R gets its
+  test when its code lands — a build-time discipline, so it belongs to the `ENG-R*` family.
+- **PLT-R6 is not mechanically checkable**, and saying otherwise would be the false comfort this
+  estate has already paid for. Like **G8** (English-only) it is a review gate: the anti-states above
+  are its checklist, and the question craft it depends on is in
+  [program/evaluation.md](../../program/evaluation.md) §5. What *is* checkable is its output — a
+  declined recommendation leaves a row in the improvement register, so a gate-that-never-fires and a
+  gate-that-fired-and-was-declined are distinguishable after the fact.

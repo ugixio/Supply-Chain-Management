@@ -473,7 +473,13 @@ mirror-coverage bar) · duplicated formulas across TS/Python with one past diver
   skip when no server is present would recreate exactly the false green `deps-locked` exists to
   prevent. `apply.py` therefore **fails rather than skips** — verified locally by running it with no
   server. It also applies the migration set **twice** to prove idempotence.
-  **Honest status: the DDL itself has never been executed.** This container cannot run it — the agent
+  **First CI attempt hung, and the fix is a lesson worth keeping:** the service container carried a
+  `--health-cmd`, and `Initialize containers` then sat for **13 minutes with no output**. A hang is
+  worse than a failure — the runner owns that step, so there is nothing to read and nothing to
+  diagnose. Readiness is now an **explicit bounded step** that polls `/ping` for 60s, prints how
+  long it took, and on giving up says so and dumps `docker ps -a`. *A gate that can fail should fail
+  loudly and locally to the step that owns it.*
+  **Honest status: the DDL itself has never been executed on this machine.** This container cannot run it — the agent
   proxy denies `builds.clickhouse.com` by policy and there is no Docker daemon — so **CI is the first
   real execution of this schema**. That is the gate the owner chose doing its job; if it goes red, the
   migration is wrong and gets fixed.

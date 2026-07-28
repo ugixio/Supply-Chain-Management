@@ -21,15 +21,17 @@ jobs:
     services:
       # Pinned version, not `latest`: a gate whose server can change under it is not reproducible.
       # DEFAULT_ACCESS_MANAGEMENT is required for the CREATE ROLE / QUOTA statements in 0005.
+      #
+      # NO container health-check on purpose. The first attempt used one, and `Initialize
+      # containers` then sat for 13 minutes with no output — a hang tells you nothing about which
+      # thing broke, and the runner owns that step so there is nowhere to look. Readiness is now an
+      # explicit step below: bounded, visible, and it prints why it gave up.
       clickhouse:
         image: clickhouse/clickhouse-server:24.8-alpine
         env:
           CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT: "1"
         ports:
           - 8123:8123
-        options: >-
-          --health-cmd "wget --spider -q http://localhost:8123/ping"
-          --health-interval 3s --health-timeout 3s --health-retries 20
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -53,6 +55,18 @@ jobs:
           restore-keys: cargo-${{ runner.os }}-
       - run: pnpm install --frozen-lockfile
       - run: make verify-full
+      - name: Wait for ClickHouse
+        run: |
+          for attempt in $(seq 1 60); do
+            if curl -sf http://localhost:8123/ping > /dev/null; then
+              echo "ClickHouse answered /ping after ${attempt}s"
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "ClickHouse never answered /ping within 60s — the schema gate cannot run."
+          docker ps -a || true
+          exit 1
       - run: make verify-schema
         env:
           CLICKHOUSE_URL: http://localhost:8123

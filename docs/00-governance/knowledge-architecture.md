@@ -60,7 +60,8 @@ meta / non-authority   00-governance/ (registries) · program/
   |---|---|---|
   | Entry points | root `CLAUDE.md`, root `README.md` | tool-required / repo convention |
   | Agent tooling | `.claude/**` (skills, commands, settings) | tool-required; the SKILL.md files are the area-skill layer (Tier 6 by role) |
-  | Component docs | `apps/*/README.md`, `packages/*/README.md` (next to the code they document) |packages\|services)/*/README.md` | live next to the code they document (Tier 6 by role; monorepo layout ADR-0023) |
+  | Component docs | `apps/*/README.md`, `packages/*/README.md`, `services/*/README.md` | live next to the code they document (Tier 6 by role; monorepo layout ADR-0023) |
+  | Schema docs | `db/*/README.md` | operational instructions for whoever touches the DDL — retention values, the forward-only rule, how to run the gate. Useless one directory away from the migrations (ADR-0036, Phase M2) |
   | Grandfathered | `docs/standards/REGULATORY_FRAMEWORK.md` | predates the architecture; kept in place, referenced by ADR-0008; front-matter stamping is a WORKFLOW follow-up |
   | Untracked transient | personal/working files kept untracked | consolidated then deleted (§5) |
 

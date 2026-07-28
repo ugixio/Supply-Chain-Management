@@ -9,9 +9,18 @@
 # `packages/shared`; `test-rs` guards `crates/scm-money`. Test targets come back when the
 # monitoring application has code worth testing — not before, and never as an empty runner.
 #
-# Never fork a second entry point: CI runs exactly `make verify-full`.
+# `verify-full` is the PORTABLE merge gate: it runs anywhere, with no service dependency.
+# `verify-schema` is the SERVICE-DEPENDENT gate: it needs a reachable ClickHouse, so it is a
+# separate target — and CI runs BOTH. That splits the old "CI runs exactly verify-full" invariant,
+# deliberately and visibly rather than by accident, because the alternative was worse in both
+# directions: folding it into verify-full makes the merge gate unrunnable without a database, and
+# letting it skip when no server is present recreates the false green that `deps-locked` exists to
+# prevent. The residual gap is real and bounded: a schema change gets its first execution in CI
+# unless the developer starts the compose file locally.
+#
+# CI runs: make verify-full  &&  make verify-schema
 
-.PHONY: verify verify-full doc-gates typecheck deps-locked test-rs lint-rs
+.PHONY: verify verify-full verify-schema doc-gates typecheck deps-locked test-rs lint-rs
 
 verify: doc-gates typecheck test-rs
 
@@ -39,3 +48,10 @@ test-rs:
 lint-rs:
 	cargo fmt --all -- --check
 	cargo clippy --workspace --all-targets -- -D warnings
+
+# The ClickHouse telemetry schema (ADR-0036). Applies the migrations, proves they are idempotent by
+# applying them twice, then asserts the sort key, partitioning, codecs, TTLs, aggregate states and
+# the materialized-view cascade. FAILS if no server is reachable — it never skips.
+#   docker compose -f db/clickhouse/docker-compose.yml up -d
+verify-schema:
+	python3 db/clickhouse/apply.py

@@ -2,9 +2,13 @@
 # Toolchain: pnpm workspaces + Turborepo (ADR-0022) and a Cargo workspace (ADR-0035).
 # ADR-0037 deleted the invented SCM application, so the Python steps went with the code they
 # tested. What remains: the doc gates, a typecheck over the standards reference module, and the
-# Rust money core. The runner image ships a stable toolchain, so no third-party setup action is
-# added; `rustup component add` covers clippy/rustfmt if absent, and the cargo registry and
-# build output are cached so the merge gate does not pay a cold download every run.
+# Rust money core, and — since M2 — the ClickHouse telemetry schema, applied against a real server.
+# The runner image ships a stable toolchain, so no third-party setup action is added;
+# `rustup component add` covers clippy/rustfmt if absent, and the cargo registry and build output
+# are cached so the merge gate does not pay a cold download every run.
+#
+# Two gate invocations, not one: `verify-full` is portable and `verify-schema` needs the service
+# container. See the Makefile header for why that split is deliberate.
 name: verify
 
 on:
@@ -14,6 +18,20 @@ on:
 jobs:
   verify:
     runs-on: ubuntu-latest
+    services:
+      # Pinned version, not `latest`: a gate whose server can change under it is not reproducible.
+      # DEFAULT_ACCESS_MANAGEMENT is required for the CREATE ROLE / QUOTA statements in 0005.
+      #
+      # NO container health-check on purpose. The first attempt used one, and `Initialize
+      # containers` then sat for 13 minutes with no output — a hang tells you nothing about which
+      # thing broke, and the runner owns that step so there is nowhere to look. Readiness is now an
+      # explicit step below: bounded, visible, and it prints why it gave up.
+      clickhouse:
+        image: clickhouse/clickhouse-server:24.8-alpine
+        env:
+          CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT: "1"
+        ports:
+          - 8123:8123
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -37,3 +55,18 @@ jobs:
           restore-keys: cargo-${{ runner.os }}-
       - run: pnpm install --frozen-lockfile
       - run: make verify-full
+      - name: Wait for ClickHouse
+        run: |
+          for attempt in $(seq 1 60); do
+            if curl -sf http://localhost:8123/ping > /dev/null; then
+              echo "ClickHouse answered /ping after ${attempt}s"
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "ClickHouse never answered /ping within 60s — the schema gate cannot run."
+          docker ps -a || true
+          exit 1
+      - run: make verify-schema
+        env:
+          CLICKHOUSE_URL: http://localhost:8123

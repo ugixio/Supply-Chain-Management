@@ -119,6 +119,11 @@ def is_allowlisted(path: str) -> bool:
     # App/package/service scaffolds may carry their own README (framework convention).
     if re.fullmatch(r"(apps|packages|services)/[^/]+/README\.md", path):
         return True
+    # Schema directories carry their own README next to the migrations: the retention values, the
+    # forward-only discipline and the compose invocation are operational instructions for whoever
+    # touches the DDL, and they are useless one directory away from it (ADR-0036 / Phase M2).
+    if re.fullmatch(r"db/[^/]+/README\.md", path):
+        return True
     return False
 
 

@@ -452,9 +452,37 @@ mirror-coverage bar) · duplicated formulas across TS/Python with one past diver
   the repository **is** the project — but they should be set as named configuration with the reason
   recorded, not inlined as magic numbers, so that the one place ADR-0037 permits a policy value does
   not become the place they leak back in.
-  **Next step:** write the raw table, the three rollup views and the two roles as numbered
-  migrations, with the metric names matching CPT-0155..0160 (ADR-0036: a rollup without its concept
-  node is an ungoverned calculation).
+  **Landed 2026-07-28** in `db/clickhouse/` — five numbered migrations (raw table, the three
+  `AggregatingMergeTree` rollups with their materialized views, and the two roles with quotas), plus
+  `apply.py` and a pinned compose file.
+  **The two open decisions were put to the owner as a selectable list rather than guessed — the first
+  live use of PLT-R6.** Chosen: retention **raw 14d · 1m 90d · 1h 1y · 1d 5y**, and **CI applies the
+  migrations against a real ClickHouse**. The retention consequence is written into the schema README
+  rather than left implicit: *an incident older than 14 days can only be examined at minute-aggregate
+  resolution.*
+  **The rollups store aggregate *states*, not finished numbers** (`AggregateFunction(...)` columns,
+  `-State` on ingest and `-MergeState` between stages). This is the load-bearing detail: a stored
+  average cannot be re-aggregated into a coarser bucket without becoming an average of averages, and
+  a stored percentile cannot be re-aggregated at all — merging t-digest states can.
+  **`project_id` is deliberately NOT `LowCardinality`**, unlike `metric`. Dictionary encoding
+  degrades past roughly ten thousand distinct values and the project count is expected to grow;
+  metric names are a bounded vocabulary (CPT-0155..0160), so there the encoding is right.
+  **The "CI runs exactly `make verify-full`" invariant is now split, deliberately.** `verify-full`
+  stays the *portable* merge gate; **`verify-schema`** is the service-dependent one and CI runs both.
+  Folding it into `verify-full` would make the merge gate unrunnable without a database; letting it
+  skip when no server is present would recreate exactly the false green `deps-locked` exists to
+  prevent. `apply.py` therefore **fails rather than skips** — verified locally by running it with no
+  server. It also applies the migration set **twice** to prove idempotence.
+  **First CI attempt hung, and the fix is a lesson worth keeping:** the service container carried a
+  `--health-cmd`, and `Initialize containers` then sat for **13 minutes with no output**. A hang is
+  worse than a failure — the runner owns that step, so there is nothing to read and nothing to
+  diagnose. Readiness is now an **explicit bounded step** that polls `/ping` for 60s, prints how
+  long it took, and on giving up says so and dumps `docker ps -a`. *A gate that can fail should fail
+  loudly and locally to the step that owns it.*
+  **Honest status: the DDL itself has never been executed on this machine.** This container cannot run it — the agent
+  proxy denies `builds.clickhouse.com` by policy and there is no Docker daemon — so **CI is the first
+  real execution of this schema**. That is the gate the owner chose doing its job; if it goes red, the
+  migration is wrong and gets fixed.
 - ⬜ **M3 · HOW** — The Rust ingestion worker: normalize → validate → deduplicate → **batch**
   insert. Ingestion is core work (ENG-R10).
 - ⬜ **M4 · HOW** — NestJS + GraphQL as the only counterpart the frontend has; Next.js dashboards.

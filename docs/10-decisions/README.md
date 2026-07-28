@@ -68,6 +68,7 @@ relations:
 - ADR-0034 — **Scale tier for monitoring:** **ClickHouse** owns analytics/time-series at scale (never the source of truth — rebuildable, one-way like ENG-R7) · **Docker** owns images · **Kubernetes** owns orchestration. Broker and cache stay gated on measured volume. (Accepted — owner-directed 2026-07-22)
 - ADR-0035 — **Rust is the complete core; it replaces the TypeScript domain.** Business rules, invariants, state machines, exact arithmetic, the hot path and ingestion all move to Rust; **Python is the tools layer** (models, statistics, optimization, ML) reached over the schema-first gRPC contract; TypeScript survives **only inside NestJS and Next.js** as framework code, never as core logic. **Supersedes the TypeScript-domain clause of ADR-0001**, narrows ADR-0033. Migration is incremental (strangler), guarded by the U8 golden vectors. (Accepted — owner-directed 2026-07-22)
 - ADR-0036 — **Telemetry data model at tens-of-thousands scale:** continuous project-supervision telemetry in ClickHouse — `(project_id, metric, ts)` sort key, monthly partitions, `Delta`+`ZSTD` / `Gorilla` codecs, `LowCardinality` labels, `AggregatingMergeTree` rollup cascade (raw→1m→1h→1d), short raw TTL with long rollup retention, batched async inserts from the Rust ingester. Resolves the L1 volume question. (Accepted — owner-directed 2026-07-22)
+- ADR-0038 — **Improvement-recommendation gate:** every task carries a search for a better implementation *inside the existing lanes* — algorithmic cost, compute and memory, data-structure and boundary choice, clean code and structure, security. When a request lacks a detail whose absence would change what gets built, the detail is **never guessed and never asked in prose**: it is presented as a **selectable list of recommended options**, each naming its trade-off, recommendation first. Selected options are implemented in the same turn under the normal gates; declined ones are recorded with their reason so they are not re-proposed. **Adopting a new technology is out of scope by construction** — that remains ADR-0002/ENG-R8 and takes its own decision. Materializes as **PLT-R6**; extends PLT-R1 (ADR-0032) from refining the prompt to resolving what the prompt left open. (Accepted — owner-directed 2026-07-27)
 - ADR-0037 — **The Global Context holds only externally-fixed standards; the fictitious SCM application is retired.** The context is the source a project consults to learn *which departments it needs and how to implement them* — nothing more. It carries what a standards body, a regulator or an arithmetic identity fixes; it never carries what an organization chooses (thresholds, targets, weightings, rating bands, method mandates). Consequently **~25,700 lines of invented application code are deleted** (`packages/domain`, `services/calc`, `crates/scm-core`), concept nodes become **definitions without parameters**, and the **only application built here is the monitoring project**. Supersedes the two-language-SCM-application premise of ADR-0001; narrows ADR-0015 (nodes define, they do not own code) and ADR-0035 (the Rust core serves the monitoring platform, not 14 departments of invented rules). (Accepted — owner-directed 2026-07-27)
 
 ---
@@ -1640,6 +1641,64 @@ not simulate a business.
 - *Move the application into a separate project inside the workspace* — rejected: it would still be
   invented data with no real requirement behind it, and the workspace's projects are meant to be
   real work.
+
+---
+
+## ADR-0038 — Improvement-recommendation gate: what the request left open is chosen, not guessed
+
+**Status:** Accepted (owner-directed 2026-07-27)
+**Extends:** ADR-0032 / PLT-R1 (prompt-refinement gate) · ADR-0012 (the improvement register).
+**Bounded by:** ADR-0002 (OSI licences) · ENG-R8 (exclusive lanes) · ADR-0037 (the inclusion test).
+
+**Context.** PLT-R1 already refines an incoming prompt before executing it. It does not say what
+happens when the refined prompt is still **underspecified** — when a detail the owner never stated
+would change what gets built. The default failure modes are both bad: guess silently and produce
+something plausible that nobody chose, or ask in prose and bury the decision in a paragraph the
+owner has to parse. This estate has evidence for the first: a USD 5,000 threshold, a 5% tolerance
+and a 40/30/20/10 weighting all entered as *reasonable-looking guesses* and were inherited as law
+until ADR-0037 removed them.
+
+**Decision.**
+- **The search is always on.** Every task carries a search for a better implementation **within the
+  lanes already adopted** — algorithmic complexity, compute and memory cost, data-structure and
+  boundary choice, clean-code and structural quality, and security. Finding nothing is a valid
+  result; **not looking is not**.
+- **The gate fires on missing detail only** — not on every message, and not on a schedule. The
+  trigger is: *a detail is absent whose two plausible readings would produce different work.*
+- **When it fires, the options are presented as a selectable list**, not as prose. Each option
+  states what it means **and what it costs**; the recommended option comes first and says why it is
+  recommended. An option nobody could honestly take does not belong in the list.
+- **Selected options are implemented in the same turn**, under the normal gates (ENG-R9 six checks,
+  `make verify-full`). The owner's selection is the decision; it does not become a backlog item.
+- **Declined options are recorded** in `program/improvement-register.md` as `accepted-as-is` with
+  the reason — the mechanism that register already defines — so the same recommendation is not
+  re-proposed in a later session.
+- **New technology is out of scope by construction.** A recommendation may propose a better
+  algorithm, a better structure, a cheaper computation or a tighter boundary. It may **not** propose
+  a new language, framework, service or dependency outside an adopted lane: that is ADR-0002 and
+  ENG-R8 territory and requires its own decision, asked as such.
+
+**Consequences.**
+- (+) The moment of highest ambiguity becomes the moment of an explicit, recorded choice.
+- (+) Improvement work stops depending on whether anyone remembered to look for it.
+- (+) A declined recommendation is remembered, so the owner is not asked the same thing twice.
+- (−) **Gated on ambiguity, the gate can go quiet.** If requests are consistently well-specified,
+  high-impact improvements found during clear work have no channel: they must be raised in the
+  handoff report instead. This is the owner's chosen trade-off, recorded here so the limitation is
+  visible rather than discovered.
+- (−) No gate can check this mechanically. Like **G8** (English-only) it is a review discipline; the
+  anti-states below are the checklist.
+- (−) A list is a real cost to the owner's attention, which is why the trigger is narrow.
+
+**Alternatives considered.**
+- *Fire at the end of every unit of work* — rejected by the owner: predictable, but it adds an
+  interruption per unit whether or not anything is genuinely open.
+- *Fire on any detected high-impact improvement, ambiguity or not* — rejected by the owner. It is
+  what would make the search continuously visible; the cost is interruptions during work that was
+  already clear.
+- *Ask in prose* — rejected: it reads as narration, and the decision it contains gets skimmed.
+- *Selected options become backlog entries* — rejected: mechanically tidier, but improvements chosen
+  and then deferred go stale, and the owner has already said yes.
 
 ---
 

@@ -115,6 +115,13 @@ Dependencies stay OSI-licensed, commercially usable and modifiable (ADR-0002).
 
 - **Improve the prompt first.** A request is refined before it is executed; the original and the
   improved form are both retained (PLT-R1, ADR-0032).
+- **Then close what it left open — by choice, not by guess (PLT-R6, ADR-0038).** The search for a
+  better implementation is standing: algorithmic cost, compute, structure, clean code, security,
+  **inside the adopted lanes only** — a recommendation never introduces a new technology. When a
+  missing detail would change what gets built, it is offered as a **selectable list** of recommended
+  options with their trade-offs, never guessed and never buried in prose. Selected options are built
+  the same turn; declined ones are recorded so they are not re-proposed. Question craft:
+  `docs/program/evaluation.md` §5.
 - **Ask before adopting a new language or framework**, with its speed and security trade-offs.
   A library inside an existing lane does not need a decision.
 - **Plan⇄context first (ADR-0010).** A change that introduces or renames a concept lands in the

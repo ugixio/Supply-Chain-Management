@@ -41,6 +41,13 @@ relations:
    commercially usable, modifiable — ADR-0002). If a check fails, the design changes before the
    code is written, not after.
 
+6. **Search for a better implementation, then close what the request left open (PLT-R6 /
+   ADR-0038).** The search is standing: algorithmic cost, compute and memory, data-structure and
+   boundary choice, clean-code and structure, security — inside the **adopted lanes only**, never by
+   proposing a new technology. When a detail is missing whose two plausible readings would produce
+   **different work**, do not guess and do not ask in prose: present a **selectable list** of
+   recommended options (§5). Implement what is selected in the same turn; record what is declined.
+
 ## 2. Decision ladder (where a choice gets recorded)
 
 | Weight of the choice | Test | Recorded as |
@@ -70,3 +77,29 @@ recorded too low costs a re-derivation every time someone hits it.
 Size the task S / M / L and risk low / medium / high. An L-or-larger or high-risk task is
 **split or escalated to the owner before work starts** — never discovered at the end.
 Record the estimate in the task entry so drift is visible in the backlog.
+
+## 5. Asking well (the question craft PLT-R6 depends on)
+
+A list of options is only as good as the thinking behind it. What makes the difference:
+
+1. **Ask only what changes the work.** If both answers produce the same code, decide, state the
+   assumption, and move. A question with no consequence spends the owner's attention for nothing.
+2. **Do the independent work first.** Everything that does not depend on the answer is finished
+   before the question is asked, so waiting costs nothing and the question arrives with context.
+3. **Read before asking.** A question the repository, the ADRs or the rules already answer is a
+   failure to look, not a clarification.
+4. **Show the fork, not the abstraction.** "Pro-rata, priority-ordered, or minimum-viable-quantity?"
+   beats "how should allocation work?" — concrete alternatives are answerable in seconds.
+5. **Name the cost of every option, including the recommended one.** An option presented without its
+   trade-off is a steer disguised as a choice.
+6. **Recommend, and say why.** Withholding a recommendation is not neutrality; it hands back
+   judgement the implementer is better placed to exercise.
+7. **Surface tensions in the request itself.** When an instruction contains two statements that pull
+   apart, quote both, say which reading will be taken, and let it be corrected. This is the cheapest
+   correction point in the whole task.
+8. **Bound the count.** A few load-bearing questions. A survey transfers the design back to the
+   owner, which is the opposite of the point.
+9. **Cover the space, and admit it when you cannot.** Options should be mutually exclusive; if they
+   do not exhaust the possibilities, say what is missing rather than implying they do.
+10. **Prefer a reversible default over a blocking question** when being wrong costs a small edit.
+    Reserve blocking for choices that are expensive or unsafe to get wrong.

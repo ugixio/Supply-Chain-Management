@@ -57,7 +57,7 @@ relations:
 | ORD | 13-order-management | `docs/40-contexts/13-order-management/rule.md` | ORD-R7 |
 | SDV | 14-supplier-development | `docs/40-contexts/14-supplier-development/rule.md` | SDV-R6 |
 | ENG | Engineering (build-time, cross-cutting) | `docs/50-engineering/rule.md` | ENG-R10 |
-| PLT | Platform / workspace (above the 14 depts) | `docs/30-foundation/platform/rule.md` | PLT-R5 |
+| PLT | Platform / workspace (above the 14 depts) | `docs/30-foundation/platform/rule.md` | PLT-R6 |
 
 ### Concept IDs — LIVE (ADR-0015)
 
@@ -100,13 +100,16 @@ statement fixes. See [25-concepts/_index.md](../25-concepts/_index.md).
 
 - **PLT — now LIVE** (materialized at W2, 2026-07-22, in `docs/30-foundation/platform/rule.md`;
   see §1). PLT-R1 prompt-refinement gate (ADR-0032) · PLT-R2 read-only project reference ·
-  PLT-R3 everything-connected · PLT-R4 node/edge typing · PLT-R5 one-branch-per-project.
+  PLT-R3 everything-connected · PLT-R4 node/edge typing · PLT-R5 one-branch-per-project ·
+  **PLT-R6 improvement-recommendation gate (ADR-0038, 2026-07-27)** — the standing search for a
+  better implementation, and the rule that a missing detail is chosen from a selectable list rather
+  than guessed.
 - *(no other reserved families — a 15th SCM department appends via its own ADR)*
 
 ## 3. Decision (ADR) numbers
 
 - Format: `ADR-NNNN`, strictly increasing, allocated at proposal time.
-- Allocated: **ADR-0001 … ADR-0037** (see `docs/10-decisions/README.md`).
+- Allocated: **ADR-0001 … ADR-0038** (see `docs/10-decisions/README.md`).
   0001–0009 retroactive; 0010–0013 proposed at skeleton adoption; 0014 (MIT) accepted;
   0015 (concepts) / 0016 (business-context extraction) proposed; **0017–0021 proposed —
   the full-stack product decisions** (staging, Clean Architecture, Decimal money, gRPC
@@ -134,7 +137,9 @@ statement fixes. See [25-concepts/_index.md](../25-concepts/_index.md).
   part via **ENG-R10**. ADR-0030 **extends** (does not supersede) ADR-0017's staging;
   ADR-0036 **extends** ADR-0034/0031/0035; **ADR-0037** supersedes the two-language
   SCM-application premise of **ADR-0001** and narrows ADR-0015/0016/0035 — the context carries
-  only externally-fixed standards, so the invented application was deleted.
+  only externally-fixed standards, so the invented application was deleted. **ADR-0038 extends
+  ADR-0032/PLT-R1** from refining the prompt to resolving what the prompt left open, and is bounded
+  by ADR-0002/ENG-R8 — an improvement recommendation may never introduce a new technology.
 
 ## 4. Department / module keys
 

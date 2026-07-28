@@ -421,9 +421,40 @@ mirror-coverage bar) · duplicated formulas across TS/Python with one past diver
   proportional to WIP, so starting more work in parallel makes items finish *later*, arithmetically.
   Registry updated (the CPT family is no longer "supply-chain" only); the catalogue index now lists
   **groups** rather than departments.
-- ⬜ **M2 · HOW** — The ClickHouse telemetry tier exactly as ADR-0036 fixes it: sort key
+- 🟦 **M2 · HOW** — The ClickHouse telemetry tier exactly as ADR-0036 fixes it: sort key
   `(project_id, metric, ts)`, monthly partitions, per-column codecs, the `AggregatingMergeTree`
   rollup cascade, raw TTL with long rollup retention, split-privilege users with quotas.
+  **ENG-R9 six checks — run before any code, 2026-07-27:**
+  1. **Lane** ✅ ClickHouse owns project telemetry at scale and never truth (ADR-0034); the schema is
+     that lane's own artefact. It is *not* PostgreSQL's (transactional truth) and the DDL is not
+     NestJS's to own — NestJS only *reads* it, through the SELECT-only identity.
+  2. **Best practice** ✅ ADR-0036 fixes the idioms rather than leaving them to taste: sort key
+     ordered project → metric → time because supervision queries scope that way; monthly partitions
+     to bound part count; `Delta`+`ZSTD` on timestamps and `Gorilla`/`DoubleDelta` on float values;
+     `LowCardinality` labels; **no `Nullable` on hot columns** — absence encoded explicitly;
+     aggregation at insert time via materialized views, not at query time.
+  3. **Security** ✅ two identities, not one: an insert-only writer for the ingester and a
+     SELECT-only reader for NestJS, each with row/memory/time **quotas** so no dashboard query can
+     exhaust the cluster. No credentials in the repository.
+  4. **Speed** ✅ the dashboard cost is paid on insert; reads hit the coarsest rollup that answers
+     the question. The hot path acquires no extra network hop (the ingester writes directly).
+  5. **Scalability** ✅ the ADR-0034/0036 target is tens of thousands of continuous series; the raw
+     TTL plus long rollup retention is what bounds growth. **Documented limit:** a cross-project
+     "top N metrics everywhere" query is expensive under this sort key and needs its own projection.
+  6. **Licence** ✅ ClickHouse is Apache-2.0 — OSI, commercially usable, modifiable (ADR-0002).
+  **Placement decided (inside an already-adopted lane, so no new ADR — CLAUDE.md working
+  agreements):** the DDL and its migrations live in their own top-level directory rather than inside
+  `apps/api`, because the schema outlives any one consumer and NestJS must not appear to own it.
+  Migrations are **forward-only and numbered**; a materialized view is never edited in place without
+  a backfill plan, which ADR-0036 records as the cost of this design.
+  **Open question for the next session, deliberately not decided here:** the concrete raw TTL and
+  rollup retention *values*. They are this application's own policy — legitimate to set, since here
+  the repository **is** the project — but they should be set as named configuration with the reason
+  recorded, not inlined as magic numbers, so that the one place ADR-0037 permits a policy value does
+  not become the place they leak back in.
+  **Next step:** write the raw table, the three rollup views and the two roles as numbered
+  migrations, with the metric names matching CPT-0155..0160 (ADR-0036: a rollup without its concept
+  node is an ungoverned calculation).
 - ⬜ **M3 · HOW** — The Rust ingestion worker: normalize → validate → deduplicate → **batch**
   insert. Ingestion is core work (ENG-R10).
 - ⬜ **M4 · HOW** — NestJS + GraphQL as the only counterpart the frontend has; Next.js dashboards.

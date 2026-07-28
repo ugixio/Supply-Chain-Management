@@ -483,8 +483,35 @@ mirror-coverage bar) · duplicated formulas across TS/Python with one past diver
   proxy denies `builds.clickhouse.com` by policy and there is no Docker daemon — so **CI is the first
   real execution of this schema**. That is the gate the owner chose doing its job; if it goes red, the
   migration is wrong and gets fixed.
-- ⬜ **M3 · HOW** — The Rust ingestion worker: normalize → validate → deduplicate → **batch**
+- 🟦 **M3 · HOW** — The Rust ingestion worker: normalize → validate → deduplicate → **batch**
   insert. Ingestion is core work (ENG-R10).
+  **M3a landed 2026-07-28 — `crates/scm-ingest`, the deterministic core, 13 tests.** Split from
+  transport by rule, not by convenience: ENG-R10.1 forbids an HTTP server or DB client in a core
+  crate, so the pipeline takes samples in and hands batches out. It also **takes time as an input**
+  rather than reading a clock, which is what lets the batch-age tests assert timing without sleeping.
+  **ENG-R9 six checks** — lane ✅ (ingestion is Rust core work) · best practice ✅ (no I/O, time
+  injected, `-D warnings` with truncation/unwrap/expect denied) · security ✅ (this is the only place
+  untrusted input enters: a non-finite value, an ungoverned metric and a future timestamp are each
+  refused) · speed ✅ (O(1) amortized dedup, no allocation per sample beyond the batch vector) ·
+  scalability ✅ (memory bounded by `window/bucket`, not by sample count — asserted by a test) ·
+  licence ✅ (no new dependency at all).
+  **Three decisions went to the owner as a list (PLT-R6), all recommended options taken:** dedup by
+  bounded time window on `(project_id, metric, ts)`; flush on **size or age, whichever first**, with
+  backoff and a dead-letter file; and an invalid sample is **dropped and counted by reason** rather
+  than failing its batch.
+  **The algorithmic core, and its honest cost.** Dedup keys are stored as a **`u64` hash** — eight
+  bytes instead of ~sixty — in `VecDeque` time buckets, so eviction drops a whole bucket at once
+  instead of scanning for expired entries. The cost is a false-positive rate: at a million live keys,
+  ~`2.7e-8` per key pair, and the consequence is one dropped telemetry point. **That trade is
+  acceptable here and would not be for money**, which is why `scm-money` stores no hashes. Written
+  into the doc comment rather than discovered later.
+  **Two behaviours worth naming, both tested:** a sample older than the dedup window is **not**
+  reported as a duplicate (claiming so would assert knowledge deliberately discarded — staleness is
+  the validator's call), and batch age runs from **arrival**, not from the sample's own timestamp, or
+  a backfill of old samples would look permanently overdue and flush one row at a time.
+  **M3b remaining:** the transport adapter (ingress) and the ClickHouse client that performs the
+  batched insert, plus the retry/dead-letter mechanics the owner chose. Both are adapter work by
+  ENG-R10.1, so they belong outside this crate.
 - ⬜ **M4 · HOW** — NestJS + GraphQL as the only counterpart the frontend has; Next.js dashboards.
 - ⬜ **M5 · HOW** — Docker images (non-root, pinned digests, multi-stage) then Kubernetes once two
   long-running services exist.

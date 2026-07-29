@@ -5,7 +5,7 @@ type: program
 owner: orchestrator
 status: draft
 since: 2026-07-19
-updated: 2026-07-19
+updated: 2026-07-29
 relations:
   - { type: part-of, target: index-program }
   - { type: governed-by, target: governance-root }
@@ -78,7 +78,15 @@ Size the task S / M / L and risk low / medium / high. An L-or-larger or high-ris
 **split or escalated to the owner before work starts** — never discovered at the end.
 Record the estimate in the task entry so drift is visible in the backlog.
 
-## 5. Asking well (the question craft PLT-R6 depends on)
+## 5. Reviewing a set of documents
+
+Any review — a repository, a department, an ADR set, one specification — runs the procedure in
+[review-protocol.md](review-protocol.md): enumerate the estate mechanically, name the finding
+classes before looking, mark every item as reached, consolidate into the durable records, then fix
+what needs no decision, mechanize what a gate could catch and raise the rest as a selectable list.
+The checklist is transient and is deleted when the review closes; the outcome is not.
+
+## 6. Asking well (the question craft PLT-R6 depends on)
 
 A list of options is only as good as the thinking behind it. What makes the difference:
 

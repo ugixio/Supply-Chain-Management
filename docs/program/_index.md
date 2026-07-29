@@ -5,7 +5,7 @@ type: program
 owner: orchestrator
 status: active
 since: 2026-07-19
-updated: 2026-07-19
+updated: 2026-07-29
 relations:
   - { type: part-of, target: index-docs }
   - { type: governed-by, target: governance-root }
@@ -24,6 +24,9 @@ relations:
     `.claude/skills/`; §4 communication contract).
   - [evaluation.md](evaluation.md) — reasoning protocol, decision ladder, self-review
     checklist (ADR-0012).
+  - [review-protocol.md](review-protocol.md) — how a body of documents is reviewed:
+    enumerate the estate, name the finding classes, mark every item, consolidate, close the
+    loop. Invoked for any review of any document type.
   - [improvement-register.md](improvement-register.md) — append-only
     continuous-improvement log (ADR-0012).
   - [templates/](templates/) — task · adr · spec · rule · skill · agent profile ·

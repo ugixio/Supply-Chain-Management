@@ -123,7 +123,13 @@ Dependencies stay OSI-licensed, commercially usable and modifiable (ADR-0002).
   missing detail would change what gets built, it is offered as a **selectable list** of recommended
   options with their trade-offs, never guessed and never buried in prose. Selected options are built
   the same turn; declined ones are recorded so they are not re-proposed. Question craft:
-  `docs/program/evaluation.md` §5.
+  `docs/program/evaluation.md` §6.
+- **Review by enumeration, never by impression.** Asked to review documents — any set, any type —
+  run `docs/program/review-protocol.md`: enumerate the estate mechanically and state its count,
+  name the finding classes before looking, mark every item as reached, then fix what needs no
+  decision, mechanize what a gate could catch, and raise the rest as a selectable list. The
+  marking checklist is transient and is deleted at the close; the findings land in the registers.
+  Report the denominator, not only the findings.
 - **Ask before adopting a new language or framework**, with its speed and security trade-offs.
   A library inside an existing lane does not need a decision.
 - **Plan⇄context first (ADR-0010).** A change that introduces or renames a concept lands in the

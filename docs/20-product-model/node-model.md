@@ -5,7 +5,7 @@ type: product-model
 owner: orchestrator
 status: active
 since: 2026-07-22
-updated: 2026-07-22
+updated: 2026-07-29
 relations:
   - { type: part-of, target: index-product-model }
   - { type: governed-by, target: index-adr }
@@ -35,7 +35,7 @@ relations:
   ladder (G6); structural edges (`part-of`) reach the parent index (G5).
 - **No node is an island, no edge dangles:** every node is reachable and every edge resolves
   to a real node — enforced as **PLT-R3** and already checked by G4/G5/G6. This is the
-  guarantee that "todo está conectado".
+  guarantee that everything is connected.
 
 ## 2. Regions — the current project and the next ones
 

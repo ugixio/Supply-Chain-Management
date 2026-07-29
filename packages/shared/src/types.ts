@@ -1,5 +1,5 @@
 /**
- * @scm/standards — machine-readable reference data for supply-chain standards.
+ * @scm/shared — machine-readable reference data for supply-chain standards.
  *
  * Everything in this file is fixed **outside this repository** (ADR-0037): a code list from
  * GS1 or UN/CEFACT, a trade rule from the ICC, a process taxonomy from ASCM. A project imports

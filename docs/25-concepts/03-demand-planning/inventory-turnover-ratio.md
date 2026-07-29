@@ -5,7 +5,7 @@ type: concept
 owner: orchestrator
 status: active
 since: 2026-07-20
-updated: 2026-07-26
+updated: 2026-07-29
 relations:
   - { type: part-of, target: index-concepts-demand-planning }
   - { type: governed-by, target: index-adr }
@@ -44,14 +44,13 @@ ratio by the entire gross margin — the most common way this metric is reported
 - **"Average" is doing real work.** A simple (opening + closing)/2 hides seasonal swings;
   a business with a Q4 peak can post a healthy annual ITR while carrying dead stock for
   nine months. Prefer a monthly average where the data supports it.
-- Benchmarks are **industry-specific** and comparisons across sectors are meaningless:
-  Turnover is only comparable within an industry and a product class: the same ratio that is
-  healthy for fresh grocery would signal dead stock in heavy industry. Comparing across them,
-  or against a single number, is the standard misuse of this measure.
+- **Turnover is only comparable within an industry and a product class.** The same ratio that is
+  healthy for fresh grocery would signal dead stock in heavy industry. Comparing across them, or
+  against a single published number, is the standard misuse of this measure.
 - A rising ITR is not automatically good — it can mean lean operations, or it can mean
   systematic stockouts. Read it against fill rate and OTIF, never alone.
 - Annualisation is implicit: feeding a quarter's COGS against an average inventory yields
-  quarterly turns, which must be ×4 to compare with the benchmarks above.
+  quarterly turns, which must be ×4 before comparing with any annual figure.
 
 ## Worked example
 

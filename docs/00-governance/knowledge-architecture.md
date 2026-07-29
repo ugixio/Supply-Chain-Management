@@ -5,7 +5,7 @@ type: governance
 owner: orchestrator
 status: active
 since: 2026-07-19
-updated: 2026-07-19
+updated: 2026-07-29
 relations:
   - { type: part-of, target: index-governance }
   - { type: governed-by, target: governance-root }
@@ -133,13 +133,23 @@ Every non-allowlisted `.md` carries YAML front-matter:
 - Every document has exactly one owner. **human** owns the contract and final approvals;
   **orchestrator** owns program/process and (until lanes are formalized) the docs tree.
 
-## 11. Enforcement (gates — adopt incrementally)
+## 11. Enforcement (gates)
 
-Wire into a `verify` script / CI as it materializes (WORKFLOW follow-up). Definitions:
+All thirteen are wired into `tools/verify.py` and run by `make verify` (ADR-0012):
 - **G1** no stray docs · **G2** front-matter validity · **G3** ID uniqueness ·
   **G4** link integrity · **G5** no orphans (`part-of` traversal) · **G6** authority
-  acyclicity · **G7** status/supersession integrity · **G8** English-only (this repo's
-  Language Policy, `CLAUDE.md`).
+  acyclicity · **G7** status/supersession integrity · **G8** English-only, screened for
+  non-English function words (this repo's Language Policy, `CLAUDE.md`; ADR-0003) ·
+  **G9** context budget and ADR disclosure · **G10** standards provenance · **G11** retired
+  rules stay retired · **G12** a rule citation names an ID, never a family wildcard ·
+  **G13** `updated:` matches the file's real last change.
+
+**What a gate can and cannot certify.** Each of these is a *mechanical* property. None of them
+can tell a standard from a plausible-looking invention — that is risk #11, it is open, and it is
+how ADR-0037's defect began. G8 and G13 were added on 2026-07-29 after a file-by-file review
+found a Spanish sentence and 164 stale `updated:` stamps that no gate was looking for; the
+lesson recorded with them is that **a gate over part of the estate certifies only that part**,
+which is why G8, G11, G12 and G13 read every tracked Markdown file, not only the governed tree.
 
 ## 12. Evolution of this document
 

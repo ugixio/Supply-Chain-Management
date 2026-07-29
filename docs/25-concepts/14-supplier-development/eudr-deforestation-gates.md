@@ -5,7 +5,7 @@ type: concept
 owner: orchestrator
 status: active
 since: 2026-07-22
-updated: 2026-07-27
+updated: 2026-07-29
 relations:
   - { type: part-of, target: index-concepts-14-supplier-development }
   - { type: governed-by, target: index-adr }
@@ -16,16 +16,18 @@ relations:
 > certification/geolocation gate per shipment, and a commodity×country risk
 > classification with satellite mitigation.
 
-## Formula (as implemented)
+## Formula
 
     gate: not regulated → COMPLIANT (out of scope)
           high-risk country: certified ∧ geo → COMPLIANT · certified only →
           REQUIRES_EVIDENCE · else NON_COMPLIANT
           standard-risk: certified ∨ geo → COMPLIANT · else REQUIRES_EVIDENCE
-    classification: production_date ≤ 2020-12-31 → HIGH/non-compliant
-          high-risk commodity (cattle/palm/soya/wood) ∧ high-risk country → HIGH
-          high-risk country → MEDIUM · else LOW · non-regulated → NEGLIGIBLE
-          forest_cover_change ≥ 10% → HIGH · satellite verification −1 level
+    classification: produced on land deforested after 2020-12-31 → non-compliant (Art. 3)
+          in-scope commodity ∧ high-risk country → escalate
+          high-risk country → escalate · standard-risk → simplified diligence
+          non-regulated → out of scope
+          any forest-cover-change trigger and any de-escalation for satellite
+          verification → PROJECT-CHOSEN
 
 ## Regulatory drift — RECORDED (verified 2026-07)
 
@@ -52,15 +54,22 @@ relations:
 - **Gate:** commodity, origin country name, cert/geo booleans, optional country
   override → `{status, reason}`.
 - **Classification:** commodity, ISO country code, production date, satellite flag,
-  optional forest-cover-change % → `{risk_level, is_compliant,
-  requires_satellite, action_required}`.
+  optional forest-cover-change percentage → risk level, compliance verdict, whether
+  satellite evidence is needed, action required.
+
+### Project-chosen inputs
+
+- **Any forest-cover-change percentage** that escalates a risk level, and **any de-escalation**
+  credited to satellite verification. The regulation fixes the cut-off date (31 December 2020),
+  the in-scope commodities and the country benchmarking; it fixes neither of these, and both are
+  operator judgement recorded in the due-diligence statement.
 
 ## Assumptions and limits
 
 - Geolocation of *all* production plots is the EUDR's hard operational core —
   the booleans here stand in for the plot-level evidence package.
-- Satellite verification reducing risk one level is a due-diligence heuristic,
-  not a regulatory rule.
+- Satellite verification reducing risk one level is a due-diligence heuristic an operator adopts,
+  not a regulatory rule — and an operator that credits it must be able to defend the credit.
 - **Does not apply when:** goods never enter the EU market.
 
 ## Worked example

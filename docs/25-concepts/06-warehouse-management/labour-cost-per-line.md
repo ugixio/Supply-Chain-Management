@@ -5,7 +5,7 @@ type: concept
 owner: orchestrator
 status: active
 since: 2026-07-22
-updated: 2026-07-22
+updated: 2026-07-29
 relations:
   - { type: part-of, target: index-concepts-06-warehouse-management }
   - { type: governed-by, target: index-adr }
@@ -29,9 +29,11 @@ relations:
 
 - **Inputs:** cost as integer cents (minor units; SCM-R14); lines > 0 (raises
   otherwise).
-- **Output:** `{cents_per_line, dollars_per_line, benchmark_cents_per_line: 50,
-  benchmark_met}` — benchmark ≤ $0.50/line for ambient pick-to-carton; value-added
-  services run to ~$1.50/line (Frazelle 2016).
+- **Output:** cost per picked line, in minor units and in major units.
+- **Project-chosen input:** the level that counts as good. Frazelle (2016) publishes figures for
+  ambient pick-to-carton and for value-added service work, but a published figure is an
+  illustration from one study's sample — the bar is set by the operation's own cost base, mix and
+  wage market.
 
 ## Assumptions and limits
 
@@ -44,7 +46,7 @@ relations:
 
 ## Worked example
 
-$54,000 labour (5,400,000¢) over 120,000 lines → `45¢/line` → benchmark met.
+$54,000 labour (5,400,000¢) over 120,000 lines → `45¢/line`.
 
 ## Governing rules
 

@@ -5,7 +5,7 @@ type: concept
 owner: orchestrator
 status: active
 since: 2026-07-22
-updated: 2026-07-22
+updated: 2026-07-29
 relations:
   - { type: part-of, target: index-concepts-06-warehouse-management }
   - { type: governed-by, target: index-adr }
@@ -30,27 +30,27 @@ relations:
 
 ## Inputs and outputs
 
-- **Outputs:** dwell → `{dwell_hours, benchmark_hours: 4.0, benchmark_met,
-  detention_risk}` — `detention_risk` fires above **2 h** because most carrier contracts
-  give 2 h free time before detention charges; turns → `{turns_per_shift,
-  benchmark_turns_per_shift: 3, benchmark_met}` (≥ 3 turns per door per 8-h shift).
+- **Outputs:** dwell in hours; turns per door per shift.
+- **Project-chosen inputs:** the free-time allowance before detention accrues, and the turn rate
+  that counts as healthy. The first is a **term of the carrier contract** — it is commonly a
+  small number of hours, but the contract fixes it, not this context; the second follows from door
+  count, shift length and the inbound profile.
 - **Guards:** negative dwell raises; `dock_hours_available > 0` required.
 
 ## Assumptions and limits
 
 - Same hours-since-midnight caveat as CPT-0047: dwell spanning midnight computes
   negative — convert to a monotonic axis first.
-- Benchmark 4 h is the inbound bar; outbound staging typically tolerates ~6 h — the
-  implementation carries only the inbound default.
-- Turn rate counts *processed trailers*, not appointments — no-shows (DockAppointment
-  `markNoShow`) never inflate it.
+- Inbound and outbound do not share a bar: outbound staging holds trailers on purpose, so a dwell
+  figure that is alarming inbound is normal outbound. Whatever levels a project sets, it needs two.
+- Turn rate counts *processed trailers*, not appointments — a no-show must never inflate it.
 - **Does not apply when:** drop-and-hook yards intentionally park trailers as mobile
   storage — dwell is then a stock decision, not a performance failure.
 
 ## Worked example
 
-Arrive 06:00, depart 11:30 → dwell 5.5 h → benchmark missed, detention risk.
-Doors process 21 trailers over 56 door-hours → `21/56×8 = 3.0` turns → benchmark met.
+Arrive 06:00, depart 11:30 → dwell 5.5 h.
+Doors process 21 trailers over 56 door-hours → `21/56×8 = 3.0` turns per door per 8-h shift.
 
 ## Project-chosen inputs
 
@@ -66,7 +66,8 @@ Doors process 21 trailers over 56 door-hours → `21/56×8 = 3.0` turns → benc
 
 ## Related
 
-- CPT-0043 Dock door sizing — chronic dwell above benchmark signals undersized doors.
+- CPT-0043 Dock door sizing — chronic dwell above whatever level a project sets signals
+  undersized doors.
 - CPT-0047 Dock-to-stock — the inside continuation of the inbound clock.
 
 ## References

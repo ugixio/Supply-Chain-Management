@@ -5,7 +5,7 @@ type: concept
 owner: orchestrator
 status: active
 since: 2026-07-22
-updated: 2026-07-22
+updated: 2026-07-29
 relations:
   - { type: part-of, target: index-concepts-13-order-management }
   - { type: governed-by, target: index-adr }
@@ -37,10 +37,12 @@ appetite, not part of the metric (RSK-R6: expectation is not exposure).
 
 ## Inputs and outputs
 
-- **Outputs:** AG.1.1 `{upside_flexibility_days, achievable_uplift_pct, benchmark_met,
-  gap_days}`; AG.1.2 `{reduction_pct, penalty_free, unrecoverable_cost_cents}`;
-  AG.1.3 `{expected_loss_cents, net_var_cents, recommendation}` (probability
-  validated ∈ [0,1]).
+- **Outputs:** AG.1.1 the response time in days and the uplift actually achievable in it;
+  AG.1.2 the reduction percentage, whether it is penalty-free, and the unrecoverable cost;
+  AG.1.3 expected loss and net exposure, in integer cents. Probability must be in [0,1].
+- **Project-chosen inputs:** every band that turns one of these numbers into an action —
+  what response time is acceptable, and at what ratio of exposure to mitigation cost a
+  project decides to spend more. SCOR fixes the *measure*; the trigger is risk appetite.
 
 ## Assumptions and limits
 
@@ -48,16 +50,18 @@ appetite, not part of the metric (RSK-R6: expectation is not exposure).
   the uplift% output verifies the 20% is actually achievable; a fast ramp to +10%
   does not qualify.
 - Baseline volumes must be > 0 (division; not guarded — recorded caveat).
-- AG.1.3 is the SCOR-flavored EAL (CPT-0072) netted for mitigation spend; its
-  recommendation thresholds (2×, 5%) are heuristics, not standardsed values.
+- AG.1.3 is the SCOR-flavoured EAL (CPT-0072) netted for mitigation spend. It yields an
+  amount, not a verdict: a rule such as "act when exposure exceeds mitigation cost by a
+  factor of two" is a heuristic a project adopts, and nothing external fixes the factor.
 - **Does not apply when:** flex is constrained by a single supplier — measure at the
   constraint, not the average.
 
 ## Worked example
 
-Base 10,000/mo, max in 30 days 12,300 (+23%), achieved in 24 days → AG.1.1 met,
-gap 0. Downside: reduced to 7,000 penalty-free → 30%. VaR: P 0.15 × 40M¢ = 6M¢
-expected; mitigation 2.5M¢ → net 3.5M¢, 6M > 5M ⇒ INCREASE_MITIGATION.
+Base 10,000/mo, max in 30 days 12,300 (+23%), achieved in 24 days → the SCOR +20% is
+reachable, in 24 days. Downside: reduced to 7,000 penalty-free → 30%. VaR: P 0.15 × 40M¢
+= 6M¢ expected; mitigation 2.5M¢ → net exposure 3.5M¢. Whether 6M¢ of exposure justifies
+more than 2.5M¢ of mitigation is the decision the number informs, not one it makes.
 
 ## Governing rules
 

@@ -1,15 +1,21 @@
 #!/usr/bin/env python3
 """Doc gates — the executable form of docs/00-governance/knowledge-architecture.md §11.
 
-Implements gates G1-G7 + G9-G11 over the tracked knowledge tree (ADR-0012, from the ugixio
-context skeleton ADR-0001/0004). G8 (English-only) is a manual review gate. Python 3,
-standard library only.
+Implements gates G1-G13 over the tracked knowledge tree (ADR-0012, from the ugixio context
+skeleton ADR-0001/0004). Python 3, standard library only.
+
+G8 (English-only) and G13 (`updated:` truthfulness) were both added on 2026-07-29, and both
+because a file-by-file review found what the gates could not: one Spanish sentence sitting in
+`20-product-model/node-model.md` since the file was written, and an `updated:` stamp that
+disagreed with the file's real last change in 164 of 221 governed documents. Neither gate is
+clever. Both close a hole that stayed open precisely because closing it needed no cleverness.
 
 Exit status: 0 when every gate passes, 1 otherwise.
 """
 
 from __future__ import annotations
 
+import datetime
 import fnmatch
 import os
 import re
@@ -92,6 +98,16 @@ RETIRED_HEADING = "## Retired rules"
 # `[^*]*` before the family matters: the first version required `**` immediately before it and so
 # missed `**SCM-R7 / CMP-R***`, where the bold span opened on the *other* rule in the sentence.
 RULE_WILDCARD = re.compile(r"\*\*[^*]*\b((?:SCM|[A-Z]{3})-R)\\?\*\*\*")
+
+# G8's screen (see the gate for why this list is function words only). Kept short on purpose: a
+# long list buys nothing and starts colliding with proper nouns and standards titles.
+NON_ENGLISH_FUNCTION_WORDS = (
+    "está", "están", "también", "según", "así", "más", "porque", "aunque", "desde",
+    "siempre", "cada", "debe", "hacer", "mismo", "usuario", "sino", "hasta", "entonces",
+    "puede", "sobre todo", "es decir", "sin embargo", "todo está",
+)
+
+TODAY = datetime.date.today().isoformat()
 
 
 def section_body(text: str, heading: str) -> str:
@@ -205,6 +221,8 @@ class Gates:
             "G10": "standards provenance (source cited, no owned code)",
             "G11": "retired rules stay retired",
             "G12": "rule citations name an ID",
+            "G8": "English-only (screened)",
+            "G13": "`updated:` matches the real last change",
         }
         ok = True
         for gate in sorted(names, key=lambda name: int(name[1:])):
@@ -216,7 +234,8 @@ class Gates:
                     print(f"  - {issue}")
             else:
                 print(f"PASS {gate} ({names[gate]})")
-        print("INFO G8 (English-only): manual review gate (knowledge-architecture §11)")
+        print("INFO G8 screens for non-English function words; judging whether prose reads as "
+              "English is still a reviewer's job (knowledge-architecture §11)")
         print(f"{'GREEN' if ok else 'RED'} — {docs_count} governed docs checked")
         return 0 if ok else 1
 
@@ -521,6 +540,52 @@ def main() -> int:
                 gates.fail("G12", f"{path}:{number} cites {family}* — a family wildcard is not a "
                                   f"citation: it reads as law and resolves to no rule. Name the "
                                   f"live ID, or say plainly that no rule fixes this")
+
+    # G8 — English only (ADR-0003), screened. A word list cannot certify that prose reads as
+    # English, so this gate does not claim to: it catches the *carrier* of the failure this
+    # repository actually had, which is a sentence written in the author's other language and
+    # never noticed. The list holds function words only. A content word can be a legitimate
+    # quotation ("Incoterms", a standard's French title, a supplier's name); a function word
+    # cannot — `está` and `desde` do not appear in an English sentence by accident.
+    for path, (_meta, text) in checked.items():
+        for number, line in enumerate(text.splitlines(), 1):
+            stripped = strip_code(line).lower()
+            for word in NON_ENGLISH_FUNCTION_WORDS:
+                if re.search(rf"(?<![\w-]){re.escape(word)}(?![\w-])", stripped):
+                    gates.fail("G8", f"{path}:{number} contains the non-English function word "
+                                     f"'{word}' — ADR-0003 makes English the single working "
+                                     f"language for every artifact in this repository")
+                    break
+
+    # G13 — `updated:` tells the truth. The field is only worth having if it moves when the file
+    # does, and a reader who cannot trust it will not read it: a 2026-07-19 stamp on a file
+    # rewritten this week is worse than no stamp, because it is evidence for a false conclusion.
+    #
+    # Scope is deliberately the CURRENT change, not the whole history. `actions/checkout` clones
+    # at depth 1, so `git log -1 -- <path>` in CI returns HEAD for every file and a history-wide
+    # gate would demand today's date on all 221 documents. What is always knowable — locally and
+    # on a shallow clone alike — is which files this commit touches, and that is exactly the set
+    # whose stamp is being written right now.
+    dirty = {
+        line[3:].strip().strip('"')
+        for line in subprocess.run(["git", "status", "--porcelain"],
+                                   capture_output=True, text=True).stdout.splitlines()
+        if line[:2] != "??"
+    }
+    if dirty:
+        changed, expected, why = dirty, TODAY, "is modified in the working tree"
+    else:
+        head = subprocess.run(["git", "show", "--pretty=format:%ad", "--date=short",
+                               "--name-only", "HEAD"], capture_output=True, text=True).stdout
+        head_lines = head.splitlines()
+        expected = head_lines[0].strip() if head_lines else TODAY
+        changed = {line for line in head_lines[1:] if line.strip()}
+        why = "was changed by HEAD"
+    for path in sorted(changed & docs.keys()):
+        stamped = docs[path][0].get("updated", "")
+        if stamped != expected:
+            gates.fail("G13", f"{path}: front-matter says updated: {stamped or '(none)'} but the "
+                              f"file {why} ({expected}) — stamp the change or do not claim a date")
 
     return gates.report(len(docs))
 

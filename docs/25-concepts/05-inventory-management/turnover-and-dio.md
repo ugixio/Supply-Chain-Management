@@ -5,7 +5,7 @@ type: concept
 owner: orchestrator
 status: active
 since: 2026-07-22
-updated: 2026-07-22
+updated: 2026-07-29
 relations:
   - { type: part-of, target: index-concepts-05-inventory-management }
   - { type: governed-by, target: index-adr }
@@ -24,7 +24,11 @@ relations:
 
 ## Inputs and outputs
 
-- Floats; ITR rounded 4 dp, DIO 2 dp. Benchmarks echoed: FMCG 8–12×; DIO < 45 days.
+- **Inputs:** COGS and average inventory value for the same period, in the same currency.
+- **Outputs:** the turnover ratio, and its reciprocal expressed in days.
+- **Project-chosen input:** the level that counts as healthy. It is industry- and
+  product-class-specific (CPT-0016), so a single number cannot be published here; a figure
+  quoted from a sector study is an illustration from that study's sample.
 
 ## Assumptions and limits
 

@@ -52,6 +52,8 @@ docs/              The context itself — tiered knowledge; map: docs/_index.md
 apps/              web · api — the monitoring application (not yet built)
 packages/shared/   @scm/shared — standards reference data only
 crates/scm-money   Exact money arithmetic; no policy
+crates/scm-ingest  Telemetry ingestion core: normalize · validate · dedup · batch; no transport
+db/clickhouse      The telemetry schema (ADR-0036): migrations, apply.py, the schema gate
 tools/verify.py    The doc gates
 ```
 
@@ -136,13 +138,14 @@ Dependencies stay OSI-licensed, commercially usable and modifiable (ADR-0002).
 
 ## Gates
 
-`make verify` — doc gates G1–G12, typecheck, Rust tests. Run after **every** layer.
+`make verify` — doc gates G1–G13, typecheck, Rust tests. Run after **every** layer.
 `make verify-full` — the merge gate: adds `cargo fmt --check` and `clippy -D warnings`.
+`make verify-schema` — the telemetry schema against a real ClickHouse. CI runs both gates.
 
 G1 no stray docs · G2 front-matter · G3 unique IDs · G4 link integrity · G5 no orphans ·
-G6 authority acyclicity · G7 status and supersession · G8 English-only (manual) ·
+G6 authority acyclicity · G7 status and supersession · G8 English-only (screened) ·
 G9 context budget · G10 standards provenance · G11 retired rules stay retired ·
-G12 a rule citation names an ID (never a family wildcard).
+G12 a rule citation names an ID (never a family wildcard) · G13 `updated:` is true.
 
 **Definition of Done:** `make verify-full` green · touched rules keep their tests · spec and model
 updated first if a concept changed · knowledge placed per

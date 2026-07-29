@@ -5,7 +5,7 @@ type: concept
 owner: orchestrator
 status: active
 since: 2026-07-22
-updated: 2026-07-22
+updated: 2026-07-29
 relations:
   - { type: part-of, target: index-concepts-06-warehouse-management }
   - { type: governed-by, target: index-adr }
@@ -45,8 +45,10 @@ relations:
 - Location fill treats every position as equal; honeycombing (part-full pallets) hides
   inside "occupied" — cubic utilisation catches what location fill misses, which is why
   both exist.
-- **Note the deliberate direction of the cubic benchmark:** `benchmark_met` is
-  `u ≤ 0.85` — *not exceeding* 85% is the healthy state.
+- **Note the direction, which is the counter-intuitive part:** for cubic utilization *lower* is
+  healthy past some point — a full cube has no room to receive, travel or reslot. High utilization
+  and good utilization are not the same reading. Where the turning point sits is the project's
+  call: it follows from the storage medium, the pick method and the inbound profile.
 - **Does not apply when:** floor-stacked bulk without discrete locations (use area-based
   measures).
 

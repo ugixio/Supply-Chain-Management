@@ -5,30 +5,36 @@ type: product-model
 owner: orchestrator
 status: active
 since: 2026-07-19
-updated: 2026-07-19
+updated: 2026-07-29
 relations:
   - { type: part-of, target: index-product-model }
   - { type: governed-by, target: index-adr }
 ---
 # Glossary
 
-> One term, one meaning, one spelling — everywhere. Seeded from the estate (README,
-> CLAUDE.md, department docs); terminology authority for definitions beyond this table:
-> APICS Dictionary 16th Ed. (ASCM 2024). Owner column = the department whose docs hold
+> One term, one meaning, one spelling — everywhere. Terminology authority for definitions beyond
+> this table: APICS Dictionary 16th Ed. (ASCM 2024). Owner column = the department whose docs hold
 > the full treatment.
+>
+> **Definitions only — no levels.** A glossary entry says what a term *means*; what value counts as
+> good is the project's decision (ADR-0037, and the inclusion test in `CLAUDE.md`). This table once
+> read *"OTD … World-class ≥ 95%"*, *"OTIF … Walmart standard 98%"* and *"C2C … Target < 30 days"* —
+> one textbook illustration and two companies' policies, published here as vocabulary. Every project
+> that read this file would have inherited them. Removed 2026-07-29; the concept node named in each
+> row carries the meaning, the formula and the source.
 
 | Term | Definition | Owner |
 |---|---|---|
-| OTD | On-Time Delivery — orders delivered by promised date / total. World-class ≥ 95%. | 07-logistics |
-| OTIF | On-Time In-Full — delivered on time AND complete. Walmart standard 98%. | 13-order-management |
-| Perfect Order Rate | Orders with no error across delivery, documentation, damage, invoicing. ≥ 95%. | 13-order-management |
+| OTD | On-Time Delivery — orders delivered by the promised date / total delivered. | 07-logistics |
+| OTIF | On-Time In-Full — delivered on time AND complete; both conditions, one metric. | 13-order-management |
+| Perfect Order Rate | Orders with no error across delivery, documentation, damage and invoicing — the product of the four rates, not their average. | 13-order-management |
 | Fill Rate | Orders fulfilled without backorder / total orders. | 05-inventory |
 | ITR | Inventory Turnover Ratio = COGS / average inventory value. | 05-inventory |
 | DIO | Days Inventory Outstanding = 365 / ITR. | 05-inventory |
-| C2C | Cash-to-Cash cycle = DIO + DSO − DPO. Target < 30 days. | 11-finance |
+| C2C | Cash-to-Cash cycle = DIO + DSO − DPO, in days; negative is possible and is not by itself a goal. | 11-finance |
 | MAPE | Mean Absolute Percentage Error — forecast accuracy metric (with MAE, RMSE). | 03-demand-planning |
 | PPM / DPMO | Defective parts per million / defects per million opportunities. | 08-quality |
-| Bullwhip Ratio | Var(orders) / Var(demand); target ≈ 1.0. | 10-risk |
+| Bullwhip Ratio | Var(orders) / Var(demand). By construction 1.0 = no amplification and > 1 = amplification; the ratio is an identity, the acceptable level is not. | 10-risk |
 | ABC-XYZ | 9-box classification: consumption value (ABC) × demand variability (XYZ, by CV). | 05-inventory |
 | EOQ | Economic Order Quantity = √(2DS/H) (Harris 1913). | 03-demand-planning |
 | ROP | Reorder Point — stock level triggering replenishment. | 03-demand-planning |
@@ -54,7 +60,7 @@ relations:
 | CSDDD | EU Corporate Sustainability Due Diligence Directive 2024/1760. | 09-compliance |
 | EUDR / CBAM | EU Deforestation Regulation / Carbon Border Adjustment Mechanism. | 14-supplier-dev / 09-compliance |
 | ESG Scoring | Environment + Social + Governance composite supplier score. | 14-supplier-development |
-| Idempotency Key | Client-supplied key making a transaction safe to retry (retry safety — an engineering concern, ENG-R\*). | cross (scm-core) |
+| Idempotency Key | Client-supplied key making a transaction safe to retry. Retry safety belongs to the write path, so this is an engineering concern, not supply-chain law (ADR-0037). | cross (engineering) |
 | Global Context | The read-only, versioned SCM knowledge substrate (`docs/` SSOT + `CPT-*` + rules) surfaced as a wiki; consumed by projects. | platform (ADR-0030) |
 | Workspace | Top-level tenant space that contains Projects. | platform (ADR-0030) |
 | Project | A unit of work that references the Global Context by stable ID and owns its transactional data; never mutates the context. | platform (ADR-0030) |

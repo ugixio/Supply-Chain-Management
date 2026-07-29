@@ -1,6 +1,6 @@
 {
   "$schema": "https://turbo.build/schema.json",
-  "//": "Task graph for the monorepo (ADR-0022). Wired into `make verify-full` at the pnpm activation sub-step.",
+  "//": "Task graph for the monorepo (ADR-0022). Declared, not yet on the gate path: `make verify` calls `tsc --noEmit` directly because there is one TypeScript package and nothing to orchestrate. `turbo run build` becomes the gate's entry point when apps/web and apps/api have builds (Phase M4).",
   "tasks": {
     "build": { "dependsOn": ["^build"], "outputs": ["dist/**"] },
     "typecheck": { "dependsOn": ["^build"] }

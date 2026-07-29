@@ -5,7 +5,7 @@ type: concept
 owner: orchestrator
 status: active
 since: 2026-07-22
-updated: 2026-07-22
+updated: 2026-07-29
 relations:
   - { type: part-of, target: index-concepts-09-compliance-regulatory }
   - { type: governed-by, target: index-adr }
@@ -18,14 +18,14 @@ relations:
 
 ## Formula
 
-    rcoi_response% = collected / requested × 100     (RMI adequacy bar: ≥ 75%)
+    rcoi_response% = collected / requested × 100
     classify: all_recycled → RECYCLED_SCRAP
               any origin ∈ DRC-covered {CD,AO,BI,CF,RW,SS,TZ,UG,ZM} →
                 NOT_FOUND_DRC_CONFLICT_FREE
               else → DRC_FREE
     Form SD deadline = May 31 of reporting_year + 1     (year ≥ 2012)
     IPSA required ⇔ classification = DRC_CONFLICT_FREE  (voluntary claim)
-    coverage: <50% or any high-risk → HIGH · <75% → MEDIUM · else LOW (+ actions)
+    coverage risk: a band over rcoi_response%, plus any high-risk smelter → PROJECT-CHOSEN
 
 | Symbol | Meaning | Unit |
 |---|---|---|
@@ -36,8 +36,16 @@ relations:
 
 - **Inputs:** counts (validated: collected ≤ requested, non-negative); origin country
   codes (validated 2-char uppercase); reporting year; classification string.
-- **Outputs:** rate + gap + adequacy; classification literal; ISO deadline;
-  boolean; coverage % + risk level + prioritized recommendations.
+- **Outputs:** the RCOI response rate and the count still outstanding; the classification
+  literal; the Form SD deadline as an ISO date; whether an IPSA is required.
+
+### Project-chosen inputs
+
+- **The response rate that counts as adequate**, and the bands that turn a coverage figure into
+  a risk level and an action. SEC Rule 13p-1 requires a *reasonable* country-of-origin inquiry
+  and a description of it; it fixes no percentage, and the RMI publishes a template, not a bar.
+  A filer's own judgement of reasonableness is the input, and it is auditable — which is exactly
+  why it must not be inherited from here.
 
 ## Assumptions and limits
 
@@ -56,9 +64,9 @@ relations:
 
 ## Worked example
 
-Requested 120 CMRTs, collected 84 → 70% (< 75%, inadequate; gap 36). One supplier
-declares RW origin → NOT_FOUND_DRC_CONFLICT_FREE → enhanced due diligence; FY 2025
-Form SD due **2026-05-31**.
+Requested 120 CMRTs, collected 84 → 70%, 36 outstanding. One supplier declares RW origin →
+NOT_FOUND_DRC_CONFLICT_FREE → enhanced due diligence. FY 2025 Form SD due **2026-05-31**
+(the deadline is fixed; whether 70% is an adequate inquiry is the filer's determination).
 
 ## Governing rules
 

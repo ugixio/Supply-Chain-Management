@@ -17,15 +17,21 @@ description: >
 - US UCC Article 2 — quantity is mandatory in all purchase contracts
 - C-TPAT (US CBP) and AEO (EU) security certifications
 
-**Procurement KPIs (APICS/ASCM Dictionary 17th ed., 2024)**
-| KPI | World-Class Target | Formula |
-|-----|-------------------|---------|
-| PO Cycle Time | < 3 days (e-procurement) | Date PO issued − Date PR raised |
-| PO Accuracy Rate | ≥ 99% | Correct POs / Total POs × 100 |
-| Supplier On-Time Delivery (OTD) | ≥ 95% | On-time receipts / Total receipts × 100 |
-| Spend Under Management | ≥ 80% | Managed spend / Total addressable spend × 100 |
-| Cost Savings vs. Budget | ≥ 3% annual | (Budget price − Actual price) × Qty |
-| PO approval threshold | **project-chosen** — from the delegation of authority, not from here | — |
+**Procurement metrics (APICS/ASCM Dictionary 17th ed., 2024)**
+
+**Metrics — definitions, not levels.** A skill states what a metric measures and what
+constrains the answer; the level a project must clear is that project's decision (ADR-0037,
+and the inclusion test in `CLAUDE.md`). The right-hand column names the constraint so the
+question can be asked properly, and stops.
+
+| Metric | Formula | What constrains the level |
+|---|---|---|
+| PO cycle time | Date PO issued − Date PR raised | The approval chain the project designs. A short cycle and a strong control are in tension, and that trade-off is the decision this metric reports on. |
+| PO accuracy rate | Correct POs / Total POs × 100 | What counts as an error — price, quantity, terms, ship-to — must be listed before a level means anything. |
+| Supplier on-time delivery | On-time receipts / Total receipts × 100 | Which date counts (requested / confirmed / promised), then the supply agreement. |
+| Spend under management | Managed spend / Total addressable × 100 | The project's own definition of *addressable*, which is where most of the variation lives. |
+| Cost savings vs budget | (Budget price − Actual price) × Qty | The budget, which the project sets — so this metric partly measures the budget's realism. |
+| PO approval threshold and levels | — | **The delegation of authority**, and for listed filers the SOX control environment. Named as a project decision in `SCM-R*` §Project decisions; an amount stated here would be inherited by every project that read it, which is exactly what happened before ADR-0037. |
 
 **Kraljic Matrix** (Kraljic 1983, Harvard Business Review)
 | | Low Supply Risk | High Supply Risk |
@@ -33,8 +39,11 @@ description: >
 | **High Profit Impact** | LEVERAGE — competitive bidding | STRATEGIC — long-term partnership |
 | **Low Profit Impact** | NON_CRITICAL — automate/catalog | BOTTLENECK — safety stock, dual source |
 
-**Approval Workflow States**
-`DRAFT → PENDING_APPROVAL → APPROVED → SENT_TO_SUPPLIER → ACKNOWLEDGED → PARTIALLY_RECEIVED → FULLY_RECEIVED → CLOSED`
+**Approval workflow states — a project's vocabulary, not a standard.** A chain such as
+`DRAFT → PENDING_APPROVAL → APPROVED → SENT → ACKNOWLEDGED → PARTIALLY_RECEIVED → RECEIVED → CLOSED`
+is one reasonable design; nothing external fixes the names, the count or the transitions. What *is*
+externally fixed is narrower: UCC Article 2 requires a stated quantity, and the three-way match
+below must precede payment. Model the states the business actually has.
 
 **Three-Way Match** (ISO 9001:2015 §8.4)
 PO quantity + price = GR quantity = Supplier invoice → mandatory before AP payment
@@ -42,7 +51,8 @@ PO quantity + price = GR quantity = Supplier invoice → mandatory before AP pay
 ## Data Analytics
 
 **Spend Analysis (Pareto / ABC)**
-- 80/20 rule: top 20% of suppliers typically represent 80% of spend
+- Pareto behaviour is the *reason* to segment, not a figure to expect: spend concentration is
+  empirical, and the actual split is what the analysis measures
 - Segment by: category, supplier, geography, Kraljic quadrant
 - Metrics: spend concentration index, price variance vs. market index, savings pipeline
 - SQL pattern: window functions for running totals, rank by spend descending
@@ -176,22 +186,23 @@ own repository, with its own policy values.*
 - `Contract.ts` — Framework agreements; price schedules; Incoterms 2020
 - `RFQ.ts` — Request for Quotation; bid comparison; award logic
 
-**Critical Business Rules to Enforce**
-```typescript
-// Rule 1: PO above threshold requires approval
-if (totalAmountCents > PO_APPROVAL_THRESHOLD_CENTS) {
-  status = 'PENDING_APPROVAL';  // never auto-approve above threshold
-}
+**Invariants worth carrying — and which of them this context may state**
 
-// Rule 2: Money is always integer cents — never floats
-const totalCents: number = Math.round(unitPriceCents * quantity);  // integer
+Only the second is supply-chain law. The others are sound engineering or sound control design,
+and a project adopts them for its own reasons:
 
-// Rule 3: Soft-delete only — never hard-delete POs
-po.isDeleted = true;  // preserve audit trail for AP reconciliation
-
-// Rule 4: Idempotency on PO creation
-if (await repo.findByIdempotencyKey(idempotencyKey)) return existing;
-```
+- **Exact money, never floats** — **SCM-R14** and **ENG-R4/R5**. An amount is minor units with
+  explicit quantization at defined boundaries, ties to even (IEEE 754-2019 §4.3.3). This one is
+  fixed outside the repository and is stated as law.
+- **Approval above a threshold** — the *existence* of an approval step, the amount and the state
+  names are each the project's decision (the rule that once stated an amount here is retired,
+  see `SCM-R*` §Retired rules). What survives is a warning: pin the boundary comparison with a
+  test at the exact limit, because `>` and `>=` were confused here once already.
+- **Preserve the audit trail rather than deleting** — a control design, and where records are
+  retained by law the period is fixed (**SCM-R7**, ≥ 5 years under CSDDD). Soft-delete is one
+  implementation of it, not the requirement.
+- **Idempotent creation** — retry safety on the write path, an engineering concern (`ENG` family),
+  not supply-chain law.
 
 **PO Approval Event Pattern (CQRS)**
 ```typescript

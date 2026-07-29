@@ -42,15 +42,21 @@ description: >
 | Rail | RID | 9 hazard classes |
 | US Road | DOT 49 CFR | 9 hazard classes |
 
-**KPIs (APICS CPIM; Christopher Ch.5)**
-| KPI | World-Class | Formula |
-|-----|------------|---------|
-| On-Time Delivery (OTD) | ≥ 95% | On-time deliveries / Total × 100 |
-| Transit Time Adherence | ≥ 97% | Actual ≤ quoted transit / Total shipments × 100 |
-| Freight Cost per Unit | Minimize | Total freight spend / Total units shipped |
-| Carrier OTD | ≥ 95% per carrier | Carrier on-time / Carrier total × 100 |
-| Claims Rate | < 0.5% | Freight claims / Total shipments × 100 |
-| CO₂ per Shipment | Track; reduce 30% by 2030 | kg CO₂ / tonne-km (GHG Protocol) |
+**Transport metrics (APICS CPIM; Christopher Ch.5)**
+
+**Metrics — definitions, not levels.** A skill states what a metric measures and what
+constrains the answer; the level a project must clear is that project's decision (ADR-0037,
+and the inclusion test in `CLAUDE.md`). The right-hand column names the constraint so the
+question can be asked properly, and stops.
+
+| Metric | Formula | What constrains the level |
+|---|---|---|
+| On-time delivery | On-time deliveries / Total × 100 | **First, which date counts** — requested, confirmed or promised — because the same shipments score differently against each (CPT-0082). Then the service commitment. Note: *"world-class OTD ≥ 95%"* is the textbook illustration `CLAUDE.md` names as the anti-pattern. |
+| Transit-time adherence | Actual ≤ quoted transit / Total × 100 | The carrier's quoted transit and the tolerance the contract allows around it. |
+| Freight cost per unit | Total freight spend / Total units | The lane mix, mode and fuel market. Comparable across periods only if the mix is held constant. |
+| Carrier OTD | Carrier on-time / Carrier total × 100 | The carrier agreement. How heavily OTD weighs against cost and damage in a carrier scorecard is the sourcing strategy's call (CPT-0102 family). |
+| Claims rate | Freight claims / Total shipments × 100 | Product fragility, packaging and the claim threshold — a low-value claim often goes unfiled, which biases the metric. |
+| CO₂ per shipment | kg CO₂ / tonne-km | **The GHG Protocol fixes the method**, not the trajectory. Any reduction path is a corporate commitment; the metric's honesty depends on using the *actual routed* distance, not great-circle. |
 
 ## Data Analytics
 

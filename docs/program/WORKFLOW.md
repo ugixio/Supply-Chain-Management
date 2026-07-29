@@ -82,6 +82,19 @@ mirror-coverage bar) · duplicated formulas across TS/Python with one past diver
 | M2 | 🟦 | ✅ | Five migrations, the rollup cascade, split-privilege roles and quotas, applied twice in CI against a real ClickHouse to prove idempotency. |
 | M3 | 🟦 | 🟦 | **M3a done** — the ingestion core with 13 behaviour tests, no clock and no transport. **M3b next** — the transport adapter and the ClickHouse client, with retry and dead-letter. |
 
+**Two further items the same review raised, both needing an owner decision rather than a fix:**
+
+- ⚠ **The `implements` edge type is declared and never used.** `knowledge-architecture.md` §8,
+  `20-product-model/node-model.md` §1 and `tools/verify.py` all carry it; zero documents use it.
+  Post-ADR-0037 a concept node links to no implementation, so a live `implements` edge invites
+  exactly the relinking ADR-0037 undid — and G4 would validate the first one happily. Retiring it
+  changes the node/edge vocabulary, which knowledge-architecture §12 puts behind **an ADR**, so it
+  is raised here rather than done. The alternative worth considering: keep it, reserved for the
+  monitoring application's own nodes, which legitimately do trace to code this repository owns.
+- ⚠ **`.claude/skills/**` KPI target tables** — swept on 2026-07-29 into "the decision plus what
+  constrains it". Recorded here because the *class* is not closed: no gate can tell a target from a
+  definition, so the next skill file added can reintroduce it (risk #13).
+
 ### Phase U — Unification (context-skeleton adoption)
 - ✅ **U1 · orchestrator** — Skeleton added on branch `feat/context-skeleton`: tier tree,
   knowledge-architecture (instantiated allowlist), id-registry (SCM live; 14 families

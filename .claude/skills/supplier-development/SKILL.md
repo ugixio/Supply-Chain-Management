@@ -20,30 +20,43 @@ Disqualified → Probation → Conditional → Approved → Preferred → Strate
 | Lever | Description | Target |
 |-------|-------------|--------|
 | Capability Audit | ISO 9001, process capability, capacity | Baseline score |
-| Technical Assistance | On-site kaizen, tooling, SPC training | 20% quality improvement |
+| Technical Assistance | On-site kaizen, tooling, SPC training | Suppliers whose gap is capability, not will |
 | Co-investment | Shared tooling, R&D, certification funding | Strategic suppliers |
 | Joint KPIs | Shared OTD/PPM targets + gain sharing | Preferred suppliers |
-| Dual Sourcing | Add 2nd source to reduce BOTK risk | < 20% single-source critical |
+| Dual Sourcing | Add 2nd source to reduce bottleneck risk | Critical items where a second source is qualifiable |
 | Supplier Tiering | Tier classification + development roadmap | Quarterly review |
 
-**Development Program KPIs**
-| KPI | Target | Formula |
-|-----|--------|---------|
-| Supplier Score Improvement | ≥ 10 pts/year | Score end of year − Score start of year |
-| CAR On-Time Closure | ≥ 95% in 30 days | CARs closed in 30d / Total CARs × 100 |
-| Audit Coverage — Tier 1 | 100% annually | Audited Tier-1 / Total Tier-1 × 100 |
-| Dual-Source Coverage | ≥ 80% critical items | Dual-sourced critical SKUs / Total critical × 100 |
-| CSDDD Assessment — Tier 1 | 100% by 2027 | Assessed / Total Tier-1 × 100 |
-| Development ROI | Track | (Score improvement × spend impact) / Development cost |
+**Development-programme metrics**
 
-**Capability Maturity Levels** (adapted from CMMI)
-| Level | Description | Typical Score |
-|-------|-------------|--------------|
-| 1 — Initial | Ad hoc; reactive | < 45 |
-| 2 — Managed | Basic controls; documented processes | 45–59 |
-| 3 — Defined | Standardized; SPC; ISO certified | 60–74 |
-| 4 — Quantitatively Managed | Statistical control; Cpk ≥ 1.33 | 75–89 |
-| 5 — Optimizing | Continuous improvement; co-innovation | ≥ 90 |
+**Metrics — definitions, not levels.** A skill states what a metric measures and what
+constrains the answer; the level a project must clear is that project's decision (ADR-0037,
+and the inclusion test in `CLAUDE.md`). The right-hand column names the constraint so the
+question can be asked properly, and stops.
+
+| Metric | Formula | What constrains the level |
+|---|---|---|
+| Supplier score improvement | Score end − Score start | **The scorecard's own construction first.** The criteria, their weights and the rating bands are all project-chosen (CPT-0061), so a point is not a portable unit — an improvement figure means nothing without the scorecard that produced it. |
+| CAR on-time closure | CARs closed within N days / Total × 100 | The project's escalation policy. ISO 9001:2015 §10.2 requires effectiveness, not a clock (QMS-R8). |
+| Audit coverage — Tier 1 | Audited Tier-1 / Total Tier-1 × 100 | Where audit is legally required (CSDDD risk-based duty, sector rules), that scope is fixed; beyond it, cadence and coverage are the programme's design. |
+| Dual-source coverage | Dual-sourced critical SKUs / Total critical × 100 | The definition of "critical", the qualification cost, and whether the part can even be dual-sourced. |
+| CSDDD assessment — Tier 1 | Assessed / Total in-scope × 100 | **The directive's phase-in by company size is law; a 100%-of-Tier-1 promise is not.** CSDDD 2024/1760 as amended by 2026/470 requires risk-based diligence — verify the current text rather than a summary (`docs/standards/REGULATORY_FRAMEWORK.md`). |
+| Development ROI | (Score improvement × spend impact) / Development cost | Inherits the scorecard's arbitrariness through its numerator. Treat as directional. |
+
+**Capability maturity levels** (adapted from CMMI)
+
+| Level | Description |
+|---|---|
+| 1 — Initial | Ad hoc; reactive |
+| 2 — Managed | Basic controls; documented processes |
+| 3 — Defined | Standardized; SPC in use; certified to a recognized QMS |
+| 4 — Quantitatively Managed | Statistical process control with capability indices tracked |
+| 5 — Optimizing | Continuous improvement; co-innovation |
+
+**No score bands.** Mapping a scorecard number onto a maturity level requires the scorecard's own
+weights and rating bands, all of which are project-chosen (CPT-0061) — so a band table published
+here would be arithmetic over someone else's scorecard. Note also that a capability index target
+(a `Cpk` figure) is a term of the customer contract, and CPT-0055 states which σ estimate makes
+the index mean what it claims.
 
 ## Data Analytics
 

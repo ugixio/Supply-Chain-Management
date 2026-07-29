@@ -20,14 +20,20 @@ description: >
 | Planning Horizon | Minimum: cumulative lead time of longest-lead item |
 | Time Fences | Demand Fence (frozen), Planning Fence (firm), Beyond Fence (tentative) |
 
-**KPIs (APICS, SCOR-DS)**
-| KPI | World-Class | Formula |
-|-----|------------|---------|
-| Schedule Adherence | ≥ 95% | Planned orders executed on time / Total planned × 100 |
-| MPS Stability | ≥ 90% | Unchanged MPS lines / Total MPS lines × 100 |
-| Capacity Utilization | 75–85% (optimal) | Actual output / Planned capacity × 100 |
-| Bullwhip Ratio | ≈ 1.0 | Var(orders) / Var(demand) |
-| Demand Signal Quality — Order Entry Accuracy | ≥ 97% (manual), ≥ 99% (EDI) | SCOR-DS RL.2.3 |
+**Supply-planning metrics (APICS, SCOR-DS)**
+
+**Metrics — definitions, not levels.** A skill states what a metric measures and what
+constrains the answer; the level a project must clear is that project's decision (ADR-0037,
+and the inclusion test in `CLAUDE.md`). The right-hand column names the constraint so the
+question can be asked properly, and stops.
+
+| Metric | Formula | What constrains the level |
+|---|---|---|
+| Schedule adherence | Planned orders executed on time / Total × 100 | The frozen-horizon policy. Adherence measured against a plan that is still being revised measures the revisions (CPT-0150). |
+| MPS stability | Unchanged MPS lines / Total × 100 | The same frozen horizon, plus the demand's own volatility. The index is bounded at 1 by construction (CPT-0146). |
+| Capacity utilization | Actual output / Planned capacity × 100 | **Queueing theory, which is the interesting constraint:** wait time rises non-linearly as utilization approaches 1, so the useful level is well below 100% and follows from variability and the acceptable queue — not from a convention. Little's Law (`L = λW`) is the tool. |
+| Bullwhip ratio | Var(orders) / Var(demand) | **An identity, not a target:** 1.0 means variability passes through unamplified, above 1 the chain amplifies it. What amplification a project tolerates is its decision (CPT-0070). |
+| Demand signal quality | SCOR-DS RL.2.3 | SCOR fixes the measure; the level follows the channel. |
 
 **Bullwhip Effect** (Lee, Padmanabhan & Whang 1997)
 ```

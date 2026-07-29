@@ -14,27 +14,42 @@ description: >
 **Forecasting Algorithm Selection** (Hyndman & Athanasopoulos, FPP3 §7–8)
 | Condition | Algorithm | Parameters |
 |-----------|-----------|-----------|
-| CV < 10%, no trend, no season | SES (Holt 1957) | α ∈ (0,1) |
+| low CV, no trend, no season | SES (Holt 1957) | α ∈ (0,1) |
 | Trend, no seasonality | Holt's Linear (Double ES) | α, β |
 | Trend + seasonality | Holt-Winters Triple ES (1960) | α, β, γ, m |
 | Stable, no pattern | SMA | period n |
 | Sparse/intermittent | Croston's method | α |
 
-**XYZ Segmentation**
-| Class | CV | Forecast Policy |
-|-------|----|----------------|
-| X | < 10% | Statistical — high confidence; SES/Holt |
-| Y | 10–25% | Consensus: statistical + commercial adjustment |
-| Z | > 25% | Scenario planning; higher safety stock |
+**XYZ segmentation — the CV boundaries are the project's**
 
-**KPIs (APICS CPIM 9.0; Chopra & Meindl Ch.7)**
-| KPI | World-Class | Formula |
-|-----|------------|---------|
-| MAPE | < 15% (A-items) | Σ\|A−F\|/A × 100/n |
-| Bias | ≈ 0% | Σ(F−A)/A × 100/n |
-| RMSE | Minimize | √(Σ(A−F)²/n) |
-| Fill Rate | ≥ 98% | Orders filled / Orders placed × 100 |
-| Safety Stock ÷ Avg Inventory | ≤ 20% | SS / Avg Inventory × 100 |
+The classes are a standard idea; the cut-offs are not. CPT-0018 states the coefficient of
+variation and names the boundaries as a project decision, because they depend on the history
+length and the demand process — a short series inflates CV through its small denominator, and an
+intermittent item can land in Z for a reason that is not volatility at all.
+
+| Class | Meaning | Typical forecast policy |
+|---|---|---|
+| X | low variability, below the project's lower cut-off | statistical methods carry it (SES/Holt) |
+| Y | between the two cut-offs | statistical plus commercial adjustment (consensus) |
+| Z | above the upper cut-off | scenario planning; more buffer, and question the method |
+
+Set the two cut-offs once, record them where the project's parameters live, and re-derive the
+classification whenever the history window changes.
+
+**Forecast-quality metrics (APICS CPIM 9.0; Chopra & Meindl Ch.7)**
+
+**Metrics — definitions, not levels.** A skill states what a metric measures and what
+constrains the answer; the level a project must clear is that project's decision (ADR-0037,
+and the inclusion test in `CLAUDE.md`). The right-hand column names the constraint so the
+question can be asked properly, and stops.
+
+| Metric | Formula | What constrains the level |
+|---|---|---|
+| MAPE | Σ\|A−F\|/A × 100/n | The demand's own predictability. A stable A-item and an intermittent C-item cannot share a bar, and MAPE is undefined at A = 0 — which is why intermittent items need MASE or a scale-free metric instead (CPT-0009). |
+| Bias | Σ(F−A)/A × 100/n | **An arithmetic property, not a target.** Zero bias is the definition of an unbiased forecast; a persistent sign is a process fault to find, not a number to negotiate. |
+| RMSE | √(Σ(A−F)²/n) | Scale-dependent, so comparable only within one series. Lower is better is not a level. |
+| Fill rate | Orders filled / Orders placed × 100 | **The service commitment**, and through it the cost of capital: fill rate and safety stock are the same decision seen from two sides (CPT-0003). |
+| Safety stock ÷ average inventory | SS / Avg Inventory × 100 | Follows from the chosen service level and the demand and lead-time variance — it is an *output* of those choices, so setting it directly overrides them. |
 
 **Projected Order Intake Formula** (APICS/ASCM Dict. 17th ed.; Chopra & Meindl Ch.7)
 ```

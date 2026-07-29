@@ -1,28 +1,34 @@
-# /scm-review — Supply Chain Code Review
+# /scm-review — Supply Chain Correctness Review
 
-Run a domain-aware review of the current changes focusing on supply chain correctness.
+Runs a domain-aware review of the current changes: **a project's implementation** against what this
+context fixes, or a change to the context itself against the inclusion test.
 
 ## What this checks
-- Inventory transaction idempotency
-- Monetary value handling (no floats for money)
-- Business rule enforcement (negative stock, approval thresholds)
-- Soft-delete compliance on financial records
-- Lot/batch tracking for regulated items
-- UOM consistency across the transaction
+
+Against the context (things fixed outside this repository, so a violation is a defect):
+- **Money** — minor units, exact arithmetic, quantization only at defined boundaries, ties to even
+  (SCM-R14, ENG-R4/R5). No float carries money anywhere, including over a wire.
+- **Dates and instants** — ISO 8601-1:2019, UTC, unambiguous (SCM-R9).
+- **Identifiers** — GS1 keys with a valid check digit; UN/ECE Rec 20 unit codes in the standard's
+  spelling, `KGM`/`LTR`/`MTR` (SCM-R10).
+- **Trade terms** — Incoterms® 2020 as the eleven rules are: DPU replaced DAT, four are sea-only.
+- **Traceability and retention** where law applies — CSDDD ≥ 5 years (SCM-R7), UFLPA's rebuttable
+  presumption (SCM-R6), REACH above 0.1% w/w (CMP-R3).
+- **Quantity stated** on a sale of goods (UCC Article 2).
+
+Against the inclusion test (a change to this repository):
+- **Is every new statement fixed outside this repository?** A standards body, a regulator, or an
+  arithmetic identity. If an organization could reasonably choose it, it is policy and does not
+  belong here — name the decision and the standard that constrains it, then stop.
+- **Policy has a shape:** a threshold, a target, a tolerance, a weighting, a rating band, a service
+  level, or a mandate to use one legitimate method over another. Look for the shape, not the
+  phrasing — the defect that caused ADR-0037 was numbers attributed to two implementations, which
+  read as description rather than as rules.
+- **A default in a signature is the worst form**, because it is inherited without anyone deciding.
+- **A textbook figure is not a specification.** "World-class OTD ≥ 95%" is an illustration.
 
 ## Usage
-Type `/scm-review` in Claude Code to trigger this review on the current diff.
+Type `/scm-review` to run this over the current diff.
 
----
-
-Review the current git diff (`git diff HEAD`) for supply chain domain correctness:
-
-1. **Money handling**: Flag any use of float/double for monetary amounts. All prices, costs, and values must use integers (cents) or a Decimal type.
-2. **Inventory safety**: Check that no code path allows negative inventory without an explicit backorder/allow-negative flag.
-3. **Idempotency**: Verify that inventory transactions and order mutations use an idempotency key or are otherwise safe to retry.
-4. **Soft deletes**: Confirm financial records (POs, invoices, GRNs, stock movements) are never hard-deleted.
-5. **UOM consistency**: Flag any place where quantities are compared or summed without normalizing the unit of measure.
-6. **Approval workflow**: Where the project has an approval threshold, check the comparison at the boundary — an order sized exactly to the limit must land where the policy says, and both readings ("above" vs "at or above") are legitimate, so the code must match the stated rule. The threshold itself is the project's, never this context's.
-7. **Audit trail**: All stock movements should record who, what, when, and why.
-
-Report findings grouped by severity: BLOCKER → WARNING → INFO.
+Report per finding: what it violates, the file and line, and whether it is a defect or a project
+decision that needs confirming. Do not supply a value the project is supposed to choose.

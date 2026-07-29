@@ -34,6 +34,14 @@ jobs:
           - 8123:8123
     steps:
       - uses: actions/checkout@v4
+        with:
+          # G13 compares a document's `updated:` stamp against the date of the commit that changed
+          # it, which needs HEAD's parent present to diff against. The default depth of 1 grafts
+          # HEAD into a parentless boundary, git then reports the whole tree as added, and the gate
+          # demanded today's date on all 222 documents — RED three times while the local gate was
+          # green. Depth 2 is the minimum that makes the check real; the gate refuses to guess and
+          # says so if it is ever run shallower than this.
+          fetch-depth: 2
       - uses: pnpm/action-setup@v4
         with:
           version: 11

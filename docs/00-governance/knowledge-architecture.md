@@ -144,6 +144,13 @@ All thirteen are wired into `tools/verify.py` and run by `make verify` (ADR-0012
   rules stay retired · **G12** a rule citation names an ID, never a family wildcard ·
   **G13** `updated:` matches the file's real last change.
 
+**A gate that cannot check must say so.** `tools/verify.py` distinguishes *passed* from *could not
+run*: where a check depends on the environment — G13 needs HEAD's parent present to diff against —
+it prints an INFO line naming the reason instead of letting a skip read as a pass. G13 was RED in CI
+three times before this, because a shallow checkout made its scope meaningless while the local run
+stayed green (improvement-register #12). **A new gate is proven by planting a violation in the
+environment CI uses, not by reading its code.**
+
 **What a gate can and cannot certify.** Each of these is a *mechanical* property. None of them
 can tell a standard from a plausible-looking invention — that is risk #11, it is open, and it is
 how ADR-0037's defect began. G8 and G13 were added on 2026-07-29 after a file-by-file review

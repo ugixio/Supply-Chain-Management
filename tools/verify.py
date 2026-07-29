@@ -208,9 +208,14 @@ def path_links(text: str):
 class Gates:
     def __init__(self):
         self.failures = {}
+        self.notes = []
 
     def fail(self, gate: str, message: str):
         self.failures.setdefault(gate, []).append(message)
+
+    def note(self, message: str):
+        """A gate reporting that it could not check, which is not the same as passing."""
+        self.notes.append(message)
 
     def report(self, docs_count: int) -> int:
         names = {
@@ -236,6 +241,8 @@ class Gates:
                 print(f"PASS {gate} ({names[gate]})")
         print("INFO G8 screens for non-English function words; judging whether prose reads as "
               "English is still a reviewer's job (knowledge-architecture §11)")
+        for note in self.notes:
+            print(f"INFO {note}")
         print(f"{'GREEN' if ok else 'RED'} — {docs_count} governed docs checked")
         return 0 if ok else 1
 
@@ -561,31 +568,68 @@ def main() -> int:
     # does, and a reader who cannot trust it will not read it: a 2026-07-19 stamp on a file
     # rewritten this week is worse than no stamp, because it is evidence for a false conclusion.
     #
-    # Scope is deliberately the CURRENT change, not the whole history. `actions/checkout` clones
-    # at depth 1, so `git log -1 -- <path>` in CI returns HEAD for every file and a history-wide
-    # gate would demand today's date on all 221 documents. What is always knowable — locally and
-    # on a shallow clone alike — is which files this commit touches, and that is exactly the set
-    # whose stamp is being written right now.
+    # Scope is the CURRENT change, not the whole history — the moment the stamp is written is the
+    # only moment it can be written honestly. Getting that scope right took two attempts, and the
+    # first one was RED in CI three times while the local gate was green:
+    #
+    #   * `git show --name-only HEAD` needs HEAD's parent to compute a diff. `actions/checkout`
+    #     clones at **depth 1**, which grafts HEAD into a parentless boundary — so git reports the
+    #     whole tree as added and the gate demanded today's date on all 222 documents.
+    #   * On a `pull_request` event, checkout uses the synthetic **merge ref**. Its first parent is
+    #     the base branch, so HEAD's diff is everything the branch changes against base — every
+    #     file of every commit in the PR, not the one commit being stamped.
+    #
+    # So the scope is computed from what is actually knowable, and the gate says out loud when it
+    # cannot check rather than inventing an answer. The lesson is the one already in the register:
+    # verify the gate against the environment that runs it, not only the one that wrote it.
     dirty = {
         line[3:].strip().strip('"')
         for line in subprocess.run(["git", "status", "--porcelain"],
                                    capture_output=True, text=True).stdout.splitlines()
         if line[:2] != "??"
     }
+    skip_reason = None
     if dirty:
+        # Authoring time: the stamp is being written now, so it must say now.
         changed, expected, why = dirty, TODAY, "is modified in the working tree"
     else:
-        head = subprocess.run(["git", "show", "--pretty=format:%ad", "--date=short",
-                               "--name-only", "HEAD"], capture_output=True, text=True).stdout
-        head_lines = head.splitlines()
-        expected = head_lines[0].strip() if head_lines else TODAY
-        changed = {line for line in head_lines[1:] if line.strip()}
-        why = "was changed by HEAD"
+        lineage = subprocess.run(["git", "rev-list", "--parents", "-n", "1", "HEAD"],
+                                 capture_output=True, text=True).stdout.split()
+        parents = lineage[1:]
+        parent_present = bool(parents) and subprocess.run(
+            ["git", "cat-file", "-e", f"{parents[0]}^{{commit}}"],
+            capture_output=True).returncode == 0
+        shallow = subprocess.run(["git", "rev-parse", "--is-shallow-repository"],
+                                 capture_output=True, text=True).stdout.strip() == "true"
+        if len(parents) > 1:
+            # A merge commit changes no file of its own; each side was gated when it was authored.
+            skip_reason = "HEAD is a merge commit, which stamps no file of its own"
+        elif not parents:
+            # git honours `.git/shallow`: at the boundary HEAD reports NO parents, so its diff is
+            # the entire tree. This is the exact shape that turned the gate red in CI.
+            skip_reason = ("HEAD has no parent to diff against — "
+                           + ("this clone is shallow, so fetch-depth must be at least 2"
+                              if shallow else "HEAD is the repository's root commit"))
+        elif not parent_present:
+            skip_reason = ("HEAD's parent commit is not in this clone, so its diff would name "
+                           "every tracked file — fetch-depth must be at least 2")
+        if skip_reason:
+            changed, expected, why = set(), TODAY, ""
+        else:
+            head = subprocess.run(["git", "show", "--pretty=format:%ad", "--date=short",
+                                   "--name-only", "HEAD"], capture_output=True, text=True).stdout
+            head_lines = head.splitlines()
+            expected = head_lines[0].strip() if head_lines else TODAY
+            changed = {line for line in head_lines[1:] if line.strip()}
+            why = "was changed by HEAD"
     for path in sorted(changed & docs.keys()):
         stamped = docs[path][0].get("updated", "")
         if stamped != expected:
             gates.fail("G13", f"{path}: front-matter says updated: {stamped or '(none)'} but the "
                               f"file {why} ({expected}) — stamp the change or do not claim a date")
+    if skip_reason:
+        gates.note(f"G13 checked nothing: {skip_reason}. The stamp was gated when the change was "
+                   f"authored (dirty tree) and on the branch push (single parent, depth 2)")
 
     return gates.report(len(docs))
 

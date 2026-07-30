@@ -35,6 +35,7 @@ apps/              web · api — the monitoring application (not yet built)
 packages/shared/   @scm/shared — standards reference data only
 crates/scm-money/  Exact money arithmetic; no policy
 crates/scm-ingest/ Telemetry ingestion core: normalize · validate · dedup · batch; no transport
+crates/scm-ingest-clickhouse/  The transport half: RowBinary insert, retry, dead-letter
 db/clickhouse/     The telemetry schema (ADR-0036): migrations + the schema gate
 tools/verify.py    The doc gates
 ```

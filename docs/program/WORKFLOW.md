@@ -5,7 +5,7 @@ type: program
 owner: orchestrator
 status: active
 since: 2026-07-19
-updated: 2026-07-29
+updated: 2026-07-30
 relations:
   - { type: part-of, target: index-program }
   - { type: governed-by, target: governance-root }
@@ -80,7 +80,7 @@ mirror-coverage bar) · duplicated formulas across TS/Python with one past diver
 | C2b | ⬜ | ✅ | Landed: QMS-R8 (corrective-action effectiveness), FEFO in CPT-0036, plan immutability in CPT-0150. |
 | C4 | 🟦 | ✅ | C4 and C4b corrected the prose that described deleted code, across the docs and the operating layer. |
 | M2 | 🟦 | ✅ | Five migrations, the rollup cascade, split-privilege roles and quotas, applied twice in CI against a real ClickHouse to prove idempotency. |
-| M3 | 🟦 | 🟦 | **M3a done** — the ingestion core with 13 behaviour tests, no clock and no transport. **M3b next** — the transport adapter and the ClickHouse client, with retry and dead-letter. |
+| M3 | 🟦 | ✅ | **M3a** the ingestion core (13 tests, no clock, no transport) and **M3b** the ClickHouse adapter (40 tests, no server needed to test any failure path). |
 
 **Two further items the same review raised, both needing an owner decision rather than a fix:**
 
@@ -533,7 +533,7 @@ mirror-coverage bar) · duplicated formulas across TS/Python with one past diver
   proxy denies `builds.clickhouse.com` by policy and there is no Docker daemon — so **CI is the first
   real execution of this schema**. That is the gate the owner chose doing its job; if it goes red, the
   migration is wrong and gets fixed.
-- 🟦 **M3 · HOW** — The Rust ingestion worker: normalize → validate → deduplicate → **batch**
+- ✅ **M3 · HOW** — The Rust ingestion worker: normalize → validate → deduplicate → **batch**
   insert. Ingestion is core work (ENG-R10).
   **M3a landed 2026-07-28 — `crates/scm-ingest`, the deterministic core, 13 tests.** Split from
   transport by rule, not by convenience: ENG-R10.1 forbids an HTTP server or DB client in a core
@@ -545,6 +545,41 @@ mirror-coverage bar) · duplicated formulas across TS/Python with one past diver
   refused) · speed ✅ (O(1) amortized dedup, no allocation per sample beyond the batch vector) ·
   scalability ✅ (memory bounded by `window/bucket`, not by sample count — asserted by a test) ·
   licence ✅ (no new dependency at all).
+
+  **M3b landed 2026-07-30 — `crates/scm-ingest-clickhouse`, the transport half, 40 tests.** No test
+  needs a server: the network sits behind a `Transport` trait and the retry waits behind a `Sleeper`,
+  so *unreachable*, *ambiguous*, *refused* and *budget exhausted* are all exercised deterministically.
+  Those are exactly the paths a live ClickHouse cannot be made to produce on demand.
+  **Four decisions went to the owner as a list (PLT-R6), all recommended options taken:** `ureq` +
+  rustls as the client; **RowBinary** on the wire with a **startup schema guard**; **at-least-once**
+  delivery, retrying an ambiguous failure in the knowledge that it may duplicate a row; and a
+  **bounded dead-letter file** for batches that outlive the retry budget.
+  **The guard is stronger than the one that was pitched, and the reason is worth keeping.** The
+  recommendation was a *column-order* check. Column order turned out not to need guarding at all,
+  because the INSERT names its columns and ClickHouse maps named columns by name. What does need
+  guarding is the **declared type**: `DateTime64(3)` widened to `DateTime64(6)` reads every
+  millisecond as a microsecond — a thousandfold error, in range, in the right column, with nothing
+  failing anywhere. The guard reads `system.columns` and compares types, so it also catches a table
+  that drifted from its own migration.
+  **Retry classification is by what is safe to do next, not by HTTP status.** `NotSent` cannot have
+  been applied, so retrying it is free; `Ambiguous` may have been applied, so retrying it is
+  at-least-once and the writer *says so* in its outcome and its counters rather than leaving an
+  operator to explain a doubled count. A 4xx is terminal — it will refuse the identical body forever,
+  so retrying only delays the dead letter.
+  **The dead letter is bounded at two generations**, giving a hard ceiling of `2 × max_bytes` no
+  matter how long an outage lasts. Past that the oldest records are dropped **on purpose and
+  counted**, because an unbounded dead-letter file turns one outage into two.
+  **ENG-R9 six checks** — lane ✅ (transport in an adapter, ENG-R10.1; no I/O entered the core) ·
+  best practice ✅ (network and sleeping both behind traits, body encoded once and reused across
+  attempts, errors classified by consequence) · security ✅ (credentials from the environment only,
+  never a default password; the INSERT-only identity from migration 0005; response header size capped;
+  SQL percent-encoded) · speed ✅ (RowBinary, one allocation per batch, no re-encode per retry) ·
+  scalability ✅ (dead letter bounded by bytes not by outage length; backoff capped so a batch cannot
+  wait past its own relevance) · licence ✅ (`ureq` MIT/Apache-2.0; **all 41 transitive crates audited
+  as permissive OSI** — no GPL, SSPL or BUSL, nothing unlicensed, per ADR-0002).
+  **Not built, and named so it is not assumed:** nothing wires the pipeline to the writer in a
+  running process yet. There is no binary, no configuration loading beyond `Endpoint::from_env`, and
+  no replay tool for the dead letter. Those belong with M4, where there is a service to host them.
   **Three decisions went to the owner as a list (PLT-R6), all recommended options taken:** dedup by
   bounded time window on `(project_id, metric, ts)`; flush on **size or age, whichever first**, with
   backoff and a dead-letter file; and an invalid sample is **dropped and counted by reason** rather

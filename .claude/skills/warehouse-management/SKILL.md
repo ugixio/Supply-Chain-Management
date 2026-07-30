@@ -21,23 +21,30 @@ description: >
 | Shipping | Load confirmation, BOL, customs docs | Incoterms® 2020 |
 | Cycle Count | ABC-priority counting schedule | ISO 9001 §8.5.2 |
 
-**KPIs (APICS CPIM; Ballou Ch.12; WERC DC Measures)**
-| KPI | World-Class | Formula |
-|-----|------------|---------|
-| Order Fill Rate | ≥ 99% | Orders filled complete / Total orders × 100 |
-| Pick Accuracy | ≥ 99.9% | Correct picks / Total picks × 100 |
-| On-Time Shipment | ≥ 98% | Shipments on time / Total shipments × 100 |
-| Dock-to-Stock Cycle Time | < 4 hours (FMCG) | GR timestamp → putaway confirmed |
-| Inventory Accuracy | ≥ 99.5% | Accurate locations / Total locations × 100 |
-| CPOI (Cases Per Operator Hour) | Benchmark varies | Cases picked / Operator-hours |
-| Order Entry Accuracy — Inbound (SCOR RL.2.3) | ≥ 99.5% (EDI) | GR lines entered without correction / Total GR lines × 100 |
-| Lines Picked per Hour | 100–150 (manual); > 250 (voice) | Lines / Labor hours |
+**Warehouse metrics (APICS CPIM; Ballou Ch.12; WERC DC Measures)**
+
+**Metrics — definitions, not levels.** A skill states what a metric measures and what
+constrains the answer; the level a project must clear is that project's decision (ADR-0037,
+and the inclusion test in `CLAUDE.md`). The right-hand column names the constraint so the
+question can be asked properly, and stops.
+
+| Metric | Formula | What constrains the level |
+|---|---|---|
+| Order fill rate | Orders filled complete / Total × 100 | The service commitment, and the stock policy that supports it. |
+| Pick accuracy | Correct picks / Total picks × 100 | The pick method and its verification (scan, voice, vision). Changing the method changes the achievable rate, so the level is downstream of a design choice. |
+| On-time shipment | Shipments on time / Total × 100 | The cut-off times committed to carriers and customers. |
+| Dock-to-stock cycle time | GR timestamp → putaway confirmed | The goods and the service promise (CPT-0047). Inspection or QA hold legitimately extends it — segment by inspection class before comparing. |
+| Inventory accuracy | Accurate locations / Total × 100 | **The count tolerance**, which must be defined before the level means anything. |
+| CPOI (cases per operator hour) | Cases picked / Operator-hours | Warehouse technology, SKU cube, order profile and travel distance (Frazelle 2016). A rate measures the *design*, never the operator. |
+| Order entry accuracy — inbound | GR lines without correction / Total × 100 | SCOR RL.2.3 fixes the measure; the channel sets the expectation. |
+| Lines picked per hour | Lines / Labour hours | The same design factors as CPOI. Published figures for manual versus voice picking describe those technologies' samples, not a bar to clear. |
 
 **ABC Velocity Slotting**
 - A-items: golden zone (waist to shoulder height, nearest to packing)
 - B-items: mid-zone (accessible)
 - C-items: top/floor shelves, remote locations
-- Re-slot trigger: ABC reclassification or velocity change > 30%
+- Re-slot trigger: ABC reclassification, or a velocity change large enough to pay for the move —
+  the re-slotting labour is the constraint, so the threshold is an operation's own arithmetic
 
 **Storage Conditions**
 | Code | Condition | Lot Tracking Required |

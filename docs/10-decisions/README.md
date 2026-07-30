@@ -5,7 +5,7 @@ type: adr
 owner: orchestrator
 status: active
 since: 2026-07-19
-updated: 2026-07-19
+updated: 2026-07-29
 relations:
   - { type: part-of, target: index-docs }
   - { type: governed-by, target: governance-root }
@@ -401,25 +401,37 @@ every fork's status ambiguous).
 
 ## Open decisions (starter backlog — each answer becomes an ADR)
 
-- [ ] **Runtime & persistence architecture.** Per-department `schema.sql` files exist but
-      no engine choice, migration runner or application layer is recorded. What executes
-      this domain logic, and against what store?
-- [ ] **API/product surface.** Library? Service? UI? Nothing is recorded.
+- [x] **Runtime & persistence architecture.** ~~Per-department `schema.sql` files exist but no
+      engine choice, migration runner or application layer is recorded.~~ **Answered, and the
+      question dissolved with its premise.** Those `schema.sql` files were deleted by ADR-0037
+      along with the domain logic they stored: this repository executes no supply-chain logic, so
+      there is nothing to persist for a department. What *is* recorded, for the one application
+      built here: PostgreSQL owns transactional truth and ClickHouse owns telemetry at scale and
+      never truth (**ADR-0033/0034**), the telemetry schema and its forward-only migration runner
+      are **ADR-0036** (`db/clickhouse/`), and the lane map is **ENG-R8**.
+- [x] **API/product surface.** ~~Library? Service? UI? Nothing is recorded.~~ **Recorded:** the
+      context is consumed as a read-only versioned substrate (**ADR-0030**), and the one
+      application is monitoring — NestJS + GraphQL as the only counterpart the frontend has, with
+      Next.js above it (**ADR-0031/0034/0036**, **ENG-R8**).
 - [x] **Package manager + lockfile.** → **ADR-0013** (npm + `package-lock.json`).
 - [x] **Repository LICENSE file.** → **ADR-0014** (MIT, matching `package.json`; the
       AGPL note in ADR-0002 re-applies only on future commercial distribution).
-- [x] **CI + verify green-gate.** → **ADR-0012** (`make verify` / `make verify-full`,
-      doc gates G1–G7+G9, CI workflow). Still pending inside it: eslint flat config
-      (lint) and the pytest gate (U7) — tracked in `program/WORKFLOW.md`.
+- [x] **CI + verify green-gate.** → **ADR-0012** (`make verify` / `make verify-full`, CI
+      workflow). The gate set has grown since: G1–G13, plus `make verify-schema` against a real
+      ClickHouse. The two items still listed as pending inside it were triaged on 2026-07-29 —
+      the pytest gate is void (its code is deleted) and eslint waits for the Phase M4 TypeScript
+      (`program/WORKFLOW.md` §Triage).
 - [ ] **Versioning scheme.** First annotated tag; what 1.0.0 means (ADR-0011 pending).
 - [x] **Agent lanes.** ~~Formalize WHAT/HOW/SPECIALTY lanes and profiles or keep
       single-orchestrator mode.~~ **Resolved by ADR-0027** (2026-07-20): formalized — 7
       least-privilege agent profiles + 7 technology skills; main session orchestrates.
-- [ ] **Cross-language consistency policy.** TS and Python implement overlapping formulas
-      (e.g. risk bands — see fix `a12c114`); decide the single-source mechanism (shared
-      spec, golden tests, or codegen). **Concept nodes (ADR-0015) now make each
-      divergence visible** — the first census already surfaced the service-level
-      z-score tables (`CPT-0003`); they do not resolve it.
+- [x] **Cross-language consistency policy.** ~~TS and Python implement overlapping formulas;
+      decide the single-source mechanism.~~ **Answered twice over.** The mechanism was chosen and
+      built — shared golden vectors (`tests/golden/money.golden.json`, U8) — and then the problem
+      was removed at the root: ADR-0037 left one implementation of anything exact, in Rust. The
+      concept nodes did the work they were added for first, though: the census surfaced seven
+      divergences, including the `CPT-0003` z-score tables, and ADR-0028 settled which side was
+      right by making the exact statement canonical and neither implementation authoritative.
 
 ---
 

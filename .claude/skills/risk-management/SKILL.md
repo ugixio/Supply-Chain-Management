@@ -51,14 +51,20 @@ A ratio of 1 means demand variability passes through unamplified; above 1 the ch
 amplifying it. Where amplification becomes actionable is a project decision.
 ```
 
-**KPIs (ISO 31000:2018; APICS)**
-| KPI | Target | Formula |
-|-----|--------|---------|
-| Risk Coverage | 100% of critical risks | Risks assessed / Risks identified × 100 |
-| Mitigation Effectiveness | ≥ 80% | Risks with implemented controls / Total high risks × 100 |
-| Supply Chain Disruption Frequency | Track trend | Disruptions per year (count) |
-| Single-Source Exposure | < 20% of critical SKUs | Single-source critical SKUs / Total critical SKUs × 100 |
-| HHI by Category | < 2,500 | Σ(supplier_share²) × 10,000 |
+**Risk metrics (ISO 31000:2018; APICS)**
+
+**Metrics — definitions, not levels.** A skill states what a metric measures and what
+constrains the answer; the level a project must clear is that project's decision (ADR-0037,
+and the inclusion test in `CLAUDE.md`). The right-hand column names the constraint so the
+question can be asked properly, and stops.
+
+| Metric | Formula | What constrains the level |
+|---|---|---|
+| Risk coverage | Risks assessed / Risks identified × 100 | The project's definition of "critical" — which is the actual decision this metric hides. ISO 31000 gives the process, not the classification. |
+| Mitigation effectiveness | Risks with controls / Total high risks × 100 | Risk appetite. Note it measures *controls in place*, not controls that work; effectiveness of a control is evidence, not a count. |
+| Disruption frequency | Disruptions per year | The project's threshold for what counts as a disruption. Without it the trend measures reporting behaviour. |
+| Single-source exposure | Single-source critical SKUs / Total critical × 100 | The sourcing strategy, and the cost of qualifying a second source. Sole-source by necessity and single-source by choice are different exposures with the same number. |
+| HHI by category | Σ(supplier_share²) × 10,000 | **The 1,500 / 2,500 breakpoints are externally fixed but for a different purpose:** they are the US DOJ/FTC Horizontal Merger Guidelines' concentration bands for antitrust review, not a supply-base policy. Borrowing them is defensible and is still the project's choice (CPT-0071). |
 
 ## Data Analytics
 

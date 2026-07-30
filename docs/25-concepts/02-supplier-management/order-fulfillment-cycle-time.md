@@ -5,7 +5,7 @@ type: concept
 owner: orchestrator
 status: active
 since: 2026-07-22
-updated: 2026-07-22
+updated: 2026-07-29
 relations:
   - { type: part-of, target: index-concepts-02-supplier-management }
   - { type: governed-by, target: index-adr }
@@ -38,15 +38,16 @@ relations:
   each stage input must include its queue time, or the sum understates reality.
 - Averages hide tails; pair with a percentile view (see `transit_time_p95`, CPT-0102-
   family in logistics) for promise-setting.
-- Make-to-stock orders skip sourcing/manufacturing (enter 0) — compare only within the
-  same fulfillment strategy; benchmarks: electronics ≤ 5 days, industrial ≤ 10 days.
+- Make-to-stock orders skip sourcing and manufacturing (enter 0), so the measure is comparable
+  only within one fulfilment strategy — and only within one industry, since the acceptable cycle
+  is set by the product and the market, not by this context.
 - **Does not apply when:** stages overlap (concurrent sourcing while manufacturing) —
   the sum then overstates the critical path.
 
 ## Worked example
 
 1.0 + 3.5 + 4.0 + 2.5 = **11.0 days**, with sourcing + manufacturing = 68% of the
-cycle — the compression target.
+cycle — which is where compression would have to come from.
 
 ## Governing rules
 

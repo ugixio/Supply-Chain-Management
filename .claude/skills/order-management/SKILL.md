@@ -54,15 +54,21 @@ Book-to-Bill = Order Intake / Shipments
 > 1.0: demand growing; < 1.0: orders declining; = 1.0: steady state
 ```
 
-**KPIs (SCOR-DS RL.1.1, RL.2.3; APICS CPIM)**
-| KPI | Target | Formula / Source |
-|-----|--------|-----------------|
-| Order Entry Accuracy (SCOR RL.2.3) | ≥ 99% (EDI); ≥ 97% (manual) | OEA formula above |
-| First-Pass Field-Match | ≥ 98.5% | FP-OEA — 8 field check |
-| Perfect Order Fulfillment | ≥ 95% | SCOR RL.1.1 |
-| Order Cycle Time | < 24h (e-commerce); < 3d (B2B) | Order confirmed → shipped |
-| Backlog Accuracy | 100% | Backlog Identity holds to cent |
-| Book-to-Bill | Track trend | Intake / Shipments |
+**Order metrics (SCOR-DS RL.1.1, RL.2.3; APICS CPIM)**
+
+**Metrics — definitions, not levels.** A skill states what a metric measures and what
+constrains the answer; the level a project must clear is that project's decision (ADR-0037,
+and the inclusion test in `CLAUDE.md`). The right-hand column names the constraint so the
+question can be asked properly, and stops.
+
+| Metric | Formula / source | What constrains the level |
+|---|---|---|
+| Order entry accuracy | SCOR RL.2.3, formula above | **SCOR fixes the measure**; the level is the project's, and it depends on the channel — an EDI feed and manual entry are different processes measured the same way, not one process with two targets. |
+| First-pass field match | FP-OEA over the 8 fields | Which fields are in scope. Change the field set and the metric is no longer comparable with its own history. |
+| Perfect order fulfilment | SCOR RL.1.1 | **The arithmetic is the constraint worth knowing:** it is the *product* of the component rates, so four rates of 99% give 96%, not 99%. The level itself is a service commitment. |
+| Order cycle time | Order confirmed → shipped | The fulfilment model and the channel promise. A make-to-order cycle and a from-stock cycle are not comparable (CPT-0060). |
+| Backlog accuracy | The backlog identity holds to the cent | **Not a target — an identity.** It either holds or the ledger is wrong (SCM-R14 for the exact arithmetic that makes it checkable). |
+| Book-to-bill | Intake / Shipments | Nothing external. A ratio above 1 means the backlog is growing; whether that is good depends on capacity. |
 
 ## Data Analytics
 
@@ -136,7 +142,9 @@ GROUP BY period ORDER BY period;
 - Seasonal: sₜ = γ(yₜ − ℓₜ₋₁ − bₜ₋₁) + (1−γ)sₜ₋ₘ
 - Forecast: ŷₜ₊ₕ = ℓₜ + h·bₜ + sₜ₊ₕ₋ₘ
 - Minimum history: 24 months (2 full seasons, m=12)
-- Backtest: walk-forward holdout h=12; deployable if MAPE < 15% AND |Bias| < 2%
+- Backtest: walk-forward holdout h=12. **Whether the result is deployable is the project's bar** —
+  set it against the naive benchmark (is FVA positive?) rather than against an absolute MAPE,
+  since achievable MAPE is a property of the demand, not of the method
 
 **Order Intake Forecast with Backtesting**
 ```python

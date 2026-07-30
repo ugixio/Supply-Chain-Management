@@ -28,14 +28,20 @@ description: >
 | PROBATION | ≥ 45 | 30-day CAR; dual-source mandatory |
 | DISQUALIFIED | < 45 | Remove from AVL; escalate to Procurement |
 
-**KPIs (APICS, ISO 9001:2015 §8.4.1)**
-| KPI | World-Class | Formula |
-|-----|------------|---------|
-| OTD | ≥ 95% | On-time deliveries / Total deliveries × 100 |
-| OTIF | ≥ 98% (Walmart std.) | Deliveries on-time AND in-full / Total × 100 |
-| PPM | < 500 (automotive) | Defective parts / Total parts × 1,000,000 |
-| DPMO | < 3,400 (6σ) | Defects / (Units × Opportunities) × 1,000,000 |
-| Fill Rate | ≥ 98% | Units delivered in full / Units ordered × 100 |
+**Supplier performance metrics (APICS, ISO 9001:2015 §8.4.1)**
+
+**Metrics — definitions, not levels.** A skill states what a metric measures and what
+constrains the answer; the level a project must clear is that project's decision (ADR-0037,
+and the inclusion test in `CLAUDE.md`). The right-hand column names the constraint so the
+question can be asked properly, and stops.
+
+| Metric | Formula | What constrains the level |
+|---|---|---|
+| OTD | On-time deliveries / Total × 100 | Which date counts (requested / confirmed / promised) before anything else, then the supply agreement. *"World-class ≥ 95%"* is the illustration `CLAUDE.md` names as the anti-pattern. |
+| OTIF | On-time AND in-full / Total × 100 | The supply agreement. A named retailer's published requirement is **that retailer's policy** — quoting it as a standard is how one company's habits get inherited. |
+| PPM | Defective parts / Total × 1,000,000 | The customer contract; an industry figure is that industry's contracted expectation. |
+| DPMO | Defects / (Units × Opportunities) × 1,000,000 | 3.4 DPMO is the *definition* of six sigma at 1.5σ shift, not a bar this context sets (CPT-0053). |
+| Fill rate | Units delivered in full / Units ordered × 100 | The service commitment, and with it the cost of holding the stock that makes it achievable. |
 
 **Approved Vendor List (AVL) Governance**
 - Annual qualification audit per ISO 9001:2015 §8.4.1

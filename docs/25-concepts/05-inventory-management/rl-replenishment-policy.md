@@ -5,7 +5,7 @@ type: concept
 owner: orchestrator
 status: active
 since: 2026-07-22
-updated: 2026-07-22
+updated: 2026-07-29
 relations:
   - { type: part-of, target: index-concepts-05-inventory-management }
   - { type: governed-by, target: index-adr }
@@ -22,27 +22,28 @@ Markov decision process on `InventoryEnv`: observation (8 features incl. on-hand
 pipeline, demand stats, fill rate) → action = order quantity → reward = −(holding +
 stockout + ordering costs). Training: PPO (vectorized, robust default) or DQN
 (discrete, sample-efficient), MLP `[128, 64]`, lr 3e-4, budget 200k steps (500k+ for
-intermittent/seasonal). Inference: `predict_action` greedy (`deterministic=True`).
-Evaluation: `benchmark_vs_classical` runs RL vs an (s,S) baseline over n episodes and
-compares mean episode cost/service.
+intermittent/seasonal). Inference: greedy (deterministic) action selection.
+Evaluation: run the learned policy against an (s,S) baseline over n episodes and compare mean
+episode cost and service.
 
 ## Inputs and outputs
 
-- **Inputs:** an `InventoryEnv`; algorithm name (PPO/DQN validated); optional network
-  and rate; benchmark takes the trained model, (s, S) parameters, episode count.
-- **Outputs:** trained stable-baselines3 model; integer order action; benchmark dict
-  of comparative episode statistics.
+- **Inputs:** a calibrated inventory simulation environment; the algorithm; the network shape and
+  learning rate; for the comparison, the trained policy, the (s,S) parameters and an episode count.
+- **Outputs:** a trained policy; an integer order quantity per state; the comparative episode
+  statistics.
+- **Project-chosen inputs:** the cost coefficients in the reward, the training budget, and the
+  margin by which the learned policy must beat the heuristic before it is trusted.
 
 ## Assumptions and limits
 
-- **The policy is only as real as the simulator:** demand process, lead times and
-  cost coefficients in `InventoryEnv` must be calibrated to the SKU, or the agent
-  optimizes a fiction. Benchmark-vs-(s,S) (CPT-0120) is the mandatory gate — if the
-  learned policy cannot beat the heuristic *in its own simulator*, it certainly
-  won't in production.
+- **The policy is only as real as the simulator:** the demand process, lead times and cost
+  coefficients must be calibrated to the SKU, or the agent optimizes a fiction. Comparison against
+  (s,S) (CPT-0120) is the gate that catches it — if the learned policy cannot beat the heuristic
+  *in its own simulator*, it certainly will not in production.
 - 200k timesteps is a floor for stable behavior; no seed is fixed → run-to-run
   variance (recorded testing caveat).
-- PPO's vectorized env factory reuses the same env instance (the `_make_env`
+- A vectorized environment that reuses one instance across workers (the
   fallback) — parallelism is nominal, not true independent envs (recorded
   implementation quirk).
 - Actions are unconstrained by business rules — rule checks live outside

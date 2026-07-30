@@ -9,7 +9,7 @@ description: >
 # Python as the tools layer — precision & gRPC
 
 > Python owns models, statistics, optimization and ML — and nothing else (ENG-R8). It is reached
-> as a gRPC service (`scm.calc.v1`, ADR-0020) called **by the Rust core**, never by the frontend.
+> as a gRPC service (ADR-0020) called **by the Rust core**, never by the frontend.
 > It decides no business rule and holds no policy value. Two things must never slip: **financial
 > exactness** and **the string-money boundary**.
 >
@@ -47,8 +47,10 @@ description: >
 
 ## gRPC / protobuf contract (ADR-0020)
 
-- Service `scm.calc.v1` in `proto/`. Each RPC is **stateless and idempotent**; no session
-  state between calls.
+- Each RPC is **stateless and idempotent**; no session state between calls. There is no `.proto`
+  in the repository — the `scm.calc.v1` service ADR-0020 named was deleted with the invented
+  application, and the next contract is written when a caller needs it (ENG-R10.1: the transport
+  lives in an adapter, never in a core).
 - **Money and rate fields are `string`**, never `double` (ENG-R5) — the client sends a
   decimal string, the server parses to `Decimal`, computes, returns a decimal string.
   Quantities may be `int`/`double` as appropriate, but never money.

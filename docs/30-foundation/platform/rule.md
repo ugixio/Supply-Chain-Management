@@ -5,7 +5,7 @@ type: rule
 owner: orchestrator
 status: active
 since: 2026-07-22
-updated: 2026-07-22
+updated: 2026-07-29
 relations:
   - { type: part-of, target: index-foundation }
   - { type: governed-by, target: index-adr }
@@ -93,6 +93,6 @@ relations:
 - **PLT-R6 is not mechanically checkable**, and saying otherwise would be the false comfort this
   estate has already paid for. Like **G8** (English-only) it is a review gate: the anti-states above
   are its checklist, and the question craft it depends on is in
-  [program/evaluation.md](../../program/evaluation.md) §5. What *is* checkable is its output — a
+  [program/evaluation.md](../../program/evaluation.md) §6. What *is* checkable is its output — a
   declined recommendation leaves a row in the improvement register, so a gate-that-never-fires and a
   gate-that-fired-and-was-declined are distinguishable after the fact.

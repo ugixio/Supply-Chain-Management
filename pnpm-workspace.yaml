@@ -1,6 +1,6 @@
-# Monorepo workspaces (ADR-0022/0023). Activation (pnpm install + lockfile migration
-# from package-lock.json, CI switch to `pnpm install --frozen-lockfile`) is the P2
-# activation sub-step; until then the TS toolchain resolves @scm/* via tsconfig paths.
+# Monorepo workspaces (ADR-0022/0023). Active: `pnpm-lock.yaml` is committed and
+# `make verify-full` runs `pnpm install --frozen-lockfile`, the exact invocation CI performs.
+# `apps/*` holds only READMEs today — the monitoring application is Phase M4.
 packages:
   - "apps/*"
   - "packages/*"

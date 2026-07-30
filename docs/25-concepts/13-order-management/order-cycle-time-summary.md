@@ -5,7 +5,7 @@ type: concept
 owner: orchestrator
 status: active
 since: 2026-07-22
-updated: 2026-07-22
+updated: 2026-07-29
 relations:
   - { type: part-of, target: index-concepts-13-order-management }
   - { type: governed-by, target: index-adr }
@@ -26,10 +26,11 @@ relations:
 
 ## Inputs and outputs
 
-- **Inputs:** `SalesOrderResult` list; **orders with any undelivered line are
-  skipped** (only complete deliveries are summarized).
-- **Output:** pandas DataFrame `[order_id, min_oct_days, max_oct_days, avg_oct_days,
-  on_time, in_full, otif, perfect_order]`; empty input → empty typed frame.
+- **Inputs:** delivered orders with their line-level dates. **Orders with any undelivered line
+  are excluded** — a partially delivered order has no cycle time yet, and including it would
+  understate the average.
+- **Outputs:** per order, the minimum, maximum and mean cycle time in days, plus the on-time,
+  in-full, OTIF and perfect-order flags. An empty input yields an empty result, not a zero.
 
 ## Assumptions and limits
 

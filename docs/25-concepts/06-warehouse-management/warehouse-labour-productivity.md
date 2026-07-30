@@ -5,7 +5,7 @@ type: concept
 owner: orchestrator
 status: active
 since: 2026-07-22
-updated: 2026-07-22
+updated: 2026-07-29
 relations:
   - { type: part-of, target: index-concepts-06-warehouse-management }
   - { type: governed-by, target: index-adr }
@@ -46,8 +46,8 @@ surveys report observed ranges, not requirements.
 - Rates are technology-dependent, so a rate never measures personal performance on its own;
   SKU cube, order profile and travel
   distance move the number materially (Frazelle 2016).
-- Receiving benchmark assumes case-level ambient receipt; pallet-in/pallet-out or
-  each-level receipt need different bars.
+- A receiving rate is only comparable within one receipt granularity: case-level ambient,
+  pallet-in/pallet-out and each-level receipt are different work and need separate bars.
 - **Does not apply when:** comparing across warehouses with different order profiles
   without normalising (use cost per line, CPT-0046, for money-comparable output).
 

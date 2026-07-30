@@ -34,6 +34,8 @@ docs/              The context itself — tiered knowledge; start at docs/_index
 apps/              web · api — the monitoring application (not yet built)
 packages/shared/   @scm/shared — standards reference data only
 crates/scm-money/  Exact money arithmetic; no policy
+crates/scm-ingest/ Telemetry ingestion core: normalize · validate · dedup · batch; no transport
+db/clickhouse/     The telemetry schema (ADR-0036): migrations + the schema gate
 tools/verify.py    The doc gates
 ```
 
@@ -80,11 +82,14 @@ Full reference: [docs/standards/REGULATORY_FRAMEWORK.md](docs/standards/REGULATO
 ## Working on this repository
 
 ```bash
-make verify        # doc gates G1-G11 + typecheck + Rust tests — run after every layer
+make verify        # doc gates G1-G13 + typecheck + Rust tests — run after every layer
 make verify-full   # the merge gate: adds the lockfile check, cargo fmt and clippy
+make verify-schema # the telemetry schema — needs a reachable ClickHouse; never skips
 ```
 
-CI runs exactly `make verify-full`. Read [CLAUDE.md](CLAUDE.md) first, then
+CI runs `make verify-full` **and** `make verify-schema`. The split is deliberate:
+`verify-full` is portable and runs anywhere, `verify-schema` needs a server. The Makefile
+header states why. Read [CLAUDE.md](CLAUDE.md) first, then
 [docs/program/evaluation.md](docs/program/evaluation.md).
 
 ## References

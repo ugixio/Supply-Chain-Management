@@ -5,7 +5,7 @@ type: program
 owner: orchestrator
 status: active
 since: 2026-07-22
-updated: 2026-07-27
+updated: 2026-07-29
 relations:
   - { type: part-of, target: index-program }
   - { type: governed-by, target: governance-root }
@@ -49,28 +49,34 @@ node-model.md`). Not a commercial product.
 > repository actually is.
 
 - **Knowledge governance** — *built, strong*. Tiered docs, one-way SSOT, append-only ADRs, stable
-  IDs, ten gates in CI, the node model. Still the estate's best asset, and the reason the reframe
+  IDs, thirteen gates in CI, the node model. Still the estate's best asset, and the reason the reframe
   could be made surgically instead of by restart.
 - **Standards fidelity** — *improving, was a real weakness*. The unit codes were wrong (`KG` for
   `KGM`) and the z-score was approximated by a hand-typed table. Both are fixed. The remaining
   exposure is that no gate can tell a standard from a plausible-looking invention — G10 checks that
   a source is *cited*, not that the content matches it.
-- **Policy separation (the new central discipline)** — *decided, not yet swept*. `CLAUDE.md`,
-  `SCM-R*` and the department index headers now carry the inclusion test; the 154 concept nodes and
-  the 14 department rule files do not yet (Phase C1/C2).
+- **Policy separation (the new central discipline)** — *swept, and the sweep is the discipline*.
+  `CLAUDE.md`, `SCM-R*` and the department index headers carry the inclusion test; Phase C1 swept
+  the 160 concept nodes and C2 rewrote all fourteen department rule families. The residue the
+  2026-07-29 file-by-file review found was not in `docs/40-contexts` — it was in the glossary, in
+  benchmark *parameters* left inside dept-06 node output descriptions, and above all in
+  `.claude/skills/**`, which no gate reads and which instructs the next session's work.
 - **Money precision (no float)** — *resolved*. One implementation, `crates/scm-money`: exact
   decimal, `roundTiesToEven`, sum-preserving apportionment, overflow reported rather than wrapped,
   no `unsafe`. The TypeScript and Python mirrors that used to disagree are gone.
-- **Security (runtime)** — *not applicable yet*. There is no running system to secure. It becomes
-  live with Phase M (authN/authZ, secrets, tenancy, ClickHouse split-privilege users).
-- **CI/CD** — *partial*. GitHub Actions runs exactly `make verify-full`; no deploy pipeline,
-  containerization or observability (Phase M5).
+- **Security (runtime)** — *beginning*. There is still no running system, but the first real
+  boundary exists: migration 0005 creates a split-privilege ClickHouse pair (insert-only writer,
+  SELECT-only reader) with quotas. AuthN/authZ, secrets and tenancy arrive with M4.
+- **CI/CD** — *partial*. GitHub Actions runs `make verify-full` and `make verify-schema` (the
+  latter against a real ClickHouse service container); no deploy pipeline, containerization or
+  observability (Phase M5).
 - **UI design tokens** — *specified only* (ADR-0026: octagon node-graph, LED-cyan `#22d3ee`); no
   UI exists.
 
 ## 4. Where improvement signals come from
 
-- `make verify` — the ten doc gates; G10 now checks standards provenance.
+- `make verify` — the thirteen doc gates; G10 checks standards provenance, G12 catches
+  family-wildcard rule citations, G13 catches a stale `updated:` stamp.
 - `docs/program/WORKFLOW.md` — the ordered backlog (Phase C cleanup, Phase M monitoring).
 - `docs/00-governance/risk-register.md` · `docs/program/improvement-register.md`.
 - **The gap no tool reports:** whether a node's content is genuinely externally fixed. The
@@ -90,14 +96,22 @@ application deleted (`packages/domain`, `services/calc`, `crates/scm-core`, `pro
 G10 rewritten from *code coverage* to *standards provenance* · `## Implementations` removed from
 152 nodes · `CLAUDE.md` rewritten around the inclusion test.
 
-**Next, in order:** **Phase C** — sweep the catalogue and the department rules for policy that the
-inclusion test forbids (C1/C2 are judgement work no gate can do), then the citation and prose
-cleanup (C3/C4). **Then Phase M** — define the delivery metrics as concept nodes, build the
-ClickHouse telemetry tier per ADR-0036, the Rust ingester, the GraphQL gateway and the dashboards.
+**Since then:** Phase C ran — C1 swept the catalogue, C2 rewrote all fourteen department rule
+families, C3 mechanized stale citations as G3/G12, C4/C4b corrected prose that described deleted
+code, C5 rewrote the standards framework with per-entry verification dates. Phase M is under way:
+**M1** the six platform concept nodes (CPT-0155..0160), **M2** the ClickHouse telemetry tier with
+its own gate, **M3a** the Rust ingestion core.
 
-**Known inconsistency, stated plainly:** until C1/C2 land, the catalogue still contains
-thresholds, targets and weightings that ADR-0037 forbids. The decision is recorded and the sweep
-is scheduled; the content has not caught up yet.
+**Next, in order:** **M3b** the transport adapter and ClickHouse client (retry, dead-letter),
+**M4** NestJS + GraphQL and the Next.js dashboards, **M5** Docker then Kubernetes.
+
+**Known inconsistency, stated plainly.** The catalogue and the department rules are swept; the
+**agent and skill layer is not**. `.claude/skills/**` still publishes KPI *target* tables — `OTD
+≥ 95%`, `Fill Rate ≥ 98%`, `CoPQ < 2% of revenue` — which are precisely what ADR-0037 forbids, and
+`.claude/commands/**` still addresses application code that no longer exists. That layer sits
+outside every gate but inside every session's working set, which makes it the worst remaining
+place for the defect, not the least important. Found by the 2026-07-29 file-by-file review;
+scoped, not yet swept.
 
 ## 6. New-technology decisions still pending (owner-gated, per the speed/security rule)
 

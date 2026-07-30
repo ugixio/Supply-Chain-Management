@@ -50,9 +50,13 @@ department domain skill, the architect's contract, and skills: `python-precision
 ## I produce (outputs)
 1. Python functions/models matching the concept node exactly (worked example reproducible),
    with domain guards (fail fast) and documented assumptions.
-2. The `scm.calc.v1` proto + a stateless, idempotent gRPC server; money as strings.
+2. The service contract, when one is needed: stateless, idempotent RPCs with money as strings
+   (ADR-0020, ENG-R5). No proto exists today — ADR-0037 deleted the one that did, and the next
+   one is written against a real caller rather than in advance.
 3. pytest per public function; Decimal-boundary tests (rounding, allocation-sums-to-whole,
-   gRPC string round-trip); the shared **golden vectors** proving TS==Python (U8).
+   string round-trip at the transport boundary). The golden fixture
+   (`tests/golden/money.golden.json`) is the oracle any second implementation must match —
+   there is only one implementation today, which is the point.
 
 ## Definition of Done
 - [ ] pytest green (run and reported — not "should pass"); typecheck/doc gates green.

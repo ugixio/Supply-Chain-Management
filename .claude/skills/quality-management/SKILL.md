@@ -36,18 +36,29 @@ The **classes and their ordering** are standard practice, and once an AQL is cho
 accept/reject numbers). The **AQL level itself is a term of the customer contract**, so this
 context supplies none.
 
-**NCR — Non-Conformance Report Lifecycle**
+**NCR lifecycle — the stages are law, the state names are not.** ISO 9001:2015 §10.2 fixes the
+*obligations*: react to the non-conformity, evaluate the need to eliminate its cause, implement
+action, and **review the effectiveness** of what was done (QMS-R8 — a closed NCR whose
+effectiveness was never verified is not closed). A chain such as
 `OPEN → UNDER_INVESTIGATION → CORRECTIVE_ACTION_REQUIRED → ACTION_IN_PROGRESS → VERIFICATION → CLOSED`
+is one reasonable encoding of those obligations; the names, the count and the transitions are the
+project's. What must not be dropped is the verification step, which is the one teams skip.
 
-**KPIs (ISO 9001:2015; APICS CPIM)**
-| KPI | World-Class | Formula |
-|-----|------------|---------|
-| PPM | < 500 (automotive) | Defective parts / Total parts × 1,000,000 |
-| DPMO | < 3,400 (6σ) | Defects / (Units × Opportunities) × 1,000,000 |
-| First Pass Yield | ≥ 99% | Units passing first inspection / Total inspected × 100 |
-| Supplier Defect Rate | < 0.1% | Defective supplier units / Total received units × 100 |
-| Cost of Poor Quality | < 2% of revenue | Internal failure + External failure + Appraisal + Prevention |
-| NCR Closure Rate | ≥ 95% in 30 days | NCRs closed within 30d / Total NCRs × 100 |
+**Quality metrics (ISO 9001:2015; APICS CPIM)**
+
+**Metrics — definitions, not levels.** A skill states what a metric measures and what
+constrains the answer; the level a project must clear is that project's decision (ADR-0037,
+and the inclusion test in `CLAUDE.md`). The right-hand column names the constraint so the
+question can be asked properly, and stops.
+
+| Metric | Formula | What constrains the level |
+|---|---|---|
+| PPM | Defective parts / Total × 1,000,000 | **The customer contract.** An automotive PPM expectation is one industry's contracted requirement, not a standard — and it is the customer's number, so it is an input to the project, not a choice it makes freely. |
+| DPMO | Defects / (Units × Opportunities) × 1,000,000 | **3.4 DPMO is definitional, not aspirational:** "six sigma" *means* that rate at 1.5σ shift. Cite it as the definition of the term (CPT-0053) and never as a bar this context sets. Counting "opportunities" consistently matters more than the level. |
+| First-pass yield | Units passing first inspection / Total × 100 | Process capability, and where inspection sits. Moving the inspection point changes the number without changing the process. |
+| Supplier defect rate | Defective units / Total received × 100 | The supply agreement, and the AQL level the project chose — **ISO 2859-1 fixes the sampling plan; the AQL is the project's decision** (SCM-R* §Project decisions). |
+| Cost of poor quality | Prevention + Appraisal + Internal + External failure | What the project counts in each Juran category. The wide ranges quoted in the quality literature are observations of samples, not a bar (CPT-0054). |
+| NCR closure rate | NCRs closed within N days / Total × 100 | Both the window and the rate are the project's escalation policy. ISO 9001:2015 §10.2 requires corrective action to be *effective* (QMS-R8) and fixes no clock. |
 
 **Cost of Quality (PAF Model — Feigenbaum 1951)**
 ```

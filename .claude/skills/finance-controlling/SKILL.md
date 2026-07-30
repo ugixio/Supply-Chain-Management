@@ -19,21 +19,26 @@ description: >
 | LIFO | US GAAP only (ASC 330) | Last unit in = first out | US tax deferral; NOT allowed under IFRS |
 | Standard Cost | IAS 2 / ASC 330 | Predetermined cost + variance | Manufacturing; variance analysis |
 
-**Key Finance Metrics (APICS; Chopra & Meindl Ch.2)**
-| KPI | World-Class | Formula |
-|-----|------------|---------|
-| Inventory Turnover | 8–12× (FMCG) | COGS / Avg Inventory (book value) |
-| DIO (Days Inventory Outstanding) | < 45 days | (Avg Inventory / COGS) × 365 |
-| DSO (Days Sales Outstanding) | < 30 days | (Avg AR / Revenue) × 365 |
-| DPO (Days Payable Outstanding) | 30–60 days | (Avg AP / COGS) × 365 |
-| Cash-to-Cash Cycle | Minimize | DIO + DSO − DPO |
-| GMROI | > 2.0 | Gross Margin / Avg Inventory Cost |
-| Inventory Carrying Cost | 20–30% per year | (Holding + Opportunity + Obsolescence) / Avg Inventory |
+**Working-capital metrics (APICS; Chopra & Meindl Ch.2)**
+
+**Metrics — definitions, not levels.** A skill states what a metric measures and what
+constrains the answer; the level a project must clear is that project's decision (ADR-0037,
+and the inclusion test in `CLAUDE.md`). The right-hand column names the constraint so the
+question can be asked properly, and stops.
+
+| Metric | Formula | What constrains the level |
+|---|---|---|
+| Inventory turnover | COGS / Avg inventory (book value) | Industry and product class — comparable only within one (CPT-0016). Fresh grocery and heavy industry read the same ratio oppositely. |
+| DIO | (Avg inventory / COGS) × 365 | The reciprocal of turnover, so the same constraint. Note the 365: a quarter's COGS must be annualized first. |
+| DSO | (Avg AR / Revenue) × 365 | **The customer payment terms**, which are contracted, plus collection performance against them. |
+| DPO | (Avg AP / COGS) × 365 | **The supplier payment terms**, which are contracted — and in the EU constrained upward by the Late Payment Directive. Stretching DPO is a financing choice with a supplier-relationship cost. |
+| Cash-to-cash cycle | DIO + DSO − DPO | An identity over the three above; it inherits their constraints and adds none. Negative is achievable and is not automatically the goal. |
+| GMROI | Gross margin / Avg inventory cost | The margin structure of the category. A level below 1 means the inventory loses money, which is arithmetic; anything above that is strategy. |
+| Inventory carrying rate | (Holding + Opportunity + Obsolescence) / Avg inventory | **The project's own cost of capital, storage cost and obsolescence risk** — named explicitly as a project decision in `SCM-R*` §Project decisions, because every EOQ and safety-stock result depends on it. |
 
 **Cash-to-Cash Cycle** (Chopra & Meindl, Ch.2)
 ```
 C2C = DIO + DSO − DPO
-Target: minimize; negative C2C = company receives cash before paying suppliers (e.g., Amazon, Dell)
 ```
 
 **GL Journal Entries (all in integer cents)**

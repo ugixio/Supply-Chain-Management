@@ -5,7 +5,7 @@ type: concept
 owner: orchestrator
 status: active
 since: 2026-07-22
-updated: 2026-07-22
+updated: 2026-07-29
 relations:
   - { type: part-of, target: index-concepts-14-supplier-development }
   - { type: governed-by, target: index-adr }
@@ -41,10 +41,9 @@ relations:
 
 ## Assumptions and limits
 
-- The default EF table is **illustrative** (ecoinvent 3.9 / IPCC AR6 order of
-  magnitude) — production reporting must use verified or database factors; the
-  docstring says so and the concept repeats it because misuse here is an audit
-  finding.
+- Any emission-factor table quoted for illustration (ecoinvent 3.9 / IPCC AR6 order of magnitude)
+  is exactly that. Reported figures must come from verified or licensed database factors, and the
+  factor set used must be named in the disclosure — misuse here is an audit finding.
 - Physical data beats spend data (GHG Protocol quality hierarchy) — the method
   ladder encodes exactly that; spend-based factors also inflate with price, not
   emissions.

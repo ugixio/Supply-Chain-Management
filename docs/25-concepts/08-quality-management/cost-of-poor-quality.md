@@ -5,7 +5,7 @@ type: concept
 owner: orchestrator
 status: active
 since: 2026-07-22
-updated: 2026-07-22
+updated: 2026-07-29
 relations:
   - { type: part-of, target: index-concepts-08-quality-management }
   - { type: governed-by, target: index-adr }
@@ -13,8 +13,9 @@ relations:
 # Cost of Poor Quality — COPQ (CPT-0054)
 
 > What bad quality costs, in Juran's four categories: prevention, appraisal, internal
-> failure (scrap/rework) and external failure (customer-facing). Benchmark 5–30% of
-> revenue. What level is tolerable is a business decision, not a property of the measure.
+> failure (scrap/rework) and external failure (customer-facing). What level is tolerable is a
+> business decision, not a property of the measure — and the wide ranges quoted in the quality
+> literature are observations of samples, not a bar to clear.
 
 ## Formula
 

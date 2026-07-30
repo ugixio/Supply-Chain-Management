@@ -31,16 +31,22 @@ description: >
 - Inventory Plan: projected inventory vs. target
 - Financial Reconciliation: P&L impact; revenue gap vs. budget
 
-**KPIs (APICS CPIM 9.0; Wallace & Stahl)**
-| KPI | Target | Formula |
-|-----|--------|---------|
-| Plan Accuracy (Family MAPE) | < 10% at family level | Σ\|Actual−Consensus\|/Actual × 100 |
-| S&OP Meeting On-Time Rate | 100% | Meetings held on schedule / Planned × 100 |
-| Demand Signal Quality (SCOR RL.2.3) | ≥ 97% | Correct demand signals / Total × 100 |
-| Forecast Value Added (FVA) | Positive | MAPE(statistical) − MAPE(consensus) |
-| Plan Horizon Coverage | 18+ months | Periods with approved plan / 18 × 100 |
-| Schedule Adherence | ≥ 95% | Executed plan / Committed plan × 100 |
-| Supply Constraint Fill | ≥ 98% | Demand filled from supply plan / Total demand × 100 |
+**S&OP metrics (APICS CPIM 9.0; Wallace & Stahl)**
+
+**Metrics — definitions, not levels.** A skill states what a metric measures and what
+constrains the answer; the level a project must clear is that project's decision (ADR-0037,
+and the inclusion test in `CLAUDE.md`). The right-hand column names the constraint so the
+question can be asked properly, and stops.
+
+| Metric | Formula | What constrains the level |
+|---|---|---|
+| Plan accuracy (family MAPE) | Σ\|Actual−Consensus\|/Actual × 100 | The aggregation level — family accuracy is structurally better than SKU accuracy, and aggregate attainment can mask offsetting mix misses (CPT-0148). Set the level per level. |
+| S&OP meeting on-time rate | Meetings held on schedule / Planned × 100 | Nothing external; it measures discipline, and a project that wants it below 100% should say why. |
+| Demand signal quality | SCOR RL.2.3 | SCOR fixes the measure; the level follows the channel, as for order entry accuracy. |
+| Forecast value added | MAPE(naïve) − MAPE(process step) | **The sign is the finding, not a target.** Negative FVA means the step makes the forecast worse and should be removed (CPT-0024) — that reading needs no threshold. |
+| Plan horizon coverage | Periods with approved plan / N × 100 | The longest lead time in the supply base: the horizon must exceed it, which makes N a derived quantity rather than a convention. |
+| Schedule adherence | Executed / Committed × 100 | Capacity stability and the commitment process. A high figure with a plan revised weekly measures nothing (CPT-0150 on plan immutability). |
+| Supply constraint fill | Demand filled from plan / Total demand × 100 | The service commitment and the capacity available — the same trade-off as fill rate, one planning level up. |
 
 **FVA — Forecast Value Added** (Gilliland 2010)
 ```

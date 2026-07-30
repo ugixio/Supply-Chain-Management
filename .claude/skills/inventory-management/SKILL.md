@@ -34,12 +34,21 @@ The **ordering** is what Pareto fixes: few items carry most of the value. The cu
 (where A becomes B), the review cadence and the accuracy expectation per class are **project
 decisions** — no percentage in this table is a standard.
 
-**XYZ Classification (Demand Variability)**
-| Class | CV | Policy |
-|-------|-----|--------|
-| X | < 10% | High forecast confidence; lean SS |
-| Y | 10–25% | Moderate SS; consensus forecast |
-| Z | > 25% | High SS; scenario planning |
+**XYZ segmentation — the CV boundaries are the project's**
+
+The classes are a standard idea; the cut-offs are not. CPT-0018 states the coefficient of
+variation and names the boundaries as a project decision, because they depend on the history
+length and the demand process — a short series inflates CV through its small denominator, and an
+intermittent item can land in Z for a reason that is not volatility at all.
+
+| Class | Meaning | Typical forecast policy |
+|---|---|---|
+| X | low variability, below the project's lower cut-off | statistical methods carry it (SES/Holt) |
+| Y | between the two cut-offs | statistical plus commercial adjustment (consensus) |
+| Z | above the upper cut-off | scenario planning; more buffer, and question the method |
+
+Set the two cut-offs once, record them where the project's parameters live, and re-derive the
+classification whenever the history window changes.
 
 **Critical Business Rules**
 1. **No negative inventory** without `backorderAllowed = true`
@@ -49,15 +58,21 @@ decisions** — no percentage in this table is a standard.
 5. **Idempotency** via `idempotencyKey` — safe to retry
 6. **FEFO** (First Expired First Out) for lot-tracked items
 
-**KPIs (APICS CPIM 9.0; Ballou Ch.9)**
-| KPI | World-Class | Formula |
-|-----|------------|---------|
-| Inventory Turnover | 8–12× (FMCG) | COGS / Avg Inventory |
-| DIO (Days Inventory Outstanding) | < 45 days | 365 / Turnover |
-| Inventory Accuracy | ≥ 99.5% | Correct count locations / Total locations × 100 |
-| Shrinkage Rate | < 0.5% | (Book − Physical) / Book × 100 |
-| Cycle Count Coverage | 100% A-items/quarter | A-items counted / Total A-items × 100 |
-| Obsolescence Rate | < 1% | Slow/dead stock value / Total inventory value × 100 |
+**Inventory metrics (APICS CPIM 9.0; Ballou Ch.9)**
+
+**Metrics — definitions, not levels.** A skill states what a metric measures and what
+constrains the answer; the level a project must clear is that project's decision (ADR-0037,
+and the inclusion test in `CLAUDE.md`). The right-hand column names the constraint so the
+question can be asked properly, and stops.
+
+| Metric | Formula | What constrains the level |
+|---|---|---|
+| Inventory turnover | COGS / Avg inventory | Industry and product class only (CPT-0016). |
+| DIO | 365 / Turnover | As above; watch the annualization. |
+| Inventory accuracy | Correct count locations / Total × 100 | **The count tolerance the project defines** — "correct" is not self-evident, and a ±1-each tolerance and an exact-match rule produce different accuracy from identical counts. Decide the tolerance before the target. |
+| Shrinkage rate | (Book − Physical) / Book × 100 | The goods' own shrink exposure and the controls in place. High-value small items and bulk raw material are different problems. |
+| Cycle-count coverage | A-items counted / Total A-items × 100 | The ABC classification (project-chosen boundaries, CPT-0018) and, where the goods are regulated, the traceability law. |
+| Obsolescence rate | Slow/dead stock value / Total inventory value × 100 | The project's definition of "slow" and "dead" — this metric is mostly a restatement of that definition, so publish it alongside. |
 
 ## Data Analytics
 

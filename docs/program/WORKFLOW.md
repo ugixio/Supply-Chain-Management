@@ -5,7 +5,7 @@ type: program
 owner: orchestrator
 status: active
 since: 2026-07-19
-updated: 2026-07-19
+updated: 2026-07-29
 relations:
   - { type: part-of, target: index-program }
   - { type: governed-by, target: governance-root }
@@ -41,9 +41,59 @@ mirror-coverage bar) · duplicated formulas across TS/Python with one past diver
 
 ## Ordered backlog
 
-> Status: ⬜ pending · 🟦 in progress · ✅ done. Entries are appended and annotated,
-> never rewritten. A 🟦 entry ALWAYS records current state + next step, so a fresh
-> session resumes without re-derivation (ADR-0012).
+> Status: ⬜ pending · 🟦 in progress · ✅ done · ⛔ void · ⚠ needs an owner decision. Entries
+> are appended and annotated, never rewritten. A 🟦 entry ALWAYS records current state + next
+> step, so a fresh session resumes without re-derivation (ADR-0012).
+
+### Triage of 2026-07-29 — what ADR-0037 did to this backlog
+
+> **Why this block exists.** Phase L was voided explicitly when ADR-0037 landed. The Phase U and
+> Phase P entries were not, and a file-by-file review of the estate found more than twenty of them
+> still reading as live work — work that would have sent the next session to rebuild the
+> application ADR-0037 deleted. A stale ⬜ is not a harmless leftover in a document whose whole
+> purpose is telling a fresh session what to do next. Verdicts below; the entries keep their text.
+
+| ID | Was | Now | Why |
+|---|---|---|---|
+| U3 | ⬜ | ✅ | The `CLAUDE.md` sections it deduplicated (§Critical Business Rules, §Code Standards) no longer exist — the contract was rewritten around the inclusion test, and it cites rule IDs rather than restating them. Done by rewrite. |
+| U7 | 🟦 | ⛔ | The pytest suite and the TS coverage bar both governed deleted code. What survives is the Definition-of-Done requirement that a touched rule keeps its test, and the 26 Rust tests that honour it. |
+| U8 | 🟦 | ✅ | The golden-vector mechanism landed (`tests/golden/money.golden.json`, read by `crates/scm-money/tests/golden_money.rs`). Its *purpose* — reconciling two languages — went away with the second implementation; the fixture stays because it pins the arithmetic. |
+| U11 | 🟦 | ⛔ | The numbering collision was resolved by ADR-0029. The remaining item, splitting three agility/VaR functions into dept 10, has no functions left to split. |
+| U11b | ⬜ | ⛔ | `Shipment.ts`, `TransportLane.ts` and the `python/NN_*` trees are deleted. The REACH item is real but belongs to a project: the obligation is stated as **CMP-R3**, and how a filer tracks an ECHA notification is its own design. |
+| U12 | ⬜ | 🟦 | Rescoped, not void: a lint lane for one 175-line standards module buys nothing. It lands with the TypeScript that Phase M4 introduces, warnings-as-errors, in the same commit as the first NestJS module. |
+| U13 | ⬜ | ⛔ | The `Shipment` type it would guard is deleted. **LOG-R3** still states the obligation; enforcing it is the implementing project's job, which is the whole point of ADR-0037. |
+| U15 | 🟦 | ✅ | Item 1 was resolved by ADR-0028 (the exact inverse-normal is canonical, stated in CPT-0003). Items 2–7 are U15b's. |
+| U15b | ⬜ | ⛔ | All seven divergences were disagreements *between two implementations*, and both are gone. The lesson is kept where it can still bite: **the same name over a different method** is the failure mode, and it is now a known pitfall in `evaluation.md`. |
+| U16 | ⬜ | ⛔ | "No TypeScript implementation of Croston/SBA" is not a gap in a repository that holds no implementations. CPT-0006/0007/0009/0010 exist as nodes; that is the deliverable. |
+| U17 | ⬜ | ⬜ | **Stays live.** Whether SCOR-DS *Make* and *Orchestrate* need departments is a knowledge question, not a code question, and ADR-0037 does not touch it. A 15th department still requires an ADR (id-registry §4). |
+| U18 | 🟦 | ✅ | Closed the hard way: the 150,322 ungoverned words were deleted with the code they described (risk #7, closed). |
+| U19 | ⬜ | ⛔ | CPT-0024 and CPT-0025 exist as concept nodes. "Implement them in whichever language ADR-0001 assigns" rests on the premise ADR-0037 superseded. |
+| P1 | ⬜ | ✅ | `docs/50-engineering/` is materialized: `_index.md` plus the ENG-R family through ENG-R10. |
+| P2 (original plan) | ⬜ | ⛔ | Superseded by what actually landed at P2. Half its layout (`packages/{domain,application,infrastructure}`, `services/calc`, `proto/`) was deleted three phases later. |
+| P3 · P4 | ⬜ | ⚠ | **Owner decision needed**, and the only two entries here that are not mine to settle. ADR-0024/0025/0026 specify a Postgres read model, a GraphQL surface and an octagon wiki over `docs/`; ADR-0037 says the one application built here is monitoring. Both readings are defensible and they build different things. Raised with the options rather than guessed (PLT-R6). |
+| P5 | 🟦 | ✅ | One exact-money implementation, `crates/scm-money`: `roundTiesToEven`, sum-preserving apportionment, overflow reported rather than wrapped. The TypeScript and Python mirrors that disagreed are gone. |
+| P6 | ⬜ | ⛔ | The `scm.calc.v1` service and its proto are deleted. Python keeps its lane (ADR-0033/0035) and it now serves the monitoring platform's models, not an SCM calculator. |
+| W2 | 🟦 | ✅ | The node model and the PLT family are live and gated (PLT-R1..R6; G4/G5/G6 enforce the graph). |
+| W3 | ⬜ | 🟦 | Rescoped: the projects data domain and the GraphQL resolvers are Phase **M4**'s gateway work. The prompt-refinement gate inside it is already law — **PLT-R1** and **PLT-R6** — and is practised, not built. |
+| W4 | ⬜ | ⛔ | Superseded by Phase M in full: M1 defines the delivery metrics as nodes, M2 the telemetry tier, M3 the ingester, M4 the dashboards. W4 *is* Phase M, described before Phase M existed. |
+| C1 | 🟦 | ✅ | C1a–C1e swept all 160 nodes. The 2026-07-29 review found residue C1 missed — six nodes carrying benchmark *parameters*, and five figures needing a source or a project-decision label — and that residue is now fixed. A completed sweep is not a perfect one. |
+| C2b | ⬜ | ✅ | Landed: QMS-R8 (corrective-action effectiveness), FEFO in CPT-0036, plan immutability in CPT-0150. |
+| C4 | 🟦 | ✅ | C4 and C4b corrected the prose that described deleted code, across the docs and the operating layer. |
+| M2 | 🟦 | ✅ | Five migrations, the rollup cascade, split-privilege roles and quotas, applied twice in CI against a real ClickHouse to prove idempotency. |
+| M3 | 🟦 | 🟦 | **M3a done** — the ingestion core with 13 behaviour tests, no clock and no transport. **M3b next** — the transport adapter and the ClickHouse client, with retry and dead-letter. |
+
+**Two further items the same review raised, both needing an owner decision rather than a fix:**
+
+- ⚠ **The `implements` edge type is declared and never used.** `knowledge-architecture.md` §8,
+  `20-product-model/node-model.md` §1 and `tools/verify.py` all carry it; zero documents use it.
+  Post-ADR-0037 a concept node links to no implementation, so a live `implements` edge invites
+  exactly the relinking ADR-0037 undid — and G4 would validate the first one happily. Retiring it
+  changes the node/edge vocabulary, which knowledge-architecture §12 puts behind **an ADR**, so it
+  is raised here rather than done. The alternative worth considering: keep it, reserved for the
+  monitoring application's own nodes, which legitimately do trace to code this repository owns.
+- ⚠ **`.claude/skills/**` KPI target tables** — swept on 2026-07-29 into "the decision plus what
+  constrains it". Recorded here because the *class* is not closed: no gate can tell a target from a
+  definition, so the next skill file added can reintroduce it (risk #13).
 
 ### Phase U — Unification (context-skeleton adoption)
 - ✅ **U1 · orchestrator** — Skeleton added on branch `feat/context-skeleton`: tier tree,
@@ -54,7 +104,7 @@ mirror-coverage bar) · duplicated formulas across TS/Python with one past diver
   section. **Nothing existing was moved, renamed or rewritten.**
 - ⬜ **U2 · human** — Review & ratify ADR-0001..0009 (retroactive), decide ADR-0010/0011,
   and merge the branch.
-- ⬜ **U3 · orchestrator** — Dedup pass: `CLAUDE.md` §Critical Business Rules /
+- ✅ **U3 · orchestrator** — Dedup pass: `CLAUDE.md` §Critical Business Rules /
   §Code Standards cite the rule IDs instead of restating them (SSOT).
 - ✅ **U4 · WHAT lane** — Per-department `rule.md` × 14: extract each department's
   invariants from its code/README into its reserved family (PRC, SUP, DMD, …).
@@ -82,14 +132,14 @@ mirror-coverage bar) · duplicated formulas across TS/Python with one past diver
   `ncrRate` using the wrong metrics group; REACH compliance reading an excluded input
   field — now conservative, see U11). Result: typecheck 0 errors, 40/40 tests green.
   **Still open inside U6 → follow-ups:** eslint flat config (U12) · pytest gate (U7).
-- 🟦 **U7 · HOW lane** — Test debt: Python test suite (the mirror-coverage bar, since retired); extend
+- ⛔ **U7 · HOW lane** — Test debt: Python test suite (the mirror-coverage bar, since retired); extend
   TS unit coverage beyond the 4 existing files; every SCM-Rx gets its test.
   **Started 2026-07-22 (with P5 slice 3):** the pytest suite is now real and **enforced** —
   `services/calc/tests/test_money.py` runs in `make verify-full` and CI via `make test-py`
   (CI-light `requirements-dev.txt` = pytest only). First Python module under test is the
   money core. **Next:** extend pytest to the calc models (needs a heavier CI lane or mocked
   deps — risk #6), and add a test per SCM-Rx / department rule.
-- 🟦 **U8 · HOW lane** — Cross-language consistency mechanism (golden test vectors shared
+- ✅ **U8 · HOW lane** — Cross-language consistency mechanism (golden test vectors shared
   by TS and Python — prevents another `a12c114`).
   **MECHANISM LANDED 2026-07-22:** `tests/golden/money.golden.json` is **one fixture file
   read by both languages** — `tests/unit/golden-money.test.ts` (Jest) and
@@ -119,16 +169,16 @@ mirror-coverage bar) · duplicated formulas across TS/Python with one past diver
 - ⬜ **U10 · human** — Review & ratify ADR-0012 (context economics + gates) and ADR-0013
   (npm + lockfile) together with U2; ratifying ADR-0012 includes declaring the exemplar
   department (candidate: `01-procurement`).
-- 🟦 **U11 · WHAT lane** — **order-management numbering collision RESOLVED by ADR-0029** (dir dissolved → dept 13 namespace; census fixed). Remaining: fine split of 3 agility/VaR fns → dept 10, blocked on a Python env. Rest of U11 below stands.
-- ⬜ **U11b · WHAT lane** — Domain dedup & modeling follow-ups surfaced by the toolchain
+- ⛔ **U11 · WHAT lane** — **order-management numbering collision RESOLVED by ADR-0029** (dir dissolved → dept 13 namespace; census fixed). Remaining: fine split of 3 agility/VaR fns → dept 10, blocked on a Python env. Rest of U11 below stands.
+- ⛔ **U11b · WHAT lane** — Domain dedup & modeling follow-ups surfaced by the toolchain
   repair: `Shipment.ts` redefines `TransportMode`/`TrackingEvent` already owned by
   `TransportLane.ts`/`TrackingEvent.ts` (aliased in the barrel for now — unify);
   `python/07_order_management/` vs `python/13_order_management/` numbering collision
   (risk register #4); REACH: model ECHA-notification tracking so compliance can reflect
   a submitted notification (currently conservative: required ⇒ not yet compliant).
-- ⬜ **U12 · HOW lane** — eslint 9 flat config (`eslint.config.mjs`) + wire `lint` into
+- 🟦 **U12 · HOW lane** — eslint 9 flat config (`eslint.config.mjs`) + wire `lint` into
   `make verify-full` (QA warnings-as-errors bar).
-- ⬜ **U13 · HOW lane** — Enforce LOG-R3 in code: `Shipment` types `hazmatClass` as
+- ⛔ **U13 · HOW lane** — Enforce LOG-R3 in code: `Shipment` types `hazmatClass` as
   optional and does not reject an `isHazmat` line missing its IMDG/ADR class, UN number,
   proper shipping name or packing group, though the README mandates it. Add the guard +
   its test (surfaced by U4 while writing `40-contexts/07-logistics-transportation/rule.md`).
@@ -161,8 +211,8 @@ mirror-coverage bar) · duplicated formulas across TS/Python with one past diver
   CO₂ factor tables; three 3WM tolerance policies; turnover/DIO triplicated; EUDR
   country list vs official benchmark; dock sizing ignoring `service_cv`; etc.) — each
   needs an owner call, feeding U8 golden vectors.
-- 🟦 **U15 · WHAT lane** — **z-score RESOLVED by ADR-0028** (canonical = exact inverse-normal). Remaining items 2–7 below stand.
-- ⬜ **U15b · WHAT lane** — Cross-language divergences surfaced by U4's concept nodes. These
+- ✅ **U15 · WHAT lane** — **z-score RESOLVED by ADR-0028** (canonical = exact inverse-normal). Remaining items 2–7 below stand.
+- ⛔ **U15b · WHAT lane** — Cross-language divergences surfaced by U4's concept nodes. These
   are **findings, not fixes**: each needs an owner decision on which side is canonical
   (feeds U8's golden-vector mechanism).
   1. **Service-level z-scores (CPT-0003)** — TS takes **percent** (`95`), Python takes a
@@ -185,7 +235,7 @@ mirror-coverage bar) · duplicated formulas across TS/Python with one past diver
      caller chooses. On short history this moves SKUs across the X/Y/Z thresholds.
   7. **Return typing** — TS safety-stock functions `Math.ceil` to integers; Python returns
      floats. Decide whether rounding is a domain rule or a presentation concern.
-- ⬜ **U16 · WHAT lane** — TypeScript coverage gaps found while cataloguing 03: **no TS
+- ⛔ **U16 · WHAT lane** — TypeScript coverage gaps found while cataloguing 03: **no TS
   implementation** of Croston / SBA (CPT-0006/0007 — intermittent demand is unavailable to
   the domain layer), of the scale-free accuracy metrics (CPT-0009), or of tracking
   signal / forecast bias (CPT-0010). Decide per item whether TS needs it (ADR-0001 puts
@@ -196,7 +246,7 @@ mirror-coverage bar) · duplicated formulas across TS/Python with one past diver
   design / facility location**; (c) SCOR-DS **Orchestrate** is unmapped. Confirm against
   the full census before proposing a 15th department (which requires an ADR — id-registry §4).
 
-- 🟦 **U18 · WHAT lane** — Extract-and-archive the department business-context documents
+- ✅ **U18 · WHAT lane** — Extract-and-archive the department business-context documents
   (ADR-0016). **The problem:** 14 `IMPLEMENTATION.md` (128,240 words) + 14 dept
   `README.md` (22,082) = **150,322 words outside the governed tree, vs 29,522 inside —
   the governed tree is 16% of the repo's prose.** Allowlisted ⇒ invisible to every gate.
@@ -223,7 +273,7 @@ mirror-coverage bar) · duplicated formulas across TS/Python with one past diver
   analytical logic, §15 use cases, §17 test cases (TC-01..TC-06 are ready-made test
   specs — feed them to U7), and the archival stamp (deferred until 03 is fully extracted).
   **Next step:** finish 03 §11/§15/§17, stamp it archived, then repeat by census order.
-- ⬜ **U19 · HOW lane** — Implement the two specified-but-missing KPIs found by U18:
+- ⛔ **U19 · HOW lane** — Implement the two specified-but-missing KPIs found by U18:
   Forecast Value Added (CPT-0024) and safety-stock coverage/adequacy (CPT-0025), with
   tests, in whichever language ADR-0001 assigns. Both have dashboard/escalation
   requirements in the business-context document and no code at all.
@@ -236,7 +286,7 @@ mirror-coverage bar) · duplicated formulas across TS/Python with one past diver
 - ✅ **P0 · human** — Ratify the product decisions. **Done 2026-07-20:** owner authorized
   proceeding on all proposed ADRs; **ADR-0010..0029 are Accepted (owner-authorized)**. This
   authorizes the money migration (P5, ADR-0019) and the agent layer (ADR-0027).
-- ⬜ **P1 · orchestrator** — Materialize the reserved `docs/50-engineering/` tier: `_index`,
+- ✅ **P1 · orchestrator** — Materialize the reserved `docs/50-engineering/` tier: `_index`,
   an `ENG-*` rule family (layering rules per ADR-0023 — dependency direction
   `apps → infrastructure → application → domain`, `domain` imports nothing, cross-department
   only through application ports; boundary linter fails violations), and a frontend-UX ADR
@@ -265,7 +315,7 @@ mirror-coverage bar) · duplicated formulas across TS/Python with one past diver
   merge — the two `order_metrics.py` files **differ**, so it needs a domain call, not a
   mechanical move (stays U11/risk #4; both preserved under `services/calc/` for now).
   **Superseded plan text below is retained for history:**
-- ⬜ **P2 (original plan) · HOW lane** — Monorepo skeleton per **ADR-0022/0023**, without breaking `src/`:
+- ⛔ **P2 (original plan) · HOW lane** — Monorepo skeleton per **ADR-0022/0023**, without breaking `src/`:
   **pnpm workspaces + Turborepo** (`pnpm-workspace.yaml`, migrate `package-lock.json` →
   `pnpm-lock.yaml`, CI → `pnpm install --frozen-lockfile`, `make verify-full` delegates to
   `turbo run`). Layout: `apps/web` · `apps/api` · `packages/{domain,application,infrastructure,shared}`
@@ -273,17 +323,17 @@ mirror-coverage bar) · duplicated formulas across TS/Python with one past diver
   barrel + path alias preserved); **`packages/shared` = `src/shared`**. `docs/ tools/ .claude/`
   stay at root. Fix the `07_order_management` → `13_order_management` collision (risk #4/U11)
   during the move. Update the 4 test imports.
-- ⬜ **P3 · HOW lane (Stage A)** — **Postgres read model (ADR-0024)** + **code-first GraphQL
+- ⚠ **P3 · HOW lane (Stage A)** — **Postgres read model (ADR-0024)** + **code-first GraphQL
   (ADR-0025)**. `tools/ingest`: one-way build reading `docs/25-concepts` + `rule.md` +
   `40-contexts` into read-model tables (drop-and-rebuild; `docs/` stays SSOT). NestJS
   code-first resolvers expose nodes/edges; `schema.gql` emitted + committed; DataLoader
   batching; contract tests. Drift guard (future gate G11) asserts ingested counts match
   `docs/`.
-- ⬜ **P4 · HOW lane (Stage A)** — Next.js octagon node-graph front end per the P1 UX ADR;
+- ⚠ **P4 · HOW lane (Stage A)** — Next.js octagon node-graph front end per the P1 UX ADR;
   SCM core node centre, 14 department nodes around it as a connected circuit, CPT sub-nodes
   on expand; click → right sidebar rendering the concept node (formula, worked example,
   links). Accessibility + light/dark.
-- 🟦 **P5 · WHAT+HOW** — Money → Decimal migration (ADR-0019). **Sliced (L/high-risk):**
+- ✅ **P5 · WHAT+HOW** — Money → Decimal migration (ADR-0019). **Sliced (L/high-risk):**
   (1) `@scm/shared` Decimal money core · (2) domain call-site migration by department ·
   (3) Python `Decimal` context · (4) `NUMERIC` columns + string-over-gRPC · (5) golden
   vectors (U8) prove TS==PY==SQL.
@@ -317,7 +367,7 @@ mirror-coverage bar) · duplicated formulas across TS/Python with one past diver
   **Next:** slice 4 — `NUMERIC` columns already exist in `schema.sql`; wire string-over-gRPC
   when P6 lands. Slice 5 / **U8** — promote the mirrored money cases into shared golden-vector
   fixtures and extend to the deferred `ReturnAuthorization` refund convergence (CPT-0091).
-- ⬜ **P6 · HOW lane (Stage B)** — Python gRPC calc service (`scm.calc.v1`), NestJS client;
+- ⛔ **P6 · HOW lane (Stage B)** — Python gRPC calc service (`scm.calc.v1`), NestJS client;
   interactive calculator for the demand-planning concepts first (the `enforced` dept).
 - ⛔ **P7 · VOID (ADR-0037)** — was Clean-Architecture wiring of the department tree
   to durable event-sourced Postgres (`EventStore` → adapter over an event table, ADR-0005
@@ -354,7 +404,7 @@ mirror-coverage bar) · duplicated formulas across TS/Python with one past diver
   ADR-0032 (prompt-refinement gate), `20-product-model/product-statement.md` +8 glossary rows,
   id-registry ADR→0032 + reserved platform family `PLT` (§2), decision-index one-liners (G9).
   Doc gates green.
-- 🟦 **W2 · WHAT lane** — Model the platform bounded contexts. **Landed 2026-07-22:** the
+- ✅ **W2 · WHAT lane** — Model the platform bounded contexts. **Landed 2026-07-22:** the
   **Node Model** (`20-product-model/node-model.md`) — the workspace as a typed node+edge graph
   with **Regions** (Global Context + one per Project), grounded in the C4 model / arc42 so a
   developer can interpret every part; the **`PLT` rule family is now LIVE**
@@ -365,12 +415,12 @@ mirror-coverage bar) · duplicated formulas across TS/Python with one past diver
   **Still open in W2 (next):** the `workspace`/`projects` **concept nodes** + the tech-branch
   taxonomy as an open data-driven set, and concept nodes for the refinement-value / project-
   progress metrics (feed W3/W4).
-- ⬜ **W3 · HOW lane (Stage B)** — Build the workspace/projects bounded context: Postgres schema
+- 🟦 **W3 · HOW lane (Stage B)** — Build the workspace/projects bounded context: Postgres schema
   for the mutable project data domain (separate from the ADR-0024 knowledge read model),
   tenancy/auth, NestJS code-first GraphQL resolvers, project→context reference resolution +
   overlay, and the **prompt-refinement gate** (refine → show diff / opt-out → execute; retain
   original+improved). Reads the knowledge read model, never writes it.
-- ⬜ **W4 · HOW lane (Stage C, ADR-0031)** — Monitoring connector: emit progress events from the
+- ⛔ **W4 · HOW lane (Stage C, ADR-0031)** — Monitoring connector: emit progress events from the
   W3 data model; connectors (internal-first, then external dev tools: GitHub/CI/issue-trackers);
   delivery metrics as `CPT-*` nodes; dashboards. Deferred until W3 lands.
 - ⬜ **W5 · WHAT lane (as branches are onboarded)** — Per-tech-branch practice knowledge
@@ -421,7 +471,7 @@ mirror-coverage bar) · duplicated formulas across TS/Python with one past diver
   proportional to WIP, so starting more work in parallel makes items finish *later*, arithmetically.
   Registry updated (the CPT family is no longer "supply-chain" only); the catalogue index now lists
   **groups** rather than departments.
-- 🟦 **M2 · HOW** — The ClickHouse telemetry tier exactly as ADR-0036 fixes it: sort key
+- ✅ **M2 · HOW** — The ClickHouse telemetry tier exactly as ADR-0036 fixes it: sort key
   `(project_id, metric, ts)`, monthly partitions, per-column codecs, the `AggregatingMergeTree`
   rollup cascade, raw TTL with long rollup retention, split-privilege users with quotas.
   **ENG-R9 six checks — run before any code, 2026-07-27:**
@@ -520,7 +570,7 @@ mirror-coverage bar) · duplicated formulas across TS/Python with one past diver
 
 > The deletion is done; making the remaining knowledge consistent with it is not.
 
-- 🟦 **C1 · WHAT** — **Sweep the concept nodes for policy.**
+- ✅ **C1 · WHAT** — **Sweep the concept nodes for policy.**
   **C1a landed 2026-07-27 — the numeric policy is out.** Method: a detector for lines carrying a
   number *and* a normative word (target, threshold, tolerance, weight, band, default), minus
   citations, narrowed 169 flagged nodes to **47 real candidate lines in 37 nodes**, each then judged
@@ -600,7 +650,7 @@ mirror-coverage bar) · duplicated formulas across TS/Python with one past diver
   count of the retirements was wrong. The reallocations are recorded in the id-registry, which is
   the one place allowed to name a retired ID; the registry now carries the
   verified figures.
-- ⬜ **C2b · WHAT** — Several retired rules named a principle worth keeping *somewhere*: FIFO/FEFO
+- ✅ **C2b · WHAT** — Several retired rules named a principle worth keeping *somewhere*: FIFO/FEFO
   picking discipline, corrective-action effectiveness verification, immutability of a committed
   plan. Each belongs to a concept node or a project's own process, not to a rule file — place them
   deliberately rather than letting them vanish.
@@ -626,7 +676,7 @@ mirror-coverage bar) · duplicated formulas across TS/Python with one past diver
   finally caught this very backlog entry naming withdrawn IDs while explaining them. That is the
   argument for the gate: the script was neither sufficient nor safe, and only the gate was
   reliable.
-- 🟦 **C4 · WHAT** — **Prose that still described deleted code (2026-07-27).**
+- ✅ **C4 · WHAT** — **Prose that still described deleted code (2026-07-27).**
   **The agent definitions came first, because they instruct future work** — an agent told to build
   `packages/domain` aggregates would have sent the next session straight back into the mistake.
   Four rewritten: `calc-engineer` (Python is the tools layer, and it now carries the lesson that a

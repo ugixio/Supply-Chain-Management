@@ -42,14 +42,20 @@ description: >
 - SVHCs in articles > 1 tonne/year: registration required
 - Field: `reachSVHC: boolean` on `InventoryItem` triggers lot tracking
 
-**KPIs (GRI, CSDDD, APICS)**
-| KPI | Target | Formula |
-|-----|--------|---------|
-| CSDDD Assessment Coverage | 100% of Tier-1 by 2027 | Assessed suppliers / Total Tier-1 × 100 |
-| UFLPA Cleared Shipments | 100% | Cleared / Total XUAR-linked shipments × 100 |
-| REACH SVHC Communication Rate | 100% | SVHCs communicated / Total SVHC articles × 100 |
-| Modern Slavery Statement Currency | 100% | Current-year statements / Total in-scope suppliers × 100 |
-| Compliance Audit Closure Rate | ≥ 95% | Findings closed / Total findings × 100 |
+**Compliance metrics (GRI, CSDDD, APICS)**
+
+**Metrics — definitions, not levels.** A skill states what a metric measures and what
+constrains the answer; the level a project must clear is that project's decision (ADR-0037,
+and the inclusion test in `CLAUDE.md`). The right-hand column names the constraint so the
+question can be asked properly, and stops.
+
+| Metric | Formula | What constrains the level |
+|---|---|---|
+| CSDDD assessment coverage | Assessed suppliers / Total in-scope × 100 | **The directive itself, and not as a percentage.** CSDDD 2024/1760 (amended by 2026/470) requires *risk-based* due diligence with a phase-in by company size — it does not mandate a coverage figure. A project that promises "100% of Tier-1" has chosen a policy stronger than the law and must be able to keep it (SCM-R7 for the ≥ 5-year retention). |
+| UFLPA-cleared shipments | Cleared / Total XUAR-linked × 100 | **Nothing to choose.** The rebuttable presumption is absolute (Pub. L. 117-78, SCM-R6): an uncleared XUAR-linked shipment is not admissible. This is a count of exceptions, not a target to approach. |
+| REACH SVHC communication rate | Communicated / Total SVHC articles × 100 | **The regulation.** Article 33 duty triggers above 0.1% w/w (CMP-R3) and is per article — there is no partial compliance and therefore no level to set. |
+| Modern-slavery statement currency | Current-year statements / In-scope × 100 | Which statutes apply (UK MSA s.54, AU MSA, CA SB-657, and their differing thresholds) — the *scope* is legal, the internal refresh cadence is the project's. |
+| Compliance audit closure rate | Findings closed / Total findings × 100 | The project's own escalation policy, weighted by finding severity. ISO 19011 fixes how an audit is conducted, not how fast a finding must close. |
 
 ## Data Analytics
 

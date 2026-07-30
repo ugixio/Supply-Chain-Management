@@ -42,7 +42,9 @@ string/exact, never float (ENG-R4/R5). Test-first, a test per live rule ID.
 
 ## I consume (inputs)
 The architect's spec + the relevant department `rule.md`/`CPT` nodes, the core's published
-binding, the `scm.calc.v1` proto, and skills: `clean-architecture`, `nestjs-graphql`,
+binding, and — once the Python tools layer exists — whatever service contract is agreed with it
+(ADR-0020 fixes the shape: money as strings, never `double`; the `scm.calc.v1` proto it named was
+deleted with the invented application). Skills: `clean-architecture`, `nestjs-graphql`,
 `engineering-standards`, `testing-quality`.
 
 ## I produce (outputs)

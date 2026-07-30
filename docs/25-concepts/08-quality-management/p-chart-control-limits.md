@@ -5,7 +5,7 @@ type: concept
 owner: orchestrator
 status: active
 since: 2026-07-22
-updated: 2026-07-22
+updated: 2026-07-29
 relations:
   - { type: part-of, target: index-concepts-08-quality-management }
   - { type: governed-by, target: index-adr }
@@ -38,9 +38,9 @@ relations:
 
 - Binomial model: each unit independently defective with constant probability within a
   subgroup; misclassification and clustered defects violate it.
-- Average-n limits are the textbook simplification, acceptable while subgroup sizes stay
-  within ~±25% of n̄; beyond that compute per-point limits with each nᵢ (the docstring
-  points there).
+- Average-n limits are the textbook simplification, and they hold only while subgroup sizes stay
+  close to n̄. Once they spread, compute per-point limits from each nᵢ — how much spread is
+  tolerable before switching is a judgement the project makes, not a constant.
 - Needs n̄·p̄ large enough that LCL > 0 to detect *improvement*; with tiny p̄ the LCL
   clamps to 0 and only degradation is detectable.
 - **Does not apply when:** counting *defects per unit* rather than defective units — that is the

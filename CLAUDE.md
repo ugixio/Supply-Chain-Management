@@ -52,6 +52,8 @@ docs/              The context itself — tiered knowledge; map: docs/_index.md
 apps/              web · api — the monitoring application (not yet built)
 packages/shared/   @scm/shared — standards reference data only
 crates/scm-money   Exact money arithmetic; no policy
+crates/scm-ingest  Telemetry ingestion core: normalize · validate · dedup · batch; no transport
+db/clickhouse      The telemetry schema (ADR-0036): migrations, apply.py, the schema gate
 tools/verify.py    The doc gates
 ```
 
@@ -121,7 +123,13 @@ Dependencies stay OSI-licensed, commercially usable and modifiable (ADR-0002).
   missing detail would change what gets built, it is offered as a **selectable list** of recommended
   options with their trade-offs, never guessed and never buried in prose. Selected options are built
   the same turn; declined ones are recorded so they are not re-proposed. Question craft:
-  `docs/program/evaluation.md` §5.
+  `docs/program/evaluation.md` §6.
+- **Review by enumeration, never by impression.** Asked to review documents — any set, any type —
+  run `docs/program/review-protocol.md`: enumerate the estate mechanically and state its count,
+  name the finding classes before looking, mark every item as reached, then fix what needs no
+  decision, mechanize what a gate could catch, and raise the rest as a selectable list. The
+  marking checklist is transient and is deleted at the close; the findings land in the registers.
+  Report the denominator, not only the findings.
 - **Ask before adopting a new language or framework**, with its speed and security trade-offs.
   A library inside an existing lane does not need a decision.
 - **Plan⇄context first (ADR-0010).** A change that introduces or renames a concept lands in the
@@ -136,13 +144,14 @@ Dependencies stay OSI-licensed, commercially usable and modifiable (ADR-0002).
 
 ## Gates
 
-`make verify` — doc gates G1–G12, typecheck, Rust tests. Run after **every** layer.
+`make verify` — doc gates G1–G13, typecheck, Rust tests. Run after **every** layer.
 `make verify-full` — the merge gate: adds `cargo fmt --check` and `clippy -D warnings`.
+`make verify-schema` — the telemetry schema against a real ClickHouse. CI runs both gates.
 
 G1 no stray docs · G2 front-matter · G3 unique IDs · G4 link integrity · G5 no orphans ·
-G6 authority acyclicity · G7 status and supersession · G8 English-only (manual) ·
+G6 authority acyclicity · G7 status and supersession · G8 English-only (screened) ·
 G9 context budget · G10 standards provenance · G11 retired rules stay retired ·
-G12 a rule citation names an ID (never a family wildcard).
+G12 a rule citation names an ID (never a family wildcard) · G13 `updated:` is true.
 
 **Definition of Done:** `make verify-full` green · touched rules keep their tests · spec and model
 updated first if a concept changed · knowledge placed per

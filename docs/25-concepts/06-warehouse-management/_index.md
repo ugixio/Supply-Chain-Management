@@ -5,7 +5,7 @@ type: concept
 owner: orchestrator
 status: active
 since: 2026-07-22
-updated: 2026-07-27
+updated: 2026-08-01
 relations:
   - { type: part-of, target: index-concepts }
   - { type: governed-by, target: index-adr }
@@ -51,3 +51,25 @@ relations:
 | [CPT-0047](dock-to-stock-time.md) | Dock-to-stock time | Inbound velocity |
 | [CPT-0048](yard-dwell-and-trailer-turns.md) | Yard dwell & trailer turns | Yard/dock capacity health |
 | [CPT-0049](labour-staffing-forecast.md) | Labour staffing forecast | Shift headcount planning |
+
+### Throughput, backlog and event-rate indicators
+
+> **Read the flow/level column before the number.** A **flow** counts events over an interval and
+> **sums** across intervals. A **level** is read at an instant and **must never be summed** — adding
+> six readings of a backlog of 40 yields 240, a quantity that does not exist. Valid aggregations for a
+> level over an interval are last, maximum, minimum or time-weighted average. This is arithmetic, not
+> convention, and it is the defect a rollup built for flows produces silently.
+
+| ID | Concept | Kind | Use when |
+|---|---|---|---|
+| [CPT-0161](goods-receipt-throughput.md) | Goods-receipt throughput | flow | Grading inbound output per period |
+| [CPT-0162](return-to-vendor-discrepancy-rate.md) | Return-to-vendor rate by discrepancy | flow (ratio) | Finding the cause behind inbound rework |
+| [CPT-0163](outbound-shipment-backlog.md) | Outbound shipment backlog | **level** | Seeing waiting outbound work, and the wait it implies |
+| [CPT-0164](sequence-readiness.md) | Sequence readiness — prepared and pending | flow + **level** | Supplying a line just-in-sequence |
+| [CPT-0165](pull-list-completion.md) | Pull-list completion | flow (+ ratio) | Grading material call-off fulfilment |
+| [CPT-0166](security-event-rate.md) | Warehouse security-event rate | flow | Reviewing site security incidents (ISO 28000) |
+
+Two of these carry a **vocabulary warning** rather than a standard: *sequence* (CPT-0164) and *pull
+list* (CPT-0165) are industry terms defined in the APICS Dictionary, and **no standards body fixes
+what one of them contains**. Counts are not comparable between operations, or across a change in how
+the unit is cut. The definition travels with the number.

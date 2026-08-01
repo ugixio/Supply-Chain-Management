@@ -5,7 +5,7 @@ type: product-model
 owner: orchestrator
 status: active
 since: 2026-07-19
-updated: 2026-07-29
+updated: 2026-08-01
 relations:
   - { type: part-of, target: index-product-model }
   - { type: governed-by, target: index-adr }
@@ -43,6 +43,10 @@ relations:
 | ATP | Available-to-Promise — uncommitted supply available for new orders. | 13-order-management |
 | S&OP | Sales & Operations Planning — the consensus planning cycle. | 12-sop-planning |
 | FEFO | First-Expired-First-Out lot picking. | 06-warehouse |
+| GR | Goods Receipt — the recorded arrival of ordered material; UN/EDIFACT RECADV is its message. | 06-warehouse / 01-procurement |
+| Pull List | A material call-off in a pull system: demand signalled by consumption. Industry vocabulary — what one list contains is not standardized (CPT-0165). | 06-warehouse |
+| Sequence (JIS) | Material staged in the exact order a consuming line will consume it. Industry vocabulary; what one sequence contains is not standardized (CPT-0164). | 06-warehouse |
+| Flow vs Level | A **flow** counts events over an interval and sums across intervals; a **level** is read at an instant and must never be summed. Adding six readings of a backlog of 40 gives 240, which does not exist. Arithmetic, not convention. | cross (CPT-0163) |
 | AQL | Acceptable Quality Limit sampling per ISO 2859-1. | 08-quality |
 | NCR / SCAR | Non-Conformance Report / Supplier Corrective Action Request. | 08-quality |
 | SPC | Statistical Process Control (control charts). | 08-quality |

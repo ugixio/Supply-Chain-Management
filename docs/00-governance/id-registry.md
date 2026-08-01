@@ -5,7 +5,7 @@ type: governance
 owner: orchestrator
 status: active
 since: 2026-07-19
-updated: 2026-07-27
+updated: 2026-08-01
 relations:
   - { type: part-of, target: index-governance }
   - { type: governed-by, target: knowledge-architecture }
@@ -66,9 +66,9 @@ relations:
 
 | Prefix | Area | Owning doc | Highest allocated |
 |---|---|---|---|
-| CPT | Concepts — supply-chain and platform (definitions, no parameters — ADR-0037) | `docs/25-concepts/` (per-node files) | CPT-0160 |
+| CPT | Concepts — supply-chain and platform (definitions, no parameters — ADR-0037) | `docs/25-concepts/` (per-node files) | CPT-0166 |
 
-Allocated so far: **CPT-0001 … CPT-0160**. CPT-0001..0025 = dept 03 (demand-planning);
+Allocated so far: **CPT-0001 … CPT-0166**. CPT-0001..0025 = dept 03 (demand-planning);
 CPT-0026..0035 = dept 01 (procurement); CPT-0036..0049 = dept 06 (warehouse management);
 CPT-0050..0059 = dept 08 (quality management);
 CPT-0060..0070 = dept 02 (supplier management);
@@ -84,7 +84,13 @@ CPT-0139..0146 = dept 04 (supply planning);
 sum-preserving allocation** (dept 11 catalogue);
 **CPT-0155..0160 = platform delivery metrics** for the monitoring application (group
 `00-platform`, Phase M1) — one estate-wide family rather than a second catalogue, as the product
-statement fixes. See [25-concepts/_index.md](../25-concepts/_index.md).
+statement fixes. See [25-concepts/_index.md](../25-concepts/_index.md);
+**CPT-0161..0166 = dept 06 throughput, backlog and event-rate indicators** (owner-requested
+2026-08-01). Allocated to **dept 06, not to `00-platform`**, and the distinction is the point: the
+platform catalogue admits a metric only if *a project's development* produces the signal, and these
+are warehouse operations. They are **definitions only** — no ingestion, no schema and no connector
+were built for them, and the operational-telemetry question is recorded as open in
+[program/WORKFLOW.md](../program/WORKFLOW.md).
 
 > **Swept under ADR-0037 (Phases C1a/C1b, 2026-07-27):** implementation links removed from all
 > nodes; every numeric threshold, target, weighting and rating band removed or attributed to the

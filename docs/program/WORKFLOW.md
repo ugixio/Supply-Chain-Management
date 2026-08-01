@@ -5,7 +5,7 @@ type: program
 owner: orchestrator
 status: active
 since: 2026-07-19
-updated: 2026-07-30
+updated: 2026-08-01
 relations:
   - { type: part-of, target: index-program }
   - { type: governed-by, target: governance-root }
@@ -444,6 +444,42 @@ mirror-coverage bar) · duplicated formulas across TS/Python with one past diver
 - ⬜ **L4/L5/L6** — the ClickHouse telemetry tier, the Rust ingestion workers and the
   Docker/Kubernetes packaging **remain live**, as the monitoring application's infrastructure.
   They are renumbered under Phase M when that work starts.
+
+### Phase W6 — Operational telemetry (raised 2026-08-01, decision open)
+
+> The owner asked for warehouse indicators — goods receipts processed, returns by discrepancy,
+> shipments pending, security events, sequences prepared and pending, pull lists processed — modelled
+> on the monitoring platform. **Investigated, and it split into two questions with different answers.**
+
+- ✅ **W6a · WHAT** — **The knowledge landed: CPT-0161..0166 in dept 06.** Definitions, formulas,
+  assumptions, project-chosen inputs and sources; no levels, no ingestion, no schema, no connector.
+  Allocated to **dept 06 and not to `00-platform`**, because that catalogue's own extension rule
+  admits a metric only if *a project's development* produces the signal — warehouse operations do not.
+  Two nodes (CPT-0164 sequence, CPT-0165 pull list) carry an explicit **vocabulary warning**: they are
+  APICS Dictionary industry terms, and no standards body fixes what one sequence or one list contains,
+  so counts are not comparable across operations.
+- ⚠ **W6b · HOW — needs an owner decision before any code.** Making the monitoring application ingest
+  operational warehouse telemetry is a **product-scope change** over ADR-0031/0034/0036, which say
+  *project supervision*. What it would require, found by inspection rather than assumed:
+  1. **An ADR** narrowing or extending those three.
+  2. **A metric `kind` (flow / level / event-count)** declared per concept node and enforced at ingest.
+     Without it the cascade corrupts levels — see risk #14, and CPT-0163 for the arithmetic.
+  3. **`argMaxState`/`anyLastState` in the rollup cascade.** Today `samples_1m` computes
+     `sumState`/`min`/`max`/p95 only, which is right for a flow and wrong for a level: a backlog of 40
+     read every ten seconds sums to **240** per minute, in range, with nothing failing.
+  4. **An entity dimension.** The sort key leads on `project_id`; a warehouse indicator is scoped by
+     site, area, dock and shift. Overloading `project_id` with a site id is a semantic lie that gets
+     inherited; adding a column changes the sort key, so it is a migration with a backfill plan.
+  5. **A codec change for counters.** `value Float64 CODEC(Gorilla, …)` suits slowly-varying floats;
+     integer counters compress materially better as integers with `DoubleDelta`/`T64`.
+  6. **A separate `telemetry.security_events` table.** ADR-0036's own consequences already say bursty
+     events belong in their own table with their own sort key. A count supports vigilance; acting needs
+     the event's class, severity, location and actor.
+  7. **`Sample` gains entity and label fields**, so `scm-ingest`, the RowBinary encoder and the schema
+     guard all change together.
+  8. **A WMS connector, which does not exist at all** — and is the largest piece.
+  **The honest blocker:** there is no WMS connected, so today these indicators are *definitions
+  without a signal*. Building 2–7 before a source exists would be building against a guess.
 
 ### Phase M — Monitoring, the only application (ADR-0031/0034/0036)
 

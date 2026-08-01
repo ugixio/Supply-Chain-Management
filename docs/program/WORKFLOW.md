@@ -5,7 +5,7 @@ type: program
 owner: orchestrator
 status: active
 since: 2026-07-19
-updated: 2026-07-29
+updated: 2026-08-01
 relations:
   - { type: part-of, target: index-program }
   - { type: governed-by, target: governance-root }
@@ -80,7 +80,7 @@ mirror-coverage bar) · duplicated formulas across TS/Python with one past diver
 | C2b | ⬜ | ✅ | Landed: QMS-R8 (corrective-action effectiveness), FEFO in CPT-0036, plan immutability in CPT-0150. |
 | C4 | 🟦 | ✅ | C4 and C4b corrected the prose that described deleted code, across the docs and the operating layer. |
 | M2 | 🟦 | ✅ | Five migrations, the rollup cascade, split-privilege roles and quotas, applied twice in CI against a real ClickHouse to prove idempotency. |
-| M3 | 🟦 | 🟦 | **M3a done** — the ingestion core with 13 behaviour tests, no clock and no transport. **M3b next** — the transport adapter and the ClickHouse client, with retry and dead-letter. |
+| M3 | 🟦 | ✅ | **M3a** the ingestion core (13 tests, no clock, no transport) and **M3b** the ClickHouse adapter (40 tests, no server needed to test any failure path). |
 
 **Two further items the same review raised, both needing an owner decision rather than a fix:**
 
@@ -445,6 +445,42 @@ mirror-coverage bar) · duplicated formulas across TS/Python with one past diver
   Docker/Kubernetes packaging **remain live**, as the monitoring application's infrastructure.
   They are renumbered under Phase M when that work starts.
 
+### Phase W6 — Operational telemetry (raised 2026-08-01, decision open)
+
+> The owner asked for warehouse indicators — goods receipts processed, returns by discrepancy,
+> shipments pending, security events, sequences prepared and pending, pull lists processed — modelled
+> on the monitoring platform. **Investigated, and it split into two questions with different answers.**
+
+- ✅ **W6a · WHAT** — **The knowledge landed: CPT-0161..0166 in dept 06.** Definitions, formulas,
+  assumptions, project-chosen inputs and sources; no levels, no ingestion, no schema, no connector.
+  Allocated to **dept 06 and not to `00-platform`**, because that catalogue's own extension rule
+  admits a metric only if *a project's development* produces the signal — warehouse operations do not.
+  Two nodes (CPT-0164 sequence, CPT-0165 pull list) carry an explicit **vocabulary warning**: they are
+  APICS Dictionary industry terms, and no standards body fixes what one sequence or one list contains,
+  so counts are not comparable across operations.
+- ⚠ **W6b · HOW — needs an owner decision before any code.** Making the monitoring application ingest
+  operational warehouse telemetry is a **product-scope change** over ADR-0031/0034/0036, which say
+  *project supervision*. What it would require, found by inspection rather than assumed:
+  1. **An ADR** narrowing or extending those three.
+  2. **A metric `kind` (flow / level / event-count)** declared per concept node and enforced at ingest.
+     Without it the cascade corrupts levels — see risk #14, and CPT-0163 for the arithmetic.
+  3. **`argMaxState`/`anyLastState` in the rollup cascade.** Today `samples_1m` computes
+     `sumState`/`min`/`max`/p95 only, which is right for a flow and wrong for a level: a backlog of 40
+     read every ten seconds sums to **240** per minute, in range, with nothing failing.
+  4. **An entity dimension.** The sort key leads on `project_id`; a warehouse indicator is scoped by
+     site, area, dock and shift. Overloading `project_id` with a site id is a semantic lie that gets
+     inherited; adding a column changes the sort key, so it is a migration with a backfill plan.
+  5. **A codec change for counters.** `value Float64 CODEC(Gorilla, …)` suits slowly-varying floats;
+     integer counters compress materially better as integers with `DoubleDelta`/`T64`.
+  6. **A separate `telemetry.security_events` table.** ADR-0036's own consequences already say bursty
+     events belong in their own table with their own sort key. A count supports vigilance; acting needs
+     the event's class, severity, location and actor.
+  7. **`Sample` gains entity and label fields**, so `scm-ingest`, the RowBinary encoder and the schema
+     guard all change together.
+  8. **A WMS connector, which does not exist at all** — and is the largest piece.
+  **The honest blocker:** there is no WMS connected, so today these indicators are *definitions
+  without a signal*. Building 2–7 before a source exists would be building against a guess.
+
 ### Phase M — Monitoring, the only application (ADR-0031/0034/0036)
 
 > The single application this repository builds. Nothing here is invented: a metric exists because
@@ -533,7 +569,7 @@ mirror-coverage bar) · duplicated formulas across TS/Python with one past diver
   proxy denies `builds.clickhouse.com` by policy and there is no Docker daemon — so **CI is the first
   real execution of this schema**. That is the gate the owner chose doing its job; if it goes red, the
   migration is wrong and gets fixed.
-- 🟦 **M3 · HOW** — The Rust ingestion worker: normalize → validate → deduplicate → **batch**
+- ✅ **M3 · HOW** — The Rust ingestion worker: normalize → validate → deduplicate → **batch**
   insert. Ingestion is core work (ENG-R10).
   **M3a landed 2026-07-28 — `crates/scm-ingest`, the deterministic core, 13 tests.** Split from
   transport by rule, not by convenience: ENG-R10.1 forbids an HTTP server or DB client in a core
@@ -545,6 +581,41 @@ mirror-coverage bar) · duplicated formulas across TS/Python with one past diver
   refused) · speed ✅ (O(1) amortized dedup, no allocation per sample beyond the batch vector) ·
   scalability ✅ (memory bounded by `window/bucket`, not by sample count — asserted by a test) ·
   licence ✅ (no new dependency at all).
+
+  **M3b landed 2026-07-30 — `crates/scm-ingest-clickhouse`, the transport half, 40 tests.** No test
+  needs a server: the network sits behind a `Transport` trait and the retry waits behind a `Sleeper`,
+  so *unreachable*, *ambiguous*, *refused* and *budget exhausted* are all exercised deterministically.
+  Those are exactly the paths a live ClickHouse cannot be made to produce on demand.
+  **Four decisions went to the owner as a list (PLT-R6), all recommended options taken:** `ureq` +
+  rustls as the client; **RowBinary** on the wire with a **startup schema guard**; **at-least-once**
+  delivery, retrying an ambiguous failure in the knowledge that it may duplicate a row; and a
+  **bounded dead-letter file** for batches that outlive the retry budget.
+  **The guard is stronger than the one that was pitched, and the reason is worth keeping.** The
+  recommendation was a *column-order* check. Column order turned out not to need guarding at all,
+  because the INSERT names its columns and ClickHouse maps named columns by name. What does need
+  guarding is the **declared type**: `DateTime64(3)` widened to `DateTime64(6)` reads every
+  millisecond as a microsecond — a thousandfold error, in range, in the right column, with nothing
+  failing anywhere. The guard reads `system.columns` and compares types, so it also catches a table
+  that drifted from its own migration.
+  **Retry classification is by what is safe to do next, not by HTTP status.** `NotSent` cannot have
+  been applied, so retrying it is free; `Ambiguous` may have been applied, so retrying it is
+  at-least-once and the writer *says so* in its outcome and its counters rather than leaving an
+  operator to explain a doubled count. A 4xx is terminal — it will refuse the identical body forever,
+  so retrying only delays the dead letter.
+  **The dead letter is bounded at two generations**, giving a hard ceiling of `2 × max_bytes` no
+  matter how long an outage lasts. Past that the oldest records are dropped **on purpose and
+  counted**, because an unbounded dead-letter file turns one outage into two.
+  **ENG-R9 six checks** — lane ✅ (transport in an adapter, ENG-R10.1; no I/O entered the core) ·
+  best practice ✅ (network and sleeping both behind traits, body encoded once and reused across
+  attempts, errors classified by consequence) · security ✅ (credentials from the environment only,
+  never a default password; the INSERT-only identity from migration 0005; response header size capped;
+  SQL percent-encoded) · speed ✅ (RowBinary, one allocation per batch, no re-encode per retry) ·
+  scalability ✅ (dead letter bounded by bytes not by outage length; backoff capped so a batch cannot
+  wait past its own relevance) · licence ✅ (`ureq` MIT/Apache-2.0; **all 41 transitive crates audited
+  as permissive OSI** — no GPL, SSPL or BUSL, nothing unlicensed, per ADR-0002).
+  **Not built, and named so it is not assumed:** nothing wires the pipeline to the writer in a
+  running process yet. There is no binary, no configuration loading beyond `Endpoint::from_env`, and
+  no replay tool for the dead letter. Those belong with M4, where there is a service to host them.
   **Three decisions went to the owner as a list (PLT-R6), all recommended options taken:** dedup by
   bounded time window on `(project_id, metric, ts)`; flush on **size or age, whichever first**, with
   backoff and a dead-letter file; and an invalid sample is **dropped and counted by reason** rather

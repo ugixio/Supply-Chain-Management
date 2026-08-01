@@ -1,0 +1,31 @@
+[package]
+name = "scm-ingest-clickhouse"
+version = "0.1.0"
+description = "ClickHouse transport adapter for the telemetry ingester: RowBinary insert, retry, dead-letter (ADR-0036, ENG-R10.1)."
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+scm-ingest = { path = "../scm-ingest" }
+# MIT/Apache-2.0 — blocking HTTP with rustls. Chosen over reqwest because a batch flush is one
+# discrete blocking operation and there is no server here to keep responsive: an async runtime
+# would be 41 crates of machinery for a sequential write. rustls rather than native-tls keeps the
+# TLS implementation memory-safe and drops the OpenSSL C dependency. The whole transitive tree was
+# licence-audited at adoption: 41 crates, every one permissive OSI (ADR-0002, ENG-R9).
+ureq = "3"
+# MIT/Apache-2.0 — writes the dead-letter records. Cold path only; correct JSON string escaping is
+# not worth hand-rolling, and this crate is already in the workspace lock.
+serde_json = { workspace = true }
+
+[lints.rust]
+unsafe_code = "forbid"
+
+[lints.clippy]
+# The adapter inherits the core's discipline (ENG-R10): this is still the ingest path, and a silent
+# truncation on the wire is worse here than in the core because it lands in a table.
+cast_possible_truncation = "deny"
+cast_precision_loss = "deny"
+unwrap_used = "deny"
+expect_used = "deny"

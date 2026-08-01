@@ -11,7 +11,7 @@
 
 [workspace]
 resolver = "3"
-members = ["crates/scm-ingest", "crates/scm-money"]
+members = ["crates/scm-ingest", "crates/scm-ingest-clickhouse", "crates/scm-money"]
 
 [workspace.package]
 edition = "2024"
@@ -23,7 +23,8 @@ publish = false
 # MIT — exact 96-bit fixed-point decimal. Chosen over `bigdecimal` because money here is
 # bounded minor units, and a fixed 96-bit mantissa is allocation-free on the hot path.
 rust_decimal = { version = "1", default-features = false, features = ["std"] }
-# MIT/Apache-2.0 — test-only, reads the shared golden fixture (U8).
+# MIT/Apache-2.0 — reads the shared golden fixture (U8) in tests, and writes dead-letter
+# records in the ClickHouse adapter.
 serde_json = "1"
 
 # Release profile for the artefact that will back `napi-rs`: optimize, and keep overflow

@@ -5,7 +5,7 @@ type: governance
 owner: orchestrator
 status: active
 since: 2026-07-19
-updated: 2026-07-29
+updated: 2026-08-02
 relations:
   - { type: part-of, target: index-governance }
   - { type: governed-by, target: governance-root }
@@ -135,21 +135,25 @@ Every non-allowlisted `.md` carries YAML front-matter:
 
 ## 11. Enforcement (gates)
 
-All thirteen are wired into `tools/verify.py` and run by `make verify` (ADR-0012):
+All fourteen are wired into `tools/verify.py` and run by `make verify` (ADR-0012):
 - **G1** no stray docs · **G2** front-matter validity · **G3** ID uniqueness ·
   **G4** link integrity · **G5** no orphans (`part-of` traversal) · **G6** authority
   acyclicity · **G7** status/supersession integrity · **G8** English-only, screened for
   non-English function words (this repo's Language Policy, `CLAUDE.md`; ADR-0003) ·
   **G9** context budget and ADR disclosure · **G10** standards provenance · **G11** retired
   rules stay retired · **G12** a rule citation names an ID, never a family wildcard ·
-  **G13** `updated:` matches the file's real last change.
+  **G13** `updated:` matches the file's real last change · **G14** a load set is priced as a
+  whole — what a session reads *together*, declared in `docs/program/load-sets.md` (ADR-0041).
 
 **A gate that cannot check must say so.** `tools/verify.py` distinguishes *passed* from *could not
 run*: where a check depends on the environment — G13 needs HEAD's parent present to diff against —
 it prints an INFO line naming the reason instead of letting a skip read as a pass. G13 was RED in CI
 three times before this, because a shallow checkout made its scope meaningless while the local run
 stayed green (improvement-register #12). **A new gate is proven by planting a violation in the
-environment CI uses, not by reading its code.**
+environment CI uses, not by reading its code.** Since ADR-0042 that proof is automated rather than
+remembered: `tools/test_gates.py` plants one violation per gate in a throwaway worktree and requires
+that gate — and no other — to fire. It runs in `make verify-full`, and it contradicted its own
+author on its first green run.
 
 **What a gate can and cannot certify.** Each of these is a *mechanical* property. None of them
 can tell a standard from a plausible-looking invention — that is risk #11, it is open, and it is

@@ -83,7 +83,7 @@ Full reference: [docs/standards/REGULATORY_FRAMEWORK.md](docs/standards/REGULATO
 ## Working on this repository
 
 ```bash
-make verify        # doc gates G1-G13 + typecheck + Rust tests — run after every layer
+make verify        # doc gates G1-G14 + typecheck + Rust tests — run after every layer
 make verify-full   # the merge gate: adds the lockfile check, cargo fmt and clippy
 make verify-schema # the telemetry schema — needs a reachable ClickHouse; never skips
 ```

@@ -137,6 +137,44 @@ what gets built:
   0 commits not already in the base. This environment's git proxy refuses `delete` with HTTP 403.
   Risk #3 closes when the default is `main`.
 
+### Phase X — How the AI uses the context (raised and started 2026-08-02)
+
+> **Why this phase exists.** The owner asked for research into improvements, verified against what
+> this repository actually is: **a context an AI follows to build, monitor and develop projects**.
+> Two of the findings came from measuring the repository rather than from the literature, and both
+> were holes nothing was looking at.
+
+- ✅ **X1 · The gates are tested (ADR-0042).** `verify.py` was 638 lines and thirteen gates over 230
+  documents with **zero tests**, one `assert` and no per-gate functions. Improvement-register #12
+  had already written the rule — *a gate is proven by planting a violation* — and it had been
+  performed once, by hand, for G13. `tools/test_gates.py` now does it for every gate on every merge.
+- ✅ **X2 · Load sets are priced (ADR-0041, gate G14).** G9 budgets a document; nothing budgeted what
+  a session reads **together**, which is what the long-context evidence is about. Measured:
+  `planning` reads **33,804 words (~45,000 tokens)**, 91 % of it the ADR index and this file —
+  the two largest documents in the repository, loaded on every planning task, and **neither had a
+  G9 budget** because none exists for type `adr` or `program`.
+- ⬜ **X3 · Split the ADR bodies out of the index.** The structural answer G14 points at, and the
+  ADR index's own footer already anticipates it (`NNNN-title.md` "when extensive"). The index keeps
+  its one-line-per-decision entries; the bodies move to files. `planning` is the only load set
+  carrying a **ceiling instead of a ratchet** precisely because the index is append-only by design
+  (ADR-0011) — G14 went red on the very commit that introduced it when two ADRs were added. **When
+  36,000 is next reached, the answer is this split, not another raise.**
+- ⬜ **X4 · A context-adherence evaluation.** The estate verifies its own consistency with fourteen
+  gates and verifies **nowhere** that an AI reading this context produces something conforming to
+  it — the premise of the project is unmeasured. The shape is IFEval's: tasks whose success is
+  checked by a **deterministic program**, never by a judge model (the bias data is in the research
+  dossier, and a judge cannot be a gate). The checkers largely exist already — they are the gates,
+  run against a task's output instead of against the repo.
+- ⬜ **X5 · The missing documentation form.** Against the Diátaxis four (tutorial · how-to ·
+  reference · explanation) the estate is 182 `concept` + 20 `rule` of **reference** and the ADRs as
+  **explanation**, with **no how-to at all**. `CLAUDE.md` promises a project can learn *"which
+  departments it needs **and how to implement them**"*; the second half has no documentary form.
+  **The scoping caveat matters more than the gap:** a how-to about *running a department* would be
+  method a company can reasonably choose — policy, and it would fail the inclusion test, which is
+  probably why none was ever written. The how-tos that belong are about **using this context**
+  (onboarding a project onto it, adding a concept node, retiring a rule). Adding the type touches
+  the closed `type` vocabulary, so it needs an ADR (knowledge-architecture §12).
+
 ### Phase U — Unification (context-skeleton adoption)
 - ✅ **U1 · orchestrator** — Skeleton added on branch `feat/context-skeleton`: tier tree,
   knowledge-architecture (instantiated allowlist), id-registry (SCM live; 14 families

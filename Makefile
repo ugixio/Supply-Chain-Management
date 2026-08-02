@@ -20,14 +20,21 @@
 #
 # CI runs: make verify-full  &&  make verify-schema
 
-.PHONY: verify verify-full verify-schema doc-gates typecheck deps-locked test-rs lint-rs
+.PHONY: verify verify-full verify-schema doc-gates gate-mutants typecheck deps-locked test-rs lint-rs
 
 verify: doc-gates typecheck test-rs
 
-verify-full: verify deps-locked lint-rs
+verify-full: verify gate-mutants deps-locked lint-rs
 
 doc-gates:
 	python3 tools/verify.py
+
+# Do the gates still catch what they claim to? Plants one violation per gate in a throwaway
+# worktree and asserts each fires — and that no other does. In `verify-full` rather than
+# `verify` because it runs the gates fourteen times over and belongs at the merge boundary,
+# not in the loop a session runs after every layer.
+gate-mutants:
+	python3 tools/test_gates.py
 
 typecheck:
 	pnpm -s exec tsc --noEmit

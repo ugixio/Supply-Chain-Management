@@ -5,7 +5,7 @@ type: adr
 owner: orchestrator
 status: active
 since: 2026-07-19
-updated: 2026-07-29
+updated: 2026-08-02
 relations:
   - { type: part-of, target: index-docs }
   - { type: governed-by, target: governance-root }
@@ -69,6 +69,7 @@ relations:
 - ADR-0035 — **Rust is the complete core; it replaces the TypeScript domain.** Business rules, invariants, state machines, exact arithmetic, the hot path and ingestion all move to Rust; **Python is the tools layer** (models, statistics, optimization, ML) reached over the schema-first gRPC contract; TypeScript survives **only inside NestJS and Next.js** as framework code, never as core logic. **Supersedes the TypeScript-domain clause of ADR-0001**, narrows ADR-0033. Migration is incremental (strangler), guarded by the U8 golden vectors. (Accepted — owner-directed 2026-07-22)
 - ADR-0036 — **Telemetry data model at tens-of-thousands scale:** continuous project-supervision telemetry in ClickHouse — `(project_id, metric, ts)` sort key, monthly partitions, `Delta`+`ZSTD` / `Gorilla` codecs, `LowCardinality` labels, `AggregatingMergeTree` rollup cascade (raw→1m→1h→1d), short raw TTL with long rollup retention, batched async inserts from the Rust ingester. Resolves the L1 volume question. (Accepted — owner-directed 2026-07-22)
 - ADR-0038 — **Improvement-recommendation gate:** every task carries a search for a better implementation *inside the existing lanes* — algorithmic cost, compute and memory, data-structure and boundary choice, clean code and structure, security. When a request lacks a detail whose absence would change what gets built, the detail is **never guessed and never asked in prose**: it is presented as a **selectable list of recommended options**, each naming its trade-off, recommendation first. Selected options are implemented in the same turn under the normal gates; declined ones are recorded with their reason so they are not re-proposed. **Adopting a new technology is out of scope by construction** — that remains ADR-0002/ENG-R8 and takes its own decision. Materializes as **PLT-R6**; extends PLT-R1 (ADR-0032) from refining the prompt to resolving what the prompt left open. (Accepted — owner-directed 2026-07-27)
+- ADR-0039 — **A measurement-identity axis (`MSR-R*`):** arithmetic that constrains how a measure may be computed and aggregated, cited once instead of restated per department. Opens with **MSR-R1** (a ratio aggregates from its components — `Σnum ÷ Σden`, never the mean of ratios) and **MSR-R2** (a level is never summed; valid aggregations are last, max, min or time-weighted average). Both are identities, so both pass the inclusion test. Motivated by finding the same identities already scattered as QMS-R7, RSK-R5, PRC-R4, SPL-R5, WHS-R5 and ORD-R5 — each a special case restated for want of a general home. The department rules stay where they are. (Accepted — owner-directed 2026-08-01)
 - ADR-0037 — **The Global Context holds only externally-fixed standards; the fictitious SCM application is retired.** The context is the source a project consults to learn *which departments it needs and how to implement them* — nothing more. It carries what a standards body, a regulator or an arithmetic identity fixes; it never carries what an organization chooses (thresholds, targets, weightings, rating bands, method mandates). Consequently **~25,700 lines of invented application code are deleted** (`packages/domain`, `services/calc`, `crates/scm-core`), concept nodes become **definitions without parameters**, and the **only application built here is the monitoring project**. Supersedes the two-language-SCM-application premise of ADR-0001; narrows ADR-0015 (nodes define, they do not own code) and ADR-0035 (the Rust core serves the monitoring platform, not 14 departments of invented rules). (Accepted — owner-directed 2026-07-27)
 
 ---
@@ -1711,6 +1712,61 @@ until ADR-0037 removed them.
 - *Ask in prose* — rejected: it reads as narration, and the decision it contains gets skimmed.
 - *Selected options become backlog entries* — rejected: mechanically tidier, but improvements chosen
   and then deferred go stale, and the owner has already said yes.
+
+---
+
+## ADR-0039 — A measurement-identity axis: aggregation rules are cited once, not restated per department
+
+**Status:** Accepted (owner-directed 2026-08-01)
+**Extends:** ADR-0037 (only externally-fixed statements belong here), ADR-0015 (concept nodes).
+
+**Context.** Modelling a warehouse shift scorecard surfaced two arithmetic facts that the catalogue
+relies on everywhere and states nowhere:
+
+1. **A ratio must be aggregated from its components.** Dozens of nodes define ratios — OTD, OTIF,
+   fill rate, PPM, perfect order rate, bin accuracy, receipt rejection. None says how to aggregate
+   one, and the intuitive way is wrong: three periods of 2/100, 3/10 and 1/90 give 3.0 % pooled and
+   11.0 % averaged. The error grows with the spread of the denominators.
+2. **A level is not a flow.** Summing a backlog over time produces a quantity that never existed.
+   Valid aggregations for a level are last, max, min or time-weighted average.
+
+Both are identities, so both pass the inclusion test — nothing an organization could choose. The
+question was where they go.
+
+**What the estate already showed.** The identities are not new to the repository; they are *scattered*.
+**QMS-R7** fixes the opportunity base for defect rates. **RSK-R5** keeps an ordinal score ordinal.
+**PRC-R4, SPL-R5, WHS-R5** and **ORD-R5** each state a conservation for one process. Every one is a
+special case of something general, restated because there was no general place to put it. That is the
+same duplication in rule form that ADR-0038 addressed in prose.
+
+**Decision.** Create a cross-cutting axis **`docs/30-foundation/measurement/`** with the family
+**`MSR-R*`**, holding arithmetic that constrains how a measure may be computed and aggregated,
+independent of what it measures. It opens with **MSR-R1** (ratio aggregation) and **MSR-R2**
+(flow versus level). Concept nodes **cite** the rule; they do not restate the arithmetic. The
+department rules above stay where they are — they carry domain detail the axis deliberately does not.
+
+**Alternatives considered.**
+- *Add them to `scm-core/rule.md`.* The natural first choice, and the file is at 963 of its 1,000-word
+  budget. Two rules do not fit, and the only trimmable text there is legal citation. Raising the budget
+  to make room would have been tuning a gate to fit a change rather than choosing where the change
+  belongs.
+- *State them in each node.* This is what happened by accident: the flow/level argument was written out
+  in three warehouse nodes before this axis existed. It does not scale and it drifts.
+- *A concept node instead of a rule.* A concept node states meaning; these state a constraint on what
+  may be done with a value. That is law, and it is the same shape as SCM-R14 — an arithmetic identity
+  already carried as a rule.
+
+**Consequences.**
+- (+) A node cites one ID instead of carrying a paragraph; three warehouse nodes shrink immediately.
+- (+) The remaining identities found in the same review — net versus absolute variance, measurement
+  coverage, averaging an ordinal scale — have somewhere to land without another structural decision.
+- (+) `MSR-R1`'s design consequence is stated where a builder will read it: a system storing only the
+  computed ratio cannot comply afterwards. That is a schema decision, not a reporting one.
+- (−) A seventeenth rule family. Justified by the scattering evidence, but it is one more prefix to
+  know, and the `30-foundation` index gains an axis that was not on its candidate list.
+- (−) The special cases stay duplicated in spirit. Consolidating QMS-R7 and RSK-R5 into the axis would
+  be a bigger change with retirement notes and citation sweeps; it is deliberately **not** done here,
+  and it is the obvious follow-up if the axis proves useful.
 
 ---
 

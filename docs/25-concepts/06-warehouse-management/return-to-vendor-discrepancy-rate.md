@@ -5,7 +5,7 @@ type: concept
 owner: orchestrator
 status: active
 since: 2026-08-01
-updated: 2026-08-01
+updated: 2026-08-02
 relations:
   - { type: part-of, target: index-concepts-06-warehouse-management }
   - { type: governed-by, target: index-adr }
@@ -44,10 +44,10 @@ relations:
   contract's tolerance (CPT-0027), a short shipment closed as complete. Only the ones that leave
   count here, so this rate is always lower than the discrepancy rate and the two are not
   substitutes.
-- **Numerator and denominator must share the granule and the period.** Returns lag receipts: a
-  receipt in one week can be returned the next. Dividing this week's returns by this week's receipts
-  measures a ratio of two different populations. Either cohort the returns to their receipt period
-  or state plainly that the rate is a period ratio, not a cohort rate.
+- **Returns lag receipts, so MSR-R1's same-population requirement bites here.** A receipt in one
+  week can be returned the next; dividing this week's returns by this week's receipts compares two
+  populations. Either cohort the returns to their receipt period, or say plainly that the figure is a
+  period ratio and not a cohort rate.
 - **Does not apply to customer returns.** Those are reverse logistics with their own economics
   (CPT-0091); the cause, the counterparty and the remedy all differ.
 
@@ -68,6 +68,7 @@ supplier's picking and 3 expired point at its stock rotation, which are two diff
 
 ## Governing rules
 
+- **MSR-R1** — the rate aggregates from pooled counts, over one population and one period.
 - **SCM-R3** — a return is a reversing movement, never an erasure of the receipt; the audit trail
   keeps both or the rate cannot be reconstructed.
 - **SCM-R4** — the physical return carries its accounting consequence.

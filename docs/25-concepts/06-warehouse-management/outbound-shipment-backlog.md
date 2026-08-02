@@ -5,7 +5,7 @@ type: concept
 owner: orchestrator
 status: active
 since: 2026-08-01
-updated: 2026-08-01
+updated: 2026-08-02
 relations:
   - { type: part-of, target: index-concepts-06-warehouse-management }
   - { type: governed-by, target: index-adr }
@@ -39,11 +39,9 @@ What *is* an identity is its relationship to throughput and waiting time — **L
 
 ## Assumptions and limits
 
-- **A level must never be summed over time, and this is arithmetic, not preference.** Reading a
-  backlog of 40 six times in a minute and adding them gives 240, which is not a quantity that
-  exists. Valid aggregations over an interval are the **last** value, the maximum, the minimum, or
-  the time-weighted average — never the sum, and never the count of readings. A telemetry rollup
-  built for flows will silently produce the 240.
+- **This is a level: see MSR-R2 for which aggregations are valid.** The consequence specific to
+  this measure is that a telemetry rollup built for flows will sum it silently, and a backlog six
+  times its real size looks entirely plausible on a chart.
 - **`W = L / λ` needs a system in steady state.** During a surge, arrivals exceed completions and
   the ratio understates the wait — exactly when someone is looking at it. Read it as an estimate
   that degrades precisely under load (CPT-0159 states the condition).
@@ -64,12 +62,12 @@ What *is* an identity is its relationship to throughput and waiting time — **L
 ## Worked example
 
 *Illustrative only.* 40 shipments pending; completions run 20 per hour. Then `W = 40 / 20 = 2 hours`
-for a shipment joining the queue now. If the same 40 is read every ten minutes and a dashboard sums
-the six readings in the hour, it displays **240** — a backlog six times reality, with nothing
-failing. That is the failure mode this node exists to prevent.
+for a shipment joining the queue now.
 
 ## Governing rules
 
+- **MSR-R2** — a level; valid aggregations are last, maximum, minimum or time-weighted average, and
+  never the sum.
 - **SCM-R9** — the reading instant is an ISO 8601 UTC timestamp; a level without its instant cannot
   be ordered, compared or aggregated correctly.
 

@@ -5,7 +5,7 @@ type: concept
 owner: orchestrator
 status: active
 since: 2026-08-01
-updated: 2026-08-01
+updated: 2026-08-02
 relations:
   - { type: part-of, target: index-concepts-06-warehouse-management }
   - { type: governed-by, target: index-adr }
@@ -46,8 +46,7 @@ relations:
   across periods; use the list count only for queue reasoning.
 - **"Fulfilled" means complete to the point of use.** Staged at the dock is not fulfilled if the line
   cannot consume it. Where the boundary sits decides the number.
-- **Do not average per-list percentages carelessly.** That weights a one-line list equally with a
-  fifty-line one. Pool the lines, or say the figure is an unweighted mean.
+- **Pool the lines rather than averaging per-list percentages (MSR-R1).**
 - **Does not apply as an outbound customer service level** — that is fill rate on a different
   population, and mixing them hides which side is short.
 
@@ -68,6 +67,7 @@ smaller lists, the count would read 96 — twice as busy, identical material mov
 
 ## Governing rules
 
+- **MSR-R1** — the fill ratio aggregates from pooled lines, not from a mean of per-list percentages.
 - **WHS-R5** — a list cannot report more fulfilled than it requested; the conservation is what makes
   fill auditable rather than self-reported.
 - **SCM-R10** — requested and fulfilled quantities carry their GS1 units, or the ratio compares

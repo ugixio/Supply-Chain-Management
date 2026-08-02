@@ -5,7 +5,7 @@ type: rule
 owner: orchestrator
 status: active
 since: 2026-07-20
-updated: 2026-07-27
+updated: 2026-08-02
 relations:
   - { type: part-of, target: index-contexts }
   - { type: governed-by, target: index-adr }
@@ -38,6 +38,8 @@ relations:
 - **QMS-R7:** Defect rates are stated **with their opportunity base**. PPM counts defective units
   per million units; DPMO counts defects per million *opportunities*, so a product with several
   inspection points has more opportunities than units and the two numbers are not comparable.
+  The general case — a ratio aggregates from its components, over one population and one period — is
+  **MSR-R1**; this rule is its defect-rate instance and adds the opportunity/unit distinction.
   *A measurement identity.*
 
 ## Retired rules

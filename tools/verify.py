@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Doc gates — the executable form of docs/00-governance/knowledge-architecture.md §11.
 
-Implements gates G1-G13 over the tracked knowledge tree (ADR-0012, from the ugixio context
+Implements gates G1-G14 over the tracked knowledge tree (ADR-0012, from the ugixio context
 skeleton ADR-0001/0004). Python 3, standard library only.
 
 G8 (English-only) and G13 (`updated:` truthfulness) were both added on 2026-07-29, and both
@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import datetime
 import fnmatch
+import glob
 import os
 import re
 import subprocess
@@ -59,6 +60,18 @@ PATH_BUDGETS = (
 )
 TYPE_BUDGETS = {"skill": 1500, "rule": 1000, "concept": 700}
 ADR_INDEX_LINE = re.compile(r"^-\s+ADR-(\d{4})\s+—", re.M)
+
+# --- G14 — load-set budgets (ADR-0041) ------------------------------------------------
+#
+# G9 prices a document. Nothing priced what a session opens *together*, which is the quantity
+# the long-context evidence is actually about: degradation is continuous in total input, so
+# fifteen individually-compliant documents can still put the middle of the window out of use.
+# The manifest lives in prose because it is a statement about how this context is meant to be
+# read; the gate parses one fenced block out of it so the declaration and the enforcement
+# cannot drift apart.
+LOAD_SETS_DOC = f"{DOCS_DIR}/program/load-sets.md"
+LOAD_SET_FENCE = re.compile(r"^```load-sets$(.*?)^```$", re.M | re.S)
+LOAD_SET_HEADER = re.compile(r"^(\S+)\s*=\s*(\d+)$")
 
 # --- G10 — standards provenance (ADR-0015 as narrowed by ADR-0037) --------------------
 #
@@ -228,6 +241,7 @@ class Gates:
             "G12": "rule citations name an ID",
             "G8": "English-only (screened)",
             "G13": "`updated:` matches the real last change",
+            "G14": "load-set budgets (what is read together)",
         }
         ok = True
         for gate in sorted(names, key=lambda name: int(name[1:])):
@@ -630,6 +644,52 @@ def main() -> int:
     if skip_reason:
         gates.note(f"G13 checked nothing: {skip_reason}. The stamp was gated when the change was "
                    f"authored (dirty tree) and on the branch push (single parent, depth 2)")
+
+    # G14 — a load set is priced as a whole (ADR-0041). The largest set is printed on every run
+    # whether or not it passes: the failure mode this gate exists for is growth nobody noticed,
+    # and a number seen once a day is what stops that.
+    try:
+        manifest = open(LOAD_SETS_DOC, encoding="utf-8").read()
+    except OSError:
+        gates.fail("G14", f"{LOAD_SETS_DOC} is missing — the load-set manifest is the gate's input")
+    else:
+        fence = LOAD_SET_FENCE.search(manifest)
+        if not fence:
+            gates.fail("G14", f"{LOAD_SETS_DOC}: no ```load-sets block to read")
+        else:
+            sets, name, budget = {}, None, 0
+            for line in fence.group(1).splitlines():
+                if not line.strip() or line.lstrip().startswith("#"):
+                    continue
+                header = LOAD_SET_HEADER.match(line.strip())
+                if header and not line.startswith((" ", "\t")):
+                    name, budget = header.group(1), int(header.group(2))
+                    sets[name] = (budget, [])
+                elif name:
+                    sets[name][1].append(line.strip())
+                else:
+                    gates.fail("G14", f"{LOAD_SETS_DOC}: '{line.strip()}' precedes any set header")
+            measured = {}
+            for name, (budget, members) in sets.items():
+                total = 0
+                for member in members:
+                    matches = sorted(glob.glob(member, recursive=True))
+                    if not matches:
+                        gates.fail("G14", f"load set '{name}' names '{member}', which matches no "
+                                          f"file — a manifest pointing at nothing prices nothing")
+                        continue
+                    for path in matches:
+                        total += len(open(path, encoding="utf-8").read().split())
+                measured[name] = total
+                if total > budget:
+                    gates.fail("G14", f"load set '{name}': {total} words read together exceeds its "
+                                      f"budget of {budget} — split the set or move the budget in "
+                                      f"an ADR, but do not let it drift")
+            if measured:
+                worst = max(measured, key=measured.get)
+                gates.note(f"G14 largest load set is '{worst}' at {measured[worst]:,} words "
+                           f"(~{int(measured[worst] * 1.33):,} tokens); "
+                           + " · ".join(f"{n} {w:,}" for n, w in sorted(measured.items())))
 
     return gates.report(len(docs))
 

@@ -1,6 +1,6 @@
 ---
 id: index-adr
-title: "Architecture Decision Records (ADR-0001..0040)"
+title: "Architecture Decision Records (ADR-0001..0042)"
 type: adr
 owner: orchestrator
 status: active
@@ -71,6 +71,8 @@ relations:
 - ADR-0038 — **Improvement-recommendation gate:** every task carries a search for a better implementation *inside the existing lanes* — algorithmic cost, compute and memory, data-structure and boundary choice, clean code and structure, security. When a request lacks a detail whose absence would change what gets built, the detail is **never guessed and never asked in prose**: it is presented as a **selectable list of recommended options**, each naming its trade-off, recommendation first. Selected options are implemented in the same turn under the normal gates; declined ones are recorded with their reason so they are not re-proposed. **Adopting a new technology is out of scope by construction** — that remains ADR-0002/ENG-R8 and takes its own decision. Materializes as **PLT-R6**; extends PLT-R1 (ADR-0032) from refining the prompt to resolving what the prompt left open. (Accepted — owner-directed 2026-07-27)
 - ADR-0039 — **A measurement-identity axis (`MSR-R*`):** arithmetic that constrains how a measure may be computed and aggregated, cited once instead of restated per department. Opens with **MSR-R1** (a ratio aggregates from its components — `Σnum ÷ Σden`, never the mean of ratios) and **MSR-R2** (a level is never summed; valid aggregations are last, max, min or time-weighted average). Both are identities, so both pass the inclusion test. Motivated by finding the same identities already scattered as QMS-R7, RSK-R5, PRC-R4, SPL-R5, WHS-R5 and ORD-R5 — each a special case restated for want of a general home. The department rules stay where they are. (Accepted — owner-directed 2026-08-01)
 - ADR-0040 — **One long-lived line, named `main`, and nothing left hanging:** the integration model becomes **ENG-R11** — every pull request bases on `main`; a work branch is short-lived and restarted from `main` after each merge; a merged branch is deleted with the merge, because a branch with zero unmerged commits is a defect and not an archive; a turn ends with the pull request merged or with the reason written into its report; the base is current at merge time or the gate is re-run; and the merge is a **merge commit**, because G13 diffs `HEAD` against its parent and a squash would fail `updated:` on every file it carries. Resolves risk #3, open since 2026-07-19. (Accepted — owner-directed 2026-08-02)
+- ADR-0041 — **A load set is priced as a whole, not document by document:** G9 has always budgeted single documents, but the long-context evidence is about **total input read together** — degradation is continuous rather than a cliff (Chroma, 18 frontier models), and past roughly half a full window the U-shaped position curve gives way to distance-from-the-end (Liu et al. 2024; Veseli et al. 2025). Load sets are declared in `docs/program/load-sets.md` and priced by gate **G14**, which fails over budget, fails on a member matching no file, and prints the largest set every run. Measured on adoption: `planning` reads **32,009 words (~42,571 tokens)**, 91 % of it the ADR index and `WORKFLOW.md` — the two largest documents in the repository, both loaded on every planning task, and **neither had a G9 budget** because none exists for `adr` or `program`. Budgets are a ratchet a few percent above measurement, and are this repository's engineering decision, not a number the research fixes. (Accepted — owner-directed 2026-08-02)
+- ADR-0042 — **The gates are proven by mutation, on every merge:** improvement-register #12 already required that a gate be proven by planting a violation in the environment CI uses — and that proof had been performed exactly once, by hand, for G13. `verify.py` was 638 lines and thirteen gates over 230 documents with **zero tests**. `tools/test_gates.py` now plants one violation per gate and asserts the gate fires **and no other does**, end-to-end against a real worktree populated from the index, wired into `make verify-full`. It contradicted its own author on its first green run — a predicted G3→G5 collateral that does not happen — which is the argument for running mutants rather than reasoning about them. (Accepted — owner-directed 2026-08-02)
 - ADR-0037 — **The Global Context holds only externally-fixed standards; the fictitious SCM application is retired.** The context is the source a project consults to learn *which departments it needs and how to implement them* — nothing more. It carries what a standards body, a regulator or an arithmetic identity fixes; it never carries what an organization chooses (thresholds, targets, weightings, rating bands, method mandates). Consequently **~25,700 lines of invented application code are deleted** (`packages/domain`, `services/calc`, `crates/scm-core`), concept nodes become **definitions without parameters**, and the **only application built here is the monitoring project**. Supersedes the two-language-SCM-application premise of ADR-0001; narrows ADR-0015 (nodes define, they do not own code) and ADR-0035 (the Rust core serves the monitoring platform, not 14 departments of invented rules). (Accepted — owner-directed 2026-07-27)
 
 ---
@@ -1841,6 +1843,137 @@ being reviewable. Nothing in the repository said so, so nothing would have caugh
   That is the one moment this decision creates the condition clause 1 forbids; it is bounded by a
   single setting change, and `main` is created **after** the last merge into the old trunk so the
   two never diverge.
+
+---
+
+## ADR-0041 — A load set is priced as a whole, not document by document
+
+**Status:** Accepted (owner-directed 2026-08-02)
+**Materializes as:** gate **G14**, manifest `docs/program/load-sets.md`
+
+**Context.** G9 has priced documents individually since ADR-0012 — 700 words for a concept, 1,000
+for a rule, 2,600 for `CLAUDE.md`. Nothing has ever priced **what a session opens together**, and
+that is the quantity the evidence is about.
+
+The 2025 long-context work is consistent on the shape of the problem, and it is not the shape G9
+assumes. Degradation is **continuous in total input** rather than a cliff at the window limit:
+Chroma's evaluation of eighteen frontier models found accuracy falling at every increment tested, so
+a 200K window can be measurably worse at 50K than at 5K. Liu et al. (TACL 2024) established the
+U-shaped position curve — primacy and recency preserved, the middle degraded — and Veseli et al.
+(2025) sharpened it: the U holds while a context is under about half full, and past that point
+performance tracks **distance from the end** instead. Both findings say the same thing for this
+repository: the risk is not one oversized document, it is **many compliant ones arriving together**.
+
+Measured on the day this was written, the estate says so plainly. The `planning` load set — what a
+session reads to answer *"what should I do next?"* — is **32,009 words (~42,571 tokens)**, and 91 %
+of it is two files: the ADR index at 17,422 words and `WORKFLOW.md` at 11,679. **Neither carries a
+G9 budget**, because G9 budgets by `type` and there is no budget for `adr` or `program`. The two
+largest documents in the repository are the two `CLAUDE.md` instructs a session to load on every
+planning task, and they are the two nothing bounded.
+
+**Decision.** Load sets are **declared** in `docs/program/load-sets.md` and **priced** by G14. A set
+names a budget in words and the files a session actually opens for that kind of task; the gate sums
+them, fails over budget, fails on a member that matches no file, and prints the largest set's total
+on every run whether or not it passes.
+
+Four of the five budgets are a **ratchet, not an endorsement**: a few percent above today's
+measurement, so nothing grows quietly. `planning` is not, and the gate is the reason.
+
+**G14 went red on the commit that introduced it.** `planning` measured 32,009 words; the budget was
+set at 33,000; writing this ADR and ADR-0042 added 1,674 words to the ADR index and the gate failed.
+The change was not wrong — the ratchet was. The ADR index is **append-only by design** (ADR-0011),
+so a budget a few percent above it turns red the next time anyone records a decision, and a gate
+that punishes the practice it protects gets disabled rather than obeyed. `planning` therefore
+carries a **ceiling with a structural answer attached**: 36,000, and when it is next reached the
+answer is the split, not another raise. The other four sets contain no append-only document and stay
+ratcheted.
+
+**Why the budget is not derived from the research.** The evidence says degradation is continuous and
+begins early. It does **not** fix a safe number, and no standards body does either — so a number
+presented as though the literature fixed it would be exactly the anti-pattern in `CLAUDE.md`, a
+textbook figure read as a specification. These budgets are **this repository's own engineering
+decision**, in the same category as G9's, and they are labelled that way in the manifest.
+
+**Alternatives considered.**
+- *Give `adr` and `program` a G9 type budget.* The obvious move, and it fails immediately: the ADR
+  index is 17× a rule's budget and cannot be trimmed to it — it is forty decision bodies. A budget
+  that can only be met by deleting history is not a budget.
+- *Count tokens with a real tokenizer.* More accurate and it adds a dependency to a lane that has
+  none. Words × 1.33 is the approximation ADR-0012 already uses; consistency beats precision here.
+- *Infer the load set from what a session actually read.* No mechanism exists to observe that, and
+  inventing one would measure a transcript rather than the instructions. The manifest binds the
+  **instructions**: if `CLAUDE.md` says to read something, it belongs in a set and gets priced.
+- *Do nothing until a model demonstrably fails.* The failure mode is silent degradation, not an
+  error, so waiting means never noticing.
+
+**Consequences.**
+- (+) The number is visible on every run. `G14 largest load set is 'planning' at 32,009 words` is
+  printed by the gate, so growth is seen rather than discovered.
+- (+) A new instruction that tells a session to read another document now has a price attached.
+- (−) **`planning` is over any comfortable reading of the evidence and the budget blesses it.** The
+  honest fix is structural and is recorded as backlog, not hidden: the ADR index is an index *and*
+  forty bodies in one file, and its own footer already anticipates the split
+  (`NNNN-title.md` "when extensive"). Until that split, a lower budget would only mean a red gate.
+- (−) The manifest is a declaration of intent, not an observation. It can be honest and still be
+  incomplete; it is only as good as the instructions it mirrors.
+
+---
+
+## ADR-0042 — The gates are proven by mutation, on every merge
+
+**Status:** Accepted (owner-directed 2026-08-02)
+**Materializes as:** `tools/test_gates.py`, wired into `make verify-full`
+
+**Context.** Improvement-register #12 already stated the rule, in these words: *a new gate is proven
+by planting a violation in the environment CI uses, not by reading its code.* It was learned the
+expensive way — G13 was green locally and RED in CI three times.
+
+The rule was written down and then performed **exactly once, by hand, for one gate**. Measured
+before this decision: `verify.py` was 638 lines implementing thirteen gates over 230 documents with
+**zero tests**, no per-gate functions and one `assert`. The next edit could break G4 in silence and
+every run would still print GREEN — the same shape as ADR-0037, where green gates certified that
+invented policy was well-organised.
+
+**Decision.** `tools/test_gates.py` plants **one violation per gate** and asserts that the gate
+fires **and that no other does**. It runs in `make verify-full`, at the merge boundary, not in the
+`make verify` loop a session runs after every layer.
+
+Three properties are deliberate:
+
+1. **End-to-end, not unit.** `verify.py` is executed as a subprocess against a real git worktree,
+   because that is what CI does. The one time this repository trusted a gate's code over its
+   behaviour it went red three times.
+2. **The worktree is populated from the index**, so the harness tests the gates *about to be
+   committed*. A gate added in a change would otherwise be tested in its absence — precisely the
+   failure being guarded against.
+3. **Silence is a failure too.** A mutant caught by nobody is a hole; a mutant that trips a gate it
+   should not is a false positive. Both fail, and expected collateral must be declared per mutant.
+
+**This already paid for itself before it was merged.** The first version declared that a duplicated
+document id would also trip G5 — reasoning that the losing document's `part-of` chain would resolve
+to a node no longer answering to that name. Plausible, and wrong: both documents carry `part-of` to
+the same index, so the chain resolves either way and G5 stays quiet. The harness contradicted its
+own author on its first green run, which is the entire argument for running mutants instead of
+reasoning about them.
+
+**Alternatives considered.**
+- *Refactor `verify.py` into one function per gate and unit-test them.* Cleaner to read, and it
+  tests the functions rather than the program — losing exactly the environment coupling (shallow
+  clones, merge refs, `git ls-files`) that produced every real failure so far. Worth doing later for
+  readability; it is not a substitute.
+- *Synthesise a minimal repository to mutate.* Faster, and it would need scaffolding that passes
+  fourteen gates — a second estate to maintain, drifting from the real one.
+- *Trust the review.* This is what was being done. It held for one gate.
+
+**Consequences.**
+- (+) Every future gate arrives with its mutant, or `verify-full` is not green. The drift guard P3
+  needs and the metric-`kind` check M2b needs are both covered before they are written.
+- (+) The rule from improvement #12 stops depending on someone remembering it.
+- (−) `verify-full` gets slower: fifteen full gate runs, about twenty seconds. Acceptable at a merge
+  boundary, which is why it is not in `verify`.
+- (−) The mutants know the shape of the documents they edit. Renaming
+  `goods-receipt-throughput.md` breaks the harness — a maintenance coupling, made explicit in the
+  `TOUCHABLE` list rather than left to be discovered.
 
 ---
 

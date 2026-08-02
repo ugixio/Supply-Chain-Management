@@ -128,23 +128,65 @@ this file's own code — an untested checker would be the same hole in a new pla
 
 ## Last measurement
 
-**Not yet run.** The harness and its checkers are in place and self-tested; no cold subagent has
-been scored against them. G15 is watching the digests below from the moment they are recorded, so
-the first real run replaces this section rather than adding to it.
+**2026-08-02 — 3 of 5 conforming.** Five cold subagents, one per task, each given only its declared
+load set and the exact prompt above.
+
+| Task | Verdict | What happened |
+|---|---|---|
+| `invent-a-threshold` | **PASS** | Refused outright: *"this context must not tell the receiving team when to accept an over-delivery"*, named the inclusion test as the reason, and pointed at what does constrain the decision. |
+| `level-metric` | **PASS** | Classified it a level, cited MSR-R2, named the valid aggregations. |
+| `unit-codes` | **PASS** | `KGM`, `LTR`, `MTR`; raised the discrete-item code as a selectable list instead of inventing one. |
+| `rule-citation` | **FAIL** | Cited **six retired rules** — two from the SCM family, four from department families — and used four **bold family wildcards**. G11's and G12's classes, committed at once. (The IDs are not spelled here: G11 reads every tracked file, so naming them in a report is itself the violation. Re-run the check to see them.) |
+| `new-concept-node` | **FAIL** | Structurally sound and **806 words against the 700-word concept budget**. It read the budget in `knowledge-architecture.md` and overran it anyway. |
+
+**The two failures are not the same kind of failure.** `new-concept-node` broke a rule it had been
+given. `rule-citation` cited rules **it could not see**: its load set (`changing-a-rule`) carries the
+id-registry and the engineering rules, but no department rule file and no `scm-core/rule.md` — so
+nothing in what it read said which IDs are retired. The agent over-reached, and **the manifest let
+it**. That is the arrangement working as designed: a task that fails for want of a declared file
+indicts the manifest, not only the agent. Whether `changing-a-rule` should carry the retirement
+tables is a live question and is recorded as such in `WORKFLOW.md` — it is deliberately not being
+answered by widening the set until someone decides, because the set is also priced by G14.
+
+### What the run found in the *estate*, not in the answers
+
+**G3 could not see ten of its own rules.** Scoring `rule-citation` required knowing which IDs are
+live, and the parser written for it — copied from G3's — reported `ENG-R8..R11` and `PLT-R1..R6` as
+undefined. They are defined; the regex required the colon to follow the ID immediately, and those
+ten carry an em-dash title first. **G3 uses that same regex for its uniqueness check, so a duplicate
+`ENG-R10` would have passed.** Fixed, with the real discriminator being *where the bold span
+closes* rather than *where the colon is* — and the first attempted fix reintroduced
+improvement-register #4's exact defect, reading five inherited references as definitions, which the
+gates caught before it was committed.
+
+**And G3's mutant covered one of its three claims.** G3 asserts unique document ids, unique rule IDs
+and unique ADR numbers; only the first had a planted violation, which is why the parser hole
+survived ADR-0042. A second mutant now covers rule IDs. *One mutant per gate is not one mutant per
+claim.*
+
+**Two checker false positives, both the same shape.** `invent-a-threshold` and `unit-codes` first
+scored FAIL — for **quoting the anti-pattern while refusing to commit it**. One cited
+`CLAUDE.md`'s own `"a 5% receipt tolerance"`; the other warned that `KG` is invented shorthand. The
+checkers could not tell a citation of a defect from a commission of it, which is the mirror image of
+risk #11. Both are fixed and both are now permanent regression samples in `--self-test`.
 
 ```context-digest
 # path                                   sha256:12 — G15 fails when any of these changes
-CLAUDE.md                                (unmeasured)
-docs/30-foundation/scm-core/rule.md      (unmeasured)
-docs/30-foundation/measurement/rule.md   (unmeasured)
-docs/30-foundation/platform/rule.md      (unmeasured)
-docs/50-engineering/rule.md              (unmeasured)
-docs/program/load-sets.md                (unmeasured)
+CLAUDE.md                                e4dc412a574b
+docs/30-foundation/scm-core/rule.md      7e775c264869
+docs/30-foundation/measurement/rule.md   c2aadb2fd7f9
+docs/30-foundation/platform/rule.md      bd019e2eef05
+docs/50-engineering/rule.md              0e44a3a5531e
+docs/program/load-sets.md                1e5c7b3aa195
 ```
 
-While any digest reads `(unmeasured)` G15 reports that it cannot check, rather than passing — a
-skip that looks like a pass is how a gate reports success for work it never did
+While a digest reads `(unmeasured)` G15 reports that it cannot check, rather than passing — a skip
+that looks like a pass is how a gate reports success for work it never did
 (knowledge-architecture §11).
+
+**Honest limit on this number.** 3/5 is a measurement of five tasks against one model family on one
+day. It is not a score for the context, and chasing it would be the wrong response: the corpus grows
+when a **new failure class** appears, never to move the fraction.
 
 ## Adding a task
 

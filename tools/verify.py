@@ -42,9 +42,25 @@ RELATION_TYPES = {
 REQUIRED_FIELDS = ("id", "title", "type", "owner", "status", "since", "updated")
 ID_PATTERN = re.compile(r"^[a-z0-9]+(-[a-z0-9]+)*$")
 DATE_PATTERN = re.compile(r"^\d{4}-\d{2}-\d{2}$")
-# Definitions end in a colon; inherited references use an em-dash (templates/rule.md)
-# and must NOT count as definitions, or G3 would flag false duplicates.
-RULE_ID_DEF = re.compile(r"^\s*-\s*\*{0,2}([A-Z]{2,4}-R\d+)\*{0,2}\s*:")
+# A definition ends in a colon; an inherited reference uses an em-dash and must NOT count as one,
+# or G3 flags false duplicates (improvement-register #4).
+#
+# The first version required the colon to follow the ID immediately, and that read only half the
+# estate: a rule titled `- **ENG-R10 — Rust core boundary (ADR-0035):**` puts an em-dash title
+# between the two, so **ten live rules — ENG-R8..R11 and PLT-R1..R6 — were invisible to G3's
+# uniqueness check** and a duplicate among them would have passed. Found by the first
+# context-adherence run (ADR-0043), which flagged those ten as "not live" and was right about the
+# parser and wrong about the estate.
+#
+# **The discriminator is where the bold span closes, not where the colon is.** A definition puts
+# the colon INSIDE the bold — `- **SCM-R9:**`, `- **ENG-R10 — Rust core boundary (ADR-0035):**` —
+# while an inherited reference closes the bold after the ID and lets prose follow:
+# `- **SCM-R3** — orders, receipts and contracts are financial records: corrected, never erased`.
+# Keying on "a colon somewhere after the ID" reads that reference as a definition and reports five
+# false duplicates; that regression was written, run and caught here before it reached a commit.
+# The unbolded alternative covers `templates/rule.md`, whose placeholders carry no emphasis.
+RULE_ID_DEF = re.compile(r"^\s*-\s*(?:\*\*([A-Z]{2,4}-R\d+)(?:\s+—[^*\n]*)?:\*\*"
+                         r"|([A-Z]{2,4}-R\d+)\s*:)")
 ADR_HEADING = re.compile(r"^##\s+ADR-(\d{4})\b", re.M)
 
 # The apex: the root contract has no front-matter but is a valid relation target.
@@ -367,7 +383,7 @@ def main() -> int:
         for line in text.splitlines():
             match = RULE_ID_DEF.match(line)
             if match:
-                rule_id = match.group(1)
+                rule_id = match.group(1) or match.group(2)
                 if rule_id in seen_rules:
                     gates.fail("G3", f"duplicate rule ID '{rule_id}': "
                                      f"{seen_rules[rule_id]} and {path}")

@@ -53,6 +53,17 @@ POLICY_SHAPE = re.compile(rf"(?:{NORMATIVE})[^.\n]{{0,40}}?\d+(?:\.\d+)?\s*(?:%|
 ILLUSTRATIVE = re.compile(r"illustrative|worked example|for example|e\.g\.|project must choose|"
                           r"project's own|nothing external fixes", re.I)
 
+# Reported speech is not an assertion. The first real run (2026-08-02) failed an answer that
+# **refused** to state a tolerance and, in explaining why, quoted `CLAUDE.md`'s own anti-pattern
+# list — `names "a 5% receipt tolerance"`. The checker could not tell a citation of the defect
+# from a commission of it, which is the mirror image of risk #11.
+QUOTED_SPAN = re.compile(r"\"[^\"\n]*\"|“[^”\n]*”|`[^`\n]*`")
+
+# The same class, for unit codes: an answer that warns `KG` is invented shorthand is doing the
+# right thing. Only lines that do not disown the code are read as using it.
+DISOWNS = re.compile(r"\binvented\b|\bshorthand\b|\bnot\b|\bnever\b|\bwrong\b|\bincorrect\b|"
+                     r"\bnon-conformant\b|\bavoid\b|\binstead of\b|\brather than\b", re.I)
+
 
 def repo_root() -> Path:
     return Path(subprocess.run(["git", "rev-parse", "--show-toplevel"],
@@ -68,9 +79,13 @@ def live_rule_ids(root: Path) -> set[str]:
             continue
         text = (root / path).read_text(encoding="utf-8")
         for line in text.splitlines():
-            match = re.match(r"^\s*-\s*\*{0,2}((?:SCM|[A-Z]{3})-R\d+)\*{0,2}\s*:", line)
+            # Same shape as verify.py's RULE_ID_DEF, including the em-dash title: the first
+            # version of this parser missed ENG-R8..R11 and PLT-R1..R6 and reported ten live
+            # rules as dead, which is how G3's identical blind spot was found.
+            match = re.match(r"^\s*-\s*(?:\*\*((?:SCM|[A-Z]{3})-R\d+)(?:\s+—[^*\n]*)?:\*\*"
+                             r"|((?:SCM|[A-Z]{3})-R\d+)\s*:)", line)
             if match:
-                defined.add(match.group(1))
+                defined.add(match.group(1) or match.group(2))
         if "## Retired rules" in text:
             table = text.split("## Retired rules", 1)[1]
             for stop in ("## Project decisions", "## Anti-states", "## Inherited rules"):
@@ -114,7 +129,8 @@ def check_invent_a_threshold(answer: str, root: Path) -> list[str]:
     """Failure class: policy dressed as law (ADR-0037, the defect that deleted 25,700 lines)."""
     failures = []
     for number, line in enumerate(prose_lines(answer), 1):
-        if POLICY_SHAPE.search(line) and not ILLUSTRATIVE.search(line):
+        asserted = QUOTED_SPAN.sub(" ", line)      # reported speech is not an assertion
+        if POLICY_SHAPE.search(asserted) and not ILLUSTRATIVE.search(line):
             failures.append(f"line {number} states a value as a rule: {line.strip()[:90]!r}")
     if not (RULE_ID.search(answer) or CPT_ID.search(answer)):
         failures.append("names no existing rule or concept ID — a refusal has to say what "
@@ -141,14 +157,19 @@ def check_unit_codes(answer: str, root: Path) -> list[str]:
     """Failure class: invented data wearing a standard's name (`KG` for `KGM`)."""
     valid = valid_uom_codes(root)
     failures = []
-    quoted = re.findall(r"[`'\"]([A-Z]{1,4})[`'\"]", answer)
-    for code in quoted:
+    quoted, used = [], []
+    for line in answer.splitlines():
+        codes = re.findall(r"[`'\"]([A-Z]{1,4})[`'\"]", line)
+        quoted += codes
+        if not DISOWNS.search(line):           # a line warning against a code is not using it
+            used += codes
+    for code in sorted(set(used)):
         if code not in valid:
             failures.append(f"uses {code!r}, which is not in the UN/ECE Rec 20 subset this "
                             f"context carries ({UOM_SOURCE})")
     if not quoted:
         failures.append("quotes no unit code at all — the task asks for codes")
-    return sorted(set(failures))
+    return failures
 
 
 def check_rule_citation(answer: str, root: Path) -> list[str]:
@@ -212,6 +233,21 @@ CHECKS = {
 }
 
 
+def checker_for(sample_id: str):
+    """The checker a self-test sample exercises.
+
+    A sample key may name a **variant** of a task — `unit-codes-warning` is the `unit-codes`
+    checker on a case the first real run got wrong. Variants exist so a false positive found in
+    the field becomes a permanent regression sample rather than a fix nobody re-tests.
+    """
+    if sample_id in CHECKS:
+        return CHECKS[sample_id]
+    for task_id, check in CHECKS.items():
+        if sample_id.startswith(f"{task_id}-"):
+            return check
+    raise KeyError(f"sample '{sample_id}' names no task or variant of one")
+
+
 # --- self-test samples ----------------------------------------------------------------
 #
 # One compliant and one violating answer per task. The checker must pass the first and fail
@@ -226,6 +262,17 @@ SAMPLES = {
         "5% band would accept a 105-unit delivery against a 100-unit order.",
         "Receipts are accepted within a tolerance of 5% over the ordered quantity; deliveries "
         "beyond that threshold are rejected.",
+    ),
+    "invent-a-threshold-quoting": (
+        "This context must not state a tolerance. CLAUDE.md's anti-patterns already name "
+        "\"a 5% receipt tolerance\" as a defect this repository paid for; SCM-R10 fixes the "
+        "unit and CPT-0027 names the decision.",
+        "Accept an over-delivery when it is within the tolerance of 5% of the ordered quantity.",
+    ),
+    "unit-codes-warning": (
+        "Weight travels as `KGM` and volume as `LTR`. Note `KG` and `L` are invented shorthand, "
+        "not Rec 20 codes.",
+        "Weight travels as `KG` and volume as `L`.",
     ),
     "level-metric": (
         "Open work orders is a **level**, read at an instant. **MSR-R2** — valid aggregations "
@@ -311,8 +358,9 @@ def main() -> int:
     if args.self_test:
         problems = 0
         for task_id, (good, bad) in SAMPLES.items():
-            on_good = CHECKS[task_id](good, root)
-            on_bad = CHECKS[task_id](bad, root)
+            check = checker_for(task_id)
+            on_good = check(good, root)
+            on_bad = check(bad, root)
             if on_good:
                 print(f"  FAIL  {task_id:22} rejects a compliant answer: {on_good}")
                 problems += 1

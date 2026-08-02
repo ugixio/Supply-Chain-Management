@@ -167,9 +167,14 @@ what gets built:
   shallow clone's boundary and would fire on everything in CI. Four sub-decisions were selected from
   a list (PLT-R6): dated record + freshness gate · **cold subagent** as the subject · gates **plus**
   per-task assertions · five tasks with a template to grow.
-  **Next step, and it is the only one left:** run the five tasks against a cold subagent, score them,
-  and record the result with its digests. Until then G15 **notes that it cannot check** rather than
-  passing — every digest reads `(unmeasured)`, which is a skip and says so.
+  **✅ First measurement 2026-08-02 — 3 of 5 conforming**, recorded with its digests, so G15 is now
+  live rather than skipping. `invent-a-threshold`, `level-metric` and `unit-codes` passed;
+  `rule-citation` cited six retired rules and four bold family wildcards; `new-concept-node` came
+  in at 806 words against the 700-word budget it had read.
+  **What the run found in the estate rather than in the answers:** G3's rule-ID parser could not see
+  ten live rules (`ENG-R8..R11`, `PLT-R1..R6`) because it required the colon to follow the ID
+  immediately, so **a duplicate `ENG-R10` would have passed G3** — fixed, and a second G3 mutant now
+  covers the rule-ID claim that had none.
 - ⬜ **X5 · The missing documentation form.** Against the Diátaxis four (tutorial · how-to ·
   reference · explanation) the estate is 182 `concept` + 20 `rule` of **reference** and the ADRs as
   **explanation**, with **no how-to at all**. `CLAUDE.md` promises a project can learn *"which
@@ -179,6 +184,16 @@ what gets built:
   probably why none was ever written. The how-tos that belong are about **using this context**
   (onboarding a project onto it, adding a concept node, retiring a rule). Adding the type touches
   the closed `type` vocabulary, so it needs an ADR (knowledge-architecture §12).
+
+- ⚠ **X6 · Does `changing-a-rule` need the retirement tables? — owner decision.** Raised by the
+  first eval run. The `rule-citation` task cited six retired rules, and **nothing in its declared
+  load set could have told it they were retired**: `changing-a-rule` carries the id-registry and
+  `50-engineering/rule.md`, but no department `rule.md` and no `scm-core/rule.md`, and the
+  retirement tables live in those. Three ways to close it, and they are not equivalent — adding all
+  fifteen rule files costs roughly 8,000 words against a G14-priced set; adding only `scm-core`
+  covers the SCM family and leaves the department ones open; extracting the retirement tables into
+  one small governed document costs little but adds a file that must stay in step with fifteen
+  others. Not decided by widening the set unilaterally, because the set has a price.
 
 ### Phase U — Unification (context-skeleton adoption)
 - ✅ **U1 · orchestrator** — Skeleton added on branch `feat/context-skeleton`: tier tree,

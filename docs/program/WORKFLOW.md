@@ -159,12 +159,17 @@ what gets built:
   carrying a **ceiling instead of a ratchet** precisely because the index is append-only by design
   (ADR-0011) — G14 went red on the very commit that introduced it when two ADRs were added. **When
   36,000 is next reached, the answer is this split, not another raise.**
-- ⬜ **X4 · A context-adherence evaluation.** The estate verifies its own consistency with fourteen
-  gates and verifies **nowhere** that an AI reading this context produces something conforming to
-  it — the premise of the project is unmeasured. The shape is IFEval's: tasks whose success is
-  checked by a **deterministic program**, never by a judge model (the bias data is in the research
-  dossier, and a judge cannot be a gate). The checkers largely exist already — they are the gates,
-  run against a task's output instead of against the repo.
+- 🟦 **X4 · A context-adherence evaluation (ADR-0043).** **Harness landed 2026-08-02:**
+  `docs/program/context-eval.md` (five tasks, one per failure class with a real history here) plus
+  `tools/context_eval.py` (deterministic checkers, self-tested against a compliant and a violating
+  sample each) and gate **G15**, which fails once a context-defining file changes after the recorded
+  measurement — by content digest, not by date, because `git log -1 -- <path>` reports the graft at a
+  shallow clone's boundary and would fire on everything in CI. Four sub-decisions were selected from
+  a list (PLT-R6): dated record + freshness gate · **cold subagent** as the subject · gates **plus**
+  per-task assertions · five tasks with a template to grow.
+  **Next step, and it is the only one left:** run the five tasks against a cold subagent, score them,
+  and record the result with its digests. Until then G15 **notes that it cannot check** rather than
+  passing — every digest reads `(unmeasured)`, which is a skip and says so.
 - ⬜ **X5 · The missing documentation form.** Against the Diátaxis four (tutorial · how-to ·
   reference · explanation) the estate is 182 `concept` + 20 `rule` of **reference** and the ADRs as
   **explanation**, with **no how-to at all**. `CLAUDE.md` promises a project can learn *"which

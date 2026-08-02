@@ -1,6 +1,6 @@
 ---
 id: index-adr
-title: "Architecture Decision Records (ADR-0001..0042)"
+title: "Architecture Decision Records (ADR-0001..0043)"
 type: adr
 owner: orchestrator
 status: active
@@ -73,6 +73,7 @@ relations:
 - ADR-0040 — **One long-lived line, named `main`, and nothing left hanging:** the integration model becomes **ENG-R11** — every pull request bases on `main`; a work branch is short-lived and restarted from `main` after each merge; a merged branch is deleted with the merge, because a branch with zero unmerged commits is a defect and not an archive; a turn ends with the pull request merged or with the reason written into its report; the base is current at merge time or the gate is re-run; and the merge is a **merge commit**, because G13 diffs `HEAD` against its parent and a squash would fail `updated:` on every file it carries. Resolves risk #3, open since 2026-07-19. (Accepted — owner-directed 2026-08-02)
 - ADR-0041 — **A load set is priced as a whole, not document by document:** G9 has always budgeted single documents, but the long-context evidence is about **total input read together** — degradation is continuous rather than a cliff (Chroma, 18 frontier models), and past roughly half a full window the U-shaped position curve gives way to distance-from-the-end (Liu et al. 2024; Veseli et al. 2025). Load sets are declared in `docs/program/load-sets.md` and priced by gate **G14**, which fails over budget, fails on a member matching no file, and prints the largest set every run. Measured on adoption: `planning` reads **32,009 words (~42,571 tokens)**, 91 % of it the ADR index and `WORKFLOW.md` — the two largest documents in the repository, both loaded on every planning task, and **neither had a G9 budget** because none exists for `adr` or `program`. Budgets are a ratchet a few percent above measurement, and are this repository's engineering decision, not a number the research fixes. (Accepted — owner-directed 2026-08-02)
 - ADR-0042 — **The gates are proven by mutation, on every merge:** improvement-register #12 already required that a gate be proven by planting a violation in the environment CI uses — and that proof had been performed exactly once, by hand, for G13. `verify.py` was 638 lines and thirteen gates over 230 documents with **zero tests**. `tools/test_gates.py` now plants one violation per gate and asserts the gate fires **and no other does**, end-to-end against a real worktree populated from the index, wired into `make verify-full`. It contradicted its own author on its first green run — a predicted G3→G5 collateral that does not happen — which is the argument for running mutants rather than reasoning about them. (Accepted — owner-directed 2026-08-02)
+- ADR-0043 — **The premise is measured: a context-adherence evaluation, decided by programs.** Fifteen gates verified that the estate is internally consistent; none verified that an agent *reading* it complies. Five tasks — one per failure class with a real history here — are answered by a **cold subagent loaded only with the declared load set** (self-evaluation would measure the conversation, not the context), scored by **deterministic programs and never a judge model**, and recorded with a digest per context-defining file. Gate **G15** fails once any of those files changes after the measurement, and *notes that it cannot check* while none exists. Gates alone were rejected as the check surface: an invented threshold with correct front-matter and a cited source passes all fifteen — ADR-0037's defect exactly. (Accepted — owner-directed 2026-08-02, four options selected from a list per PLT-R6)
 - ADR-0037 — **The Global Context holds only externally-fixed standards; the fictitious SCM application is retired.** The context is the source a project consults to learn *which departments it needs and how to implement them* — nothing more. It carries what a standards body, a regulator or an arithmetic identity fixes; it never carries what an organization chooses (thresholds, targets, weightings, rating bands, method mandates). Consequently **~25,700 lines of invented application code are deleted** (`packages/domain`, `services/calc`, `crates/scm-core`), concept nodes become **definitions without parameters**, and the **only application built here is the monitoring project**. Supersedes the two-language-SCM-application premise of ADR-0001; narrows ADR-0015 (nodes define, they do not own code) and ADR-0035 (the Rust core serves the monitoring platform, not 14 departments of invented rules). (Accepted — owner-directed 2026-07-27)
 
 ---
@@ -1974,6 +1975,83 @@ reasoning about them.
 - (−) The mutants know the shape of the documents they edit. Renaming
   `goods-receipt-throughput.md` breaks the harness — a maintenance coupling, made explicit in the
   `TOUCHABLE` list rather than left to be discovered.
+
+---
+
+## ADR-0043 — The premise is measured: a context-adherence evaluation, decided by programs
+
+**Status:** Accepted (owner-directed 2026-08-02, four options selected from a list per PLT-R6)
+**Materializes as:** `docs/program/context-eval.md`, `tools/context_eval.py`, gate **G15**
+
+**Context.** Fifteen gates verify that this estate is **internally consistent**. Not one verified
+that an agent **reading** it produces something conforming to it — so the premise of the repository,
+that a context makes an AI build correctly, was never measured. The only "golden" fixture in the
+tree proves money arithmetic.
+
+**Decision.** Five tasks, one per failure class that actually occurred here, scored by deterministic
+programs. Four sub-decisions were put to the owner as a selectable list; all four recommendations
+were taken.
+
+**1. When it runs — a dated record plus a freshness gate.** The result is written into
+`docs/program/context-eval.md` and **G15** fails once any context-defining file changes after the
+recorded measurement. *Rejected:* a non-blocking CI job (needs an API key as a CI secret and a
+model callable from the runner — a dependency and a per-run cost in a lane that has neither); a
+blocking gate in `verify-full` (puts network and non-determinism in the merge gate, so an
+unavailable model reddens unrelated changes, contradicting the other fifteen gates); running it
+manually (improvement-register #15 had just named that shape — *if the mechanism is a person
+remembering, the entry is not done* — and adopting it here would repeat the mistake in the same
+week it was recorded).
+
+**G15 compares digests, not dates.** `git log -1 -- <path>` is the obvious way to ask when a file
+last changed, and it is wrong here for the reason G13 already paid for three red CI runs: at a
+shallow clone's boundary git reports the graft, every file looks freshly changed, and the gate fires
+on everything. A content hash needs no history at all. While a digest reads `(unmeasured)` the gate
+**notes that it cannot check** rather than passing — a skip that reads as a pass is how a gate
+reports success for work it never did.
+
+**2. The subject is a cold subagent** loaded with the task's declared load set and nothing else.
+*Rejected, and this is the one that decides whether the exercise means anything:* self-evaluation by
+the session. A session that just wrote a rule cites it from memory and scores a meaningless 100 % —
+it measures the conversation, not the context. The cold subagent also puts the ADR-0041 manifest
+under test: if a task fails because the declared load set lacked what the task needed, **the
+manifest is what is wrong**. Also rejected: an external API call (key, dependency, cost, a new lane
+decision) and recorded fixtures (they age into measuring the *previous* context).
+
+**3. The checks are the gates plus per-task deterministic assertions.** Gates alone were tempting —
+zero new code, fifteen checks reused — and they miss the class that matters: **an invented threshold
+with correct front-matter, a cited source and a compliant word count passes all fifteen.** That is
+ADR-0037's defect exactly: well-structured and false. The per-task assertions add the semantic layer
+without adding a judge — *did it cite MSR-R2? did it put a number next to a normative word? are the
+unit codes in UN/ECE Rec 20?* — and each is a program.
+
+**4. Five tasks plus a template.** One per failure class with a real history here: policy dressed as
+law, a level aggregated as a flow, invented data wearing a standard's name (`KG` for `KGM`), a
+family-wildcard citation, structural non-conformance. The corpus grows from incidents, as the
+improvement register does — a task is added when a **new class appears**, never to raise a score.
+
+**Never a judge model.** Position bias reaching **75 %** for the first-placed answer, with judgments
+inverting when positions are swapped; verbosity bias; **10–25 %** self-preference, correlated with
+self-recognition. GPT-4-class agreement with humans (>80 %) matches human–human agreement and
+supports use as a **calibrated screening tool**, not as the thing that decides whether this context
+works. Human raters are not clean either — they score assertive-but-wrong output 15–20 % above
+cautious-but-right — which is the argument for preferring the deterministic option wherever one
+exists, not for trusting either.
+
+**Consequences.**
+- (+) The repository's premise stops being an assumption. A regression in the context shows up as a
+  failing task rather than as a defect discovered months later.
+- (+) The load-set manifest gains a consumer that can contradict it.
+- (+) The checkers are themselves tested: `--self-test` runs a compliant and a violating sample past
+  each and requires it to pass one and fail the other. An untested checker would be ADR-0042's hole
+  in a new place.
+- (−) **The tasks are authored by the same process they evaluate.** Deterministic checks make the
+  *verdict* objective; they do not make the *question set* impartial. A blind spot in the author is
+  a blind spot in the corpus, and only a new incident reveals it — which is why the corpus is
+  incident-driven rather than designed up front.
+- (−) `level-metric` deliberately carries **no** check for "did it sum?" — no reliable regex exists,
+  and a false accusation costs more here than a miss.
+- (−) The measurement needs a subagent run; it cannot be produced by `make` alone. G15 makes its
+  *absence* visible, which is the most a gate can do about work that requires a model.
 
 ---
 

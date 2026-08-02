@@ -44,11 +44,12 @@ CONCEPT = "docs/25-concepts/06-warehouse-management/goods-receipt-throughput.md"
 CONCEPT_B = "docs/25-concepts/06-warehouse-management/outbound-shipment-backlog.md"
 STRAY = "stray-note.md"
 MANIFEST = "docs/program/load-sets.md"
+EVAL_RECORD = "docs/program/context-eval.md"
 RETIRED_RULE_ID = "SCM-R1"    # retired by ADR-0037; declared in 30-foundation/scm-core
 
 # Every path any mutant may create or modify. The harness restores all of them between
 # mutants, so this list must stay in step with the mutations below.
-TOUCHABLE = (CONCEPT, CONCEPT_B, STRAY, MANIFEST)
+TOUCHABLE = (CONCEPT, CONCEPT_B, STRAY, MANIFEST, EVAL_RECORD)
 
 
 # --- worktree plumbing ----------------------------------------------------------------
@@ -222,6 +223,20 @@ def mutate_g14(wt: Path) -> list[str]:
     return [MANIFEST]
 
 
+def mutate_g15(wt: Path) -> list[str]:
+    """A recorded measurement that describes a context which has since changed.
+
+    The record ships with every digest reading `(unmeasured)`, so G15 skips with a note rather
+    than passing. The mutant supplies a digest, which is what makes the gate able to fail at
+    all — planting a stale measurement is the only way to prove the staleness check works
+    before a real measurement exists.
+    """
+    text = restamp(read(wt, EVAL_RECORD))
+    write(wt, EVAL_RECORD, text.replace("CLAUDE.md                                (unmeasured)",
+                                        "CLAUDE.md                                000000000000", 1))
+    return [EVAL_RECORD]
+
+
 MUTANTS = [
     ("G1", "tracked .md outside docs/", mutate_g1, set()),
     ("G2", "type outside the vocabulary", mutate_g2, set()),
@@ -237,6 +252,7 @@ MUTANTS = [
     ("G12", "rule family wildcard as a citation", mutate_g12, set()),
     ("G13", "change stamped with an old date", mutate_g13, set()),
     ("G14", "load set reading past its budget", mutate_g14, set()),
+    ("G15", "measurement recorded against a changed context", mutate_g15, set()),
 ]
 # The `also` column declares collateral that is real rather than tolerated, and it is empty
 # today. It exists because the first version of this file predicted that a duplicated id

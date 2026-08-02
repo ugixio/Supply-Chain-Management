@@ -35,6 +35,7 @@ doc-gates:
 # not in the loop a session runs after every layer.
 gate-mutants:
 	python3 tools/test_gates.py
+	python3 tools/context_eval.py --self-test
 
 typecheck:
 	pnpm -s exec tsc --noEmit

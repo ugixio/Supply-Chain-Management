@@ -5,7 +5,7 @@ type: concept
 owner: orchestrator
 status: active
 since: 2026-08-01
-updated: 2026-08-01
+updated: 2026-08-02
 relations:
   - { type: part-of, target: index-concepts-06-warehouse-management }
   - { type: governed-by, target: index-adr }
@@ -37,16 +37,16 @@ relations:
 ## Assumptions and limits
 
 - **The obligation to manage incidents is external; the taxonomy is not.** ISO 28000:2022 requires a
-  security management system that identifies, records and reviews security incidents, and ISO
-  28000 certification is what CPT-0035 checks for validity. **What ISO 28000 does not fix** is the
+  security management system that identifies, records and reviews security incidents.
+  **What ISO 28000 does not fix** is the
   class list, the severity scale, or what counts as reportable — those are the project's, and they
   are where two sites' numbers stop being comparable.
 - **A rising rate is ambiguous, and reading it as bad is the standard error.** It can mean more
   incidents or better reporting: a site that just trained its staff looks worse than one that
   under-reports, and the under-reporting site is the one at risk. Read it against reporting coverage.
 - **Near-misses and actual losses do not belong in one count** unless the classes separate them.
-- **Personal data.** An event record naming an individual is personal data under GDPR where the EU
-  applies; retention and access are then legal constraints, not operational preferences.
+- **Personal data.** An event record naming an individual is personal data under GDPR; retention
+  and access are legal constraints, not operational preferences.
 - **Does not apply as a shrinkage measure.** Inventory loss is measured against book quantity; a
   security event may or may not cause it.
 
@@ -64,10 +64,12 @@ relations:
 *Illustrative only.* A month records 7 events: 4 unauthorised-access attempts at one perimeter door,
 2 seal discrepancies on inbound trailers, 1 confirmed loss. Rate **7 per month**. The decision comes
 not from 7 but from *4 at one door* — a physical control to fix — and from the seal discrepancies,
-which point at a carrier rather than the site.
+which point at a carrier.
 
 ## Governing rules
 
+- **MSR-R2** — a flow; it sums across periods. A count of *open* events is a level, and the two
+  must not share one series.
 - **SCM-R9** — the event instant is an ISO 8601 UTC timestamp, or events across sites cannot be
   ordered or correlated.
 - **SCM-R7** — where due-diligence retention applies, records are kept at least five years; a

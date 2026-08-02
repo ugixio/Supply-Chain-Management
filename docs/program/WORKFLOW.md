@@ -129,6 +129,14 @@ what gets built:
   rollup. It is worth doing without the scope change because the corruption is silent and the
   schema is young; it is queued as **M2b**.
 
+- ⚠ **Branches — two steps are the owner's, 2026-08-02.** **ADR-0040 / ENG-R11** put the integration
+  model in writing and `main` now exists at the same commit as the old trunk. What a session cannot
+  do: **flip the default branch to `main`** (a repository setting with no API surface here) and
+  **delete four stale refs** — `claude/bold-cannon-l7wtso` once the default moves, plus
+  `feat/context-skeleton`, `fix/verify-rule-id-regex` and `feat/per-department-rules`, each carrying
+  0 commits not already in the base. This environment's git proxy refuses `delete` with HTTP 403.
+  Risk #3 closes when the default is `main`.
+
 ### Phase U — Unification (context-skeleton adoption)
 - ✅ **U1 · orchestrator** — Skeleton added on branch `feat/context-skeleton`: tier tree,
   knowledge-architecture (instantiated allowlist), id-registry (SCM live; 14 families

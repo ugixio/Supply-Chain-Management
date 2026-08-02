@@ -8,3 +8,6 @@ __pycache__/
 *.log
 .env
 .env.*
+
+# Context-adherence eval outputs — one run's artefacts, not part of the context (ADR-0043).
+.eval-out/

@@ -45,11 +45,12 @@ CONCEPT_B = "docs/25-concepts/06-warehouse-management/outbound-shipment-backlog.
 STRAY = "stray-note.md"
 MANIFEST = "docs/program/load-sets.md"
 EVAL_RECORD = "docs/program/context-eval.md"
+DEPT_RULE = "docs/40-contexts/06-warehouse-management/rule.md"
 RETIRED_RULE_ID = "SCM-R1"    # retired by ADR-0037; declared in 30-foundation/scm-core
 
 # Every path any mutant may create or modify. The harness restores all of them between
 # mutants, so this list must stay in step with the mutations below.
-TOUCHABLE = (CONCEPT, CONCEPT_B, STRAY, MANIFEST, EVAL_RECORD)
+TOUCHABLE = (CONCEPT, CONCEPT_B, STRAY, MANIFEST, EVAL_RECORD, DEPT_RULE)
 
 
 # --- worktree plumbing ----------------------------------------------------------------
@@ -143,6 +144,19 @@ def mutate_g3(wt: Path) -> list[str]:
     return [CONCEPT]
 
 
+def mutate_g3_rule(wt: Path) -> list[str]:
+    """A rule ID defined twice — G3's *second* claim, which had no mutant.
+
+    G3 asserts three separate things: unique document ids, unique rule IDs and unique ADR
+    numbers. Only the first was planted, and the gap was not theoretical: its rule-ID parser
+    could not see ten live rules and nothing noticed. One mutant per gate is not one mutant per
+    claim.
+    """
+    write(wt, DEPT_RULE, restamp(read(wt, DEPT_RULE)) +
+          "\n- **SCM-R9 — a second definition of an ID that already has one:** planted.\n")
+    return [DEPT_RULE]
+
+
 def mutate_g4(wt: Path) -> list[str]:
     """A relation pointing at an id that does not exist."""
     text = read(wt, CONCEPT).replace("target: index-adr", "target: index-of-nothing", 1)
@@ -226,14 +240,20 @@ def mutate_g14(wt: Path) -> list[str]:
 def mutate_g15(wt: Path) -> list[str]:
     """A recorded measurement that describes a context which has since changed.
 
-    The record ships with every digest reading `(unmeasured)`, so G15 skips with a note rather
-    than passing. The mutant supplies a digest, which is what makes the gate able to fail at
-    all — planting a stale measurement is the only way to prove the staleness check works
-    before a real measurement exists.
+    Corrupting the recorded digest is equivalent to changing the file it describes, and it is the
+    safer direction to plant: the alternative — editing `CLAUDE.md` — would trip G9's path budget
+    as well and stop testing G15 alone.
+
+    This mutant was rewritten once. While every digest still read `(unmeasured)` it worked by
+    *supplying* one; the moment a real measurement was recorded, that substring was gone and the
+    mutation silently became a no-op. The harness reported it immediately, which is the case for
+    asserting that a mutant fires rather than assuming a planted violation landed.
     """
     text = restamp(read(wt, EVAL_RECORD))
-    write(wt, EVAL_RECORD, text.replace("CLAUDE.md                                (unmeasured)",
-                                        "CLAUDE.md                                000000000000", 1))
+    corrupted = re.sub(r"^(CLAUDE\.md\s+)\S+$", r"\g<1>000000000000", text, count=1, flags=re.M)
+    if corrupted == text:
+        raise RuntimeError("G15 mutant planted nothing: no CLAUDE.md digest line to corrupt")
+    write(wt, EVAL_RECORD, corrupted)
     return [EVAL_RECORD]
 
 
@@ -241,6 +261,7 @@ MUTANTS = [
     ("G1", "tracked .md outside docs/", mutate_g1, set()),
     ("G2", "type outside the vocabulary", mutate_g2, set()),
     ("G3", "duplicate document id", mutate_g3, set()),
+    ("G3", "duplicate rule ID (G3's second claim)", mutate_g3_rule, set()),
     ("G4", "relation to an unknown id", mutate_g4, set()),
     ("G5", "no part-of edge (orphan)", mutate_g5, set()),
     ("G6", "governed-by pointing sideways", mutate_g6, set()),
@@ -251,11 +272,14 @@ MUTANTS = [
     ("G11", "citation to a retired rule", mutate_g11, set()),
     ("G12", "rule family wildcard as a citation", mutate_g12, set()),
     ("G13", "change stamped with an old date", mutate_g13, set()),
-    ("G14", "load set reading past its budget", mutate_g14, set()),
+    ("G14", "load set reading past its budget", mutate_g14, {"G15"}),
     ("G15", "measurement recorded against a changed context", mutate_g15, set()),
 ]
-# The `also` column declares collateral that is real rather than tolerated, and it is empty
-# today. It exists because the first version of this file predicted that a duplicated id
+# The `also` column declares collateral that is real rather than tolerated. G14's mutant edits
+# `load-sets.md`, which is one of the files the context-adherence measurement is recorded against
+# (ADR-0043) — so changing it genuinely invalidates that measurement and G15 is right to fire. The
+# two gates agreeing is the system working; what the column forbids is an *undeclared* second
+# failure, which means the mutation is testing something other than its gate. It exists because the first version of this file predicted that a duplicated id
 # would drag G5 with it — the reasoning being that the losing document's part-of chain would
 # resolve to a node no longer answering to that name. The harness said otherwise on its first
 # green run: both documents carry part-of to the same index, so the chain resolves either way

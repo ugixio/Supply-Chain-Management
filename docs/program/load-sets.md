@@ -27,7 +27,16 @@ Each set names a **budget in words** and the files a session actually opens for 
 A member may be a literal path or a glob. Missing members fail the gate — a manifest that names a
 file nobody kept is worse than no manifest.
 
+**Every set is a ratchet or a ceiling, and which one is not a matter of taste.** A set whose members
+are all bounded documents gets a **ratchet** a few percent above measurement, so nothing grows
+quietly. A set containing an **append-only** document — the ADR index, the improvement register, the
+risk register, all of which grow monotonically by design and never shrink — gets a **ceiling with a
+structural answer attached**, because a ratchet over a monotonic quantity schedules a false alarm
+and a gate that reddens correct work gets disabled rather than obeyed. The classification is stated
+per set below and it is the first thing to get right when adding one.
+
 ```load-sets
+# RATCHET — all members bounded.
 # Loaded before anything else, every single task.
 every-task = 3200
   CLAUDE.md
@@ -35,16 +44,16 @@ every-task = 3200
   docs/program/evaluation.md
 
 # "What should I do next?" — the state of the estate plus the decisions behind it.
-# NOT a ratchet, and see below for why: the ADR index is append-only by design, so a tight
-# budget here goes red on ordinary decision-writing. 36000 is a ceiling with a structural
-# answer attached — when it is next reached, split the ADR bodies out; do not raise it again.
-planning = 36000
+# CEILING — contains the ADR index, which is append-only by design (ADR-0011). When 38000 is
+# reached the answer is splitting the ADR bodies out (backlog X3), not another raise.
+planning = 38000
   CLAUDE.md
   docs/_index.md
   docs/program/evaluation.md
   docs/program/WORKFLOW.md
   docs/10-decisions/README.md
 
+# RATCHET — all members bounded.
 # Adding or changing a concept node.
 authoring-a-concept = 7200
   CLAUDE.md
@@ -55,6 +64,7 @@ authoring-a-concept = 7200
   docs/30-foundation/scm-core/rule.md
   docs/30-foundation/measurement/rule.md
 
+# RATCHET — all members bounded.
 # Adding or changing a rule in any family.
 changing-a-rule = 8000
   CLAUDE.md
@@ -64,8 +74,11 @@ changing-a-rule = 8000
   docs/00-governance/id-registry.md
   docs/50-engineering/rule.md
 
-# Running the review protocol over a set of documents.
-reviewing-the-estate = 9200
+# CEILING — contains the improvement register AND the risk register, both append-only (closed
+# risks stay listed; lessons are never deleted). A ratchet here went red 21 words over on the
+# commit that added one lesson. When 12000 is reached, the answer is archiving closed rows to a
+# dated file, not another raise.
+reviewing-the-estate = 12000
   CLAUDE.md
   docs/_index.md
   docs/program/evaluation.md
@@ -78,32 +91,37 @@ reviewing-the-estate = 9200
 
 Measured 2026-08-02, at the moment the gate was written:
 
-| Set | Words | ≈ Tokens | Budget | Headroom |
+| Set | Kind | Words | ≈ Tokens | Budget |
 |---|---|---|---|---|
-| `every-task` | 2,908 | 3,867 | 3,200 | 9 % |
-| `authoring-a-concept` | 6,546 | 8,706 | 7,200 | 10 % |
-| `changing-a-rule` | 7,293 | 9,699 | 8,000 | 10 % |
-| `reviewing-the-estate` | 8,309 | 11,050 | 9,200 | 11 % |
-| **`planning`** | **33,683** | **44,798** | 36,000 | 6 % |
+| `every-task` | ratchet | 2,979 | 3,962 | 3,200 |
+| `authoring-a-concept` | ratchet | 6,693 | 8,902 | 7,200 |
+| `changing-a-rule` | ratchet | 7,440 | 9,895 | 8,000 |
+| `reviewing-the-estate` | **ceiling** | 9,221 | 12,264 | 12,000 |
+| **`planning`** | **ceiling** | **35,453** | **47,152** | 38,000 |
 
-**`planning` is the outlier and it is not close.** Two documents account for 91 % of it:
-`docs/10-decisions/README.md` at ~19,100 words and `docs/program/WORKFLOW.md` at ~11,700. Neither
-carries a G9 budget, because G9 budgets by `type` and no budget exists for `adr` or `program` — so
-the two largest documents in the repository are the two `CLAUDE.md` instructs a session to load on
-every planning task, and they are the two nothing has ever bounded.
+**`planning` is the outlier and it is not close.** Two documents account for 91 % of it: the ADR
+index and `WORKFLOW.md`. Neither carries a G9 budget, because G9 budgets by `type` and no budget
+exists for `adr` or `program` — so the two largest documents in the repository are the two
+`CLAUDE.md` instructs a session to load on every planning task, and they are the two nothing had
+ever bounded.
 
-**The gate proved this on the commit that introduced it.** `planning` measured 32,009 words, the
-budget was set at 33,000 as a ratchet — and then writing the two ADRs that adopt G14 and the
-mutation harness added 1,674 words to the ADR index and turned the gate red. Nothing was wrong with
-the change; **the ratchet was wrong**. The ADR index is append-only by design (ADR-0011: history is
-never rewritten), so any budget a few percent above it goes red the next time anyone records a
-decision — which would make the gate an obstacle to the practice it is supposed to protect.
+**The gate caught the same mistake twice in one day, which is how the ratchet/ceiling distinction
+got made.**
 
-So `planning` carries a **ceiling with a structural answer attached, not a ratchet**: 36,000, and
-when it is next reached the answer is **the split, not another raise**. The ADR index is an index
-*and* forty-two decision bodies in one file, and its own footer already anticipates the separation
-(`NNNN-title.md` "when extensive"). The other four sets stay ratcheted, because none of them
-contains an append-only document.
+- **First**, on the commit that introduced G14: `planning` measured 32,009 and the budget was set at
+  33,000 as a ratchet. Writing the two ADRs that adopt G14 and the mutation harness added 1,674
+  words to the ADR index and the gate went red. The change was right; the ratchet was wrong.
+- **Then again, one commit later**, on `reviewing-the-estate` — 21 words over, from adding a single
+  lesson to the improvement register. The lesson being added *was* the first occurrence. **Recording
+  a lesson is not applying it** (improvement #15's point, demonstrated on itself), and the fix is
+  not a bigger number: it is classifying every set as ratchet or ceiling by asking whether any
+  member grows monotonically by design.
+
+Both ceilings carry a structural answer, not just headroom. For `planning` it is splitting the ADR
+bodies out of the index (backlog X3) — the index's own footer already anticipates it
+(`NNNN-title.md` "when extensive"). For `reviewing-the-estate` it is archiving closed risk rows and
+done improvement rows to a dated file. **When either ceiling is reached, that is what happens — not
+another raise.**
 
 ## What this does not claim
 

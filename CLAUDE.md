@@ -57,6 +57,7 @@ crates/scm-ingest-clickhouse  The transport half: RowBinary insert, retry, dead-
 db/clickhouse      The telemetry schema (ADR-0036): migrations, apply.py, the schema gate
 tools/verify.py    The doc gates
 tools/test_gates.py  Mutation tests: does each gate still catch what it claims to? (ADR-0042)
+tools/context_eval.py  Does an agent *reading* this context comply with it? (ADR-0043)
 ```
 
 ## Standards this context carries
@@ -148,7 +149,7 @@ Dependencies stay OSI-licensed, commercially usable and modifiable (ADR-0002).
 
 ## Gates
 
-`make verify` — doc gates G1–G14, typecheck, Rust tests. Run after **every** layer.
+`make verify` — doc gates G1–G15, typecheck, Rust tests. Run after **every** layer.
 `make verify-full` — the merge gate: adds the gate mutation tests, `cargo fmt --check` and
 `clippy -D warnings`.
 `make verify-schema` — the telemetry schema against a real ClickHouse. CI runs both gates.
@@ -157,7 +158,8 @@ G1 no stray docs · G2 front-matter · G3 unique IDs · G4 link integrity · G5 
 G6 authority acyclicity · G7 status and supersession · G8 English-only (screened) ·
 G9 context budget · G10 standards provenance · G11 retired rules stay retired ·
 G12 a rule citation names an ID (never a family wildcard) · G13 `updated:` is true ·
-G14 a load set is priced as a whole (`docs/program/load-sets.md`).
+G14 a load set is priced as a whole (`docs/program/load-sets.md`) ·
+G15 the context-adherence measurement is not stale (`docs/program/context-eval.md`).
 
 The gates themselves are tested: `tools/test_gates.py` plants one violation per gate and
 requires that gate — and no other — to fire (ADR-0042).

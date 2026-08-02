@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Doc gates — the executable form of docs/00-governance/knowledge-architecture.md §11.
 
-Implements gates G1-G14 over the tracked knowledge tree (ADR-0012, from the ugixio context
+Implements gates G1-G15 over the tracked knowledge tree (ADR-0012, from the ugixio context
 skeleton ADR-0001/0004). Python 3, standard library only.
 
 G8 (English-only) and G13 (`updated:` truthfulness) were both added on 2026-07-29, and both
@@ -18,6 +18,7 @@ from __future__ import annotations
 import datetime
 import fnmatch
 import glob
+import hashlib
 import os
 import re
 import subprocess
@@ -72,6 +73,21 @@ ADR_INDEX_LINE = re.compile(r"^-\s+ADR-(\d{4})\s+—", re.M)
 LOAD_SETS_DOC = f"{DOCS_DIR}/program/load-sets.md"
 LOAD_SET_FENCE = re.compile(r"^```load-sets$(.*?)^```$", re.M | re.S)
 LOAD_SET_HEADER = re.compile(r"^(\S+)\s*=\s*(\d+)$")
+
+# --- G15 — the context-adherence measurement is not stale (ADR-0043) ------------------
+#
+# The estate checks its own consistency; G15 checks that somebody checked whether an agent
+# *reading* it complies. The measurement is recorded with a digest per context-defining file,
+# and the gate fails when any of them has changed since — a rule rewritten after the last
+# measurement invalidates it.
+#
+# Digests rather than dates on purpose. `git log -1 -- <path>` is the obvious way to ask when
+# a file last changed and it is wrong here for the reason G13 already paid for: at a shallow
+# clone's boundary git reports the graft, so every file looks freshly changed and the gate
+# would fire on everything in CI. A content hash needs no history at all.
+CONTEXT_EVAL_DOC = f"{DOCS_DIR}/program/context-eval.md"
+DIGEST_FENCE = re.compile(r"^```context-digest$(.*?)^```$", re.M | re.S)
+DIGEST_UNMEASURED = "(unmeasured)"
 
 # --- G10 — standards provenance (ADR-0015 as narrowed by ADR-0037) --------------------
 #
@@ -242,6 +258,7 @@ class Gates:
             "G8": "English-only (screened)",
             "G13": "`updated:` matches the real last change",
             "G14": "load-set budgets (what is read together)",
+            "G15": "the context-adherence measurement is not stale",
         }
         ok = True
         for gate in sorted(names, key=lambda name: int(name[1:])):
@@ -690,6 +707,47 @@ def main() -> int:
                 gates.note(f"G14 largest load set is '{worst}' at {measured[worst]:,} words "
                            f"(~{int(measured[worst] * 1.33):,} tokens); "
                            + " · ".join(f"{n} {w:,}" for n, w in sorted(measured.items())))
+
+    # G15 — the context-adherence measurement still describes this context (ADR-0043).
+    try:
+        record = open(CONTEXT_EVAL_DOC, encoding="utf-8").read()
+    except OSError:
+        gates.fail("G15", f"{CONTEXT_EVAL_DOC} is missing — the measurement record is the input")
+    else:
+        fence = DIGEST_FENCE.search(record)
+        if not fence:
+            gates.fail("G15", f"{CONTEXT_EVAL_DOC}: no ```context-digest block to read")
+        else:
+            unmeasured, checked = [], 0
+            for line in fence.group(1).splitlines():
+                if not line.strip() or line.lstrip().startswith("#"):
+                    continue
+                parts = line.split()
+                if len(parts) != 2:
+                    gates.fail("G15", f"{CONTEXT_EVAL_DOC}: '{line.strip()}' is not "
+                                      f"'<path> <digest>'")
+                    continue
+                path, recorded = parts
+                if not os.path.exists(path):
+                    gates.fail("G15", f"the record names '{path}', which does not exist — a "
+                                      f"measurement over a file nobody kept measures nothing")
+                    continue
+                if recorded == DIGEST_UNMEASURED:
+                    unmeasured.append(path)
+                    continue
+                actual = hashlib.sha256(open(path, "rb").read()).hexdigest()[:12]
+                checked += 1
+                if actual != recorded:
+                    gates.fail("G15", f"{path} has changed since the context-adherence "
+                                      f"measurement (recorded {recorded}, now {actual}) — re-run "
+                                      f"`tools/context_eval.py` and record the result, or the "
+                                      f"estate is claiming a result about a context it no "
+                                      f"longer has")
+            if unmeasured:
+                gates.note(f"G15 checked {checked} of {checked + len(unmeasured)} context files: "
+                           f"{len(unmeasured)} still read {DIGEST_UNMEASURED}, so no measurement "
+                           f"exists to be stale ({', '.join(unmeasured)}). This is a skip, not a "
+                           f"pass — see {CONTEXT_EVAL_DOC} §Last measurement")
 
     return gates.report(len(docs))
 

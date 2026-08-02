@@ -5,7 +5,7 @@ type: concept
 owner: orchestrator
 status: active
 since: 2026-08-01
-updated: 2026-08-01
+updated: 2026-08-02
 relations:
   - { type: part-of, target: index-concepts-06-warehouse-management }
   - { type: governed-by, target: index-adr }
@@ -34,8 +34,7 @@ relations:
 
 ## Assumptions and limits
 
-- **This is a flow, and flows sum.** Two consecutive periods add: 40 in one shift and 35 in the next
-  is 75 in the two. That is what distinguishes it from CPT-0163, where addition is invalid.
+- **This is a flow (MSR-R2), so consecutive periods add** — unlike CPT-0163, where they must not.
 - **Choose the granule and keep it.** A receipt, a receipt *line* and a pallet are three different
   denominators, and the same day yields three different numbers. Mixing them across periods is the
   most common way this indicator becomes uncomparable with its own history.
@@ -64,6 +63,7 @@ not interchangeable — which is why the granule travels with the number.
 
 ## Governing rules
 
+- **MSR-R2** — a flow; it sums across adjacent periods.
 - **SCM-R10** — quantities carry their GS1 unit; a received quantity without its unit is not a
   quantity, and a throughput built on unit-less quantities inherits that defect.
 - **SCM-R9** — the period boundaries are ISO 8601 instants in UTC, or two sites in different

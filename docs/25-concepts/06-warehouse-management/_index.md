@@ -5,7 +5,7 @@ type: concept
 owner: orchestrator
 status: active
 since: 2026-07-22
-updated: 2026-08-01
+updated: 2026-08-02
 relations:
   - { type: part-of, target: index-concepts }
   - { type: governed-by, target: index-adr }
@@ -54,11 +54,9 @@ relations:
 
 ### Throughput, backlog and event-rate indicators
 
-> **Read the flow/level column before the number.** A **flow** counts events over an interval and
-> **sums** across intervals. A **level** is read at an instant and **must never be summed** — adding
-> six readings of a backlog of 40 yields 240, a quantity that does not exist. Valid aggregations for a
-> level over an interval are last, maximum, minimum or time-weighted average. This is arithmetic, not
-> convention, and it is the defect a rollup built for flows produces silently.
+> **Read the Kind column before the number.** Which aggregations are valid follows from it, and the
+> arithmetic is stated once in [30-foundation/measurement/rule.md](../../30-foundation/measurement/rule.md)
+> — **MSR-R2** for flow versus level, **MSR-R1** for ratios.
 
 | ID | Concept | Kind | Use when |
 |---|---|---|---|

@@ -5,7 +5,7 @@ type: concept
 owner: orchestrator
 status: active
 since: 2026-07-20
-updated: 2026-07-27
+updated: 2026-08-02
 relations:
   - { type: part-of, target: index-docs }
   - { type: governed-by, target: index-adr }
@@ -33,6 +33,18 @@ relations:
   department boundaries — EOQ is cited by planning, inventory and finance — so IDs are
   not per-department.
 - **Template:** [program/templates/concept.md](../program/templates/concept.md).
+
+
+## Measurement identities every node inherits
+
+Two pieces of arithmetic constrain how any measure in this catalogue may be aggregated, and they are
+stated once rather than in each node — [30-foundation/measurement/rule.md](../30-foundation/measurement/rule.md):
+
+- **MSR-R1** — a ratio aggregates from its components (`Σnumerator ÷ Σdenominator`), never by
+  averaging ratios. Numerator and denominator share one population and one period.
+- **MSR-R2** — a flow sums across intervals; a level never does.
+
+A node that publishes a ratio or a level **cites the rule**; it does not restate it (ADR-0039).
 
 ## What the gate does and does not check
 

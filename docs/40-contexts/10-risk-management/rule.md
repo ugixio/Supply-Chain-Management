@@ -5,7 +5,7 @@ type: rule
 owner: orchestrator
 status: active
 since: 2026-07-20
-updated: 2026-07-27
+updated: 2026-08-02
 relations:
   - { type: part-of, target: index-contexts }
   - { type: governed-by, target: index-adr }
@@ -24,7 +24,8 @@ relations:
 - **RSK-R2:** Residual risk **cannot exceed** inherent risk. Residual is what remains *after*
   controls, so a control that raised the score was mis-scored or introduced a new risk that
   belongs in its own entry. *An identity of the definition.*
-- **RSK-R5:** A **risk score built from ordinal scales is ordinal**. Multiplying a likelihood rank
+- **RSK-R5:** A **risk score built from ordinal scales is ordinal** — the measurement-scale sibling
+  of the aggregation identities in **MSR-R1**/**MSR-R2**. Multiplying a likelihood rank
   by an impact rank yields a rank, not a quantity: a 20 is not twice a 10, distinct pairs collapse
   onto one number (4×5 and 5×4 both give 20 while demanding different responses), and averaging
   such scores across a portfolio is meaningless. *A measurement-theory fact,* stated because

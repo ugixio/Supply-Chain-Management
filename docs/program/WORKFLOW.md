@@ -5,7 +5,7 @@ type: program
 owner: orchestrator
 status: active
 since: 2026-07-19
-updated: 2026-08-01
+updated: 2026-08-02
 relations:
   - { type: part-of, target: index-program }
   - { type: governed-by, target: governance-root }
@@ -94,6 +94,40 @@ mirror-coverage bar) · duplicated formulas across TS/Python with one past diver
 - ⚠ **`.claude/skills/**` KPI target tables** — swept on 2026-07-29 into "the decision plus what
   constrains it". Recorded here because the *class* is not closed: no gate can tell a target from a
   definition, so the next skill file added can reintroduce it (risk #13).
+
+### Triage of 2026-08-02 — markers that stopped matching the estate
+
+> **Why this block exists.** The 2026-07-29 triage swept Phases U, P, W, C and M. It did not reach
+> **Phase L**, and it ran *before* M2/M3 landed, so two markers have been describing work as
+> outstanding that is finished. A state-gathering sweep over the whole backlog found them by
+> enumeration: 16 live markers read, 2 wrong. The rest were correct, including the two that look
+> stale and are not — **U12** and **W3** are 🟦 by the 2026-07-29 ruling, each recording its state
+> and its next step, which is what a 🟦 is required to do.
+
+| ID | Was | Now | Why |
+|---|---|---|---|
+| L4 · L5 | ⬜ | ✅ | Delivered under Phase M, which is what "renumbered under Phase M when that work starts" anticipated. L4 (the ClickHouse telemetry tier) is **M2** — five migrations, the rollup cascade, split-privilege roles, applied twice in CI against a real server. L5 (the Rust ingestion workers) is **M3a/M3b** — 13 + 40 tests. Leaving them ⬜ tells a fresh session to build what exists. |
+| L6 | ⬜ | ⛔ | Void as an L entry, live as **M5**: Docker images then Kubernetes, once two long-running services exist. One entry, not two, so the work is tracked in one place. |
+| P2 | 🟦 | ✅ | Both slices landed 2026-07-20 with verify-full green. Its one recorded residual — the `07_order_management` / `13_order_management` merge — needs no domain call any more: ADR-0037 deleted both packages, closing risk #4 and voiding U11. A 🟦 whose next step has been overtaken is a ⬜ in disguise. |
+
+**Owner decisions taken 2026-08-02**, recorded here because both were raised as ⚠ and both change
+what gets built:
+
+- **P3 · P4 — the octagon wiki stays live.** Asked as a selectable choice against "monitoring only"
+  (PLT-R6), the owner kept it: ADR-0024 (Postgres read model), ADR-0025 (code-first GraphQL) and
+  ADR-0026 (the octagon node-graph) remain in force. **Consequence for M4**, which is why this is
+  recorded rather than just answered: the NestJS gateway serves **two** read surfaces — the
+  knowledge read model built one-way from `docs/`, and the telemetry tier — so its module boundary
+  and its drift guard are part of M4's scope from the start, not a later addition. The entries stay
+  ⚠ only until their first slice is planned; the *decision* is no longer open.
+- **W6b — no operational warehouse telemetry, and risk #14 is closed anyway.** The product stays
+  project supervision (ADR-0031/0034/0036 unchanged, no new ADR). The owner separately chose to fix
+  the defect that W6b would have exposed: today `samples_1m` computes `sumState`/`min`/`max`/p95
+  only, so a **level** ingested through the cascade sums silently — a backlog of 40 read every ten
+  seconds reports 240 per minute, in range, with nothing failing. The fix is a declared metric
+  `kind` (flow · level · event-count) enforced at ingest, plus `argMaxState`/`anyLastState` in the
+  rollup. It is worth doing without the scope change because the corruption is silent and the
+  schema is young; it is queued as **M2b**.
 
 ### Phase U — Unification (context-skeleton adoption)
 - ✅ **U1 · orchestrator** — Skeleton added on branch `feat/context-skeleton`: tier tree,
@@ -292,7 +326,7 @@ mirror-coverage bar) · duplicated formulas across TS/Python with one past diver
   only through application ports; boundary linter fails violations), and a frontend-UX ADR
   for the octagon node-graph (octagon shape, LED-cyan stroke, transparent fill, right
   sidebar, interaction states, a11y, light/dark).
-- 🟦 **P2 · HOW lane** — Monorepo restructure per **ADR-0022/0023**. **Landed
+- ✅ **P2 · HOW lane** — Monorepo restructure per **ADR-0022/0023**. **Landed
   2026-07-20 (structure + wiring, verify-full green):** `git mv src/departments →
   packages/domain/src`, `src/shared → packages/shared/src`, `python → services/calc`; old
   top-level barrel removed; `@scm/shared` / `@scm/domain` path aliases (tsconfig `paths` +
@@ -311,9 +345,9 @@ mirror-coverage bar) · duplicated formulas across TS/Python with one past diver
   the root `build` script but not yet in the gate (no per-package build configs exist until
   apps land — P3+); typecheck/jest still run once at root over all packages, which is
   correct for the current surface.
-  **NOT done (deferred, own decision):** the `07_order_management` vs `13_order_management`
-  merge — the two `order_metrics.py` files **differ**, so it needs a domain call, not a
-  mechanical move (stays U11/risk #4; both preserved under `services/calc/` for now).
+  **The one deferred item is void (triaged 2026-08-02):** the `07_order_management` vs
+  `13_order_management` merge needed a domain call because the two `order_metrics.py` files
+  differed — ADR-0037 deleted both, closing risk #4 and voiding U11. Nothing remains to decide.
   **Superseded plan text below is retained for history:**
 - ⛔ **P2 (original plan) · HOW lane** — Monorepo skeleton per **ADR-0022/0023**, without breaking `src/`:
   **pnpm workspaces + Turborepo** (`pnpm-workspace.yaml`, migrate `package-lock.json` →
@@ -323,13 +357,17 @@ mirror-coverage bar) · duplicated formulas across TS/Python with one past diver
   barrel + path alias preserved); **`packages/shared` = `src/shared`**. `docs/ tools/ .claude/`
   stay at root. Fix the `07_order_management` → `13_order_management` collision (risk #4/U11)
   during the move. Update the 4 test imports.
-- ⚠ **P3 · HOW lane (Stage A)** — **Postgres read model (ADR-0024)** + **code-first GraphQL
+- ⬜ **P3 · HOW lane (Stage A)** — **Confirmed live by the owner 2026-08-02** against the
+  monitoring-only alternative; it is planned as part of **M4**, not as a separate phase, because
+  one gateway serves both read surfaces. **Postgres read model (ADR-0024)** + **code-first GraphQL
   (ADR-0025)**. `tools/ingest`: one-way build reading `docs/25-concepts` + `rule.md` +
   `40-contexts` into read-model tables (drop-and-rebuild; `docs/` stays SSOT). NestJS
   code-first resolvers expose nodes/edges; `schema.gql` emitted + committed; DataLoader
-  batching; contract tests. Drift guard (future gate G11) asserts ingested counts match
-  `docs/`.
-- ⚠ **P4 · HOW lane (Stage A)** — Next.js octagon node-graph front end per the P1 UX ADR;
+  batching; contract tests. A drift guard asserts the ingested counts match `docs/` — as a **new**
+  gate number, since G1–G13 are all taken (the "future gate G11" this entry once named is now
+  the retired-rules gate).
+- ⬜ **P4 · HOW lane (Stage A)** — **Confirmed live by the owner 2026-08-02.** Next.js octagon
+  node-graph front end per the P1 UX ADR;
   SCM core node centre, 14 department nodes around it as a connected circuit, CPT sub-nodes
   on expand; click → right sidebar rendering the concept node (formula, worked example,
   links). Accessibility + light/dark.
@@ -441,9 +479,11 @@ mirror-coverage bar) · duplicated formulas across TS/Python with one past diver
   had nothing to port. `crates/scm-core` (PurchaseOrder) was deleted three commits after it
   landed: it faithfully reproduced a USD 5,000 approval threshold that never belonged in a
   standards context.
-- ⬜ **L4/L5/L6** — the ClickHouse telemetry tier, the Rust ingestion workers and the
-  Docker/Kubernetes packaging **remain live**, as the monitoring application's infrastructure.
-  They are renumbered under Phase M when that work starts.
+- ✅ **L4/L5** — renumbered and **delivered** under Phase M, exactly as this entry anticipated:
+  L4 (the ClickHouse telemetry tier) is **M2**, L5 (the Rust ingestion workers) is **M3a/M3b**.
+  Triaged 2026-08-02.
+- ⛔ **L6** — void as an L entry; the Docker/Kubernetes packaging is tracked as **M5**, so it has
+  one home rather than two.
 
 ### Phase W6 — Operational telemetry (raised 2026-08-01, decision open)
 
@@ -458,7 +498,15 @@ mirror-coverage bar) · duplicated formulas across TS/Python with one past diver
   Two nodes (CPT-0164 sequence, CPT-0165 pull list) carry an explicit **vocabulary warning**: they are
   APICS Dictionary industry terms, and no standards body fixes what one sequence or one list contains,
   so counts are not comparable across operations.
-- ⚠ **W6b · HOW — needs an owner decision before any code.** Making the monitoring application ingest
+- ⛔ **W6b · HOW — ANSWERED NO, 2026-08-02.** The owner declined the scope change: the monitoring
+  application stays project supervision, and ADR-0031/0034/0036 are unchanged. **Items 2 and 3
+  below survive the *no*** and were split out as **M2b**, because the level-summing defect is
+  already present in a schema that has no level metrics yet — it is cheap to fix now and silent
+  when it bites (risk #14). Items 1 and 4–8 are void unless the scope question reopens. The
+  inspection is kept in full below: it is what a *yes* would have cost, and re-deriving it later
+  would be waste.
+  **Original entry — what it would require, found by inspection rather than assumed.** Making the
+  monitoring application ingest
   operational warehouse telemetry is a **product-scope change** over ADR-0031/0034/0036, which say
   *project supervision*. What it would require, found by inspection rather than assumed:
   1. **An ADR** narrowing or extending those three.
@@ -633,7 +681,17 @@ mirror-coverage bar) · duplicated formulas across TS/Python with one past diver
   **M3b remaining:** the transport adapter (ingress) and the ClickHouse client that performs the
   batched insert, plus the retry/dead-letter mechanics the owner chose. Both are adapter work by
   ENG-R10.1, so they belong outside this crate.
+- ⬜ **M2b · HOW** — **Close risk #14: make the rollup safe for levels.** Decided 2026-08-02 with
+  W6b answered *no*, because the defect does not need the scope change to bite. A metric `kind`
+  (flow · level · event-count) declared per series and enforced at ingest, plus `argMaxState` /
+  `anyLastState` alongside the existing `sumState`/`min`/`max`/p95 in `samples_1m`, so a level
+  aggregates by last / max / min and never by sum (**MSR-R2**). Forward-only migration per
+  ADR-0036; `make verify-schema` must cover the new columns.
 - ⬜ **M4 · HOW** — NestJS + GraphQL as the only counterpart the frontend has; Next.js dashboards.
+  **Scope confirmed 2026-08-02:** with P3/P4 kept alive, the gateway serves **two** read surfaces —
+  the knowledge read model (ADR-0024/0025) and the telemetry tier (ADR-0036) — and the octagon
+  front end (ADR-0026) sits above it. The drift guard asserting the ingested counts match `docs/`
+  belongs to this phase, not to a later one.
 - ⬜ **M5 · HOW** — Docker images (non-root, pinned digests, multi-stage) then Kubernetes once two
   long-running services exist.
 

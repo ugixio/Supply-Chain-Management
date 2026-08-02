@@ -45,7 +45,7 @@ docs/              The context itself — tiered knowledge; map: docs/_index.md
   10-decisions/      ADRs (append-only; the index is the entry point)
   20-product-model/  What this project is; the node model; glossary
   25-concepts/       CPT-NNNN concept nodes, per department
-  30-foundation/     Cross-cutting rules (SCM-R*, PLT-*)
+  30-foundation/     Cross-cutting rules (SCM-R*, PLT-*, MSR-*)
   40-contexts/       Per-department rules (PRC-*, DMD-*, INV-* …)
   50-engineering/    ENG-R* build-time rules
   program/           Backlog, operating model, evaluation protocol, templates
@@ -88,6 +88,8 @@ Full reference: `docs/standards/REGULATORY_FRAMEWORK.md`.
   best-option gate (ENG-R9), the Rust core boundary (ENG-R10).
 - **`PLT-*`** — `docs/30-foundation/platform/rule.md`. Prompt-refinement gate, read-only project
   reference, everything-connected, node/edge typing.
+- **`MSR-*`** — `docs/30-foundation/measurement/rule.md`. Measurement identities: a ratio aggregates
+  from its components (MSR-R1), a level is never summed (MSR-R2). Cited, never restated.
 - Per-department families live in `docs/40-contexts/<NN-dept>/rule.md`.
 
 ## Concept nodes

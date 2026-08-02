@@ -5,7 +5,7 @@ type: governance
 owner: orchestrator
 status: active
 since: 2026-07-19
-updated: 2026-08-01
+updated: 2026-08-02
 relations:
   - { type: part-of, target: index-governance }
   - { type: governed-by, target: knowledge-architecture }
@@ -58,6 +58,7 @@ relations:
 | SDV | 14-supplier-development | `docs/40-contexts/14-supplier-development/rule.md` | SDV-R6 |
 | ENG | Engineering (build-time, cross-cutting) | `docs/50-engineering/rule.md` | ENG-R10 |
 | PLT | Platform / workspace (above the 14 depts) | `docs/30-foundation/platform/rule.md` | PLT-R6 |
+| MSR | Measurement identities (how a measure aggregates, cross-department) | `docs/30-foundation/measurement/rule.md` | MSR-R2 |
 
 ### Concept IDs — LIVE (ADR-0015)
 

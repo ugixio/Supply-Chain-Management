@@ -5,7 +5,7 @@ type: concept
 owner: orchestrator
 status: active
 since: 2026-08-01
-updated: 2026-08-01
+updated: 2026-08-02
 relations:
   - { type: part-of, target: index-concepts-06-warehouse-management }
   - { type: governed-by, target: index-adr }
@@ -42,13 +42,13 @@ relations:
 - **Vocabulary warning.** *Sequence* is industry vocabulary for just-in-sequence supply, defined in
   the APICS Dictionary. **No standards body fixes what one sequence contains**, so another plant's
   counts are not comparable. Record the definition next to the number.
-- **Prepared and pending do not add up to required unless the horizon is closed.** Requirements
-  arrive during the shift; `prepared + pending = required` holds only for a frozen horizon.
+- **`prepared + pending = required` holds only for a frozen horizon** — requirements arrive during
+  the shift.
 - **Sequence integrity is binary and it dominates the count.** Right parts in the wrong order is not
   partially prepared — the line cannot use it. Counting it as progress is how this indicator
   flatters an operation.
-- **The pending level obeys CPT-0163's arithmetic**: valid aggregations over an interval are last,
-  max, min or time-weighted average. Never the sum.
+- **The pending count is a level (MSR-R2)**; the prepared count is a flow. Reporting them the same
+  way is the error this pairing exists to prevent.
 - **Does not apply where supply is not sequenced.** Bulk or kitted supply has no sequence; use
   CPT-0040 instead.
 
@@ -69,6 +69,7 @@ are not prepared: readiness **78.3%**, and the line stops either way.
 
 ## Governing rules
 
+- **MSR-R2** — `prepared` is a flow and sums; `pending` is a level and does not.
 - **WHS-R5** — what a task reports completed cannot exceed what it was given; a prepared count is
   only auditable under that conservation.
 - **SCM-R9** — the instant on the pending level and the boundaries of the period are ISO 8601 UTC.

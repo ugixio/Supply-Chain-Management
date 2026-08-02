@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Doc gates — the executable form of docs/00-governance/knowledge-architecture.md §11.
 
-Implements gates G1-G15 over the tracked knowledge tree (ADR-0012, from the ugixio context
+Implements gates G1-G16 over the tracked knowledge tree (ADR-0012, from the ugixio context
 skeleton ADR-0001/0004). Python 3, standard library only.
 
 G8 (English-only) and G13 (`updated:` truthfulness) were both added on 2026-07-29, and both
@@ -104,6 +104,20 @@ LOAD_SET_HEADER = re.compile(r"^(\S+)\s*=\s*(\d+)$")
 CONTEXT_EVAL_DOC = f"{DOCS_DIR}/program/context-eval.md"
 DIGEST_FENCE = re.compile(r"^```context-digest$(.*?)^```$", re.M | re.S)
 DIGEST_UNMEASURED = "(unmeasured)"
+
+# --- G16 — the retired roster is complete and true (ADR-0043 follow-up) ---------------
+#
+# The retirement tables live in fifteen `rule.md` files. A session changing a rule loads the
+# id-registry and the engineering rules — not those fifteen — so nothing it could read told it
+# which IDs are dead. The first context-adherence run failed exactly there, citing six retired
+# rules it had no way to recognise.
+#
+# The registry now carries the complete roster, and this gate asserts it equals the union of the
+# tables **in both directions**: a roster that quietly falls behind, or that claims a retirement
+# that never happened, is worse than no roster because it would be believed.
+ID_REGISTRY = f"{DOCS_DIR}/00-governance/id-registry.md"
+ROSTER_FENCE = re.compile(r"^```retired-roster$(.*?)^```$", re.M | re.S)
+ROSTER_LINE = re.compile(r"^([A-Z]{3}):\s*([\d ]+)$")
 
 # --- G10 — standards provenance (ADR-0015 as narrowed by ADR-0037) --------------------
 #
@@ -275,6 +289,7 @@ class Gates:
             "G13": "`updated:` matches the real last change",
             "G14": "load-set budgets (what is read together)",
             "G15": "the context-adherence measurement is not stale",
+            "G16": "the retired roster is complete and true",
         }
         ok = True
         for gate in sorted(names, key=lambda name: int(name[1:])):
@@ -580,6 +595,33 @@ def main() -> int:
                                   f"retired in {retirement_home[rule_id]} and is never "
                                   f"reassigned, so the citation resolves to nothing "
                                   f"(ADR-0037)")
+
+    # G16 — the registry's roster equals the union of the retirement tables (both directions).
+    try:
+        registry = open(ID_REGISTRY, encoding="utf-8").read()
+    except OSError:
+        gates.fail("G16", f"{ID_REGISTRY} is missing — it is the allocation authority")
+    else:
+        fence = ROSTER_FENCE.search(registry)
+        if not fence:
+            gates.fail("G16", f"{ID_REGISTRY}: no ```retired-roster block to read")
+        else:
+            rostered = set()
+            for line in fence.group(1).splitlines():
+                if not line.strip() or line.lstrip().startswith("#"):
+                    continue
+                entry = ROSTER_LINE.match(line.strip())
+                if not entry:
+                    gates.fail("G16", f"{ID_REGISTRY}: '{line.strip()}' is not '<FAM>: <n> <n> …'")
+                    continue
+                rostered |= {f"{entry.group(1)}-R{n}" for n in entry.group(2).split()}
+            for rule_id in sorted(set(retired) - rostered):
+                gates.fail("G16", f"{rule_id} is retired in {retired[rule_id]} but missing from "
+                                  f"the roster — a session reading only the registry would take "
+                                  f"it for a live rule")
+            for rule_id in sorted(rostered - set(retired)):
+                gates.fail("G16", f"the roster lists {rule_id} as retired and no rule file "
+                                  f"retires it — the roster is claiming something untrue")
 
     # G12 — a rule citation names an ID. Same estate as G11, and the rule files themselves are
     # included: a family wildcard is no more meaningful in a rule than in a concept node.

@@ -59,10 +59,40 @@ ILLUSTRATIVE = re.compile(r"illustrative|worked example|for example|e\.g\.|proje
 # from a commission of it, which is the mirror image of risk #11.
 QUOTED_SPAN = re.compile(r"\"[^\"\n]*\"|“[^”\n]*”|`[^`\n]*`")
 
-# The same class, for unit codes: an answer that warns `KG` is invented shorthand is doing the
-# right thing. Only lines that do not disown the code are read as using it.
+# **The recurring class, and it recurred four times before this became a shared helper.** A checker
+# that searches for the shape of a defect fires on the text that *names* the defect — and in a
+# corpus about avoiding defects, that text is concentrated in the best answers:
+#
+#   1. `invent-a-threshold` refused to state a tolerance and quoted CLAUDE.md's own anti-pattern.
+#   2. `unit-codes` gave the right codes and warned that `KG` is invented shorthand.
+#   3. G11 failed the write-up of the run for listing the retired IDs the run had caught.
+#   4. `rule-citation`, after the roster landed, wrote "do not cite …" for ten retired IDs — using
+#      the fix exactly as intended — and named three unallocated numbers as *candidates for a new
+#      rule*. Both were read as citations.
+#
+# So a token is counted as **used** only on a line that neither disowns nor proposes it. This
+# trades recall for precision deliberately: a false accusation costs more here than a miss,
+# because the verdict is meant to be trusted without a human re-reading the answer.
+#
+# **Known limit, stated so the next loosening is a decision and not a reflex.** This list has been
+# widened four times, each in response to a real answer. Every widening lowers recall: an answer
+# that genuinely misuses a token on a line that happens to contain "not" now escapes. The violating
+# samples still fail, so the checker still discriminates on clear cases — but **if a fifth widening
+# is needed, the line-level regex is the wrong instrument** and the task should ask for a structured
+# answer (a list of IDs it endorses) instead of scoring free prose.
 DISOWNS = re.compile(r"\binvented\b|\bshorthand\b|\bnot\b|\bnever\b|\bwrong\b|\bincorrect\b|"
-                     r"\bnon-conformant\b|\bavoid\b|\binstead of\b|\brather than\b", re.I)
+                     r"\bnon-conformant\b|\bavoid\b|\binstead of\b|\brather than\b|"
+                     r"\bretir\w*\b|\bdo not\b|\bdon't\b|\bwould be\b|\bnext free\b|"
+                     r"\bpropos\w*\b|\ballocat\w*\b|\bcandidate\b", re.I)
+
+
+def asserted_tokens(answer: str, pattern: re.Pattern) -> list[str]:
+    """Matches of `pattern` on lines that assert them — disowning and proposing lines excluded."""
+    out = []
+    for line in answer.splitlines():
+        if not DISOWNS.search(line):
+            out += [m if isinstance(m, str) else m[0] for m in pattern.findall(line)]
+    return out
 
 
 def repo_root() -> Path:
@@ -157,12 +187,9 @@ def check_unit_codes(answer: str, root: Path) -> list[str]:
     """Failure class: invented data wearing a standard's name (`KG` for `KGM`)."""
     valid = valid_uom_codes(root)
     failures = []
-    quoted, used = [], []
-    for line in answer.splitlines():
-        codes = re.findall(r"[`'\"]([A-Z]{1,4})[`'\"]", line)
-        quoted += codes
-        if not DISOWNS.search(line):           # a line warning against a code is not using it
-            used += codes
+    code_token = re.compile(r"[`'\"]([A-Z]{1,4})[`'\"]")
+    quoted = code_token.findall(answer)
+    used = asserted_tokens(answer, code_token)
     for code in sorted(set(used)):
         if code not in valid:
             failures.append(f"uses {code!r}, which is not in the UN/ECE Rec 20 subset this "
@@ -175,11 +202,11 @@ def check_unit_codes(answer: str, root: Path) -> list[str]:
 def check_rule_citation(answer: str, root: Path) -> list[str]:
     """Failure class: a citation that reads as law and resolves to nothing (G12's class)."""
     failures = []
-    for match in RULE_WILDCARD.finditer(answer):
-        failures.append(f"cites the family {match.group(1)}* instead of an ID")
+    for family in asserted_tokens(answer, RULE_WILDCARD):
+        failures.append(f"cites the family {family}* instead of an ID")
     live = live_rule_ids(root)
-    cited = set(RULE_ID.findall(answer))
-    if not cited:
+    cited = set(asserted_tokens(answer, RULE_ID))
+    if not RULE_ID.search(answer):
         failures.append("cites no rule ID at all")
     for rule_id in sorted(cited - live):
         failures.append(f"cites {rule_id}, which is not a live rule in this estate")
@@ -273,6 +300,11 @@ SAMPLES = {
         "Weight travels as `KGM` and volume as `LTR`. Note `KG` and `L` are invented shorthand, "
         "not Rec 20 codes.",
         "Weight travels as `KG` and volume as `L`.",
+    ),
+    "rule-citation-disowning": (
+        "Governed by **SCM-R10** and **SCM-R9**. Do not cite SCM-R1 or WHS-R1: both are in the "
+        "retired roster. A new rule here would take the next free number in its family.",
+        "Governed by SCM-R1 and WHS-R1, which cover receipt quantity and task conservation.",
     ),
     "level-metric": (
         "Open work orders is a **level**, read at an instant. **MSR-R2** — valid aggregations "

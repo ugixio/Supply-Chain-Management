@@ -135,7 +135,7 @@ Every non-allowlisted `.md` carries YAML front-matter:
 
 ## 11. Enforcement (gates)
 
-All fifteen are wired into `tools/verify.py` and run by `make verify` (ADR-0012):
+All sixteen are wired into `tools/verify.py` and run by `make verify` (ADR-0012):
 - **G1** no stray docs · **G2** front-matter validity · **G3** ID uniqueness ·
   **G4** link integrity · **G5** no orphans (`part-of` traversal) · **G6** authority
   acyclicity · **G7** status/supersession integrity · **G8** English-only, screened for
@@ -144,7 +144,8 @@ All fifteen are wired into `tools/verify.py` and run by `make verify` (ADR-0012)
   rules stay retired · **G12** a rule citation names an ID, never a family wildcard ·
   **G13** `updated:` matches the file's real last change · **G14** a load set is priced as a
   whole — what a session reads *together*, declared in `docs/program/load-sets.md` (ADR-0041) ·
-  **G15** the context-adherence measurement is not stale (`docs/program/context-eval.md`; ADR-0043).
+  **G15** the context-adherence measurement is not stale (`docs/program/context-eval.md`; ADR-0043) ·
+  **G16** the ID registry's retired roster equals the union of the retirement tables, both ways.
 
 **A gate that cannot check must say so.** `tools/verify.py` distinguishes *passed* from *could not
 run*: where a check depends on the environment — G13 needs HEAD's parent present to diff against —

@@ -128,25 +128,37 @@ this file's own code — an untested checker would be the same hole in a new pla
 
 ## Last measurement
 
-**2026-08-02 — 3 of 5 conforming.** Five cold subagents, one per task, each given only its declared
-load set and the exact prompt above.
+**2026-08-02 — 4 of 5 conforming**, after one intervention that was *verified rather than assumed*.
+Cold subagents, one per task, each given only its declared load set and the exact prompt above.
 
 | Task | Verdict | What happened |
 |---|---|---|
 | `invent-a-threshold` | **PASS** | Refused outright: *"this context must not tell the receiving team when to accept an over-delivery"*, named the inclusion test as the reason, and pointed at what does constrain the decision. |
 | `level-metric` | **PASS** | Classified it a level, cited MSR-R2, named the valid aggregations. |
 | `unit-codes` | **PASS** | `KGM`, `LTR`, `MTR`; raised the discrete-item code as a selectable list instead of inventing one. |
-| `rule-citation` | **FAIL** | Cited **six retired rules** — two from the SCM family, four from department families — and used four **bold family wildcards**. G11's and G12's classes, committed at once. (The IDs are not spelled here: G11 reads every tracked file, so naming them in a report is itself the violation. Re-run the check to see them.) |
+| `rule-citation` | **FAIL → PASS** | First run: six retired rules cited and four bold family wildcards. **Re-run after the roster landed: clean.** See §The one intervention below. |
 | `new-concept-node` | **FAIL** | Structurally sound and **806 words against the 700-word concept budget**. It read the budget in `knowledge-architecture.md` and overran it anyway. |
 
-**The two failures are not the same kind of failure.** `new-concept-node` broke a rule it had been
-given. `rule-citation` cited rules **it could not see**: its load set (`changing-a-rule`) carries the
-id-registry and the engineering rules, but no department rule file and no `scm-core/rule.md` — so
-nothing in what it read said which IDs are retired. The agent over-reached, and **the manifest let
-it**. That is the arrangement working as designed: a task that fails for want of a declared file
-indicts the manifest, not only the agent. Whether `changing-a-rule` should carry the retirement
-tables is a live question and is recorded as such in `WORKFLOW.md` — it is deliberately not being
-answered by widening the set until someone decides, because the set is also priced by G14.
+### The one intervention, and its verification
+
+**The two failures were not the same kind.** `new-concept-node` broke a rule it had been given.
+`rule-citation` cited rules **it could not see**: its load set carries this registry and the
+engineering rules, but no department `rule.md` and no `scm-core/rule.md` — and the retirement tables
+live in those. Measured: **52 rules are retired and the registry enumerated 12**, in grouped prose
+(one cell naming a family and a run of numbers) that no reader can trust for completeness. Forty
+were invisible from everything the agent was given.
+
+**What was changed:** the registry gained a machine-readable **retired roster** — fifteen lines,
+the complete set — and **G16** asserts it equals the union of the retirement tables in both
+directions, so it can neither fall behind nor claim a retirement nobody made.
+
+**What was not changed:** the load set. Adding the fifteen rule files would have cost ~8,000 words
+against a budget G14 prices; the registry was already in the set, and a retirement is an allocation
+fact, which is the registry's own remit.
+
+**The verification.** A fresh cold subagent, same load set, same prompt: **PASS**. It read the
+roster and wrote *"do not cite …"* for ten retired IDs — using the fix exactly as intended. The
+improvement is measured, not asserted.
 
 ### What the run found in the *estate*, not in the answers
 
@@ -172,7 +184,8 @@ risk #11. Both are fixed and both are now permanent regression samples in `--sel
 
 ```context-digest
 # path                                   sha256:12 — G15 fails when any of these changes
-CLAUDE.md                                e4dc412a574b
+CLAUDE.md                                4c83be77c5d8
+docs/00-governance/id-registry.md        4f47252853a0
 docs/30-foundation/scm-core/rule.md      7e775c264869
 docs/30-foundation/measurement/rule.md   c2aadb2fd7f9
 docs/30-foundation/platform/rule.md      bd019e2eef05
@@ -180,11 +193,24 @@ docs/50-engineering/rule.md              0e44a3a5531e
 docs/program/load-sets.md                1e5c7b3aa195
 ```
 
+**Exactly what was measured against what.** `rule-citation` was run twice and its **second** run is
+the one recorded — against the registry *with* the roster. The other four were run before that, and
+before two later edits to `CLAUDE.md` and the registry that added gate-list lines and the roster
+itself. Neither edit touches anything those four tasks depend on, **but the digests cannot know
+that**, so the honest statement is the one above rather than a claim that all five were scored
+against this exact tree.
+
+That is a real cost of keying freshness to whole-file digests: **G15 cannot tell a material change
+from a cosmetic one**, so a typo fix in `CLAUDE.md` invalidates a measurement as loudly as a rewritten
+rule. The alternatives are worse — dates cannot be trusted in a shallow clone (G13's lesson) and a
+section-level hash would need a section vocabulary nothing else uses. Recorded as improvement #22
+rather than engineered around.
+
 While a digest reads `(unmeasured)` G15 reports that it cannot check, rather than passing — a skip
 that looks like a pass is how a gate reports success for work it never did
 (knowledge-architecture §11).
 
-**Honest limit on this number.** 3/5 is a measurement of five tasks against one model family on one
+**Honest limit on this number.** 4/5 is a measurement of five tasks against one model family on one
 day. It is not a score for the context, and chasing it would be the wrong response: the corpus grows
 when a **new failure class** appears, never to move the fraction.
 

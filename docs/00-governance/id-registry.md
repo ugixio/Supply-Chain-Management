@@ -56,7 +56,7 @@ relations:
 | SOP | 12-sop-planning | `docs/40-contexts/12-sop-planning/rule.md` | SOP-R5 |
 | ORD | 13-order-management | `docs/40-contexts/13-order-management/rule.md` | ORD-R7 |
 | SDV | 14-supplier-development | `docs/40-contexts/14-supplier-development/rule.md` | SDV-R6 |
-| ENG | Engineering (build-time, cross-cutting) | `docs/50-engineering/rule.md` | ENG-R10 |
+| ENG | Engineering (build-time, cross-cutting) | `docs/50-engineering/rule.md` | ENG-R11 |
 | PLT | Platform / workspace (above the 14 depts) | `docs/30-foundation/platform/rule.md` | PLT-R6 |
 | MSR | Measurement identities (how a measure aggregates, cross-department) | `docs/30-foundation/measurement/rule.md` | MSR-R2 |
 

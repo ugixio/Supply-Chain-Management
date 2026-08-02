@@ -85,7 +85,7 @@ Full reference: `docs/standards/REGULATORY_FRAMEWORK.md`.
   IDs stay listed as retired so old citations still resolve.
 - **`ENG-R*`** — `docs/50-engineering/rule.md`. Build-time law: dependency direction, exact money
   (ENG-R4/R5), generated artefacts, exclusive technology lanes (ENG-R8), the six-check
-  best-option gate (ENG-R9), the Rust core boundary (ENG-R10).
+  best-option gate (ENG-R9), the Rust core boundary (ENG-R10), the integration model (ENG-R11).
 - **`PLT-*`** — `docs/30-foundation/platform/rule.md`. Prompt-refinement gate, read-only project
   reference, everything-connected, node/edge typing.
 - **`MSR-*`** — `docs/30-foundation/measurement/rule.md`. Measurement identities: a ratio aggregates
@@ -159,7 +159,8 @@ G12 a rule citation names an ID (never a family wildcard) · G13 `updated:` is t
 **Definition of Done:** `make verify-full` green · touched rules keep their tests · spec and model
 updated first if a concept changed · knowledge placed per
 `docs/00-governance/knowledge-architecture.md` (no stray `.md`) · self-review run · commit message
-proposed (Conventional Commits, ADR-0011).
+proposed (Conventional Commits, ADR-0011) · **integrated or reported (ENG-R11)** — the pull request
+merges into `main` and its branch is deleted, or the turn's report says why it did not.
 
 ## References
 

@@ -165,19 +165,54 @@ ADR-0037; the keys are unaffected.)*
 ## 6. Gate-invariant IDs (fixed)
 
 `G1`–`G8` name the knowledge-architecture §11 invariants. New gates append (G9+).
-Allocated: **G1–G12** (G9 context budget, ADR-0012; G10 **standards provenance** — was concept
+Allocated: **G1–G16** (G9 context budget, ADR-0012; G10 **standards provenance** — was concept
 coverage under ADR-0015, rewritten by ADR-0037 when the code it policed was deleted; **G11
 retired rules stay retired**, added at Phase C3 because a citation of a retired ID is invisible to
 G4 — it is not a broken link, it silently resolves to nothing and reads as law; **G12 a rule
 citation names an ID**, added at Phase C1d after 47 nodes were found citing family wildcards like
 `**FIN-R***` — invisible for the same reason, and most of them stood in for lifecycle rules
-retired with the deleted application).
+retired with the deleted application; **G13** `updated:` truthfulness, **G14** load-set budgets, **G15** context-adherence freshness, **G16** this file's retired roster).
+
+### The retired roster — complete, and gated
+
+> **Why this block exists.** The first context-adherence run (ADR-0043) failed its citation task by
+> naming six retired rules, and the agent could not have known: its load set carries this registry
+> and the engineering rules, and **the retirement tables live in the fifteen `rule.md` files, none
+> of which it had**. The narrative map below covers most of them, but in grouped prose
+> (`WHS-R1 / R2 / R3 / R4`) that no reader can trust for *completeness* and no gate could check.
+>
+> This roster is the complete set, and **G16 asserts it equals the union of the retirement tables**
+> — in both directions, so it cannot silently fall behind or claim a retirement that never
+> happened. A roster that drifts is worse than none, because it would be believed.
+
+```retired-roster
+# family: retired numbers — the complete set, asserted against the rule files by G16.
+CMP: 1
+DMD: 1 2 3 4 5 7 8
+FIN: 1 2 3
+INV: 2 3
+LOG: 2
+ORD: 1 2 3 4
+PRC: 2 3 5 6
+QMS: 1 2 3 4
+RSK: 1 3 4
+SCM: 1 2 5 8 11 12 13
+SDV: 1 2 3
+SOP: 1 2 3
+SPL: 3 4
+SUP: 1 2 3 4
+WHS: 1 2 3 4
+```
+
+**Fifty-two retired IDs.** None is ever reassigned; a citation of one resolves to nothing and reads
+as law, which is what G11 exists to catch after the fact and what this roster exists to prevent
+before it.
 
 ### What replaced a retired rule (Phase C3)
 
 > A retired ID is never reassigned, so a reader who meets an old citation needs to know where the
-> durable part went. This table is that map. It lives here because the registry is the allocation
-> authority and one of G11's three exempt homes.
+> durable part went. This table is that map — the *narrative* companion to the roster above. It
+> lives here because the registry is the allocation authority and one of G11's three exempt homes.
 
 | Retired | Where the durable part went |
 |---|---|

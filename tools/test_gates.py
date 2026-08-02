@@ -46,11 +46,12 @@ STRAY = "stray-note.md"
 MANIFEST = "docs/program/load-sets.md"
 EVAL_RECORD = "docs/program/context-eval.md"
 DEPT_RULE = "docs/40-contexts/06-warehouse-management/rule.md"
+REGISTRY = "docs/00-governance/id-registry.md"
 RETIRED_RULE_ID = "SCM-R1"    # retired by ADR-0037; declared in 30-foundation/scm-core
 
 # Every path any mutant may create or modify. The harness restores all of them between
 # mutants, so this list must stay in step with the mutations below.
-TOUCHABLE = (CONCEPT, CONCEPT_B, STRAY, MANIFEST, EVAL_RECORD, DEPT_RULE)
+TOUCHABLE = (CONCEPT, CONCEPT_B, STRAY, MANIFEST, EVAL_RECORD, DEPT_RULE, REGISTRY)
 
 
 # --- worktree plumbing ----------------------------------------------------------------
@@ -257,6 +258,25 @@ def mutate_g15(wt: Path) -> list[str]:
     return [EVAL_RECORD]
 
 
+def mutate_g16_missing(wt: Path) -> list[str]:
+    """A roster that has fallen behind the retirement tables."""
+    text = restamp(read(wt, REGISTRY))
+    write(wt, REGISTRY, text.replace("WHS: 1 2 3 4", "WHS: 1 2 3", 1))
+    return [REGISTRY]
+
+
+def mutate_g16_extra(wt: Path) -> list[str]:
+    """A roster claiming a retirement no rule file declares — the other direction.
+
+    Both directions are planted because the gate promises both, and a check that only looks
+    one way lets the roster grow claims nobody made. G3's rule-ID hole came from exactly this:
+    a gate asserting three things with one of them tested.
+    """
+    text = restamp(read(wt, REGISTRY))
+    write(wt, REGISTRY, text.replace("WHS: 1 2 3 4", "WHS: 1 2 3 4 99", 1))
+    return [REGISTRY]
+
+
 MUTANTS = [
     ("G1", "tracked .md outside docs/", mutate_g1, set()),
     ("G2", "type outside the vocabulary", mutate_g2, set()),
@@ -274,12 +294,16 @@ MUTANTS = [
     ("G13", "change stamped with an old date", mutate_g13, set()),
     ("G14", "load set reading past its budget", mutate_g14, {"G15"}),
     ("G15", "measurement recorded against a changed context", mutate_g15, set()),
+    ("G16", "roster fallen behind the retirement tables", mutate_g16_missing, {"G15"}),
+    ("G16", "roster claiming a retirement nobody declared", mutate_g16_extra, {"G15"}),
 ]
-# The `also` column declares collateral that is real rather than tolerated. G14's mutant edits
-# `load-sets.md`, which is one of the files the context-adherence measurement is recorded against
-# (ADR-0043) — so changing it genuinely invalidates that measurement and G15 is right to fire. The
-# two gates agreeing is the system working; what the column forbids is an *undeclared* second
-# failure, which means the mutation is testing something other than its gate. It exists because the first version of this file predicted that a duplicated id
+# The `also` column declares collateral that is real rather than tolerated. G14's and G16's mutants
+# edit `load-sets.md` and `id-registry.md`, both of which the context-adherence measurement is
+# recorded against (ADR-0043) — so changing either genuinely invalidates that measurement and G15 is
+# right to fire. The gates agreeing is the system working; what the column forbids is an *undeclared*
+# second failure, which means the mutation is testing something other than its gate. Expect this
+# column to grow as G15's watched set grows: every context-defining file a mutant touches drags G15
+# with it, and that coupling is the point of the gate rather than a nuisance. It exists because the first version of this file predicted that a duplicated id
 # would drag G5 with it — the reasoning being that the losing document's part-of chain would
 # resolve to a node no longer answering to that name. The harness said otherwise on its first
 # green run: both documents carry part-of to the same index, so the chain resolves either way

@@ -176,10 +176,11 @@ def reorder_point(avg_daily_demand: float, lead_time_days: float,
     return avg_daily_demand * lead_time_days + safety_stock
 ```
 
-## Aggregates a procurement implementation typically needs
+## What a procurement implementation typically needs
 
-*Shapes, not code — ADR-0037 deleted the reference implementation. A project builds these in its
-own repository, with its own policy values.*
+*Shapes, not code — ADR-0037 deleted the reference implementation. A project builds these in
+its own repository, with its own policy values and its own layout. The names below are the
+responsibilities that need a home, not paths in this repository.*
 
 - `PurchaseOrder.ts` — PO aggregate; `POStatus` union; approval workflow; three-way match
 - `Supplier.ts` — Supplier master; `KraljicQuadrant`; certifications (ISO 28000, C-TPAT, AEO)

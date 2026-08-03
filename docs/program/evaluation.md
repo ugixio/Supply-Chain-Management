@@ -5,7 +5,7 @@ type: program
 owner: orchestrator
 status: draft
 since: 2026-07-19
-updated: 2026-07-29
+updated: 2026-08-03
 relations:
   - { type: part-of, target: index-program }
   - { type: governed-by, target: governance-root }

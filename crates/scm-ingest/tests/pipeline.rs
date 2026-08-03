@@ -5,7 +5,9 @@
 
 #![allow(clippy::unwrap_used, clippy::expect_used)]
 
-use scm_ingest::{Batcher, Deduplicator, Pipeline, RejectReason, Sample, normalize};
+use scm_ingest::{
+    Batcher, Deduplicator, MetricKind, MetricRegistry, Pipeline, RejectReason, Sample, normalize,
+};
 
 const NOW: i64 = 1_800_000_000_000; // a fixed UTC instant; the value is irrelevant, its fixedness is not
 
@@ -20,16 +22,14 @@ fn sample(project: &str, metric: &str, ts_ms: i64, value: f64) -> Sample {
     }
 }
 
-fn governed() -> Vec<String> {
-    // The CPT-0155..0160 metric names — ADR-0036: a metric with no concept node is ungoverned.
-    [
-        "deployment_frequency",
-        "lead_time_for_changes",
-        "change_failure_rate",
-    ]
-    .iter()
-    .map(|name| (*name).to_owned())
-    .collect()
+fn governed() -> MetricRegistry {
+    // The CPT-0155..0167 metric names with their kind — ADR-0036: a metric with no concept node is
+    // ungoverned, and since 0006 an accepted metric must also declare how it may be aggregated.
+    MetricRegistry::new(vec![
+        ("deployment_frequency".to_owned(), MetricKind::Flow),
+        ("lead_time_for_changes".to_owned(), MetricKind::Level),
+        ("change_failure_rate".to_owned(), MetricKind::Flow),
+    ])
 }
 
 fn pipeline(max_samples: usize, max_age_ms: i64) -> Pipeline {

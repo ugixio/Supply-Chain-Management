@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Doc gates — the executable form of docs/00-governance/knowledge-architecture.md §11.
 
-Implements gates G1-G16 over the tracked knowledge tree (ADR-0012, from the ugixio context
+Implements gates G1-G17 over the tracked knowledge tree (ADR-0012, from the ugixio context
 skeleton ADR-0001/0004). Python 3, standard library only.
 
 G8 (English-only) and G13 (`updated:` truthfulness) were both added on 2026-07-29, and both
@@ -114,6 +114,60 @@ SLICES = {"adr-index": ADR_INDEX_LINE}
 CONTEXT_EVAL_DOC = f"{DOCS_DIR}/program/context-eval.md"
 DIGEST_FENCE = re.compile(r"^```context-digest$(.*?)^```$", re.M | re.S)
 DIGEST_UNMEASURED = "(unmeasured)"
+
+# --- G17 — table shape ------------------------------------------------------------------
+# The delimiter row (`|---|---|`) is what makes a pipe-delimited line a table header in GFM.
+TABLE_DELIMITER = re.compile(r"\|[\s:|-]+\|")
+# GFM splits cells on every pipe, including one inside a code span; only `\|` is a literal.
+# `docs/25-concepts/03-demand-planning/tracking-signal-and-bias.md` writes `\|ME\|` for an
+# absolute value and is correct — a splitter that ignored the escape would call it a defect.
+UNESCAPED_PIPE = re.compile(r"(?<!\\)\|")
+
+
+EVAL_TASK_LOAD_SET = re.compile(r"\*\*Load set:\*\*\s*`([^`]+)`")
+
+
+def eval_task_load_sets() -> set[str]:
+    """The load sets the evaluation tasks declare, read from the record itself.
+
+    Same source `tools/context_eval.py` parses, so the gate cannot disagree with the runner
+    about which sets are under measurement.
+    """
+    try:
+        record = open(CONTEXT_EVAL_DOC, encoding="utf-8").read()
+    except OSError:
+        return set()
+    return set(EVAL_TASK_LOAD_SET.findall(record))
+
+
+def parse_load_sets() -> dict[str, list[str]]:
+    """Set name -> declared members, from the one fenced block in the manifest."""
+    try:
+        manifest = open(LOAD_SETS_DOC, encoding="utf-8").read()
+    except OSError:
+        return {}
+    fence = LOAD_SET_FENCE.search(manifest)
+    if not fence:
+        return {}
+    out: dict[str, list[str]] = {}
+    current = None
+    for line in fence.group(1).splitlines():
+        if not line.strip() or line.lstrip().startswith("#"):
+            continue
+        header = LOAD_SET_HEADER.match(line.strip())
+        if header:
+            current = header.group(1)
+            out[current] = []
+        elif current is not None:
+            out[current].append(line.strip())
+    return out
+
+
+def table_cells(line: str) -> list[str]:
+    """The cells of a Markdown table row, outer pipes discarded."""
+    body = line.strip()
+    return UNESCAPED_PIPE.split(body[1:-1])
+
 
 # --- G16 — the retired roster is complete and true (ADR-0043 follow-up) ---------------
 #
@@ -300,6 +354,7 @@ class Gates:
             "G14": "load-set budgets (what is read together)",
             "G15": "the context-adherence measurement is not stale",
             "G16": "the retired roster is complete and true",
+            "G17": "every table row has the cells its header declares",
         }
         ok = True
         for gate in sorted(names, key=lambda name: int(name[1:])):
@@ -507,11 +562,20 @@ def main() -> int:
                 gates.fail("G9", f"{path}: {words} words exceeds the "
                                  f"{meta['type']}-type budget of {budget}")
         if meta.get("type") == "adr":
+            # The index and the bodies must agree in BOTH directions. Checking only
+            # body -> entry let ADR-0045 and ADR-0046 ship as index entries with no
+            # decision body while PLT-R7 and knowledge-selection.md cited them as
+            # their authority: a citation that resolves to a summary line reads as
+            # though the decision was recorded when it was not.
             indexed = set(ADR_INDEX_LINE.findall(text))
-            for number in ADR_HEADING.findall(text):
-                if number not in indexed:
-                    gates.fail("G9", f"{path}: ADR-{number} has no one-line entry in "
-                                     f"the decision index")
+            bodied = set(ADR_HEADING.findall(text))
+            for number in sorted(bodied - indexed):
+                gates.fail("G9", f"{path}: ADR-{number} has no one-line entry in "
+                                 f"the decision index")
+            for number in sorted(indexed - bodied):
+                gates.fail("G9", f"{path}: ADR-{number} is listed in the decision index "
+                                 f"but has no '## ADR-{number}' body — a decision that is "
+                                 f"cited must be recorded, not summarised")
 
     # G7 — supersession integrity.
     for path, (meta, _) in docs.items():
@@ -646,6 +710,43 @@ def main() -> int:
                 gates.fail("G12", f"{path}:{number} cites {family}* — a family wildcard is not a "
                                   f"citation: it reads as law and resolves to no rule. Name the "
                                   f"live ID, or say plainly that no rule fixes this")
+
+    # G17 — a table row carries the cells its header declares. Same full estate as G11/G12.
+    #
+    # Why this is a gate and not a proofreading habit: a Markdown table row with a missing trailing
+    # cell **renders as an empty cell**. Nothing looks broken. Fourteen consecutive rows of the
+    # improvement register lost their `Status` column that way and the estate stayed green for two
+    # days, while the register's own instructions say the owner reviews rows by status — the field
+    # that decides whether a lesson is closed was silently absent from every recent row. The
+    # concepts index had the mirror image: a third column with an empty heading that only one of
+    # fifteen rows filled. Both are the same defect, and a cell count catches both.
+    for path, (_meta, text) in checked.items():
+        header_cells, header_line, in_fence = None, 0, False
+        lines = text.splitlines()
+        for number, line in enumerate(lines, 1):
+            if line.lstrip().startswith("```"):
+                in_fence, header_cells = not in_fence, None
+                continue
+            if in_fence:
+                continue
+            stripped = line.strip()
+            if not (stripped.startswith("|") and stripped.endswith("|") and len(stripped) > 1):
+                header_cells = None
+                continue
+            if TABLE_DELIMITER.fullmatch(stripped):
+                continue
+            if header_cells is None:
+                # A pipe-delimited line is a table header only if a delimiter row follows it.
+                # Without that check, prose containing pipes would be read as a one-row table.
+                following = lines[number].strip() if number < len(lines) else ""
+                if TABLE_DELIMITER.fullmatch(following):
+                    header_cells, header_line = len(table_cells(stripped)), number
+                continue
+            found = len(table_cells(stripped))
+            if found != header_cells:
+                gates.fail("G17", f"{path}:{number} has {found} cells; the header on line "
+                                  f"{header_line} declares {header_cells} — a short row renders "
+                                  f"as an empty cell, so the missing field is invisible")
 
     # G8 — English only (ADR-0003), screened. A word list cannot certify that prose reads as
     # English, so this gate does not claim to: it catches the *carrier* of the failure this
@@ -802,7 +903,7 @@ def main() -> int:
         if not fence:
             gates.fail("G15", f"{CONTEXT_EVAL_DOC}: no ```context-digest block to read")
         else:
-            unmeasured, checked = [], 0
+            unmeasured, checked, watched = [], 0, set()
             for line in fence.group(1).splitlines():
                 if not line.strip() or line.lstrip().startswith("#"):
                     continue
@@ -812,6 +913,7 @@ def main() -> int:
                                       f"'<path> <digest>'")
                     continue
                 path, recorded = parts
+                watched.add(path)
                 if not os.path.exists(path):
                     gates.fail("G15", f"the record names '{path}', which does not exist — a "
                                       f"measurement over a file nobody kept measures nothing")
@@ -827,6 +929,22 @@ def main() -> int:
                                       f"`tools/context_eval.py` and record the result, or the "
                                       f"estate is claiming a result about a context it no "
                                       f"longer has")
+            # The watched list is written by hand, so it can fall behind the manifest it is
+            # supposed to cover. It did: `how-to/change-a-rule.md` joined the
+            # `changing-a-rule` set and was never added here, which left `rule-citation`
+            # scored against an input G15 was not watching. Every member of every load set
+            # an evaluation task declares must be watched, or the freshness claim has a hole
+            # exactly where a new document goes.
+            members = parse_load_sets()
+            for task_set in sorted(eval_task_load_sets()):
+                for member in members.get(task_set, ()):
+                    path = member.split("#")[0]
+                    if path not in watched:
+                        gates.fail("G15", f"{path} is in the '{task_set}' load set an evaluation "
+                                          f"task declares, but the context-digest block does not "
+                                          f"watch it — add it, or the measurement cannot go stale "
+                                          f"when it changes")
+
             if unmeasured:
                 gates.note(f"G15 checked {checked} of {checked + len(unmeasured)} context files: "
                            f"{len(unmeasured)} still read {DIGEST_UNMEASURED}, so no measurement "

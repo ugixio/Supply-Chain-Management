@@ -107,7 +107,7 @@ platform catalogue was checked against the current published grouping and found 
 > gate can check remains true — a number copied from a textbook example reads exactly like a
 > standard — so the anti-states in
 > [30-foundation/scm-core/rule.md](../30-foundation/scm-core/rule.md) stay the reviewer's
-> checklist. **Phase C1c/C1d complete:** 58 of 154 nodes carry a `Project-chosen inputs` table (the
+> checklist. **Phase C1c/C1d complete:** 71 of 167 nodes carry a `Project-chosen inputs` table (the
 > rest are pure identities with no free parameter), and the per-language divergence sections — which
 > had been concealing rating bands and tolerances — are gone.
 
@@ -174,13 +174,13 @@ ADR-0037; the keys are unaffected.)*
 ## 6. Gate-invariant IDs (fixed)
 
 `G1`–`G8` name the knowledge-architecture §11 invariants. New gates append (G9+).
-Allocated: **G1–G16** (G9 context budget, ADR-0012; G10 **standards provenance** — was concept
+Allocated: **G1–G17** (G9 context budget, ADR-0012; G10 **standards provenance** — was concept
 coverage under ADR-0015, rewritten by ADR-0037 when the code it policed was deleted; **G11
 retired rules stay retired**, added at Phase C3 because a citation of a retired ID is invisible to
 G4 — it is not a broken link, it silently resolves to nothing and reads as law; **G12 a rule
 citation names an ID**, added at Phase C1d after 47 nodes were found citing family wildcards like
 `**FIN-R***` — invisible for the same reason, and most of them stood in for lifecycle rules
-retired with the deleted application; **G13** `updated:` truthfulness, **G14** load-set budgets, **G15** context-adherence freshness, **G16** this file's retired roster).
+retired with the deleted application; **G13** `updated:` truthfulness, **G14** load-set budgets, **G15** context-adherence freshness, **G16** this file's retired roster, **G17** table shape — added 2026-08-03 when a review for archivable register rows found fourteen rows with no status cell at all).
 
 ### The retired roster — complete, and gated
 

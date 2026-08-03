@@ -46,102 +46,12 @@ mirror-coverage bar) · duplicated formulas across TS/Python with one past diver
 > are appended and annotated, never rewritten. A 🟦 entry ALWAYS records current state + next
 > step, so a fresh session resumes without re-derivation (ADR-0012).
 
-### Triage of 2026-07-29 — what ADR-0037 did to this backlog
+### Closed triages — archived
 
-> **Why this block exists.** Phase L was voided explicitly when ADR-0037 landed. The Phase U and
-> Phase P entries were not, and a file-by-file review of the estate found more than twenty of them
-> still reading as live work — work that would have sent the next session to rebuild the
-> application ADR-0037 deleted. A stale ⬜ is not a harmless leftover in a document whose whole
-> purpose is telling a fresh session what to do next. Verdicts below; the entries keep their text.
-
-| ID | Was | Now | Why |
-|---|---|---|---|
-| U3 | ⬜ | ✅ | The `CLAUDE.md` sections it deduplicated (§Critical Business Rules, §Code Standards) no longer exist — the contract was rewritten around the inclusion test, and it cites rule IDs rather than restating them. Done by rewrite. |
-| U7 | 🟦 | ⛔ | The pytest suite and the TS coverage bar both governed deleted code. What survives is the Definition-of-Done requirement that a touched rule keeps its test, and the 26 Rust tests that honour it. |
-| U8 | 🟦 | ✅ | The golden-vector mechanism landed (`tests/golden/money.golden.json`, read by `crates/scm-money/tests/golden_money.rs`). Its *purpose* — reconciling two languages — went away with the second implementation; the fixture stays because it pins the arithmetic. |
-| U11 | 🟦 | ⛔ | The numbering collision was resolved by ADR-0029. The remaining item, splitting three agility/VaR functions into dept 10, has no functions left to split. |
-| U11b | ⬜ | ⛔ | `Shipment.ts`, `TransportLane.ts` and the `python/NN_*` trees are deleted. The REACH item is real but belongs to a project: the obligation is stated as **CMP-R3**, and how a filer tracks an ECHA notification is its own design. |
-| U12 | ⬜ | 🟦 | Rescoped, not void: a lint lane for one 175-line standards module buys nothing. It lands with the TypeScript that Phase M4 introduces, warnings-as-errors, in the same commit as the first NestJS module. |
-| U13 | ⬜ | ⛔ | The `Shipment` type it would guard is deleted. **LOG-R3** still states the obligation; enforcing it is the implementing project's job, which is the whole point of ADR-0037. |
-| U15 | 🟦 | ✅ | Item 1 was resolved by ADR-0028 (the exact inverse-normal is canonical, stated in CPT-0003). Items 2–7 are U15b's. |
-| U15b | ⬜ | ⛔ | All seven divergences were disagreements *between two implementations*, and both are gone. The lesson is kept where it can still bite: **the same name over a different method** is the failure mode, and it is now a known pitfall in `evaluation.md`. |
-| U16 | ⬜ | ⛔ | "No TypeScript implementation of Croston/SBA" is not a gap in a repository that holds no implementations. CPT-0006/0007/0009/0010 exist as nodes; that is the deliverable. |
-| U17 | ⬜ | ⬜ | **Stays live.** Whether SCOR-DS *Make* and *Orchestrate* need departments is a knowledge question, not a code question, and ADR-0037 does not touch it. A 15th department still requires an ADR (id-registry §4). |
-| U18 | 🟦 | ✅ | Closed the hard way: the 150,322 ungoverned words were deleted with the code they described (risk #7, closed). |
-| U19 | ⬜ | ⛔ | CPT-0024 and CPT-0025 exist as concept nodes. "Implement them in whichever language ADR-0001 assigns" rests on the premise ADR-0037 superseded. |
-| P1 | ⬜ | ✅ | `docs/50-engineering/` is materialized: `_index.md` plus the ENG-R family through ENG-R10. |
-| P2 (original plan) | ⬜ | ⛔ | Superseded by what actually landed at P2. Half its layout (`packages/{domain,application,infrastructure}`, `services/calc`, `proto/`) was deleted three phases later. |
-| P3 · P4 | ⬜ | ⚠ | **Owner decision needed**, and the only two entries here that are not mine to settle. ADR-0024/0025/0026 specify a Postgres read model, a GraphQL surface and an octagon wiki over `docs/`; ADR-0037 says the one application built here is monitoring. Both readings are defensible and they build different things. Raised with the options rather than guessed (PLT-R6). |
-| P5 | 🟦 | ✅ | One exact-money implementation, `crates/scm-money`: `roundTiesToEven`, sum-preserving apportionment, overflow reported rather than wrapped. The TypeScript and Python mirrors that disagreed are gone. |
-| P6 | ⬜ | ⛔ | The `scm.calc.v1` service and its proto are deleted. Python keeps its lane (ADR-0033/0035) and it now serves the monitoring platform's models, not an SCM calculator. |
-| W2 | 🟦 | ✅ | The node model and the PLT family are live and gated (PLT-R1..R6; G4/G5/G6 enforce the graph). |
-| W3 | ⬜ | 🟦 | Rescoped: the projects data domain and the GraphQL resolvers are Phase **M4**'s gateway work. The prompt-refinement gate inside it is already law — **PLT-R1** and **PLT-R6** — and is practised, not built. |
-| W4 | ⬜ | ⛔ | Superseded by Phase M in full: M1 defines the delivery metrics as nodes, M2 the telemetry tier, M3 the ingester, M4 the dashboards. W4 *is* Phase M, described before Phase M existed. |
-| C1 | 🟦 | ✅ | C1a–C1e swept all 160 nodes. The 2026-07-29 review found residue C1 missed — six nodes carrying benchmark *parameters*, and five figures needing a source or a project-decision label — and that residue is now fixed. A completed sweep is not a perfect one. |
-| C2b | ⬜ | ✅ | Landed: QMS-R8 (corrective-action effectiveness), FEFO in CPT-0036, plan immutability in CPT-0150. |
-| C4 | 🟦 | ✅ | C4 and C4b corrected the prose that described deleted code, across the docs and the operating layer. |
-| M2 | 🟦 | ✅ | Five migrations, the rollup cascade, split-privilege roles and quotas, applied twice in CI against a real ClickHouse to prove idempotency. |
-| M3 | 🟦 | ✅ | **M3a** the ingestion core (13 tests, no clock, no transport) and **M3b** the ClickHouse adapter (40 tests, no server needed to test any failure path). |
-
-**Two further items the same review raised, both needing an owner decision rather than a fix:**
-
-- ⚠ **The `implements` edge type is declared and never used.** `knowledge-architecture.md` §8,
-  `20-product-model/node-model.md` §1 and `tools/verify.py` all carry it; zero documents use it.
-  Post-ADR-0037 a concept node links to no implementation, so a live `implements` edge invites
-  exactly the relinking ADR-0037 undid — and G4 would validate the first one happily. Retiring it
-  changes the node/edge vocabulary, which knowledge-architecture §12 puts behind **an ADR**, so it
-  is raised here rather than done. The alternative worth considering: keep it, reserved for the
-  monitoring application's own nodes, which legitimately do trace to code this repository owns.
-- ⚠ **`.claude/skills/**` KPI target tables** — swept on 2026-07-29 into "the decision plus what
-  constrains it". Recorded here because the *class* is not closed: no gate can tell a target from a
-  definition, so the next skill file added can reintroduce it (risk #13).
-
-### Triage of 2026-08-02 — markers that stopped matching the estate
-
-> **Why this block exists.** The 2026-07-29 triage swept Phases U, P, W, C and M. It did not reach
-> **Phase L**, and it ran *before* M2/M3 landed, so two markers have been describing work as
-> outstanding that is finished. A state-gathering sweep over the whole backlog found them by
-> enumeration: 16 live markers read, 2 wrong. The rest were correct, including the two that look
-> stale and are not — **U12** and **W3** are 🟦 by the 2026-07-29 ruling, each recording its state
-> and its next step, which is what a 🟦 is required to do.
-
-| ID | Was | Now | Why |
-|---|---|---|---|
-| L4 · L5 | ⬜ | ✅ | Delivered under Phase M, which is what "renumbered under Phase M when that work starts" anticipated. L4 (the ClickHouse telemetry tier) is **M2** — five migrations, the rollup cascade, split-privilege roles, applied twice in CI against a real server. L5 (the Rust ingestion workers) is **M3a/M3b** — 13 + 40 tests. Leaving them ⬜ tells a fresh session to build what exists. |
-| L6 | ⬜ | ⛔ | Void as an L entry, live as **M5**: Docker images then Kubernetes, once two long-running services exist. One entry, not two, so the work is tracked in one place. |
-| P2 | 🟦 | ✅ | Both slices landed 2026-07-20 with verify-full green. Its one recorded residual — the `07_order_management` / `13_order_management` merge — needs no domain call any more: ADR-0037 deleted both packages, closing risk #4 and voiding U11. A 🟦 whose next step has been overtaken is a ⬜ in disguise. |
-
-**Owner decisions taken 2026-08-02**, recorded here because both were raised as ⚠ and both change
-what gets built:
-
-- **P3 · P4 — the octagon wiki stays live.** Asked as a selectable choice against "monitoring only"
-  (PLT-R6), the owner kept it: ADR-0024 (Postgres read model), ADR-0025 (code-first GraphQL) and
-  ADR-0026 (the octagon node-graph) remain in force. **Consequence for M4**, which is why this is
-  recorded rather than just answered: the NestJS gateway serves **two** read surfaces — the
-  knowledge read model built one-way from `docs/`, and the telemetry tier — so its module boundary
-  and its drift guard are part of M4's scope from the start, not a later addition. The entries stay
-  ⚠ only until their first slice is planned; the *decision* is no longer open.
-- **W6b — no operational warehouse telemetry, and risk #14 is closed anyway.** The product stays
-  project supervision (ADR-0031/0034/0036 unchanged, no new ADR). The owner separately chose to fix
-  the defect that W6b would have exposed: today `samples_1m` computes `sumState`/`min`/`max`/p95
-  only, so a **level** ingested through the cascade sums silently — a backlog of 40 read every ten
-  seconds reports 240 per minute, in range, with nothing failing. The fix is a declared metric
-  `kind` (flow · level · event-count) enforced at ingest, plus `argMaxState`/`anyLastState` in the
-  rollup. It is worth doing without the scope change because the corruption is silent and the
-  schema is young; it is queued as **M2b**.
-
-- ⚠ **Branches — two steps are the owner's, 2026-08-02.** **ADR-0040 / ENG-R11** put the integration
-  model in writing and `main` now exists at the same commit as the old trunk. What a session cannot
-  do: **flip the default branch to `main`** (a repository setting with no API surface here) and
-  **delete four stale refs** — `claude/bold-cannon-l7wtso` once the default moves, plus
-  `feat/context-skeleton`, `fix/verify-rule-id-regex` and `feat/per-department-rules`, each carrying
-  0 commits not already in the base. This environment's git proxy refuses `delete` with HTTP 403.
-  Risk #3 closes when the default is `main`.
-  **A third item joined the list 2026-08-03:** the first calendar tag. ADR-0046 adopts per-node
-  digests plus an annotated `YYYY.MM` tag, and `git push origin refs/tags/2026.08` returns **HTTP 403**
-  from the same proxy. The tag was created locally and dies with the container, so **the scheme is
-  adopted and its first instance is pending** — one command for the owner:
-  `git tag -a 2026.08 <sha> -m "…" && git push origin 2026.08`.
+The triages of **2026-07-29** (what ADR-0037 did to this backlog) and **2026-08-02** (markers that
+stopped matching the estate) are complete and moved verbatim to
+[WORKFLOW-archive.md](WORKFLOW-archive.md). Nothing was deleted or restated: the `planning` load set
+reached its ceiling and this was the structural answer, taken instead of a raise.
 
 ### Phase X — How the AI uses the context (raised and started 2026-08-02)
 
@@ -194,7 +104,17 @@ what gets built:
   inclusion test — which is probably why the form was never created. **Verified:** the failing task
   re-run against a fresh cold subagent came in at **633 words** against 806, naming the budget in its
   own report. The confound is recorded in `context-eval.md`.
-  **Next two, not written:** `changing-a-rule` and `running-the-evaluation`.
+  **Both remaining guides written 2026-08-03**, closing the form: `how-to/change-a-rule.md` (802
+  words) and `how-to/run-the-evaluation.md` (795). Each is organised around the traps that have
+  actually been hit rather than around the rules, which are cited and never restated — the rule guide
+  leads with *establish that it is a rule and not a policy* (seven of thirteen original `SCM-R*`
+  failed that test) and *never edit a rule's meaning in place*; the evaluation guide leads with *the
+  manifest is under test too* and *diagnose past the first cause*, both of which are this week's
+  incidents rather than theory.
+  **One consequence worth recording:** adding `change-a-rule.md` to the `changing-a-rule` load set is
+  a **material** change to the `rule-citation` evaluation task, because it alters what the cold
+  subagent reads. That task was re-run and passed again. A guide that a session is told to read is a
+  guide the measurement has to account for.
 
 - ✅ **X6 · The retirement tables were unreachable — closed 2026-08-02 without widening the set.**
   Raised by the first eval run and measured: **52 rules are retired, the id-registry enumerated 12**,
@@ -795,12 +715,32 @@ what gets built:
   **M3b remaining:** the transport adapter (ingress) and the ClickHouse client that performs the
   batched insert, plus the retry/dead-letter mechanics the owner chose. Both are adapter work by
   ENG-R10.1, so they belong outside this crate.
-- ⬜ **M2b · HOW** — **Close risk #14: make the rollup safe for levels.** Decided 2026-08-02 with
-  W6b answered *no*, because the defect does not need the scope change to bite. A metric `kind`
-  (flow · level · event-count) declared per series and enforced at ingest, plus `argMaxState` /
-  `anyLastState` alongside the existing `sumState`/`min`/`max`/p95 in `samples_1m`, so a level
-  aggregates by last / max / min and never by sum (**MSR-R2**). Forward-only migration per
-  ADR-0036; `make verify-schema` must cover the new columns.
+- ✅ **M2b · HOW** — **Close risk #14: make the rollup safe for levels.** Decided 2026-08-02 with
+  W6b answered *no*, because the defect does not need the scope change to bite. **Landed
+  2026-08-03**, and the shape changed once during the work in a way worth recording.
+  **What was built.** `db/clickhouse/migrations/0006_metric_kind.sql` adds `kind` to `samples`
+  (`LowCardinality(String)`, `DEFAULT ''` per ADR-0036's no-`Nullable` rule) and to all three
+  rollups, plus a `last_state` per rollup, and recreates the three materialized views. In
+  `crates/scm-ingest`, `MetricKind` and `MetricRegistry` replace the flat governed-metric list:
+  validation now asks `registry.kind_of(metric)`, and `Sample` deliberately has **no** `kind` field
+  so an emitter cannot declare its own metric a flow. `crates/scm-ingest-clickhouse` carries the
+  column as the 7th in `COLUMNS`/`INSERT_STATEMENT`; `encode_batch` takes the registry and **drops**
+  an ungoverned metric rather than encoding a blank kind.
+  **The enforcement is a missing column, not a warning.** The plan said "`argMaxState` alongside
+  `sumState`, so a level aggregates by last and never by sum" — an instruction to the reader.
+  Instead the read surface splits: `telemetry.levels_1m` has **no sum column at all** and
+  `telemetry.flows_1m` has no `last_value`, so MSR-R2's forbidden aggregation is not selectable.
+  `apply.py` gains `VIEW_ASSERTIONS` that fail if either absence is ever filled in — the gate checks
+  what is *not* there, which is the only kind of check that survives a helpful future contributor.
+  **Two corrections to the plan itself.** `anyLastState` was wrong and the risk row had named it as
+  an alternative to `argMaxState`: `anyLast` returns whichever row the engine merged last, a
+  nondeterministic pick that diverges from the newest reading exactly under load. And **no ADR was
+  needed** — the fix changes nothing about what the product measures, only that a level may not be
+  summed, which MSR-R2 already fixes.
+  **Not executed in this environment.** No Docker daemon and no `clickhouse-local`, so the migration
+  is unrun locally; `python3 db/clickhouse/apply.py --check-only` fails as designed rather than
+  skipping. CI's `verify-schema` job is what proves the DDL. A duration metric still has no correct
+  kind — recorded as risk #15 rather than guessed at.
 - ⬜ **M4 · HOW** — NestJS + GraphQL as the only counterpart the frontend has; Next.js dashboards.
   **Scope confirmed 2026-08-02:** with P3/P4 kept alive, the gateway serves **two** read surfaces —
   the knowledge read model (ADR-0024/0025) and the telemetry tier (ADR-0036) — and the octagon
@@ -808,6 +748,88 @@ what gets built:
   belongs to this phase, not to a later one.
 - ⬜ **M5 · HOW** — Docker images (non-root, pinned digests, multi-stage) then Kubernetes once two
   long-running services exist.
+
+### Triage of 2026-08-03 — references that outlived what they referenced
+
+A scan for backticked repository paths that resolve to nothing: **121 mentions across 30 files.**
+The denominator matters more than the count, because most of it was not a defect.
+
+- **59 were not real** — relative citations (`rule.md`, `evaluation.md`) resolved against the repo
+  root instead of the citing document's own directory. The first pass reported them as dead.
+- **~45 are legitimate.** `10-decisions/README.md` and `WORKFLOW.md` are append-only history: an ADR
+  that records deleting `src/departments/` has to name it. `30-foundation/_index.md` marks
+  `security/` and `observability/` *none recorded yet*; `40-contexts/_index.md` says `specs/` stay ⬜
+  *created per unit of work, never speculatively*; both `20-product-model` references to
+  `context-map.md` sit under **MISSING (owner input needed)**. All honest.
+- **One class was a real defect, and it was the class that matters:** live guidance, loaded by every
+  session, naming deleted files as though they could be opened. **Thirteen of fourteen department
+  skills** carried a `## TypeScript` / `**Domain Objects**` section listing `domain/NCR.ts`,
+  `services/QualityService.ts` and 60 others. `procurement` had been fixed and is what made the rest
+  visible. Same reservoir as improvement #11 — `.claude/skills/**`, which no gate reads.
+
+**Fixed:** all 14 skills carry one heading and one disclaimer (*shapes, not code — a project builds
+these in its own repository, with its own policy values and its own layout*), directory prefixes
+stripped since the layout was never this repository's to imply; `procurement` unified onto the same
+wording rather than left as a fourteenth variant. **CPT-0063** rewritten — its entire content had been
+a rounding difference between two deleted Python files, and it now states what is true independent of
+any implementation: the denominator is the **inspected** quantity, and using the received quantity
+instead understates a 200-of-10,000 sample fiftyfold.
+
+**⚠ Raised, not built — a gate for this class.** A path-existence gate would now fire on all 62
+corrected shape names, and a gate that reddens correct work gets disabled rather than obeyed. It needs
+the disclaimer convention to be machine-readable first (a fenced block, or a front-matter flag on the
+section) and it needs the historical tiers exempt by declaration rather than by guess. That is a
+design decision, so it is a decision and not a patch.
+### Review of 2026-08-03 — file-by-file, the whole estate
+
+**Denominator: 322 tracked files**, enumerated with `git ls-files`. **239 carry front-matter and are
+governed by the doc gates; 83 are not** — and that 83 is where the protocol says to look first.
+**12 files carried a finding.** Seven finding classes were named before looking, from this project's
+own registers. What each class returned:
+
+- **Rule-ID integrity — clean.** 66 live rules, 52 retired, 119 distinct IDs cited across every
+  `.md`/`.py`/`.rs`/`.ts`/`.sql`. **Zero retired IDs cited in live guidance.** The one apparent
+  dangling citation (`ENG-R12`) is the sentence saying that ID *cannot yet be allocated*; the one
+  undefined CPT (`CPT-0999`) is reserved on purpose in four places.
+- **Two ADRs cited as law with no decision recorded.** 46 index entries, **44 bodies**: ADR-0045 and
+  ADR-0046 existed as summary lines only, while **PLT-R7** named ADR-0045 as its authority and
+  `knowledge-selection.md` cited ADR-0046 twice. **G9 checked body → entry and never the reverse.**
+  Both bodies written; the gate is now two-sided and carries a third mutant (**20 gates**).
+- **Four nodes published an invented scoring scheme as their canonical formula.** CPT-0025
+  (0.8×/1.5× bands, 90-day window), CPT-0080 (30/35/25/10 weighting, 180/365-day bands, GREEN ≥ 75),
+  CPT-0132 (the whole ESG point system), CPT-0138 (0.6/0.4 blend). Two *said in prose* the numbers
+  were policy and printed them in `## Formula` anyway. All four now state the shape parametrically
+  with the values in `Project-chosen inputs`, each row naming what constrains it.
+- **G15's watched list had fallen behind its own manifest.** `how-to/change-a-rule.md` joined the
+  `changing-a-rule` set two commits earlier and was never watched, so `rule-citation` was scored
+  against an input whose change could not register. G15 now derives the requirement from the manifest.
+- **Policy-as-law elsewhere — swept and genuinely clean.** Across 227 rule/concept/skill files,
+  **zero** lines put a unit-bearing number in a normative sentence. Of 17 pairing a percentage with a
+  normative word, each is the anti-pattern quoted *as* such, a worked example, or externally fixed —
+  REACH's 0.1 % w/w; CBAM's 50 % traced to the Omnibus-amended Art. 22(2) with the original 80 %
+  named and a verification date; CPT-0127's 1.645 is the normal-curve z.
+- **Duplicated prose — 1 of 280 files.** `known-pitfalls.md` carried its intro twice, and the second
+  copy cited a `review-protocol.md` §Where findings land that does not exist. CPT-0025 carried a
+  sentence fragment glued onto its DMD-R9 citation by an unread scripted edit.
+- **Stale self-claims.** The ID registry said `58 of 154 nodes` (really **71 of 167**). Checked and
+  true: `1000/1000` for the ENG family (exact), 17 gates, 14 departments, three crates, 71 Rust
+  tests, and every CI claim. `REGULATORY_FRAMEWORK.md`'s absent front-matter is U9's recorded "keep
+  grandfathered", allowlisted in knowledge-architecture §3 and enforced at `verify.py:213` —
+  consistent in all three places, checked rather than assumed.
+- **ADR hygiene.** ADR-0011 read `Decision (proposed)` under an Accepted status with nothing saying
+  ADR-0046 had killed its SemVer clause; ADR-0012 still described G1–G7+G9 and one CI invocation.
+  Both carry amendment notes now, following the precedent already set at ADR-0009 and ADR-0013.
+
+**⚠ Raised, not built.** A gate for "a free numeric parameter in `## Definition` with no
+`Project-chosen inputs` table" would have found all four scoring nodes, but it needs a discriminator
+the sweep applied by hand: `fraction (0.10 = 10%)` in a symbol table is a **unit encoding**, and seven
+nodes use it legitimately. That discriminator is a decision.
+
+**This review pushed `planning` past its ceiling, and the declared exit did not fit.** The manifest
+names shortening the ADR index entries; measurement says WORKFLOW is 14,505 of the 20,142 words and
+the index slice only 2,427, so the exit addressed the wrong term. These blocks were compressed
+instead. **The structural answer when it recurs is a `WORKFLOW-archive.md`** for closed phases, the
+same instrument the risk register already uses — not another raise.
 
 ### Phase C — Clean the context after ADR-0037
 

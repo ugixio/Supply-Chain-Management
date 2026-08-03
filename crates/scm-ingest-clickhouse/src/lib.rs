@@ -35,18 +35,26 @@
 //!
 //! ```no_run
 //! use std::time::Duration;
-//! use scm_ingest::{Batcher, Deduplicator, Pipeline};
+//! use scm_ingest::{Batcher, Deduplicator, MetricKind, MetricRegistry, Pipeline};
 //! use scm_ingest_clickhouse::{
 //!     DeadLetter, Endpoint, HttpTransport, RetryPolicy, ThreadSleeper, Writer,
 //! };
 //!
 //! # fn main() -> Result<(), Box<dyn std::error::Error>> {
+//! // One registry, shared: the pipeline decides whether a metric is governed and the writer
+//! // stamps the `kind` column from the same answer. Two registries would be two answers.
+//! let registry = MetricRegistry::new(vec![
+//!     ("deployment_frequency".to_owned(), MetricKind::Flow),
+//!     ("open_work_orders".to_owned(), MetricKind::Level),
+//! ]);
+//!
 //! let endpoint = Endpoint::from_env(Duration::from_secs(10))?;
 //! let writer = Writer::new(
 //!     HttpTransport::new(endpoint),
 //!     ThreadSleeper,
 //!     RetryPolicy::new(5, Duration::from_millis(200), Duration::from_secs(5)),
 //!     DeadLetter::new("/var/lib/scm/dead-letter.ndjson", 64 * 1024 * 1024)?,
+//!     registry.clone(),
 //! );
 //!
 //! // Refuse to start on a schema the encoder does not match: under RowBinary a successful insert

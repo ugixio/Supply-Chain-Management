@@ -145,6 +145,9 @@ mod tests {
             "value\tFloat64",
             "environment\tLowCardinality(String)",
             "unit\tLowCardinality(String)",
+            // Added by migration 0006 (M2b): the metric's kind, which decides whether the read
+            // views expose a sum for it at all.
+            "kind\tLowCardinality(String)",
             "ingested_at\tDateTime64(3, 'UTC')",
         ]
         .join("\n")

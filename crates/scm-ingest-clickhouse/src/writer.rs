@@ -14,7 +14,7 @@
 
 use std::time::Duration;
 
-use scm_ingest::Sample;
+use scm_ingest::{MetricRegistry, Sample};
 
 use crate::deadletter::DeadLetter;
 use crate::rowbinary::{INSERT_STATEMENT, encode_batch};
@@ -81,16 +81,28 @@ pub struct Writer<T: Transport, S: Sleeper> {
     policy: RetryPolicy,
     dead_letter: DeadLetter,
     stats: Stats,
+    /// The same registry the pipeline validated against, used to stamp the `kind` column.
+    ///
+    /// Held here rather than passed per write because it is fixed for the process's life, and
+    /// because a second registry supplied at call time is a second answer to "is this a level".
+    registry: MetricRegistry,
 }
 
 impl<T: Transport, S: Sleeper> Writer<T, S> {
-    pub fn new(transport: T, sleeper: S, policy: RetryPolicy, dead_letter: DeadLetter) -> Self {
+    pub fn new(
+        transport: T,
+        sleeper: S,
+        policy: RetryPolicy,
+        dead_letter: DeadLetter,
+        registry: MetricRegistry,
+    ) -> Self {
         Self {
             transport,
             sleeper,
             policy,
             dead_letter,
             stats: Stats::default(),
+            registry,
         }
     }
 
@@ -109,7 +121,7 @@ impl<T: Transport, S: Sleeper> Writer<T, S> {
         if batch.is_empty() {
             return Outcome::Empty;
         }
-        let body = encode_batch(batch);
+        let body = encode_batch(batch, &self.registry);
         let mut duplicate_possible = false;
         let mut last: Option<TransportError> = None;
         let mut used = 0_u32;

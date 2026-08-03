@@ -209,13 +209,16 @@ def safety_stock_method4(sigma_demand: float, avg_demand: float,
     return z * np.sqrt(avg_lt * sigma_demand**2 + avg_demand**2 * sigma_lt**2)
 ```
 
-## TypeScript
+## What an inventory implementation typically needs
 
-**Domain Objects**
-- `domain/InventoryItem.ts` — Item master; ABC/XYZ; `storageCondition`; `reachSVHC`
-- `domain/StockMovement.ts` — Movement aggregate; GL accounts; idempotency
-- `domain/LotRecord.ts` — Lot master; expiry date; FEFO sort key
-- `services/InventoryService.ts` — Balance projection; negative inventory guard
+*Shapes, not code — ADR-0037 deleted the reference implementation. A project builds these in
+its own repository, with its own policy values and its own layout. The names below are the
+responsibilities that need a home, not paths in this repository.*
+
+- `InventoryItem.ts` — Item master; ABC/XYZ; `storageCondition`; `reachSVHC`
+- `StockMovement.ts` — Movement aggregate; GL accounts; idempotency
+- `LotRecord.ts` — Lot master; expiry date; FEFO sort key
+- `InventoryService.ts` — Balance projection; negative inventory guard
 
 **Negative Inventory Guard**
 ```typescript

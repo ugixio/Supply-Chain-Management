@@ -150,7 +150,10 @@ All sixteen are wired into `tools/verify.py` and run by `make verify` (ADR-0012)
   **G13** `updated:` matches the file's real last change · **G14** a load set is priced as a
   whole — what a session reads *together*, declared in `docs/program/load-sets.md` (ADR-0041) ·
   **G15** the context-adherence measurement is not stale (`docs/program/context-eval.md`; ADR-0043) ·
-  **G16** the ID registry's retired roster equals the union of the retirement tables, both ways.
+  **G16** the ID registry's retired roster equals the union of the retirement tables, both ways ·
+  **G17** every Markdown table row carries the cell count its header declares — a short row renders
+  as an empty cell, so a missing field is invisible (fourteen register rows lost their status that
+  way, and a catalogue column with an empty heading went unfilled by fourteen of fifteen rows).
 
 **A gate that cannot check must say so.** `tools/verify.py` distinguishes *passed* from *could not
 run*: where a check depends on the environment — G13 needs HEAD's parent present to diff against —

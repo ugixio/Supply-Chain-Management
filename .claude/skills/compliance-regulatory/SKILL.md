@@ -190,13 +190,16 @@ def check_csddd_retention(assessment_date: date, retention_years: int = 5) -> di
     }
 ```
 
-## TypeScript
+## What a compliance implementation typically needs
 
-**Domain Objects**
-- `domain/CSDDDAssessment.ts` — Due diligence assessment; adverse impact findings; remediation plan
-- `compliance/UFLPA.ts` — XUAR operations flag; clearance document ref; risk score
-- `compliance/REACH.ts` — SVHC substance; concentration; notification/registration status
-- `regulations/ModernSlaveryStatement.ts` — Annual statement; approval date; public URL
+*Shapes, not code — ADR-0037 deleted the reference implementation. A project builds these in
+its own repository, with its own policy values and its own layout. The names below are the
+responsibilities that need a home, not paths in this repository.*
+
+- `CSDDDAssessment.ts` — Due diligence assessment; adverse impact findings; remediation plan
+- `UFLPA.ts` — XUAR operations flag; clearance document ref; risk score
+- `REACH.ts` — SVHC substance; concentration; notification/registration status
+- `ModernSlaveryStatement.ts` — Annual statement; approval date; public URL
 
 **Critical Guards**
 ```typescript

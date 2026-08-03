@@ -47,11 +47,13 @@ MANIFEST = "docs/program/load-sets.md"
 EVAL_RECORD = "docs/program/context-eval.md"
 DEPT_RULE = "docs/40-contexts/06-warehouse-management/rule.md"
 REGISTRY = "docs/00-governance/id-registry.md"
+ADR_INDEX = "docs/10-decisions/README.md"
 RETIRED_RULE_ID = "SCM-R1"    # retired by ADR-0037; declared in 30-foundation/scm-core
 
 # Every path any mutant may create or modify. The harness restores all of them between
 # mutants, so this list must stay in step with the mutations below.
-TOUCHABLE = (CONCEPT, CONCEPT_B, STRAY, MANIFEST, EVAL_RECORD, DEPT_RULE, REGISTRY)
+TOUCHABLE = (CONCEPT, CONCEPT_B, STRAY, MANIFEST, EVAL_RECORD, DEPT_RULE, REGISTRY,
+             ADR_INDEX)
 
 
 # --- worktree plumbing ----------------------------------------------------------------
@@ -201,6 +203,24 @@ def mutate_g9(wt: Path) -> list[str]:
     return [CONCEPT]
 
 
+def mutate_g9_adr_orphan_entry(wt: Path) -> list[str]:
+    """An ADR listed in the index with no decision body.
+
+    G9's third claim, and the one that was missing: the check ran body -> entry only,
+    so ADR-0045 and ADR-0046 shipped as index entries with no body while PLT-R7 and
+    knowledge-selection.md cited them as their authority. Planting the reverse
+    direction is what keeps that from happening silently again.
+    """
+    text = read(wt, ADR_INDEX)
+    marker = "\n> **File map:**"
+    entry = ("- ADR-9999 — **A decision summarised and never recorded:** planted by the "
+             "gate mutation harness.\n")
+    # Insert the index entry among the entries, leaving no matching `## ADR-9999` body.
+    text = text.replace(marker, "\n" + entry + marker, 1)
+    write(wt, ADR_INDEX, text)
+    return [ADR_INDEX]
+
+
 def mutate_g10(wt: Path) -> list[str]:
     """A concept node that cites no source."""
     text = restamp(read(wt, CONCEPT))
@@ -226,6 +246,18 @@ def mutate_g13(wt: Path) -> list[str]:
     """A real change carrying a stamp that predates it."""
     text = restamp(read(wt, CONCEPT), STALE) + "\nAn edit the stamp does not admit to.\n"
     write(wt, CONCEPT, text)
+    return [CONCEPT]
+
+
+def mutate_g17(wt: Path) -> list[str]:
+    """A table row one cell short of its header.
+
+    The mutant is a three-column table whose second row supplies two cells. Rendered, that row
+    simply shows an empty third cell — which is exactly why the real instance survived two days in
+    the improvement register and fourteen consecutive rows deep.
+    """
+    write(wt, CONCEPT, restamp(read(wt, CONCEPT)) +
+          "\n| Term | Unit | Source |\n|---|---|---|\n| a | b | c |\n| d | e |\n")
     return [CONCEPT]
 
 
@@ -288,6 +320,7 @@ MUTANTS = [
     ("G7", "superseded with no superseded-by", mutate_g7, set()),
     ("G8", "non-English prose", mutate_g8, set()),
     ("G9", "over the concept word budget", mutate_g9, set()),
+    ("G9", "ADR indexed with no body (G9's third claim)", mutate_g9_adr_orphan_entry, set()),
     ("G10", "concept node citing no source", mutate_g10, set()),
     ("G11", "citation to a retired rule", mutate_g11, set()),
     ("G12", "rule family wildcard as a citation", mutate_g12, set()),
@@ -296,6 +329,7 @@ MUTANTS = [
     ("G15", "measurement recorded against a changed context", mutate_g15, set()),
     ("G16", "roster fallen behind the retirement tables", mutate_g16_missing, {"G15"}),
     ("G16", "roster claiming a retirement nobody declared", mutate_g16_extra, {"G15"}),
+    ("G17", "table row one cell short of its header", mutate_g17, set()),
 ]
 # The `also` column declares collateral that is real rather than tolerated. G14's and G16's mutants
 # edit `load-sets.md` and `id-registry.md`, both of which the context-adherence measurement is

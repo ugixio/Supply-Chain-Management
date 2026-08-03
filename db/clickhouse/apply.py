@@ -44,6 +44,29 @@ SCHEMA_ASSERTIONS: list[tuple[str, str, str]] = [
      "the rollup aggregates at insert time"),
     ("telemetry.samples_1h", "AggregatingMergeTree", "cascade stage 2"),
     ("telemetry.samples_1d", "AggregatingMergeTree", "cascade stage 3"),
+    # M2b / risk #14 — a level must not be summable, and the mechanism is data plus absence.
+    ("telemetry.samples", "kind",
+     "the metric's kind is a column, stamped by the ingester so an emitter cannot relabel itself"),
+    ("telemetry.samples_1m", "AggregateFunction(argMax",
+     "argMax(value, ts) is the last reading in the bucket; anyLast is a nondeterministic pick that "
+     "only usually looks right, and differs exactly under load"),
+    ("telemetry.samples_1h", "AggregateFunction(argMax", "the level state survives stage 2"),
+    ("telemetry.samples_1d", "AggregateFunction(argMax", "the level state survives stage 3"),
+]
+
+# The read surface, and the assertion that carries the whole point of M2b: `levels_1m` must NOT
+# expose a sum. An invalid aggregation that is absent cannot be used by mistake; one that is merely
+# documented can. Each entry is (view, substring, present?, why).
+VIEW_ASSERTIONS: list[tuple[str, str, bool, str]] = [
+    ("telemetry.levels_1m", "argMaxMerge", True,
+     "a level's valid aggregation is its last reading (MSR-R2)"),
+    ("telemetry.levels_1m", "sumMerge", False,
+     "MSR-R2: summing a level fabricates a quantity that never existed — the column must not exist"),
+    ("telemetry.flows_1m", "sumMerge", True,
+     "a flow sums across adjacent intervals (MSR-R2)"),
+    ("telemetry.flows_1m", "argMaxMerge", False,
+     "the 'last reading' of a flow is one interval's count, and reading it as a level understates "
+     "the period"),
 ]
 
 # Every stage must hold aggregate *states*, not finished numbers: a finished average cannot be
@@ -103,6 +126,13 @@ def assert_schema(url: str) -> int:
                 "states, or the next stage averages averages"
             )
 
+    for view, substring, want_present, why in VIEW_ASSERTIONS:
+        ddl = query(url, f"SHOW CREATE TABLE {view}").replace("\\n", " ")
+        if want_present and substring not in ddl:
+            failures.append(f"{view}: expected {substring!r} — {why}")
+        if not want_present and substring in ddl:
+            failures.append(f"{view}: must NOT contain {substring!r} — {why}")
+
     # The cascade must actually be wired: each stage needs its materialized view.
     views = query(url, "SELECT name FROM system.tables WHERE database = 'telemetry' "
                        "AND engine = 'MaterializedView' ORDER BY name")
@@ -118,7 +148,8 @@ def assert_schema(url: str) -> int:
         return 1
 
     print(f"GREEN schema matches ADR-0036 "
-          f"({len(SCHEMA_ASSERTIONS)} assertions, {len(STATE_TABLES)} state tables, 3 views)")
+          f"({len(SCHEMA_ASSERTIONS)} assertions, {len(VIEW_ASSERTIONS)} read-surface assertions, "
+          f"{len(STATE_TABLES)} state tables, 3 views)")
     return 0
 
 

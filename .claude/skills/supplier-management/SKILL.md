@@ -178,9 +178,12 @@ def rolling_supplier_kpi(df: pd.DataFrame, window: int = 13) -> pd.DataFrame:
     return df
 ```
 
-## TypeScript
+## What a supplier-management implementation typically needs
 
-**Domain Objects**
+*Shapes, not code — ADR-0037 deleted the reference implementation. A project builds these in
+its own repository, with its own policy values and its own layout. The names below are the
+responsibilities that need a home, not paths in this repository.*
+
 - `SupplierScorecard.ts` — Composite score; sub-scores; `SupplierRating` enum
 - `CorrectionActionReport.ts` — CAR lifecycle; due dates; closure verification
 - `SupplierAudit.ts` — ISO 9001 §8.4.1 audit record; findings; re-audit schedule

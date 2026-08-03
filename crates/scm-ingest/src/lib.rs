@@ -21,11 +21,82 @@ use std::collections::{HashSet, VecDeque};
 use std::fmt;
 use std::hash::{Hash, Hasher};
 
+/// How a measure may be aggregated over an interval — **MSR-R2**, as data rather than as prose.
+///
+/// The distinction is not a reporting convention: summing a level fabricates a quantity that never
+/// existed. A backlog of 40 read every ten seconds sums to 240 in a minute, in range, with nothing
+/// failing. So the classification travels with the metric, is **stamped by this pipeline from its
+/// registry**, and is never read off the incoming sample — an emitter that could relabel its own
+/// metric could turn a level into a flow and the corruption would be indistinguishable from data.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum MetricKind {
+    /// Counts events over an interval; sums across adjacent intervals.
+    Flow,
+    /// Read at an instant; valid aggregations are last, max, min or time-weighted average — never
+    /// the sum, and never the count of readings.
+    Level,
+    /// A flow whose unit is "one occurrence", kept distinct because a dashboard usually wants the
+    /// count and the breakdown rather than a rate (see CPT-0166).
+    EventCount,
+}
+
+impl MetricKind {
+    /// The wire and column spelling. Matches `db/clickhouse/migrations/0006_metric_kind.sql`, and
+    /// the schema gate asserts the column is `LowCardinality(String)` so this stays a string.
+    #[must_use]
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::Flow => "flow",
+            Self::Level => "level",
+            Self::EventCount => "event_count",
+        }
+    }
+}
+
+/// The governed metrics and the kind of each — the single place the classification is decided.
+///
+/// A flat list of names was enough while every metric was a flow. It is not enough now: the name
+/// alone cannot tell the writer which aggregation is valid, and two sources of that answer would
+/// eventually disagree.
+#[derive(Debug, Clone, Default)]
+pub struct MetricRegistry {
+    entries: Vec<(String, MetricKind)>,
+}
+
+impl MetricRegistry {
+    #[must_use]
+    pub fn new(entries: Vec<(String, MetricKind)>) -> Self {
+        Self { entries }
+    }
+
+    /// The kind of a governed metric, or `None` when the metric is not governed at all.
+    #[must_use]
+    pub fn kind_of(&self, metric: &str) -> Option<MetricKind> {
+        self.entries
+            .iter()
+            .find(|(name, _)| name == metric)
+            .map(|(_, kind)| *kind)
+    }
+
+    #[must_use]
+    pub fn len(&self) -> usize {
+        self.entries.len()
+    }
+
+    #[must_use]
+    pub fn is_empty(&self) -> bool {
+        self.entries.is_empty()
+    }
+}
+
 /// A single telemetry sample, before normalization.
 ///
 /// `ts_ms` is a Unix millisecond instant in **UTC** (SCM-R9). Labels are plain `String` rather than
 /// `Option<String>` because ADR-0036 forbids `Nullable` on the hot columns: absence is the empty
 /// string, decided once here rather than at every call site.
+///
+/// **There is no `kind` field, deliberately.** The kind is stamped from [`MetricRegistry`] at the
+/// point the sample is accepted, so an emitter cannot declare its own metric a flow.
 #[derive(Debug, Clone, PartialEq)]
 pub struct Sample {
     pub project_id: String,
@@ -318,7 +389,7 @@ impl Batcher {
 /// silent drop is only acceptable when it is counted.
 #[derive(Debug)]
 pub struct Pipeline {
-    governed_metrics: Vec<String>,
+    registry: MetricRegistry,
     max_skew_ms: i64,
     deduplicator: Deduplicator,
     batcher: Batcher,
@@ -327,19 +398,20 @@ pub struct Pipeline {
 }
 
 impl Pipeline {
-    /// `governed_metrics` is the set every accepted metric must belong to: ADR-0036 requires each
-    /// supervision metric to be a `CPT-*` concept node, so an unrecognized name is an ungoverned
-    /// calculation entering through the ingest door.
+    /// `registry` is the set every accepted metric must belong to, with the kind of each: ADR-0036
+    /// requires each supervision metric to be a `CPT-*` concept node, so an unrecognized name is an
+    /// ungoverned calculation entering through the ingest door — and an accepted one must declare
+    /// how it may be aggregated (MSR-R2).
     #[must_use]
     pub fn new(
-        governed_metrics: Vec<String>,
+        registry: MetricRegistry,
         max_skew_ms: i64,
         deduplicator: Deduplicator,
         batcher: Batcher,
     ) -> Self {
         assert!(max_skew_ms > 0, "accepted clock skew must be positive");
         Self {
-            governed_metrics,
+            registry,
             max_skew_ms,
             deduplicator,
             batcher,
@@ -358,7 +430,7 @@ impl Pipeline {
         if sample.metric.is_empty() {
             return Err(self.reject(RejectReason::MissingMetric));
         }
-        if !self.governed_metrics.contains(&sample.metric) {
+        if self.registry.kind_of(&sample.metric).is_none() {
             return Err(self.reject(RejectReason::UnknownMetric));
         }
         if !sample.value.is_finite() {
@@ -390,6 +462,15 @@ impl Pipeline {
     /// Flushes unconditionally — shutdown path.
     pub fn drain(&mut self) -> Option<Vec<Sample>> {
         self.batcher.drain()
+    }
+
+    /// The registry this pipeline validated against.
+    ///
+    /// Exposed so the transport half stamps the `kind` column from **the same** source that decided
+    /// the sample was governed. Two registries would be two answers to one question.
+    #[must_use]
+    pub fn registry(&self) -> &MetricRegistry {
+        &self.registry
     }
 
     /// Rejections by reason.

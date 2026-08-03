@@ -5,7 +5,7 @@ type: program
 owner: orchestrator
 status: active
 since: 2026-07-29
-updated: 2026-07-29
+updated: 2026-08-03
 relations:
   - { type: part-of, target: index-program }
   - { type: governed-by, target: governance-root }
@@ -33,8 +33,8 @@ relations:
 2. **Name the finding classes before looking.** Two or five named classes, written down first.
    Reviewing without them produces a list of whatever caught the eye, which is not a review of the
    estate; it is a sample of it. Derive the classes from what the project has *already* got wrong —
-   its ADRs, its risk register, its known pitfalls — because a defect that happened once has a
-   mechanism that is still in place.
+   its ADRs, its risk register, its [known pitfalls](known-pitfalls.md) — because a defect that
+   happened once has a mechanism that is still in place.
 3. **Mark every item as it is reached.** A checklist with three states: not reached, reached and
    clean, reached with a finding. Marking is not bookkeeping — it is the only thing that makes
    "there is no residue in the remaining 130 files" a statement rather than a hope, and it lets a
@@ -59,7 +59,7 @@ already exist:
 | A concrete defect, fixed | the commit — its message states the class and the reason, not only the diff |
 | A defect the gates could have caught | a new or widened gate in `tools/verify.py`, plus its entry in `00-governance/knowledge-architecture.md` §11 |
 | A standing exposure that cannot be mechanized | `00-governance/risk-register.md` |
-| A recurring mistake in *how* the work is done | `program/improvement-register.md`, and a known pitfall in `program/evaluation.md` |
+| A recurring mistake in *how* the work is done | a row in [`program/improvement-register.md`](improvement-register.md), **and** the rule it distils to in [`program/known-pitfalls.md`](known-pitfalls.md) — the record and the readable form, in the same change |
 | Something needing an owner decision | a selectable list now, an ADR when answered |
 | Status that was wrong | corrected at the source, with the correction visible (a triage block, not a silent edit) |
 

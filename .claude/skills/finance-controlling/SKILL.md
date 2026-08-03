@@ -184,13 +184,16 @@ def update_wac(current_qty: int, current_wac_cents: int,
     return round(total_value / total_qty)  # always round to nearest cent
 ```
 
-## TypeScript
+## What a finance and controlling implementation typically needs
 
-**Domain Objects**
-- `domain/JournalEntry.ts` — GL posting; debit/credit pairs; always balance to zero
-- `domain/LandedCost.ts` — Landed cost components; duty rates; total in cents
-- `domain/InventoryValuation.ts` — FIFO/WAC layer management; cost rollup
-- `reports/FinancialReport.ts` — C2C, DIO, DSO, DPO, GMROI computation
+*Shapes, not code — ADR-0037 deleted the reference implementation. A project builds these in
+its own repository, with its own policy values and its own layout. The names below are the
+responsibilities that need a home, not paths in this repository.*
+
+- `JournalEntry.ts` — GL posting; debit/credit pairs; always balance to zero
+- `LandedCost.ts` — Landed cost components; duty rates; total in cents
+- `InventoryValuation.ts` — FIFO/WAC layer management; cost rollup
+- `FinancialReport.ts` — C2C, DIO, DSO, DPO, GMROI computation
 
 **Money Rule (Critical)**
 ```typescript

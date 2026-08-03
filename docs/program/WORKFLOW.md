@@ -216,6 +216,20 @@ what gets built:
   **CPT-0999 is now reserved** for the context-adherence evaluation — its `new-concept-node` prompt
   had named CPT-0167, which was free that morning and allocated the same afternoon.
 
+- ✅ **X8 · The purpose was unreadable — fixed and made measurable, 2026-08-03 (ADR-0045).** Asked for
+  a plain summary of the project, the weakest thing in the estate turned out not to be rigour: the
+  entry point named a supply-chain knowledge base *and* a DevOps dashboard and **never connected
+  them**, leaving the reason in ADR-0030 among forty-four decisions. Now three paragraphs at the top of
+  `CLAUDE.md` — the two axes, the portfolio, and why monitoring watches it — plus **PLT-R7** (governing
+  knowledge is selected and declared to the owner before development) and the practice-area roster.
+  **And a new eval task, `what-is-this-for`, so the prose cannot quietly drift back:** it checks a cold
+  subagent names both axes, names the portfolio, ties monitoring to the projects **on one line**, and
+  does *not* conclude this is a supply-chain application. Run on adoption: **PASS**, from the three
+  always-loaded files alone.
+  **The gap this closed was in the eval too.** All five previous tasks measured whether an agent
+  *obeys* the context; none asked whether it can say what the context is **for**, so the eval could not
+  have found the problem the owner found by asking.
+
 ### Phase U — Unification (context-skeleton adoption)
 - ✅ **U1 · orchestrator** — Skeleton added on branch `feat/context-skeleton`: tier tree,
   knowledge-architecture (instantiated allowlist), id-registry (SCM live; 14 families
@@ -548,9 +562,17 @@ what gets built:
 - ⛔ **W4 · HOW lane (Stage C, ADR-0031)** — Monitoring connector: emit progress events from the
   W3 data model; connectors (internal-first, then external dev tools: GitHub/CI/issue-trackers);
   delivery metrics as `CPT-*` nodes; dashboards. Deferred until W3 lands.
-- ⬜ **W5 · WHAT lane (as branches are onboarded)** — Per-tech-branch practice knowledge
+- 🟦 **W5 · WHAT lane (as branches are onboarded)** — Per-tech-branch practice knowledge
   (AI/ML/Data/Backend/Frontend/DevOps/…): materialize a branch's standards/skills **only when a
   real project in that branch needs them** (no speculative pre-build — knowledge-architecture).
+  **Roster landed 2026-08-03 (ADR-0045):** `docs/50-engineering/practice-areas.md` enumerates the
+  thirty-five areas the owner named, each with **the external authority that would make a statement in
+  it admissible** — standard, terminology or identity. **Content is still zero and that is the rule**,
+  not a gap: what the roster fixes is the anchor, which is the part that cannot be improvised when
+  someone finally writes the area. Two rows are flagged as the ones that will fight the inclusion test
+  hardest: *clean code* (advice largely choosable) and *technology strategy* (**no external anchor at
+  all** — it can contribute only the decisions a strategy must record).
+  **Next step:** nothing, until a project needs an area. Then §How a row becomes knowledge.
 
 ### Phase L — VOID (superseded by ADR-0037)
 

@@ -57,7 +57,7 @@ relations:
 | ORD | 13-order-management | `docs/40-contexts/13-order-management/rule.md` | ORD-R7 |
 | SDV | 14-supplier-development | `docs/40-contexts/14-supplier-development/rule.md` | SDV-R6 |
 | ENG | Engineering (build-time, cross-cutting) | `docs/50-engineering/rule.md` | ENG-R11 |
-| PLT | Platform / workspace (above the 14 depts) | `docs/30-foundation/platform/rule.md` | PLT-R6 |
+| PLT | Platform / workspace (above the 14 depts) | `docs/30-foundation/platform/rule.md` | PLT-R7 |
 | MSR | Measurement identities (how a measure aggregates, cross-department) | `docs/30-foundation/measurement/rule.md` | MSR-R2 |
 
 ### Concept IDs — LIVE (ADR-0015)
@@ -118,7 +118,8 @@ platform catalogue was checked against the current published grouping and found 
   PLT-R3 everything-connected · PLT-R4 node/edge typing · PLT-R5 one-branch-per-project ·
   **PLT-R6 improvement-recommendation gate (ADR-0038, 2026-07-27)** — the standing search for a
   better implementation, and the rule that a missing detail is chosen from a selectable list rather
-  than guessed.
+  than guessed · **PLT-R7 selected-and-declared knowledge (ADR-0045, 2026-08-03)** — no project uses
+  the whole context, so the parts that apply are chosen and reported to the owner before development.
 - *(no other reserved families — a 15th SCM department appends via its own ADR)*
 
 ## 3. Decision (ADR) numbers

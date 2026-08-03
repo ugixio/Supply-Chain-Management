@@ -226,13 +226,16 @@ def process_capability(measurements: np.ndarray, usl: float, lsl: float) -> dict
             'sigma_level': round(sigma_level, 2), 'ppm_defective': round(ppm_defective, 0)}
 ```
 
-## TypeScript
+## What a quality implementation typically needs
 
-**Domain Objects**
-- `domain/InspectionRecord.ts` — Inspection aggregate; AQL parameters; lot disposition
-- `domain/NCR.ts` — NCR lifecycle; defect classification; corrective action
-- `reports/QualityDashboard.ts` — PPM, DPMO, FPY, COPQ calculations
-- `services/QualityService.ts` — Sampling plan lookup; SPC trigger; NCR creation
+*Shapes, not code — ADR-0037 deleted the reference implementation. A project builds these in
+its own repository, with its own policy values and its own layout. The names below are the
+responsibilities that need a home, not paths in this repository.*
+
+- `InspectionRecord.ts` — Inspection aggregate; AQL parameters; lot disposition
+- `NCR.ts` — NCR lifecycle; defect classification; corrective action
+- `QualityDashboard.ts` — PPM, DPMO, FPY, COPQ calculations
+- `QualityService.ts` — Sampling plan lookup; SPC trigger; NCR creation
 
 **AQL Disposition**
 ```typescript

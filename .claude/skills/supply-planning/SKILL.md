@@ -186,13 +186,16 @@ def solve_production_schedule(demands: list[int], capacity: list[int],
 | `networkx` | Supply network graph, critical path | BSD-3 |
 | `simpy` | Discrete event simulation of supply plan | MIT |
 
-## TypeScript
+## What a supply-planning implementation typically needs
 
-**Domain Objects**
-- `domain/MasterProductionSchedule.ts` — MPS aggregate; time fences; freeze logic
-- `domain/MaterialRequirement.ts` — MRP netting; planned order release
-- `domain/CapacityPlan.ts` — CRP; work center utilization; bottleneck flags
-- `services/SIOPService.ts` — S&OP alignment; consensus commit
+*Shapes, not code — ADR-0037 deleted the reference implementation. A project builds these in
+its own repository, with its own policy values and its own layout. The names below are the
+responsibilities that need a home, not paths in this repository.*
+
+- `MasterProductionSchedule.ts` — MPS aggregate; time fences; freeze logic
+- `MaterialRequirement.ts` — MRP netting; planned order release
+- `CapacityPlan.ts` — CRP; work center utilization; bottleneck flags
+- `SIOPService.ts` — S&OP alignment; consensus commit
 
 **MRP Netting**
 ```typescript

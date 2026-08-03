@@ -106,6 +106,12 @@ never has to be read whole. **A lesson added to the register is distilled here i
 - **When an agent gets something wrong, ask what it was given before asking what it did.** A failure
   that traces to an absent input is a manifest defect wearing an agent's clothes, and the cheapest
   fix is usually to make a document already in the set carry the missing fact. (#21)
+- **A sweep that corrects the governed documents leaves the instructions pointing at the old world.**
+  ADR-0037 deleted the code and fixed the docs; thirteen skill files went on naming the deleted files
+  as though a reader could open them. `.claude/**` is loaded by every session and read by no gate —
+  check it explicitly, or it keeps the previous estate alive. (#35)
+- **Before believing a path-scan, resolve relative to the citing file, not to the repo root.** Half of
+  a 121-hit sweep was citations that were correct all along. (#35)
 - **If the subject already knows what the artefact is supposed to teach, the measurement is of the
   subject.** (#17)
 - **A refined prompt can still be underspecified, and both default responses — guess, or ask in

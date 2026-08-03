@@ -219,13 +219,16 @@ def analyze_supply_network(edges_df: pd.DataFrame) -> dict:
 | `simpy` | Discrete event risk simulation | MIT |
 | `scikit-learn` | Clustering, anomaly detection | BSD-3 |
 
-## TypeScript
+## What a risk implementation typically needs
 
-**Domain Objects**
-- `domain/RiskEvent.ts` — Risk register entry; probability; impact; EAL; mitigation status
-- `models/BullwhipAnalysis.ts` — Order variance / demand variance; per-SKU ratio
-- `models/HHICalculator.ts` — Supplier concentration; category-level HHI
-- `services/RiskService.ts` — Risk scoring; heat map generation; early warning triggers
+*Shapes, not code — ADR-0037 deleted the reference implementation. A project builds these in
+its own repository, with its own policy values and its own layout. The names below are the
+responsibilities that need a home, not paths in this repository.*
+
+- `RiskEvent.ts` — Risk register entry; probability; impact; EAL; mitigation status
+- `BullwhipAnalysis.ts` — Order variance / demand variance; per-SKU ratio
+- `HHICalculator.ts` — Supplier concentration; category-level HHI
+- `RiskService.ts` — Risk scoring; heat map generation; early warning triggers
 
 **EAL Calculation**
 ```typescript

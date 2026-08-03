@@ -194,13 +194,16 @@ def select_fefo_lots(lots_df: pd.DataFrame, qty_needed: float) -> pd.DataFrame:
     return pd.DataFrame(allocations)
 ```
 
-## TypeScript
+## What a warehouse implementation typically needs
 
-**Domain Objects**
-- `domain/WarehouseLocation.ts` — Location master; zone; ABC slot; capacity
-- `domain/GoodsReceipt.ts` — GR aggregate; ASN match; lot creation; correction count
-- `operations/PickTask.ts` — Pick instruction; FEFO lot; quantity; status
-- `services/WMSService.ts` — Wave creation; putaway engine; FEFO picker
+*Shapes, not code — ADR-0037 deleted the reference implementation. A project builds these in
+its own repository, with its own policy values and its own layout. The names below are the
+responsibilities that need a home, not paths in this repository.*
+
+- `WarehouseLocation.ts` — Location master; zone; ABC slot; capacity
+- `GoodsReceipt.ts` — GR aggregate; ASN match; lot creation; correction count
+- `PickTask.ts` — Pick instruction; FEFO lot; quantity; status
+- `WMSService.ts` — Wave creation; putaway engine; FEFO picker
 
 **GR Entry Accuracy Guard**
 ```typescript

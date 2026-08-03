@@ -168,13 +168,16 @@ def detect_capacity_constraints(demand_plan: pd.DataFrame,
 | `pulp` | Multi-period production LP | MIT |
 | `statsmodels` | FVA trend, regression | BSD-3 |
 
-## TypeScript
+## What an S&OP implementation typically needs
 
-**Domain Objects**
-- `domain/SOPCycle.ts` — S&OP monthly cycle; inputs/outputs; approval state
-- `domain/ConsensusForecast.ts` — Statistical + commercial adjustment; FVA tracking
-- `domain/SupplyPlanCommit.ts` — Committed supply by family/period
-- `services/SOPService.ts` — Gap analysis; scenario generation; financial reconciliation
+*Shapes, not code — ADR-0037 deleted the reference implementation. A project builds these in
+its own repository, with its own policy values and its own layout. The names below are the
+responsibilities that need a home, not paths in this repository.*
+
+- `SOPCycle.ts` — S&OP monthly cycle; inputs/outputs; approval state
+- `ConsensusForecast.ts` — Statistical + commercial adjustment; FVA tracking
+- `SupplyPlanCommit.ts` — Committed supply by family/period
+- `SOPService.ts` — Gap analysis; scenario generation; financial reconciliation
 
 **FVA Computation**
 ```typescript

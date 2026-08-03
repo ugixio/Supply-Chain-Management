@@ -192,13 +192,16 @@ def supplier_development_roi(score_before: float, score_after: float,
             'roi_pct': round(roi_pct, 1), 'payback_months': round(development_cost_usd / (avoided_loss_usd / 12), 1)}
 ```
 
-## TypeScript
+## What a supplier-development implementation typically needs
 
-**Domain Objects**
-- `domain/DevelopmentProgram.ts` — Development plan; milestones; KPI targets; sponsor
-- `domain/SupplierAudit.ts` — Audit record; findings; maturity score; re-audit date
-- `domain/CorrectiveActionReport.ts` — CAR; root cause; corrective action; closure verification
-- `services/DevelopmentService.ts` — Program enrollment; milestone tracking; ROI calculation
+*Shapes, not code — ADR-0037 deleted the reference implementation. A project builds these in
+its own repository, with its own policy values and its own layout. The names below are the
+responsibilities that need a home, not paths in this repository.*
+
+- `DevelopmentProgram.ts` — Development plan; milestones; KPI targets; sponsor
+- `SupplierAudit.ts` — Audit record; findings; maturity score; re-audit date
+- `CorrectiveActionReport.ts` — CAR; root cause; corrective action; closure verification
+- `DevelopmentService.ts` — Program enrollment; milestone tracking; ROI calculation
 
 **Development Milestone Tracking**
 ```typescript

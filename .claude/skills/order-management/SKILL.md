@@ -217,13 +217,16 @@ def predict_order_delay(df: pd.DataFrame) -> pd.DataFrame:
 | `scipy.stats` | Confidence intervals for forecasts | BSD-3 |
 | `statsforecast` | AutoARIMA, ETS at scale | Apache-2.0 |
 
-## TypeScript
+## What an order-management implementation typically needs
 
-**Domain Objects**
-- `domain/CustomerOrder.ts` — Order aggregate; 8-field validation; status lifecycle
-- `domain/OrderLine.ts` — Line-level detail; open qty; NETWR (integer cents)
-- `services/OrderManagementService.ts` — Order entry; FP-OEA check; backlog identity
-- `services/IntakeProjectionService.ts` — Projected Order Intake; Holt-Winters call
+*Shapes, not code — ADR-0037 deleted the reference implementation. A project builds these in
+its own repository, with its own policy values and its own layout. The names below are the
+responsibilities that need a home, not paths in this repository.*
+
+- `CustomerOrder.ts` — Order aggregate; 8-field validation; status lifecycle
+- `OrderLine.ts` — Line-level detail; open qty; NETWR (integer cents)
+- `OrderManagementService.ts` — Order entry; FP-OEA check; backlog identity
+- `IntakeProjectionService.ts` — Projected Order Intake; Holt-Winters call
 
 **8-Field Entry Validation**
 ```typescript

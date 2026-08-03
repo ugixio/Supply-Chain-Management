@@ -181,13 +181,16 @@ def solve_cvrp(distance_matrix: list[list[int]], demands: list[int],
 | `geopandas` | Geospatial route mapping | BSD-3 |
 | `scipy.optimize` | Cost minimization, carrier allocation | BSD-3 |
 
-## TypeScript
+## What a logistics implementation typically needs
 
-**Domain Objects**
-- `domain/Shipment.ts` — Shipment aggregate; Incoterms; carrier; hazmat class
-- `domain/CustomsDeclaration.ts` — HS codes; duties; AES/SAD filing
-- `customs/HazmatManifest.ts` — IMDG/ADR classification; emergency contacts
-- `services/LogisticsService.ts` — Carrier selection; rate shopping; booking
+*Shapes, not code — ADR-0037 deleted the reference implementation. A project builds these in
+its own repository, with its own policy values and its own layout. The names below are the
+responsibilities that need a home, not paths in this repository.*
+
+- `Shipment.ts` — Shipment aggregate; Incoterms; carrier; hazmat class
+- `CustomsDeclaration.ts` — HS codes; duties; AES/SAD filing
+- `HazmatManifest.ts` — IMDG/ADR classification; emergency contacts
+- `LogisticsService.ts` — Carrier selection; rate shopping; booking
 
 **Incoterms Validation**
 ```typescript

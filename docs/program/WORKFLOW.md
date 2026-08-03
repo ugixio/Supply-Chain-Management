@@ -839,6 +839,38 @@ what gets built:
 - ⬜ **M5 · HOW** — Docker images (non-root, pinned digests, multi-stage) then Kubernetes once two
   long-running services exist.
 
+### Triage of 2026-08-03 — references that outlived what they referenced
+
+A scan for backticked repository paths that resolve to nothing: **121 mentions across 30 files.**
+The denominator matters more than the count, because most of it was not a defect.
+
+- **59 were not real** — relative citations (`rule.md`, `evaluation.md`) resolved against the repo
+  root instead of the citing document's own directory. The first pass reported them as dead.
+- **~45 are legitimate.** `10-decisions/README.md` and `WORKFLOW.md` are append-only history: an ADR
+  that records deleting `src/departments/` has to name it. `30-foundation/_index.md` marks
+  `security/` and `observability/` *none recorded yet*; `40-contexts/_index.md` says `specs/` stay ⬜
+  *created per unit of work, never speculatively*; both `20-product-model` references to
+  `context-map.md` sit under **MISSING (owner input needed)**. All honest.
+- **One class was a real defect, and it was the class that matters:** live guidance, loaded by every
+  session, naming deleted files as though they could be opened. **Thirteen of fourteen department
+  skills** carried a `## TypeScript` / `**Domain Objects**` section listing `domain/NCR.ts`,
+  `services/QualityService.ts` and 60 others. `procurement` had been fixed and is what made the rest
+  visible. Same reservoir as improvement #11 — `.claude/skills/**`, which no gate reads.
+
+**Fixed:** all 14 skills carry one heading and one disclaimer (*shapes, not code — a project builds
+these in its own repository, with its own policy values and its own layout*), directory prefixes
+stripped since the layout was never this repository's to imply; `procurement` unified onto the same
+wording rather than left as a fourteenth variant. **CPT-0063** rewritten — its entire content had been
+a rounding difference between two deleted Python files, and it now states what is true independent of
+any implementation: the denominator is the **inspected** quantity, and using the received quantity
+instead understates a 200-of-10,000 sample fiftyfold.
+
+**⚠ Raised, not built — a gate for this class.** A path-existence gate would now fire on all 62
+corrected shape names, and a gate that reddens correct work gets disabled rather than obeyed. It needs
+the disclaimer convention to be machine-readable first (a fenced block, or a front-matter flag on the
+section) and it needs the historical tiers exempt by declaration rather than by guess. That is a
+design decision, so it is a decision and not a patch.
+
 ### Phase C — Clean the context after ADR-0037
 
 > The deletion is done; making the remaining knowledge consistent with it is not.

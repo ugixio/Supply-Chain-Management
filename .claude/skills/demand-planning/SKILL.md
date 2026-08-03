@@ -221,14 +221,17 @@ def forecast_metrics(actuals: np.ndarray, forecasts: np.ndarray) -> dict:
     }
 ```
 
-## TypeScript
+## What a demand-planning implementation typically needs
 
-**Domain Objects**
-- `algorithms/Forecasting.ts` — SMA, SES, Holt, Holt-Winters + metrics
-- `algorithms/SafetyStock.ts` — SS methods 1–4, EOQ, ROP, DIO
-- `domain/DemandPlan.ts` — Demand plan per SKU/period
-- `domain/SOPCycle.ts` — Monthly S&OP cycle (inputs/outputs)
-- `services/ForecastingService.ts` — Orchestrator
+*Shapes, not code — ADR-0037 deleted the reference implementation. A project builds these in
+its own repository, with its own policy values and its own layout. The names below are the
+responsibilities that need a home, not paths in this repository.*
+
+- `Forecasting.ts` — SMA, SES, Holt, Holt-Winters + metrics
+- `SafetyStock.ts` — SS methods 1–4, EOQ, ROP, DIO
+- `DemandPlan.ts` — Demand plan per SKU/period
+- `SOPCycle.ts` — Monthly S&OP cycle (inputs/outputs)
+- `ForecastingService.ts` — Orchestrator
 
 **Algorithm Types**
 ```typescript

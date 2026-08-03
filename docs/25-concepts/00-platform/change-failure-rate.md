@@ -5,7 +5,7 @@ type: concept
 owner: orchestrator
 status: active
 since: 2026-07-27
-updated: 2026-07-27
+updated: 2026-08-03
 relations:
   - { type: part-of, target: index-concepts-00-platform }
   - { type: governed-by, target: index-adr }
@@ -33,11 +33,10 @@ whose numerator and denominator come from different definitions is not a rate.
 
 - **Inputs:** the deployment population, and per deployment whether it was followed by remediation
   attributable to it.
-- **Output:** the fraction **and both counts**. `1/8` and `50/400` are both 12.5% and are not
-  equally informative — the first is one bad afternoon.
-- **Attribution is a judgement, not a lookup.** A degradation surfacing hours later, after three
-  deployments, has no mechanical owner. Whatever rule a project uses, it decides the numerator, so it
-  must be applied consistently.
+- **Output:** the fraction **and both counts**. `1/8` and `50/400` are both 12.5%; the first is one
+  bad afternoon.
+- **Attribution is a judgement, not a lookup.** A degradation surfacing after three deployments has
+  no mechanical owner, and whatever rule a project uses decides the numerator.
 
 ## Assumptions and limits
 
@@ -82,8 +81,9 @@ fixed definition of a change.
 
 ## Related
 
-- CPT-0155 Deployment frequency — the shared denominator, and the batch-size trap above.
+- CPT-0155 Deployment frequency — the shared denominator and the batch-size trap.
 - CPT-0158 Failed-deployment recovery time — how bad the failures were, not how many.
+- CPT-0167 Deployment rework rate — the other instability measure, and what a low rate here hides.
 
 ## References
 

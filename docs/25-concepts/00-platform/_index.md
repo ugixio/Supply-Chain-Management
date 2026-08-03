@@ -5,7 +5,7 @@ type: concept
 owner: orchestrator
 status: active
 since: 2026-07-27
-updated: 2026-07-27
+updated: 2026-08-03
 relations:
   - { type: part-of, target: index-concepts }
   - { type: governed-by, target: index-adr }
@@ -33,25 +33,41 @@ appear in a table headed **target**.
 something meaningful; a project comparing itself against a survey's cut-off has adopted another
 population's distribution as a goal.
 
-The second trap is subtler and is called out per node: **these four metrics are gameable in
-isolation.** Deployment frequency rises if you split one change into five. Change failure rate
-falls if you stop calling incidents failures. Lead time shortens if you branch later. Each node
-names what it can be traded against, because a monitoring dashboard that shows one of them alone
-is an invitation.
+The second trap is subtler and is called out per node: **each of these metrics is gameable in
+isolation.** Deployment frequency rises if you split one change into five. Change failure rate falls
+if you stop calling incidents failures. Lead time shortens if you branch later. Rework rate falls if
+you put the hotfix on the plan. Each node names what it can be traded against, because a monitoring
+dashboard that shows one of them alone is an invitation.
 
 ## Catalogue
 
-### Delivery throughput and stability
+### Throughput
 
 | ID | Concept | What it answers |
 |---|---|---|
 | [CPT-0155](deployment-frequency.md) | Deployment frequency | How often change reaches production |
 | [CPT-0156](lead-time-for-changes.md) | Lead time for changes | How long a change takes to get there |
-| [CPT-0157](change-failure-rate.md) | Change failure rate | What share of changes degrade the service |
 | [CPT-0158](failed-deployment-recovery-time.md) | Failed-deployment recovery time | How quickly a degradation is resolved |
 
-The four are read as **two pairs** — throughput (0155, 0156) against stability (0157, 0158) —
-because either pair alone can be improved by damaging the other.
+### Instability
+
+| ID | Concept | What it answers |
+|---|---|---|
+| [CPT-0157](change-failure-rate.md) | Change failure rate | What share of changes degrade the service |
+| [CPT-0167](deployment-rework-rate.md) | Deployment rework rate | What share of the release stream went backwards |
+
+**The grouping is DORA's own and it changed; this catalogue followed on 2026-08-03.** It previously
+read as "two pairs" — 0155/0156 against 0157/0158 — which is a defensible way to think and is not the
+published taxonomy. Three measures describe **throughput**, including recovery time (how fast the
+stream resumes), and two describe **instability**. The argument the old framing carried survives and
+is what matters: **either group alone can be improved by damaging the other**, so a dashboard shows
+both or it misleads.
+
+**Rework rate (CPT-0167) is the one the original four miss.** A team can post good numbers on all of
+them and still spend its release stream going back over work that already shipped. It matters
+particularly here: published research associates AI-assisted development with higher throughput and
+worse stability, so a monitoring product for AI-assisted projects that measures only throughput will
+report improvement while the thing it is meant to watch degrades.
 
 ### Flow
 

@@ -5,7 +5,7 @@ type: governance
 owner: orchestrator
 status: active
 since: 2026-07-19
-updated: 2026-08-02
+updated: 2026-08-03
 relations:
   - { type: part-of, target: index-governance }
   - { type: governed-by, target: knowledge-architecture }
@@ -67,9 +67,9 @@ relations:
 
 | Prefix | Area | Owning doc | Highest allocated |
 |---|---|---|---|
-| CPT | Concepts — supply-chain and platform (definitions, no parameters — ADR-0037) | `docs/25-concepts/` (per-node files) | CPT-0166 |
+| CPT | Concepts — supply-chain and platform (definitions, no parameters — ADR-0037) | `docs/25-concepts/` (per-node files) | CPT-0167 |
 
-Allocated so far: **CPT-0001 … CPT-0166**. CPT-0001..0025 = dept 03 (demand-planning);
+Allocated so far: **CPT-0001 … CPT-0167**. CPT-0001..0025 = dept 03 (demand-planning);
 CPT-0026..0035 = dept 01 (procurement); CPT-0036..0049 = dept 06 (warehouse management);
 CPT-0050..0059 = dept 08 (quality management);
 CPT-0060..0070 = dept 02 (supplier management);
@@ -91,7 +91,15 @@ statement fixes. See [25-concepts/_index.md](../25-concepts/_index.md);
 platform catalogue admits a metric only if *a project's development* produces the signal, and these
 are warehouse operations. They are **definitions only** — no ingestion, no schema and no connector
 were built for them, and the operational-telemetry question is recorded as open in
-[program/WORKFLOW.md](../program/WORKFLOW.md).
+[program/WORKFLOW.md](../program/WORKFLOW.md);
+**CPT-0167 = deployment rework rate**, the fifth DORA delivery metric, added 2026-08-03 when the
+platform catalogue was checked against the current published grouping and found to carry four of five.
+
+> **CPT-0999 is RESERVED and never allocated to a real node.** The context-adherence evaluation
+> (ADR-0043) asks a cold subagent to author a node with a stated number, and its answer is scored by
+> running the gates over a throwaway worktree. If that number were a live allocation the task would
+> fail on a duplicate CPT — a spurious failure, in the one place the estate measures itself. The
+> reservation is the fix, and it is recorded here because this file is the collision authority.
 
 > **Swept under ADR-0037 (Phases C1a/C1b, 2026-07-27):** implementation links removed from all
 > nodes; every numeric threshold, target, weighting and rating band removed or attributed to the

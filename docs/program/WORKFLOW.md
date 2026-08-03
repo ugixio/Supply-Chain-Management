@@ -200,6 +200,22 @@ what gets built:
   retirement is an allocation fact. **Verified by re-running the failing task against a fresh cold
   subagent — PASS.** The eval score moved 3/5 → 4/5.
 
+- ✅ **X7 · The platform catalogue carried four of five delivery metrics — closed 2026-08-03.**
+  Enumerated against DORA's current published framework rather than against the recommendation that
+  raised it, and the recommendation was **wrong**: it proposed adding Change Failure Rate, which
+  CPT-0157 has carried since Phase M1. What was actually missing is **CPT-0167 deployment rework
+  rate**, the fifth metric — the one that catches a team posting good numbers on the other four while
+  spending its release stream going back over shipped work. The catalogue's **grouping was also
+  outdated**: it read as "two pairs" (0155/0156 against 0157/0158) where the published taxonomy is
+  three throughput measures, recovery time among them, and two instability measures. Corrected, with
+  the trade-off argument the old framing carried kept because it is the part that matters.
+  **Why this mattered before M4 and not after:** published research associates AI-assisted
+  development with higher throughput and worse stability, so a monitoring product for AI-assisted
+  projects that measures only throughput reports improvement while the thing it watches degrades.
+  Free to fix now, expensive once dashboards exist.
+  **CPT-0999 is now reserved** for the context-adherence evaluation — its `new-concept-node` prompt
+  had named CPT-0167, which was free that morning and allocated the same afternoon.
+
 ### Phase U — Unification (context-skeleton adoption)
 - ✅ **U1 · orchestrator** — Skeleton added on branch `feat/context-skeleton`: tier tree,
   knowledge-architecture (instantiated allowlist), id-registry (SCM live; 14 families

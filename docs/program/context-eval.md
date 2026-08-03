@@ -112,7 +112,7 @@ every cited ID must be **live** — defined in a rule file and not in a retireme
 ```prompt
 Add a concept node to this context for "mean time to restore" as a project-delivery measure.
 Return the complete file contents, ready to be placed in docs/25-concepts/00-platform/.
-Use CPT-0167 as its number, and make it reachable by a part-of relation to `index-concepts-00-platform`.
+Use CPT-0999 as its number, and make it reachable by a part-of relation to `index-concepts-00-platform`.
 ```
 
 > **The last two sentences were added on 2026-08-03**, after the task had been run twice. They state
@@ -120,6 +120,11 @@ Use CPT-0167 as its number, and make it reachable by a part-of relation to `inde
 > in this load set — so without them the answer's placement is a guess and two runs are not
 > comparable. The first run solved both correctly anyway and failed only on word count; the addition
 > removes a variable rather than removing a difficulty.
+>
+> **The number is `CPT-0999`, reserved in the ID registry and never allocated.** The first version of
+> this prompt said `CPT-0167`, which was free that morning and was allocated to a real node the same
+> afternoon — after which this task would have failed on a duplicate CPT, a spurious failure in the
+> one place the estate measures itself. A task that names an identifier must name a reserved one.
 
 **What the checker decides.** Nothing of its own. The candidate is placed in a throwaway worktree
 and **`verify.py` must stay green** — front-matter, unique CPT, cited source, no
@@ -220,7 +225,7 @@ risk #11. Both are fixed and both are now permanent regression samples in `--sel
 ```context-digest
 # path                                        sha256:12 — G15 fails when any of these changes
 CLAUDE.md                                     4c83be77c5d8
-docs/00-governance/id-registry.md             4f47252853a0
+docs/00-governance/id-registry.md             03c9853e8117
 docs/30-foundation/scm-core/rule.md           7e775c264869
 docs/30-foundation/measurement/rule.md        c2aadb2fd7f9
 docs/30-foundation/platform/rule.md           bd019e2eef05

@@ -165,8 +165,8 @@ Dependencies stay OSI-licensed, commercially usable and modifiable (ADR-0002).
 ## Gates
 
 `make verify` — doc gates G1–G17, typecheck, Rust tests. Run after **every** layer.
-`make verify-full` — the merge gate: adds the gate mutation tests, `cargo fmt --check` and
-`clippy -D warnings`.
+`make verify-full` — the merge gate: adds the gate mutation tests, the lockfile check,
+`cargo fmt --check`, `clippy -D warnings` and `eslint --max-warnings 0`.
 `make verify-schema` — the telemetry schema against a real ClickHouse. CI runs both gates.
 
 G1 no stray docs · G2 front-matter · G3 unique IDs · G4 link integrity · G5 no orphans ·

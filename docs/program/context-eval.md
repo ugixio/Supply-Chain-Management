@@ -179,6 +179,45 @@ this file's own code — an untested checker would be the same hole in a new pla
 
 ## Last measurement
 
+**2026-08-03, third cycle — 6 of 6 conforming, and the cycle earned its keep by failing once.**
+Re-run in full because U12 changed `CLAUDE.md` — one sentence, describing what `make verify-full`
+runs. Nothing any task queries, and re-running selectively on that judgement is exactly what
+`how-to/run-the-evaluation.md` §3 warns against: the digests cannot certify materiality, so the
+whole cycle went again. Six cold subagents, each with its declared load set and nothing else.
+
+| Task | Verdict | What happened |
+|---|---|---|
+| `what-is-this-for` | **PASS** | Both axes, the portfolio, monitoring tied to what it watches. |
+| `invent-a-threshold` | **FAIL → PASS**, and **the checker was the defect** | The answer refused to state a tolerance, quoted `CLAUDE.md`'s anti-pattern list to explain why, and cited what does constrain the decision — correct on every dimension. It failed on the line `> **Policy dressed as law.** A USD 5,000 approval threshold, **a 5% receipt tolerance** …`, which is a **Markdown blockquote quoting this repository's own text**. See §The blockquote regression. |
+| `level-metric` | **PASS** | Level, MSR-R2, valid aggregations named. |
+| `unit-codes` | **PASS** | `KGM` · `LTR` · `MTR` · `EA` in the scored block. The structural `answer` block that replaced the prose heuristic keeps holding. |
+| `rule-citation` | **PASS**, four times | SCM-R9 and SCM-R10, retired IDs written off by name. |
+| `new-concept-node` | **PASS** | 590 words against the 700 budget, source cited, no `## Implementations`. |
+
+### The blockquote regression — the same incident, a second time, because the first fix was literal
+
+**This is the quoting class recurring, and the record of the first occurrence is what indicts the
+first fix.** On 2026-08-02 an answer refused to state a tolerance, quoted the anti-pattern to explain
+why, and failed. The fix was `QUOTED_SPAN`, which strips `"…"`, `“…”` and `` `…` ``. It covered the
+three syntaxes that answer had used.
+
+The 2026-08-03 answer did the identical thing in a **Markdown blockquote**, and the disowning
+sentence — *"were once stated as binding rules"* — wrapped onto a line the number did not share. The
+checker is line-scoped, so it saw a bare `5% receipt tolerance` on an undisowned line and fired.
+
+**The instrument, not the list.** `DISOWNS` already carries a written threshold saying that if a
+fifth widening is needed the line-level regex is the wrong tool. Adding "binding rules" to a word
+list would have been that fifth widening in spirit. A blockquote is the most explicit *these are not
+my words* marker Markdown has, so it is now treated as reported speech alongside `QUOTED_SPAN` —
+**structure, not vocabulary.** The generalisation worth keeping: the first fix targeted three
+*spellings* of quotation instead of quotation itself, which is why it lasted one cycle.
+
+**The evasion this admits is stated, not discovered later.** An answer could assert policy inside a
+blockquote and escape. `invent-a-threshold-blockquote` is now a permanent regression sample carrying
+both the legitimate case and a violating one, so the fix cannot be quietly narrowed back.
+
+### Second cycle (superseded by the run above)
+
 **2026-08-03, second cycle — 6 of 6 conforming.** Re-run in full because M2b changed `CLAUDE.md`,
 the id-registry and the load-set manifest, and G15 was right to red: a measurement is about the
 context it was taken against. All six were run fresh against **this** tree — one cold subagent each,
@@ -294,7 +333,7 @@ risk #11. Both are fixed and both are now permanent regression samples in `--sel
 
 ```context-digest
 # path                                        sha256:12 — G15 fails when any of these changes
-CLAUDE.md                                     ec95648042d5
+CLAUDE.md                                     53f838917f0c
 docs/_index.md                                53f2766c9d3f
 docs/program/evaluation.md                    6e806b7f4e29
 docs/00-governance/knowledge-architecture.md  3706e4bb0421

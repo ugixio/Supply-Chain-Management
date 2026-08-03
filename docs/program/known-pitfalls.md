@@ -59,6 +59,9 @@ relations:
 - **A hand-written list that mirrors a machine-readable one will drift, and the gate reading it will
   not notice.** G15's watched files lagged its own load-set manifest by two commits. Derive the list
   from the source instead of maintaining a copy. (#36)
+- **When a false positive recurs, ask whether the previous fix named the concept or an instance of
+  it.** `QUOTED_SPAN` fixed three *spellings* of quotation and the same correct answer failed one
+  cycle later using a fourth. Prefer structure over vocabulary. (#37)
 
 ### About rules, thresholds and sweeps
 

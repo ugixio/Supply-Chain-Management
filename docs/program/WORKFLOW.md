@@ -236,8 +236,27 @@ reached its ceiling and this was the structural answer, taken instead of a raise
   `python/07_order_management/` vs `python/13_order_management/` numbering collision
   (risk register #4); REACH: model ECHA-notification tracking so compliance can reflect
   a submitted notification (currently conservative: required ⇒ not yet compliant).
-- 🟦 **U12 · HOW lane** — eslint 9 flat config (`eslint.config.mjs`) + wire `lint` into
+- ✅ **U12 · HOW lane** — eslint flat config (`eslint.config.mjs`) + wire `lint` into
   `make verify-full` (QA warnings-as-errors bar).
+  **Landed 2026-08-03:** `make lint-ts` in the merge gate, mirroring `lint-rs` —
+  `pnpm -s exec eslint . --max-warnings 0`. **The bar lives at the invocation, not in the config:** a
+  severity written into the config can be argued down one rule at a time, a count on the command line
+  cannot.
+  **Two things this entry got wrong, corrected rather than quietly satisfied.** The version is
+  **eslint 10**, not 9 — 10 makes flat config the only format, so the intent stands. And no ADR is
+  needed: a library inside an adopted lane. ESLint and `typescript-eslint` are MIT, dev-only, zero
+  runtime surface; ENG-R9's six checks were stated at handoff.
+  **Type-aware linting is deliberately off, as a decision rather than an omission.** It needs a full
+  program build per run and the estate has **two** TypeScript files, so it would cost real time to
+  find nothing. It belongs to **M4**, when `apps/api` and `apps/web` bring code worth reasoning about
+  — recorded inside `eslint.config.mjs` so the next session inherits the reason rather than the gap.
+  **Proven by planting a violation** (ADR-0042's discipline, applied to a lint bar rather than a
+  gate): an `any` signature made `make lint-ts` exit 2, and removing it returned 0. `make deps-locked`
+  re-run because the lockfile moved — improvement #6's exact failure mode.
+  **Found while doing it:** `README.md` claimed `verify` runs "doc gates G1-G16" when they are
+  **G1–G17**, and `CLAUDE.md` and `README.md` each described `verify-full` partially, omitting a
+  different step. Yesterday's file-by-file review missed the G16 claim because its numeric sweep
+  looked for counts beside the word *gates*, and `G1-G16` is a range.
 - ⛔ **U13 · HOW lane** — Enforce LOG-R3 in code: `Shipment` types `hazmatClass` as
   optional and does not reject an `isHazmat` line missing its IMDG/ADR class, UN number,
   proper shipping name or packing group, though the README mandates it. Add the guard +

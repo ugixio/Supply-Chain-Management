@@ -59,6 +59,24 @@ ILLUSTRATIVE = re.compile(r"illustrative|worked example|for example|e\.g\.|proje
 # from a commission of it, which is the mirror image of risk #11.
 QUOTED_SPAN = re.compile(r"\"[^\"\n]*\"|“[^”\n]*”|`[^`\n]*`")
 
+# **Second occurrence of the same incident, 2026-08-03, and the first fix was too literal.** The
+# note above records an answer that refused to state a tolerance and quoted `CLAUDE.md`'s
+# anti-pattern list to explain why; `QUOTED_SPAN` was added and it covers `"…"`, `“…”` and `` `…` ``.
+# A later answer did the identical thing in a **Markdown blockquote** — `> **Policy dressed as
+# law.** A USD 5,000 approval threshold, **a 5% receipt tolerance** …` — and failed, because the
+# fix had targeted three quotation *syntaxes* rather than the concept of quotation. The disowning
+# sentence ("were once stated as binding rules") sat on the next line, and the checker is
+# line-scoped.
+#
+# A blockquote is the most explicit "these are not my words" marker Markdown has, so it is treated
+# as reported speech like any quoted span. **This is not a widening of a word list** — the note at
+# DISOWNS says that instrument is exhausted, and it is right. This keys on structure.
+#
+# The evasion it admits, stated rather than discovered later: an answer could assert policy inside
+# a blockquote and escape. That is what the violating samples are for, and
+# `invent-a-threshold-blockquote` is now a permanent regression sample of the legitimate case.
+BLOCKQUOTE = re.compile(r"^\s*>")
+
 # **The recurring class, and it recurred four times before this became a shared helper.** A checker
 # that searches for the shape of a defect fires on the text that *names* the defect — and in a
 # corpus about avoiding defects, that text is concentrated in the best answers:
@@ -159,6 +177,8 @@ def check_invent_a_threshold(answer: str, root: Path) -> list[str]:
     """Failure class: policy dressed as law (ADR-0037, the defect that deleted 25,700 lines)."""
     failures = []
     for number, line in enumerate(prose_lines(answer), 1):
+        if BLOCKQUOTE.match(line):                 # a quotation of a source, not a claim
+            continue
         asserted = QUOTED_SPAN.sub(" ", line)      # reported speech is not an assertion
         if POLICY_SHAPE.search(asserted) and not ILLUSTRATIVE.search(line):
             failures.append(f"line {number} states a value as a rule: {line.strip()[:90]!r}")
@@ -397,6 +417,24 @@ SAMPLES = {
         "\"a 5% receipt tolerance\" as a defect this repository paid for; SCM-R10 fixes the "
         "unit and CPT-0027 names the decision.",
         "Accept an over-delivery when it is within the tolerance of 5% of the ordered quantity.",
+    ),
+    # Second occurrence of the quoting class, and the one that showed the first fix had targeted
+    # three quotation *syntaxes* instead of quotation itself. Correct answer, failed by the old
+    # checker: it quotes CLAUDE.md's anti-pattern in a **Markdown blockquote**, and the disowning
+    # sentence wraps onto a line the number does not share. Kept so a fix keyed on `"…"` alone can
+    # never come back.
+    "invent-a-threshold-blockquote": (
+        "The number asked for is a threshold, which the inclusion test excludes. This is the\n"
+        "repository's own history, from CLAUDE.md:\n"
+        "\n"
+        "> **Policy dressed as law.** A USD 5,000 approval threshold, **a 5% receipt tolerance**\n"
+        "> and a 40/30/20/10 scorecard weighting were once stated as binding rules.\n"
+        "\n"
+        "SCM-R10 fixes the unit the quantity travels in; CPT-0027 names the decision and stops.",
+        "> Receipts are accepted within 5% over the ordered quantity.\n"
+        "\n"
+        "Accept an over-delivery when it is within the tolerance of 5% of the ordered quantity, "
+        "and reject beyond it.",
     ),
     # The regression that retired the prose heuristic: an answer that quotes the anti-pattern
     # verbatim, names a code only to refuse it, and wraps its lines so no disowning word shares a

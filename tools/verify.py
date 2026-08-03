@@ -30,7 +30,7 @@ DOCS_DIR = "docs"
 
 TYPES = {
     "governance", "adr", "product-model", "concept", "context-spec", "rule", "skill",
-    "engineering", "operations", "program", "archive", "transient",
+    "engineering", "operations", "program", "how-to", "archive", "transient",
 }
 OWNERS = {"human", "orchestrator"}  # extend when agent lanes are formalized
 STATUSES = {"draft", "active", "superseded", "deprecated", "archived"}
@@ -75,7 +75,7 @@ PATH_BUDGETS = (
     ("docs/program/evaluation.md", 1200),
     ("docs/program/operating-model.md", 1200),
 )
-TYPE_BUDGETS = {"skill": 1500, "rule": 1000, "concept": 700}
+TYPE_BUDGETS = {"skill": 1500, "rule": 1000, "concept": 700, "how-to": 900}
 ADR_INDEX_LINE = re.compile(r"^-\s+ADR-(\d{4})\s+—", re.M)
 
 # --- G14 — load-set budgets (ADR-0041) ------------------------------------------------
@@ -89,6 +89,16 @@ ADR_INDEX_LINE = re.compile(r"^-\s+ADR-(\d{4})\s+—", re.M)
 LOAD_SETS_DOC = f"{DOCS_DIR}/program/load-sets.md"
 LOAD_SET_FENCE = re.compile(r"^```load-sets$(.*?)^```$", re.M | re.S)
 LOAD_SET_HEADER = re.compile(r"^(\S+)\s*=\s*(\d+)$")
+
+# A member may name a **slice** of a file as `path#selector`, priced instead of the whole file.
+# One selector exists and it is not a general mechanism: `adr-index` prices the one-line-per-decision
+# entries of the ADR index and not the decision bodies. That is how the file is actually read — the
+# index is scanned, a body is looked up by ID — and the difference is 1,950 words against 20,200.
+# The owner rejected splitting the bodies into files (backlog X3, it would collide with planned work),
+# so the honest alternative is to price the unit a session really loads rather than the file it sits
+# in. A selector nobody implements is a hard failure: a manifest that silently prices the wrong thing
+# is worse than one that names a file it cannot find.
+SLICES = {"adr-index": ADR_INDEX_LINE}
 
 # --- G15 — the context-adherence measurement is not stale (ADR-0043) ------------------
 #
@@ -748,13 +758,29 @@ def main() -> int:
             for name, (budget, members) in sets.items():
                 total = 0
                 for member in members:
-                    matches = sorted(glob.glob(member, recursive=True))
+                    target, _, selector = member.partition("#")
+                    if selector and selector not in SLICES:
+                        gates.fail("G14", f"load set '{name}' names slice '{selector}', which no "
+                                          f"selector implements — known: "
+                                          f"{', '.join(sorted(SLICES))}")
+                        continue
+                    matches = sorted(glob.glob(target, recursive=True))
                     if not matches:
-                        gates.fail("G14", f"load set '{name}' names '{member}', which matches no "
+                        gates.fail("G14", f"load set '{name}' names '{target}', which matches no "
                                           f"file — a manifest pointing at nothing prices nothing")
                         continue
                     for path in matches:
-                        total += len(open(path, encoding="utf-8").read().split())
+                        text = open(path, encoding="utf-8").read()
+                        if selector:
+                            kept = SLICES[selector].findall(text)
+                            if not kept:
+                                gates.fail("G14", f"load set '{name}': slice '{selector}' selects "
+                                                  f"nothing in {path}")
+                            total += sum(len(line.split()) for line in
+                                         [ln for ln in text.splitlines()
+                                          if SLICES[selector].match(ln)])
+                        else:
+                            total += len(text.split())
                 measured[name] = total
                 if total > budget:
                     gates.fail("G14", f"load set '{name}': {total} words read together exceeds its "

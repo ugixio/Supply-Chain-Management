@@ -244,8 +244,19 @@ def check_new_concept_node(answer: str, root: Path) -> list[str]:
                                   capture_output=True, text=True)
             if done.returncode == 0:
                 return []
-            return [line.strip() for line in done.stdout.splitlines()
-                    if line.startswith("FAIL") or line.strip().startswith("- ")]
+            # Attribute only what names the candidate. Delegating to the whole suite was too
+            # broad: the first re-run of this task "failed" on G15 reporting that the *measurement
+            # record* was stale — true, and not the candidate node's doing. A check that hands off
+            # to a suite inherits every verdict the suite reaches, including the ones about the
+            # estate rather than about the thing under test.
+            #
+            # Matching on the path keeps cross-file verdicts that genuinely implicate the
+            # candidate: G10's duplicate-CPT message names both files, so a stolen number is
+            # still caught.
+            relative = str(target.relative_to(worktree))
+            mine = [line.strip() for line in done.stdout.splitlines()
+                    if relative in line]
+            return mine
         finally:
             subprocess.run(["git", "worktree", "remove", "--force", str(worktree)],
                            cwd=root, capture_output=True)

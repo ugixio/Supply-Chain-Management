@@ -5,7 +5,7 @@ type: program
 owner: orchestrator
 status: active
 since: 2026-07-19
-updated: 2026-08-02
+updated: 2026-08-03
 relations:
   - { type: part-of, target: index-program }
   - { type: governed-by, target: governance-root }
@@ -13,7 +13,8 @@ relations:
 # Development workflow (orchestrator playbook + backlog)
 
 > The **human orchestrates**; the AI executes bounded tasks from
-> `templates/task.md`. Before each task the AI loads: `CLAUDE.md` + ADRs → the relevant
+> `templates/task.md`. Before each task the AI loads: `CLAUDE.md` + **the ADR index entries** (the
+> bodies are looked up by ID, not read whole — see `program/load-sets.md`) → the relevant
 > department SKILL (`.claude/skills/<dept>/`) + README → the unit spec (when specs
 > exist). Never the whole repo.
 
@@ -153,12 +154,15 @@ what gets built:
   `planning` reads **33,804 words (~45,000 tokens)**, 91 % of it the ADR index and this file —
   the two largest documents in the repository, loaded on every planning task, and **neither had a
   G9 budget** because none exists for type `adr` or `program`.
-- ⬜ **X3 · Split the ADR bodies out of the index.** The structural answer G14 points at, and the
-  ADR index's own footer already anticipates it (`NNNN-title.md` "when extensive"). The index keeps
-  its one-line-per-decision entries; the bodies move to files. `planning` is the only load set
-  carrying a **ceiling instead of a ratchet** precisely because the index is append-only by design
-  (ADR-0011) — G14 went red on the very commit that introduced it when two ADRs were added. **When
-  36,000 is next reached, the answer is this split, not another raise.**
+- ⛔ **X3 · Splitting the ADR bodies — REJECTED by the owner 2026-08-03.** The index keeps working by
+  **index search**, because splitting the bodies into files would collide with planned work. The
+  ruling produced a better answer than the split would have: `docs/program/load-sets.md` now prices
+  the ADR member as a **slice** (`README.md#adr-index`), so a planning session is charged for the
+  1,950 words of entries it scans rather than the 20,200-word file they sit in. **`planning` fell
+  from 35,453 to 17,426 words — halved, with nothing moved and no forty-three new documents to keep
+  reachable.** The ceiling's exit changed with it: at 20,000 the finding will be that the "one-line"
+  entries have grown into paragraphs — they average 45 words — and the answer is to shorten them.
+
 - 🟦 **X4 · A context-adherence evaluation (ADR-0043).** **Harness landed 2026-08-02:**
   `docs/program/context-eval.md` (five tasks, one per failure class with a real history here) plus
   `tools/context_eval.py` (deterministic checkers, self-tested against a compliant and a violating
@@ -176,15 +180,16 @@ what gets built:
   ten live rules (`ENG-R8..R11`, `PLT-R1..R6`) because it required the colon to follow the ID
   immediately, so **a duplicate `ENG-R10` would have passed G3** — fixed, and a second G3 mutant now
   covers the rule-ID claim that had none.
-- ⬜ **X5 · The missing documentation form.** Against the Diátaxis four (tutorial · how-to ·
-  reference · explanation) the estate is 182 `concept` + 20 `rule` of **reference** and the ADRs as
-  **explanation**, with **no how-to at all**. `CLAUDE.md` promises a project can learn *"which
-  departments it needs **and how to implement them**"*; the second half has no documentary form.
-  **The scoping caveat matters more than the gap:** a how-to about *running a department* would be
-  method a company can reasonably choose — policy, and it would fail the inclusion test, which is
-  probably why none was ever written. The how-tos that belong are about **using this context**
-  (onboarding a project onto it, adding a concept node, retiring a rule). Adding the type touches
-  the closed `type` vocabulary, so it needs an ADR (knowledge-architecture §12).
+- ✅ **X5 · The missing documentary form — landed 2026-08-03 (ADR-0044).** Against Diátaxis's four,
+  the estate had *reference* and *explanation* and **no task-oriented document at all**, while
+  `CLAUDE.md` promises a project learns "which departments it needs **and how to implement them**".
+  `how-to` joins the type vocabulary with a 900-word budget; `program/how-to/add-a-concept-node.md`
+  is the first, chosen because the eval named the failure it addresses. **The scoping rule is the
+  decision:** a how-to about *running a department* is method a company can choose and fails the
+  inclusion test — which is probably why the form was never created. **Verified:** the failing task
+  re-run against a fresh cold subagent came in at **633 words** against 806, naming the budget in its
+  own report. The confound is recorded in `context-eval.md`.
+  **Next two, not written:** `changing-a-rule` and `running-the-evaluation`.
 
 - ✅ **X6 · The retirement tables were unreachable — closed 2026-08-02 without widening the set.**
   Raised by the first eval run and measured: **52 rules are retired, the id-registry enumerated 12**,

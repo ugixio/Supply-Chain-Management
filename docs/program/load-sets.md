@@ -5,7 +5,7 @@ type: program
 owner: orchestrator
 status: active
 since: 2026-08-02
-updated: 2026-08-02
+updated: 2026-08-03
 relations:
   - { type: part-of, target: index-program }
   - { type: governed-by, target: index-adr }
@@ -24,8 +24,14 @@ relations:
 ## The manifest
 
 Each set names a **budget in words** and the files a session actually opens for that kind of task.
-A member may be a literal path or a glob. Missing members fail the gate — a manifest that names a
-file nobody kept is worse than no manifest.
+A member may be a literal path, a glob, or **`path#selector`** naming a *slice* of a file. Missing
+members fail the gate, and so does an unimplemented selector — a manifest that silently prices the
+wrong thing is worse than one that names a file it cannot find.
+
+One selector exists, `adr-index`, and it is not a general mechanism. It prices the
+one-line-per-decision entries of the ADR index and **not** the decision bodies, because that is how
+the file is read: the entries are scanned and a body is looked up by ID when it is needed. The
+difference is **1,950 words against 20,200**.
 
 **Every set is a ratchet or a ceiling, and which one is not a matter of taste.** A set whose members
 are all bounded documents gets a **ratchet** a few percent above measurement, so nothing grows
@@ -44,22 +50,25 @@ every-task = 3200
   docs/program/evaluation.md
 
 # "What should I do next?" — the state of the estate plus the decisions behind it.
-# CEILING — contains the ADR index, which is append-only by design (ADR-0011). When 38000 is
-# reached the answer is splitting the ADR bodies out (backlog X3), not another raise.
-planning = 38000
+# CEILING — contains WORKFLOW.md and the ADR index lines, both append-only by design. The ADR
+# member is a SLICE: the one-line entries are scanned, a decision body is looked up by ID when it
+# is needed, and only the entries are priced. When 20000 is reached the answer is that the
+# "one-line" entries have grown into paragraphs — shorten them; do not raise this.
+planning = 20000
   CLAUDE.md
   docs/_index.md
   docs/program/evaluation.md
   docs/program/WORKFLOW.md
-  docs/10-decisions/README.md
+  docs/10-decisions/README.md#adr-index
 
 # RATCHET — all members bounded.
 # Adding or changing a concept node.
-authoring-a-concept = 7200
+authoring-a-concept = 8200
   CLAUDE.md
   docs/_index.md
   docs/program/evaluation.md
   docs/00-governance/knowledge-architecture.md
+  docs/program/how-to/add-a-concept-node.md
   docs/program/templates/concept.md
   docs/30-foundation/scm-core/rule.md
   docs/30-foundation/measurement/rule.md
@@ -93,17 +102,18 @@ Measured 2026-08-02, at the moment the gate was written:
 
 | Set | Kind | Words | ≈ Tokens | Budget |
 |---|---|---|---|---|
-| `every-task` | ratchet | 2,979 | 3,962 | 3,200 |
-| `authoring-a-concept` | ratchet | 6,693 | 8,902 | 7,200 |
-| `changing-a-rule` | ratchet | 7,440 | 9,895 | 8,000 |
-| `reviewing-the-estate` | **ceiling** | 9,221 | 12,264 | 12,000 |
-| **`planning`** | **ceiling** | **35,453** | **47,152** | 38,000 |
+| `every-task` | ratchet | 2,992 | 3,979 | 3,200 |
+| `authoring-a-concept` | ratchet | 6,722 | 8,940 | 7,200 |
+| `changing-a-rule` | ratchet | 7,757 | 10,317 | 8,000 |
+| `reviewing-the-estate` | **ceiling** | 10,554 | 14,037 | 12,000 |
+| **`planning`** | **ceiling** | **17,409** | **23,153** | 20,000 |
 
-**`planning` is the outlier and it is not close.** Two documents account for 91 % of it: the ADR
-index and `WORKFLOW.md`. Neither carries a G9 budget, because G9 budgets by `type` and no budget
-exists for `adr` or `program` — so the two largest documents in the repository are the two
-`CLAUDE.md` instructs a session to load on every planning task, and they are the two nothing had
-ever bounded.
+**`planning` was 35,453 words and is 17,409 — halved without moving a file.** The whole difference is
+the `adr-index` slice: the ADR file is 20,200 words, of which 1,950 are the entries a planning
+session actually scans. Neither it nor `WORKFLOW.md` carries a G9 budget, because G9 budgets by
+`type` and none exists for `adr` or `program`, so the two largest documents in the repository were
+the two `CLAUDE.md` instructs a session to load on every planning task — and pricing the *unit that
+is read* rather than the file it sits in was the whole fix.
 
 **The gate caught the same mistake twice in one day, which is how the ratchet/ceiling distinction
 got made.**
@@ -117,11 +127,18 @@ got made.**
   not a bigger number: it is classifying every set as ratchet or ceiling by asking whether any
   member grows monotonically by design.
 
-Both ceilings carry a structural answer, not just headroom. For `planning` it is splitting the ADR
-bodies out of the index (backlog X3) — the index's own footer already anticipates it
-(`NNNN-title.md` "when extensive"). For `reviewing-the-estate` it is archiving closed risk rows and
-done improvement rows to a dated file. **When either ceiling is reached, that is what happens — not
-another raise.**
+Both ceilings carry a structural answer, not just headroom — and `planning`'s changed.
+
+**Splitting the ADR bodies into files was the obvious answer and the owner rejected it** (backlog
+X3): the index is to keep working by index search, because splitting would collide with planned work.
+That ruling is what produced the slice, and the slice is better than the split would have been —
+nothing moved, no forty-three new documents to keep reachable, and the priced unit is now the one a
+session really loads.
+
+So `planning`'s exit is different: at 20,000 the finding will be that the **"one-line" entries have
+grown into paragraphs** — they average 45 words today, which is a paragraph by any reading. Shorten
+them. For `reviewing-the-estate` the exit is archiving closed risk rows and done improvement rows to
+a dated file. **When either ceiling is reached, that is what happens — not another raise.**
 
 ## What this does not claim
 

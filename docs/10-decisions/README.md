@@ -1,11 +1,11 @@
 ---
 id: index-adr
-title: "Architecture Decision Records (ADR-0001..0043)"
+title: "Architecture Decision Records (ADR-0001..0044)"
 type: adr
 owner: orchestrator
 status: active
 since: 2026-07-19
-updated: 2026-08-02
+updated: 2026-08-03
 relations:
   - { type: part-of, target: index-docs }
   - { type: governed-by, target: governance-root }
@@ -74,6 +74,7 @@ relations:
 - ADR-0041 — **A load set is priced as a whole, not document by document:** G9 has always budgeted single documents, but the long-context evidence is about **total input read together** — degradation is continuous rather than a cliff (Chroma, 18 frontier models), and past roughly half a full window the U-shaped position curve gives way to distance-from-the-end (Liu et al. 2024; Veseli et al. 2025). Load sets are declared in `docs/program/load-sets.md` and priced by gate **G14**, which fails over budget, fails on a member matching no file, and prints the largest set every run. Measured on adoption: `planning` reads **32,009 words (~42,571 tokens)**, 91 % of it the ADR index and `WORKFLOW.md` — the two largest documents in the repository, both loaded on every planning task, and **neither had a G9 budget** because none exists for `adr` or `program`. Budgets are a ratchet a few percent above measurement, and are this repository's engineering decision, not a number the research fixes. (Accepted — owner-directed 2026-08-02)
 - ADR-0042 — **The gates are proven by mutation, on every merge:** improvement-register #12 already required that a gate be proven by planting a violation in the environment CI uses — and that proof had been performed exactly once, by hand, for G13. `verify.py` was 638 lines and thirteen gates over 230 documents with **zero tests**. `tools/test_gates.py` now plants one violation per gate and asserts the gate fires **and no other does**, end-to-end against a real worktree populated from the index, wired into `make verify-full`. It contradicted its own author on its first green run — a predicted G3→G5 collateral that does not happen — which is the argument for running mutants rather than reasoning about them. (Accepted — owner-directed 2026-08-02)
 - ADR-0043 — **The premise is measured: a context-adherence evaluation, decided by programs.** Fifteen gates verified that the estate is internally consistent; none verified that an agent *reading* it complies. Five tasks — one per failure class with a real history here — are answered by a **cold subagent loaded only with the declared load set** (self-evaluation would measure the conversation, not the context), scored by **deterministic programs and never a judge model**, and recorded with a digest per context-defining file. Gate **G15** fails once any of those files changes after the measurement, and *notes that it cannot check* while none exists. Gates alone were rejected as the check surface: an invented threshold with correct front-matter and a cited source passes all fifteen — ADR-0037's defect exactly. (Accepted — owner-directed 2026-08-02, four options selected from a list per PLT-R6)
+- ADR-0044 — **A fourth documentary form, `how-to`, and only about using this context:** against Diátaxis's four forms the estate had *reference* (182 concept nodes, 20 rule files) and *explanation* (the ADRs) and **no task-oriented document at all**, while `CLAUDE.md` promises a project learns "which departments it needs **and how to implement them**". The first eval run priced the gap: a node structurally perfect at **806 words against a 700-word budget it had read** — nothing missing from its inputs, no document turning the stated rule into an order of operations. **The scoping constraint is the whole decision:** a how-to about *running a department* would be method an organization can reasonably choose, so it fails the inclusion test — which is likely why the form was never created. The ones that belong are about the context itself. Verified by re-running the failing task: **633 words**, budget named in the answer. (Accepted — owner-directed 2026-08-03)
 - ADR-0037 — **The Global Context holds only externally-fixed standards; the fictitious SCM application is retired.** The context is the source a project consults to learn *which departments it needs and how to implement them* — nothing more. It carries what a standards body, a regulator or an arithmetic identity fixes; it never carries what an organization chooses (thresholds, targets, weightings, rating bands, method mandates). Consequently **~25,700 lines of invented application code are deleted** (`packages/domain`, `services/calc`, `crates/scm-core`), concept nodes become **definitions without parameters**, and the **only application built here is the monitoring project**. Supersedes the two-language-SCM-application premise of ADR-0001; narrows ADR-0015 (nodes define, they do not own code) and ADR-0035 (the Rust core serves the monitoring platform, not 14 departments of invented rules). (Accepted — owner-directed 2026-07-27)
 
 ---
@@ -2054,6 +2055,61 @@ exists, not for trusting either.
   *absence* visible, which is the most a gate can do about work that requires a model.
 
 ---
+
+## ADR-0044 — A fourth documentary form: `how-to`, and only about using this context
+
+**Status:** Accepted (owner-directed 2026-08-03)
+**Materializes as:** the `how-to` type, `docs/program/how-to/`, budget 900 words
+
+**Context.** Against the four forms Diátaxis distinguishes — tutorial, how-to, reference,
+explanation — this estate had **two**. The 182 concept nodes and 20 rule files are *reference*; the
+ADRs are *explanation*. There was **no task-oriented document anywhere**, while the first line of
+`CLAUDE.md` promises a project can learn "which supply-chain departments it needs **and how to
+implement them**". The second half of that promise had no documentary form.
+
+The first context-adherence run (ADR-0043) put a number on the cost. `new-concept-node` produced a
+node that was structurally perfect and **806 words against a 700-word budget** — a budget stated
+plainly in a file the agent had loaded. Nothing was missing from its inputs. What was missing was a
+document that turns a stated rule into an **order of operations**.
+
+**Decision.** `how-to` joins the closed `type` vocabulary. A how-to in this repository is about
+**using this context** — adding a concept node, changing a rule, running the evaluation. Budget 900
+words, and it lives under `docs/program/how-to/`.
+
+**The scoping constraint is the whole decision, and it is why none existed before.** A how-to about
+*running a department* — how to receive goods, how to score a supplier — would be **method an
+organization can reasonably choose**, which is policy, which fails the inclusion test. That is very
+likely why the form was never created: the obvious how-tos are forbidden, so the category looked
+forbidden. It is not. The how-tos that belong are about the **context itself**, whose procedures are
+this repository's own to fix.
+
+**Verification, not assertion.** The guide was written, added to the `authoring-a-concept` load set
+so G14 prices it, and the failing task was re-run against a fresh cold subagent: **633 words**, with
+the answer naming the budget in its own report. The confound is recorded in
+`program/context-eval.md` — the prompt also gained the CPT number and the `part-of` target — so the
+result is stated as "the failing dimension moved and the answer explained why", not as a controlled
+experiment.
+
+**Alternatives considered.**
+- *Use the existing `program` type.* No vocabulary change and no ADR needed. Rejected: `program`
+  already holds the backlog, the evaluation protocol and the registers, which are neither
+  task-oriented nor budgeted; a form whose whole point is being a distinct kind of document should be
+  a distinct type, and G9 can then budget it.
+- *Restate the budget more loudly in `knowledge-architecture.md`.* Cheapest of all, and it treats the
+  problem as insufficient emphasis. The agent had read the number. Repetition was not the gap.
+- *Write how-tos for the departments too.* The inclusion test forbids it, and the attempt is how a
+  context re-acquires one company's habits.
+
+**Consequences.**
+- (+) The `CLAUDE.md` promise acquires a form, and the estate has three of Diátaxis's four.
+- (+) A rule that keeps being broken now has somewhere to become operational, without the rule file
+  growing prose that its budget cannot hold.
+- (−) A twelfth `type`, and one more thing for a session to classify correctly.
+- (−) **The forbidden how-to is one slip away.** "How to add a concept node" is legitimate; "how to
+  set a receipt tolerance" is the ADR-0037 defect wearing this new form. The scoping rule is written
+  into `knowledge-architecture.md` §8 next to the type itself rather than left in this ADR.
+- (−) One guide is not a set. `changing-a-rule` and `running-the-evaluation` are the obvious next two
+  and are recorded in the backlog, not written here.
 
 > **File map:** this README is the canonical ADR index. New decisions are appended here
 > as `## ADR-NNNN — Title` (or as `docs/10-decisions/NNNN-title.md` when extensive).

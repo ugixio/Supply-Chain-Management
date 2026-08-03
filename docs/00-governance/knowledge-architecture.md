@@ -5,7 +5,7 @@ type: governance
 owner: orchestrator
 status: active
 since: 2026-07-19
-updated: 2026-08-02
+updated: 2026-08-03
 relations:
   - { type: part-of, target: index-governance }
   - { type: governed-by, target: governance-root }
@@ -111,7 +111,12 @@ meta / non-authority   00-governance/ (registries) · program/
 Every non-allowlisted `.md` carries YAML front-matter:
 - **Required:** `id`, `title`, `type`, `owner`, `status`, `since`, `updated`, `relations`.
 - `type` ∈ `governance | adr | product-model | context-spec | rule | skill | engineering |
-  operations | program | archive | transient`
+  operations | program | how-to | archive | transient`
+  — **`how-to` added 2026-08-03 (ADR-0044).** The estate had `concept` and `rule` as *reference* and
+  the ADRs as *explanation*, and **no task-oriented form at all**, while `CLAUDE.md` promises a
+  project can learn "which departments it needs **and how to implement them**". A how-to here is
+  about **using this context** — never about running a department, which would be method an
+  organization can reasonably choose and would fail the inclusion test. Budget 900 words.
 - `owner` ∈ `human | orchestrator` (extend when agent lanes are formalized — see
   `program/operating-model.md`)
 - `status` ∈ `draft | active | superseded | deprecated | archived`

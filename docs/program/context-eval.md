@@ -5,7 +5,7 @@ type: program
 owner: orchestrator
 status: active
 since: 2026-08-02
-updated: 2026-08-02
+updated: 2026-08-03
 relations:
   - { type: part-of, target: index-program }
   - { type: governed-by, target: index-adr }
@@ -112,7 +112,14 @@ every cited ID must be **live** — defined in a rule file and not in a retireme
 ```prompt
 Add a concept node to this context for "mean time to restore" as a project-delivery measure.
 Return the complete file contents, ready to be placed in docs/25-concepts/00-platform/.
+Use CPT-0167 as its number, and make it reachable by a part-of relation to `index-concepts-00-platform`.
 ```
+
+> **The last two sentences were added on 2026-08-03**, after the task had been run twice. They state
+> facts a session would normally get from the registry and the department index, neither of which is
+> in this load set — so without them the answer's placement is a guess and two runs are not
+> comparable. The first run solved both correctly anyway and failed only on word count; the addition
+> removes a variable rather than removing a difficulty.
 
 **What the checker decides.** Nothing of its own. The candidate is placed in a throwaway worktree
 and **`verify.py` must stay green** — front-matter, unique CPT, cited source, no
@@ -128,8 +135,9 @@ this file's own code — an untested checker would be the same hole in a new pla
 
 ## Last measurement
 
-**2026-08-02 — 4 of 5 conforming**, after one intervention that was *verified rather than assumed*.
-Cold subagents, one per task, each given only its declared load set and the exact prompt above.
+**2026-08-03 — 5 of 5 conforming**, after two interventions, each *verified by re-running the task
+that failed* rather than assumed. Cold subagents, one per task, each given only its declared load set
+and the exact prompt above.
 
 | Task | Verdict | What happened |
 |---|---|---|
@@ -137,7 +145,7 @@ Cold subagents, one per task, each given only its declared load set and the exac
 | `level-metric` | **PASS** | Classified it a level, cited MSR-R2, named the valid aggregations. |
 | `unit-codes` | **PASS** | `KGM`, `LTR`, `MTR`; raised the discrete-item code as a selectable list instead of inventing one. |
 | `rule-citation` | **FAIL → PASS** | First run: six retired rules cited and four bold family wildcards. **Re-run after the roster landed: clean.** See §The one intervention below. |
-| `new-concept-node` | **FAIL** | Structurally sound and **806 words against the 700-word concept budget**. It read the budget in `knowledge-architecture.md` and overran it anyway. |
+| `new-concept-node` | **FAIL → PASS** | First run: structurally sound at **806 words** against the 700-word budget it had read. **Re-run after the how-to landed: 633 words**, and the answer cited the budget by name. See §The second intervention. |
 
 ### The one intervention, and its verification
 
@@ -160,7 +168,34 @@ fact, which is the registry's own remit.
 roster and wrote *"do not cite …"* for ten retired IDs — using the fix exactly as intended. The
 improvement is measured, not asserted.
 
-### What the run found in the *estate*, not in the answers
+### The second intervention, and an honest confound
+
+`new-concept-node` failed on the one thing the context states plainly and the agent still got wrong:
+**the 700-word budget, read and overrun.** Nothing was missing from its load set — the number was in
+front of it. What was missing was a **form**: against the Diátaxis four the estate had *reference*
+(182 concept nodes, 20 rule files) and *explanation* (the ADRs) and **no task-oriented document at
+all**, while `CLAUDE.md` promises a project can learn "which departments it needs *and how to
+implement them*".
+
+`program/how-to/add-a-concept-node.md` is that form (ADR-0044), and it makes the budget operational
+instead of stated: *count while writing, here is the command, trim the node rather than the budget,
+and here is what to cut first.* **Re-run: 633 words**, and the answer named the budget in its own
+report.
+
+**The confound, stated because the number is worthless without it.** Two things changed between the
+runs, not one: the guide was added to the load set **and** the prompt gained the CPT number and the
+`part-of` target. The first run had solved both of those correctly on its own and failed *only* on
+word count, so the addition removed a variable rather than a difficulty — but the two runs are not
+identical and this is not a controlled experiment. What is solid: the failing dimension moved
+806 → 633 and the answer explained why.
+
+**A third thing was wrong and it was the instrument.** The first re-run scored FAIL on G15 reporting
+that the *measurement record* was stale — true, and nothing to do with the candidate node. The check
+delegated to the whole gate suite and inherited every verdict it reached. It now attributes only
+failures that name the candidate file, which still catches cross-file verdicts that genuinely
+implicate it (G10's duplicate-CPT message names both).
+
+### What the first run found in the *estate*, not in the answers
 
 **G3 could not see ten of its own rules.** Scoring `rule-citation` required knowing which IDs are
 live, and the parser written for it — copied from G3's — reported `ENG-R8..R11` and `PLT-R1..R6` as
@@ -183,14 +218,15 @@ checkers could not tell a citation of a defect from a commission of it, which is
 risk #11. Both are fixed and both are now permanent regression samples in `--self-test`.
 
 ```context-digest
-# path                                   sha256:12 — G15 fails when any of these changes
-CLAUDE.md                                4c83be77c5d8
-docs/00-governance/id-registry.md        4f47252853a0
-docs/30-foundation/scm-core/rule.md      7e775c264869
-docs/30-foundation/measurement/rule.md   c2aadb2fd7f9
-docs/30-foundation/platform/rule.md      bd019e2eef05
-docs/50-engineering/rule.md              0e44a3a5531e
-docs/program/load-sets.md                1e5c7b3aa195
+# path                                        sha256:12 — G15 fails when any of these changes
+CLAUDE.md                                     4c83be77c5d8
+docs/00-governance/id-registry.md             4f47252853a0
+docs/30-foundation/scm-core/rule.md           7e775c264869
+docs/30-foundation/measurement/rule.md        c2aadb2fd7f9
+docs/30-foundation/platform/rule.md           bd019e2eef05
+docs/50-engineering/rule.md                   0e44a3a5531e
+docs/program/load-sets.md                     caf47a8e4af3
+docs/program/how-to/add-a-concept-node.md     6341e78e7551
 ```
 
 **Exactly what was measured against what.** `rule-citation` was run twice and its **second** run is
@@ -210,8 +246,8 @@ While a digest reads `(unmeasured)` G15 reports that it cannot check, rather tha
 that looks like a pass is how a gate reports success for work it never did
 (knowledge-architecture §11).
 
-**Honest limit on this number.** 4/5 is a measurement of five tasks against one model family on one
-day. It is not a score for the context, and chasing it would be the wrong response: the corpus grows
+**Honest limit on this number.** 5/5 is a measurement of five tasks against one model family, on two days, with the corpus
+authored by the same process it evaluates. It is not a score for the context, and chasing it would be the wrong response: the corpus grows
 when a **new failure class** appears, never to move the fraction.
 
 ## Adding a task

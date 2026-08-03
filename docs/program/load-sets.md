@@ -80,8 +80,17 @@ every-task = 3400
 # "What should I do next?" — the state of the estate plus the decisions behind it.
 # CEILING — contains WORKFLOW.md and the ADR index lines, both append-only by design. The ADR
 # member is a SLICE: the one-line entries are scanned, a decision body is looked up by ID when it
-# is needed, and only the entries are priced. When 20000 is reached the answer is that the
-# "one-line" entries have grown into paragraphs — shorten them; do not raise this.
+# is needed, and only the entries are priced.
+#   REACHED 2026-08-03 at 20,142 during the file-by-file review, and **the exit named here was the
+# wrong one**. It said to shorten the ADR index entries; measurement said WORKFLOW.md was 14,505 of
+# the 20,142 words and the index slice only 2,427, so shortening the entries would have addressed a
+# term that was not the problem. Named as not fitting rather than executed (known pitfall #29), and
+# the instrument used instead was the risk register's: the two closed triages (2026-07-29, 2026-08-02)
+# moved verbatim to WORKFLOW-archive.md, nothing deleted, 20,142 -> 18,338.
+#   NEXT TIME, ask which member grew before reaching for either exit. WORKFLOW.md is the dominant
+# term and its closed phases are the supply: Phase U, Phase P and the closed half of Phase C are all
+# complete records that a "what next?" session does not read. Shortening the ADR entries remains
+# available and is the smaller lever. Do not raise this.
 planning = 20000
   CLAUDE.md
   docs/_index.md

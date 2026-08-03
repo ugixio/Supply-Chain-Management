@@ -107,7 +107,7 @@ platform catalogue was checked against the current published grouping and found 
 > gate can check remains true — a number copied from a textbook example reads exactly like a
 > standard — so the anti-states in
 > [30-foundation/scm-core/rule.md](../30-foundation/scm-core/rule.md) stay the reviewer's
-> checklist. **Phase C1c/C1d complete:** 58 of 154 nodes carry a `Project-chosen inputs` table (the
+> checklist. **Phase C1c/C1d complete:** 71 of 167 nodes carry a `Project-chosen inputs` table (the
 > rest are pure identities with no free parameter), and the per-language divergence sections — which
 > had been concealing rating bands and tolerances — are gone.
 

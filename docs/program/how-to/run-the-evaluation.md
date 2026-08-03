@@ -31,9 +31,12 @@ time it happened the wrong thing got fixed.
     python3 tools/verify.py        # G15 names every file whose digest moved
 
 G15 keys freshness to a **content digest per file**, not to a date, because a shallow clone makes
-`git log` report every file as freshly changed. Fourteen files are watched — every file in a task's
-declared load set. Any one of them moving invalidates the measurement, **including cosmetically**;
-that false-alarm rate is the accepted cost of a claim that can be checked at all.
+`git log` report every file as freshly changed. Every file in a declared load set is watched, and
+**G15 derives that requirement from the manifest** — it fails when a set names a member the digest
+block does not carry. It has to: `change-a-rule.md` joined the `changing-a-rule` set and went two
+commits unwatched, so `rule-citation` was scored against an input whose change could not register.
+Any watched file moving invalidates the measurement, **including cosmetically**; that false-alarm
+rate is the accepted cost of a claim that can be checked at all.
 
 ## 2. Get the prompts, and give each one a cold subagent
 

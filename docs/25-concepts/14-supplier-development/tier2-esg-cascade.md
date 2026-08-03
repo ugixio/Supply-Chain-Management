@@ -5,7 +5,7 @@ type: concept
 owner: orchestrator
 status: active
 since: 2026-07-22
-updated: 2026-07-22
+updated: 2026-08-03
 relations:
   - { type: part-of, target: index-concepts-14-supplier-development }
   - { type: governed-by, target: index-adr }
@@ -17,17 +17,35 @@ relations:
 > spend-weighted tier-2 average, discounted by how much of tier-2 spend actually
 > has data — so hiding your upstream costs you points.
 
-## Formula
+## Definition
 
-    tier2_avg = Σ(weight%_i × score_i) / Σ weight%_i
-    extended = 0.6 × tier1_score + 0.4 × tier2_avg × coverage%/100
-    coverage_penalty = 1 − coverage%/100
+Two parts, and only the first is an identity:
+
+    tier2_avg = Σᵢ (wᵢ · scoreᵢ) / Σᵢ wᵢ          — a weighted mean (MSR-R1)
+    extended  = (1 − β) · tier1_score + β · tier2_avg · coverage
+
+**The weighted mean is fixed** — it aggregates from its components, never as a mean of means
+(**MSR-R1**). **The blend weight β and the treatment of missing data are not.**
+
+**What the shape does fix is the direction:** unmeasured tier-2 spend contributes **zero**, not the
+observed average. That is the deliberate part — imputing the average would let a supplier improve its
+score by disclosing less, and the discount makes opacity cost points rather than earn them.
 
 | Symbol | Meaning | Unit |
 |---|---|---|
-| tier1_score | the direct supplier's ESG score (CPT-0133) | 0–100 |
-| weight%_i | tier-2 supplier's share of tier-2 spend | percent |
-| coverage% | share of tier-2 spend with ESG data | 0–100 |
+| tier1_score | the direct supplier's ESG score (CPT-0133) | reported scale |
+| wᵢ | tier-2 supplier's share of tier-2 spend | fraction |
+| coverage | share of tier-2 spend carrying ESG data | fraction |
+| β | weight given to the tier-2 view | fraction |
+
+## Project-chosen inputs
+
+| Decision | Why the context cannot fix it |
+|---|---|
+| The blend weight β | How much a supplier's own record should be diluted by its upstream is a judgement about accountability, not a measurable quantity. |
+| The coverage level below which a gap is flagged | CSDDD Art. 7–9 imposes a duty over indirect business relationships; it names no coverage percentage. |
+| The tier-2 average below which the chain is called weak | A rating band. |
+| Whether spend or criticality carries the weight | Spend-weighting assumes spend ∝ exposure, which fails for a small single-source smelter. |
 
 ## Inputs and outputs
 
@@ -39,24 +57,22 @@ relations:
 
 ## Assumptions and limits
 
-- **The coverage discount is the design:** unknown tier-2 contributes zero — an
-  85-scoring tier-1 with 0% cascade coverage caps at 51. This rewards mapping,
-  not just performing.
-- Consequence to note: a supplier with *bad* tier-2 data (avg < ~tier1) can score
-  *lower* than one who reported nothing beyond the same coverage — pair the score
-  with the risk_gaps text so opacity is never the winning move in review.
-- One tier deep — tier-3+ risk arrives only through tier-2 scores themselves
-  (contrast the GNN's multi-hop propagation, CPT-0069).
-- Spend-weighting assumes spend ∝ exposure; for hazard-driven risk (one small
-  smelter) weight by criticality instead.
+- **The coverage discount is the design, and it has a perverse edge.** A supplier with *bad* tier-2
+  data can score lower than one reporting nothing at the same coverage — so the score must always be
+  read with the gap list, or opacity becomes the winning move in review.
+- One tier deep. Tier-3 and beyond arrive only through tier-2 scores themselves (contrast the
+  multi-hop propagation of CPT-0069).
+- The blend is applied to scores that are themselves policy-presence composites (CPT-0132), so its
+  limitations are inherited whole.
 - **Does not apply when:** tier-2 identities are unknown — that is the CMRT/RCOI
   problem (CPT-0099) before it is a scoring problem.
 
 ## Worked example
 
-Tier-1 82; tier-2: (60% spend, 71), (40%, 55) → avg 64.6; coverage 70% →
-`0.6×82 + 0.4×64.6×0.7 = 49.2 + 18.1 = **67.3**`, penalty 0.30, gap list empty
-except coverage note if < 50.
+**β = 0.4 chosen for the illustration.** Tier-1 82; tier-2 (0.60 spend, 71) and (0.40, 55) →
+avg 64.6; coverage 0.70 → `0.6×82 + 0.4×64.6×0.70` = 49.2 + 18.1 = **67.3**. The tier-1 score of 82
+falls to 67.3 **because 30% of the upstream is unmeasured** — that gap, not the number, is the output
+worth reporting.
 
 ## Governing rules
 

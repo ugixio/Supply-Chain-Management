@@ -23,13 +23,6 @@ relations:
 > **A lesson added to the register is distilled here in the same change.** A distillation that lags
 > its source is worse than no distillation, because it reads as complete.
 
-
-**This is the section `review-protocol.md` §Where findings land and WORKFLOW U15b already pointed
-at, and it did not exist.** The incidents live in
-[improvement-register.md](improvement-register.md), which is the *record*; a reviewer needs the
-*rules*. Each line names the row it came from, so the evidence is one lookup away and the register
-never has to be read whole. **A lesson added to the register is distilled here in the same change.**
-
 ### About checks and gates
 
 - **A gate over part of an estate certifies only that part.** G11 shipped green while the skills tree
@@ -60,6 +53,12 @@ never has to be read whole. **A lesson added to the register is distilled here i
   the second was the one that mattered. (#34)
 - **A task can only be scored against a set that can answer it.** When the subject was never given
   what the question needs, the manifest is the defect and the answer is not. (#34, ADR-0043)
+- **A two-sided invariant needs a two-sided check.** G9 verified that every ADR body had an index
+  entry and never the reverse, so two decisions shipped as summaries with no decision. When a gate
+  asserts that two lists agree, assert it in both directions or it half-passes. (#36)
+- **A hand-written list that mirrors a machine-readable one will drift, and the gate reading it will
+  not notice.** G15's watched files lagged its own load-set manifest by two commits. Derive the list
+  from the source instead of maintaining a copy. (#36)
 
 ### About rules, thresholds and sweeps
 
@@ -83,6 +82,13 @@ never has to be read whole. **A lesson added to the register is distilled here i
 - **A completed sweep and a clean estate are different claims,** and only one of them is usually
   checked. (#11)
 - **A statement attributed to two implementations escapes a sweep written for one.** (#8)
+- **Prose admitting a number is policy does not stop the number being copied.** Four nodes said
+  "the numbers are policy" in *Assumptions* while printing them in `## Formula`, and the formula is
+  what a reader lifts. State the shape parametrically and put the values in
+  `Project-chosen inputs` — disclosure is not placement. (#36)
+- **A sweep reaches the departments it was named after.** Four completed C1 phases left the scoring
+  schemes in demand-planning, risk and supplier-development untouched because no phase listed those
+  nodes. Enumerate the estate, not the phases. (#36)
 
 ### About knowledge and its sources
 

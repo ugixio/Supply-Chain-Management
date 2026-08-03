@@ -190,7 +190,7 @@ given its declared load set and nothing else, and the exact prompt above.
 | `invent-a-threshold` | **PASS** | Refused to state a tolerance, named the inclusion test as the reason, and cited what does constrain the decision. |
 | `level-metric` | **PASS** | Classified it a level, cited MSR-R2, named the valid aggregations. |
 | `unit-codes` | **FAIL → PASS** | **The one regression of this cycle, and the answer was right.** Scored against `every-task`, a correct answer failed on all four codes; the checker and the task's load set both changed, and the re-run declared `KGM` · `LTR` · `MTR` · `EA`. See §The regression below. |
-| `rule-citation` | **PASS**, twice | Cited SCM-R9 and SCM-R10, and wrote off the retired IDs by name using the roster. **Re-run the same day** when `how-to/change-a-rule.md` joined its load set: adding a member changes what the subject reads, so the earlier score no longer described its input. Clean again. |
+| `rule-citation` | **PASS**, three times | Cited SCM-R9 and SCM-R10, and wrote off the retired IDs by name using the roster. **Re-run the same day** when `how-to/change-a-rule.md` joined its load set: adding a member changes what the subject reads, so the earlier score no longer described its input. Clean again. |
 | `new-concept-node` | **PASS** | Inside the 700-word budget, source cited, no `## Implementations`; `verify.py` stayed green with the candidate in place. |
 
 ### The regression, and what it cost to diagnose honestly
@@ -298,15 +298,16 @@ CLAUDE.md                                     ec95648042d5
 docs/_index.md                                53f2766c9d3f
 docs/program/evaluation.md                    6e806b7f4e29
 docs/00-governance/knowledge-architecture.md  3706e4bb0421
-docs/00-governance/id-registry.md             bcc09beca388
+docs/00-governance/id-registry.md             66be03b6f677
 docs/30-foundation/scm-core/rule.md           7e775c264869
 docs/30-foundation/measurement/rule.md        c2aadb2fd7f9
 docs/30-foundation/platform/rule.md           0268bef446f1
 docs/50-engineering/rule.md                   0e44a3a5531e
 docs/50-engineering/practice-areas.md         318d1ff3932e
 docs/standards/REGULATORY_FRAMEWORK.md        f1f47f8501ae
-docs/program/load-sets.md                     1850bc3adb60
+docs/program/load-sets.md                     51fd39bc8e72
 docs/program/how-to/add-a-concept-node.md     6341e78e7551
+docs/program/how-to/change-a-rule.md          6b2bee8a3822
 docs/program/templates/concept.md             09d066c2e4ab
 ```
 
@@ -325,6 +326,20 @@ not discarded; it is the reason both changed, and it is preserved as a `--self-t
 Unlike the first cycle, no task here was scored against a state of the tree that a later edit moved.
 That is not a claim of discipline: it is what happens when the whole cycle is re-run instead of
 patched, which is the only thing the digests can actually certify.
+
+**`load-sets.md` moved again, and this one is immaterial — stated rather than assumed.** The
+2026-08-03 review corrected the `planning` set's declared *exit* (a comment) and archived two closed
+triages. `planning` is read by no evaluation task; no task's member list changed; no digest of any
+member moved. The block below is refreshed so G15 reads true, and nothing was re-scored — which is
+exactly the case G15 cannot distinguish and the reason this paragraph exists.
+
+**A third run, and this time the gate itself was the finding.** The 2026-08-03 file-by-file review
+corrected a stale count in the id-registry, which is in this task's set, so `rule-citation` was run a
+third time: PASS. But the review also found that **`how-to/change-a-rule.md` was in the
+`changing-a-rule` set and was not in the block below** — added to the set two commits earlier and
+never watched. So for two commits this task was scored against an input G15 could not see change.
+G15 now derives the watched set from the manifest and fails when a declared member is unwatched, which
+is the only version of this claim that cannot drift again.
 
 **One later edit did move the tree, and it was answered rather than argued away.** Two how-to guides
 landed after this cycle closed, and one of them — `change-a-rule.md` — was added to the

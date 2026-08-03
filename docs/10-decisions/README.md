@@ -288,15 +288,20 @@ discipline on every new doc; a dedup pass on `CLAUDE.md` is now owed (WORKFLOW U
 
 ## ADR-0011 — Git discipline: Conventional Commits, SemVer tags, main always green
 
-**Status:** Accepted (owner-authorized 2026-07-20)
+**Status:** Accepted (owner-authorized 2026-07-20) · **tag clause narrowed by ADR-0046**
 
 **Context:** History mixes styles (`feat(wave-d): …` vs `Add … files`). No tags exist;
 `package.json` says 1.0.0 with no tagged release. No branch protection convention is
 recorded.
 
-**Decision (proposed):** Conventional Commits with department/area scope; short branches
+**Decision:** Conventional Commits with department/area scope; short branches
 per unit of work merged green; annotated SemVer tags for demonstrable states; the default
 branch always builds with green tests; secrets never committed.
+
+> **The tag clause did not survive.** ADR-0046 rejects SemVer for this corpus on substance — a
+> retired ID is never reassigned, so no citation can break and the major component has nothing to
+> encode — and replaces it with a per-node digest plus a `YYYY.MM` calendar tag. Everything else in
+> this decision stands, and ADR-0040 later gave the branch discipline its enforceable form (ENG-R11).
 
 **Consequences:** (+) walkable history, releasable states. (−) requires consistency from
 every contributor (including AI sessions).
@@ -322,6 +327,12 @@ department reorganization, all four test suites failing, and two genuine type bu
    + G9 over the tracked tree; `make verify` (fast: doc gates + typecheck + unit tests,
    run after every layer) and `make verify-full` (merge/CI gate) are the only entry
    points; CI runs `make verify-full`.
+
+   > **Both specifics have since moved, and the decision's shape has not.** The gate roster is now
+   > **G1–G17** (each addition carries its own ADR and its own mutant, ADR-0042), and CI runs
+   > **`make verify-full` *and* `make verify-schema`** — the split was forced by the telemetry
+   > schema needing a real ClickHouse, and is recorded in WORKFLOW M2. What stands is the rule that
+   > the Makefile targets are the *only* entry points and that CI runs what a developer runs.
 2. **Context budgets — gate G9.** Always-loaded docs carry word budgets (CLAUDE.md 2600,
    shrinking with the U3 dedup; skills 1500; rules 1000; program protocol docs 1200).
    Layer 1 loads the **decision index** above; full ADR text on demand. G9 fails a
@@ -2112,6 +2123,109 @@ experiment.
   into `knowledge-architecture.md` §8 next to the type itself rather than left in this ADR.
 - (−) One guide is not a set. `changing-a-rule` and `running-the-evaluation` are the obvious next two
   and are recorded in the backlog, not written here.
+
+## ADR-0045 — The Global Context has two axes, and no project uses all of it
+
+**Status:** Accepted (owner-directed 2026-08-03)
+**Materializes as:** the purpose section in `CLAUDE.md`; `docs/50-engineering/practice-areas.md`;
+**PLT-R7**; the `what-is-this-for` context-adherence task
+
+**Context.** Asked for a plain summary of the project, the estate's weakest point turned out not to
+be rigour. Sixteen gates, a mutation harness and a context-adherence evaluation were all green, and
+`CLAUDE.md` still named two things — a supply-chain knowledge base **and** a DevOps monitoring
+dashboard — and **never said how they were connected**. The reason existed, buried in ADR-0030 among
+forty-four decisions. No mechanism could have found this: every gate checks whether statements are
+consistent, and none asks whether the estate says what it is *for*.
+
+**Decision.** The Global Context carries **two axes**, stated at the entry point rather than derived:
+
+- **How a company is run** — the fourteen supply-chain departments, which are the operating
+  disciplines of any firm that buys, builds, delivers and accounts for things.
+- **How software is engineered** — the practice areas a professional build rests on.
+
+Neither axis describes *this* repository. Both exist for the **portfolio of projects** the context
+governs, inside this workspace and beyond it. The monitoring application watches that portfolio, so
+a company selling technology can decide from evidence rather than from impression — which is why a
+knowledge repository ships a dashboard and nothing else.
+
+**Three parts, and the third is the load-bearing one.**
+
+1. The purpose stated in `CLAUDE.md`, at the top, where a reader arrives.
+2. **`practice-areas.md`** — thirty-five engineering areas, each with the **external authority** that
+   would make a statement in it admissible. A **roster, not content**: W5 forbids speculative
+   pre-build, and the anchor is the part that cannot be improvised later, so the anchor is what gets
+   recorded now.
+3. **PLT-R7** — governing knowledge is **selected and declared to the owner before development
+   begins**, never assumed. No project uses all of this context, and which parts apply is a
+   declaration, not a default.
+
+**Verified, not asserted.** A `what-is-this-for` task was added to the context-adherence evaluation
+and answered by a cold subagent loaded with the `every-task` set: **PASS**. The claim being tested is
+precisely the one no gate can make — that a reader of the entry point can state what the repository
+is for.
+
+**Alternatives considered.**
+- *Explain the connection in ADR-0030.* Where it already was, and where it was found to be
+  unreadable. A decision buried among forty-four is not an entry point.
+- *Write the engineering axis out in full now.* Rejected by W5 and by the inclusion test: thirty-five
+  areas of invented content is the ADR-0037 defect at a larger scale. The roster names the authority
+  and stops.
+- *Drop the monitoring application and be purely a knowledge base.* Coherent, and it discards the
+  instrument that makes the portfolio visible. Rejected on the owner's direction; the two-axis model
+  is what makes the dashboard follow from the purpose instead of sitting beside it.
+
+**Consequences.**
+- (+) The first thing a reader meets is why the repository exists, and the two halves are one thing.
+- (+) PLT-R7 converts "which knowledge applies" from an assumption into a declared artefact.
+- (−) `practice-areas.md` is a roster that will tempt someone to fill it in. The authority column is
+  the guard: an area with no admissible source stays empty.
+- (−) The purpose section is prose, and prose degrades. The `what-is-this-for` eval task is what
+  stops it degrading again, and it is watched by G15.
+
+## ADR-0046 — The context is versioned per node by digest, and tagged by calendar
+
+**Status:** Accepted (owner-directed 2026-08-03) · **Narrows ADR-0011**
+**Materializes as:** `docs/program/templates/knowledge-selection.md`; the `YYYY.MM` annotated tag
+
+**Context.** ADR-0030 promised a "versioned substrate" and ADR-0011 proposed annotated **SemVer**
+tags. **Zero tags existed**, and this was the last open decision in the estate.
+
+**Decision, and the rejection is the substance of it.** **SemVer is rejected on a substantive
+ground, not on effort.** A retired ID in this corpus is never reassigned and stays listed forever
+(G11, G16), so **every prior citation resolves by construction** — the corpus cannot produce a
+breaking change. That leaves SemVer's major component with nothing to encode, and a version scheme
+whose principal signal is always zero is worse than none: it invites readers to infer compatibility
+guarantees from a number that never moves.
+
+Instead, two mechanisms for two different readers:
+
+- **For the machine: a per-node content digest, `sha256:12`**, recorded **by the project** in its
+  declaration — what it actually relied on, not which state the whole repository was in. This is the
+  mechanism G15 already proves works, applied to a project's own artefact.
+- **For the human: an annotated `YYYY.MM` tag**, a legible reference that claims nothing about
+  compatibility because there is nothing to claim.
+
+**The form is a template, and the honest consequence is stated rather than hidden.** The declaration
+is the **project's** artefact, and PLT-R2 keeps project material out of the context — so the form
+lives at `templates/knowledge-selection.md` and **no gate here can check that a project declared
+anything**. That limit is written into the template itself.
+
+**Alternatives considered.**
+- *SemVer as ADR-0011 proposed.* Rejected above, on the ground that the major component is
+  unreachable by construction.
+- *A single repository-wide digest.* Simpler to produce and wrong for the consumer: a project relies
+  on a handful of nodes, and a whole-repo digest changes when anything moves, so it reports drift the
+  project does not have.
+- *Version each node with a monotonic integer.* Requires the context to track per-node history it
+  does not keep, and re-creates the compatibility promise the digest deliberately avoids.
+
+**Consequences.**
+- (+) The last open decision closes, and a project can state exactly what it consulted.
+- (+) A digest is checkable by the project without asking this repository anything.
+- (−) `YYYY.MM` says nothing about content, by design — a reader wanting "what changed" must read the
+  ADR index, which is the honest answer.
+- (−) The declaration is unenforceable from here. Stated in the template, and it is the price of
+  PLT-R2.
 
 > **File map:** this README is the canonical ADR index. New decisions are appended here
 > as `## ADR-NNNN — Title` (or as `docs/10-decisions/NNNN-title.md` when extensive).

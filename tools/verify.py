@@ -124,6 +124,45 @@ TABLE_DELIMITER = re.compile(r"\|[\s:|-]+\|")
 UNESCAPED_PIPE = re.compile(r"(?<!\\)\|")
 
 
+EVAL_TASK_LOAD_SET = re.compile(r"\*\*Load set:\*\*\s*`([^`]+)`")
+
+
+def eval_task_load_sets() -> set[str]:
+    """The load sets the evaluation tasks declare, read from the record itself.
+
+    Same source `tools/context_eval.py` parses, so the gate cannot disagree with the runner
+    about which sets are under measurement.
+    """
+    try:
+        record = open(CONTEXT_EVAL_DOC, encoding="utf-8").read()
+    except OSError:
+        return set()
+    return set(EVAL_TASK_LOAD_SET.findall(record))
+
+
+def parse_load_sets() -> dict[str, list[str]]:
+    """Set name -> declared members, from the one fenced block in the manifest."""
+    try:
+        manifest = open(LOAD_SETS_DOC, encoding="utf-8").read()
+    except OSError:
+        return {}
+    fence = LOAD_SET_FENCE.search(manifest)
+    if not fence:
+        return {}
+    out: dict[str, list[str]] = {}
+    current = None
+    for line in fence.group(1).splitlines():
+        if not line.strip() or line.lstrip().startswith("#"):
+            continue
+        header = LOAD_SET_HEADER.match(line.strip())
+        if header:
+            current = header.group(1)
+            out[current] = []
+        elif current is not None:
+            out[current].append(line.strip())
+    return out
+
+
 def table_cells(line: str) -> list[str]:
     """The cells of a Markdown table row, outer pipes discarded."""
     body = line.strip()
@@ -523,11 +562,20 @@ def main() -> int:
                 gates.fail("G9", f"{path}: {words} words exceeds the "
                                  f"{meta['type']}-type budget of {budget}")
         if meta.get("type") == "adr":
+            # The index and the bodies must agree in BOTH directions. Checking only
+            # body -> entry let ADR-0045 and ADR-0046 ship as index entries with no
+            # decision body while PLT-R7 and knowledge-selection.md cited them as
+            # their authority: a citation that resolves to a summary line reads as
+            # though the decision was recorded when it was not.
             indexed = set(ADR_INDEX_LINE.findall(text))
-            for number in ADR_HEADING.findall(text):
-                if number not in indexed:
-                    gates.fail("G9", f"{path}: ADR-{number} has no one-line entry in "
-                                     f"the decision index")
+            bodied = set(ADR_HEADING.findall(text))
+            for number in sorted(bodied - indexed):
+                gates.fail("G9", f"{path}: ADR-{number} has no one-line entry in "
+                                 f"the decision index")
+            for number in sorted(indexed - bodied):
+                gates.fail("G9", f"{path}: ADR-{number} is listed in the decision index "
+                                 f"but has no '## ADR-{number}' body — a decision that is "
+                                 f"cited must be recorded, not summarised")
 
     # G7 — supersession integrity.
     for path, (meta, _) in docs.items():
@@ -855,7 +903,7 @@ def main() -> int:
         if not fence:
             gates.fail("G15", f"{CONTEXT_EVAL_DOC}: no ```context-digest block to read")
         else:
-            unmeasured, checked = [], 0
+            unmeasured, checked, watched = [], 0, set()
             for line in fence.group(1).splitlines():
                 if not line.strip() or line.lstrip().startswith("#"):
                     continue
@@ -865,6 +913,7 @@ def main() -> int:
                                       f"'<path> <digest>'")
                     continue
                 path, recorded = parts
+                watched.add(path)
                 if not os.path.exists(path):
                     gates.fail("G15", f"the record names '{path}', which does not exist — a "
                                       f"measurement over a file nobody kept measures nothing")
@@ -880,6 +929,22 @@ def main() -> int:
                                       f"`tools/context_eval.py` and record the result, or the "
                                       f"estate is claiming a result about a context it no "
                                       f"longer has")
+            # The watched list is written by hand, so it can fall behind the manifest it is
+            # supposed to cover. It did: `how-to/change-a-rule.md` joined the
+            # `changing-a-rule` set and was never added here, which left `rule-citation`
+            # scored against an input G15 was not watching. Every member of every load set
+            # an evaluation task declares must be watched, or the freshness claim has a hole
+            # exactly where a new document goes.
+            members = parse_load_sets()
+            for task_set in sorted(eval_task_load_sets()):
+                for member in members.get(task_set, ()):
+                    path = member.split("#")[0]
+                    if path not in watched:
+                        gates.fail("G15", f"{path} is in the '{task_set}' load set an evaluation "
+                                          f"task declares, but the context-digest block does not "
+                                          f"watch it — add it, or the measurement cannot go stale "
+                                          f"when it changes")
+
             if unmeasured:
                 gates.note(f"G15 checked {checked} of {checked + len(unmeasured)} context files: "
                            f"{len(unmeasured)} still read {DIGEST_UNMEASURED}, so no measurement "

@@ -125,7 +125,15 @@ platform catalogue was checked against the current published grouping and found 
 ## 3. Decision (ADR) numbers
 
 - Format: `ADR-NNNN`, strictly increasing, allocated at proposal time.
-- Allocated: **ADR-0001 … ADR-0038** (see `docs/10-decisions/README.md`).
+- Allocated: **ADR-0001 … ADR-0047** (see `docs/10-decisions/README.md`).
+  This line read `ADR-0038` until 2026-08-03 while nine more existed — the same blind spot that let
+  `README.md` claim "G1-G16": a **range** is invisible to a sweep looking for a count beside a noun.
+- **Retroactive ADRs superseded 2026-08-03 by owner decision**, because their premises left with the
+  code ADR-0037 deleted: **0001** (two-language split → ADR-0033/0035), **0005** (event-sourced
+  inventory → ADR-0037), **0006** (data conventions → clause by clause: ADR-0047 · SCM-R9 · SCM-R10 ·
+  SCM-R11 retired), **0007** (soft-delete + idempotency → ADR-0037), **0009** (Jest + pytest →
+  ADR-0035/0037). **0013** was already superseded by ADR-0022. None was re-numbered and none was
+  deleted: a superseded ADR stays listed so every prior citation resolves.
   0001–0009 retroactive; 0010–0013 proposed at skeleton adoption; 0014 (MIT) accepted;
   0015 (concepts) / 0016 (business-context extraction) proposed; **0017–0021 proposed —
   the full-stack product decisions** (staging, Clean Architecture, Decimal money, gRPC

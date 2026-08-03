@@ -138,10 +138,23 @@ found in one sweep.
 ```prompt
 A new node records the quantity and the timestamp of a goods receipt. State which rules of this
 context govern it.
+
+End your answer with a fenced block, opened with three backticks and the word `answer`, holding one
+rule ID per line — the IDs you are **citing as governing this node**, and no others. Only that block
+is scored; discuss retired IDs, near-misses and what you rejected freely outside it.
 ```
 
-**What the checker decides.** No family wildcard (`**PRC-R***`), at least one rule ID cited, and
-every cited ID must be **live** — defined in a rule file and not in a retirement table.
+**What the checker decides.** Inside the `answer` block only: no family wildcard (`**PRC-R***`), at
+least one rule ID, and every ID **live** — defined in a rule file and not in a retirement table.
+
+**Why the block exists, and it is the third time this class was paid for.** The prose form failed
+three correct answers in a row, each for the same reason: the checker is **line-scoped**, and an
+answer that writes off a retired ID puts the disowning word on a different line from the ID once the
+paragraph wraps. The fifth run's line named a **retired core rule as "the old" one and gave its live
+successor** — a textbook-correct use of the replacement table, scored as a violation. `DISOWNS` carries a written threshold
+saying that when this recurs the line-level regex is the wrong instrument and **the task should ask
+for a structured answer instead**; this is that instruction being followed rather than re-argued,
+and it is the same fix `unit-codes` already carries.
 
 ### Task `new-concept-node`
 
@@ -191,8 +204,46 @@ whole cycle went again. Six cold subagents, each with its declared load set and 
 | `invent-a-threshold` | **FAIL → PASS**, and **the checker was the defect** | The answer refused to state a tolerance, quoted `CLAUDE.md`'s anti-pattern list to explain why, and cited what does constrain the decision — correct on every dimension. It failed on the line `> **Policy dressed as law.** A USD 5,000 approval threshold, **a 5% receipt tolerance** …`, which is a **Markdown blockquote quoting this repository's own text**. See §The blockquote regression. |
 | `level-metric` | **PASS** | Level, MSR-R2, valid aggregations named. |
 | `unit-codes` | **PASS** | `KGM` · `LTR` · `MTR` · `EA` in the scored block. The structural `answer` block that replaced the prose heuristic keeps holding. |
-| `rule-citation` | **PASS**, four times | SCM-R9 and SCM-R10, retired IDs written off by name. |
+| `rule-citation` | **FAIL → PASS** on the sixth run, and **the checker was the defect for the third time** | SCM-R9 and SCM-R10 cited correctly. The fifth run — after the retroactive-ADR supersessions moved the id-registry — failed on a line that named a **retired core rule as "the old" one and pointed at its live successor**: a correct write-off using the replacement table exactly as intended, with the word *retired* one line above the identifier. See §The third occurrence. Re-run alone rather than with the cycle, which is not the §3 shortcut: `id-registry.md` sits in one load set only, so no other task can see it change. Set membership is a fact, not a materiality judgement. |
 | `new-concept-node` | **PASS** | 590 words against the 700 budget, source cited, no `## Implementations`. |
+
+### The third occurrence — and the file had already written down the answer
+
+**Same mechanism, third checker, and this time the remedy was sitting in the code waiting to be
+used.** `rule-citation` failed an answer that wrote off a retired ID exactly as the roster intends:
+
+> the durable form of **the old** ⟨retired core rule⟩ **is PRC-R1** — cited, never restated
+
+The identifier is retired, the answer says so, and it names the live successor. The failure is line
+scoping: *retired* sat one line above the identifier once the paragraph wrapped.
+
+**The identifier is elided here on purpose, and the reason is the same lesson one turn later.** Writing
+it out made **G11** fail this very document — a gate whose rule is that a citation of a retired ID
+resolves to nothing, firing on prose that names one in order to discuss it. The estate's own remedy
+applies to its own record: *change the document, prefer not to weaken the check.* The mechanism is
+what this section is about, not which rule it was; the real identifier lives in the regression sample
+in `tools/context_eval.py`, which G11 does not read.
+
+**Three correct answers have now failed this way — invent-a-threshold twice, rule-citation once — and
+each time the fix was local.** A word list, then three quotation syntaxes, then blockquotes. The
+pattern is that the *instrument* is wrong, and `DISOWNS` says so in its own comment, naming the
+remedy for this specific checker: *ask for a structured answer (a list of IDs it endorses) instead of
+scoring free prose.*
+
+**So that is what happened, rather than a fourth local patch.** `rule-citation` now ends with a
+fenced ```answer block listing the IDs the answer endorses, and only that block is scored — the same
+shape `unit-codes` has carried since its own regression. Everything outside it is free, which is the
+point: discussing a retired ID, a near-miss or a rejected candidate is *good* practice and the prose
+form was punishing it.
+
+**Two samples migrated rather than replaced,** so nothing is lost: `rule-citation-disowning` still
+tests that warning against an ID is not citing it, and `rule-citation-writes-off-retired` is the new
+permanent record of this occurrence. Ten checkers, all discriminating.
+
+**The honest limit.** A structured block moves the failure from *false accusation* to *unparseable
+answer* — an agent that omits the block now fails for a different reason. That is the right trade
+here, because the block is stated in the prompt and a missing one is a real non-compliance rather
+than a misreading, but it is a trade and not a free win.
 
 ### The blockquote regression — the same incident, a second time, because the first fix was literal
 
@@ -337,7 +388,7 @@ CLAUDE.md                                     53f838917f0c
 docs/_index.md                                53f2766c9d3f
 docs/program/evaluation.md                    6e806b7f4e29
 docs/00-governance/knowledge-architecture.md  3706e4bb0421
-docs/00-governance/id-registry.md             66be03b6f677
+docs/00-governance/id-registry.md             d0e914a62618
 docs/30-foundation/scm-core/rule.md           7e775c264869
 docs/30-foundation/measurement/rule.md        c2aadb2fd7f9
 docs/30-foundation/platform/rule.md           0268bef446f1

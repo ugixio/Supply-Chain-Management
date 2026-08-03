@@ -79,11 +79,20 @@ relations:
 - ADR-0046 — **The context is versioned per node by digest, and tagged by calendar:** ADR-0030 promised a "versioned substrate" and ADR-0011 proposed SemVer tags; **zero tags existed** and this was the last open decision. SemVer is rejected on substance — a retired ID is never reassigned and stays listed (G11/G16), so every prior citation resolves and **the corpus cannot produce a breaking change by construction**, leaving the major component with nothing to encode. Instead: a **per-node `sha256:12`** recorded by the project (what it relied on, not which repo state — the mechanism G15 already proves) plus an annotated **`YYYY.MM`** tag as a legible human reference that claims nothing about compatibility. The declaration is the project's artefact and the form is `templates/knowledge-selection.md`, because PLT-R2 keeps project material out of the context — **so no gate here can check a project declared anything**, which is stated rather than hidden. Narrows ADR-0011. (Accepted — owner-directed 2026-08-03)
 - ADR-0037 — **The Global Context holds only externally-fixed standards; the fictitious SCM application is retired.** The context is the source a project consults to learn *which departments it needs and how to implement them* — nothing more. It carries what a standards body, a regulator or an arithmetic identity fixes; it never carries what an organization chooses (thresholds, targets, weightings, rating bands, method mandates). Consequently **~25,700 lines of invented application code are deleted** (`packages/domain`, `services/calc`, `crates/scm-core`), concept nodes become **definitions without parameters**, and the **only application built here is the monitoring project**. Supersedes the two-language-SCM-application premise of ADR-0001; narrows ADR-0015 (nodes define, they do not own code) and ADR-0035 (the Rust core serves the monitoring platform, not 14 departments of invented rules). (Accepted — owner-directed 2026-07-27)
 
+- ADR-0047 — **Money in the Rust core: integer minor units, exact decimal computation:** ADR-0019 decided "arbitrary-precision Decimal end-to-end" and named an estate — TypeScript `Money { amount: Decimal }`, Python `decimal`, `NUMERIC(19,4)`, gRPC strings — of which **nothing survives**; `crates/scm-money` instead represents money as `i64` minor units and uses `Decimal` as the computation medium, a reversal never recorded, so the accepted decision and the shipped code had disagreed since the crate was written. Separates the two roles: **representation** is integer minor units (`i64`, because a credit is a first-class value), **computation** is exact decimal quantizing once with `roundTiesToEven` (IEEE 754-2019 §4.3.3) through the single `MONEY_ROUNDING` constant, and apportionment is largest-remainder because its sum-preserving property is the identity **SCM-R14**. The precision gain over ADR-0019 is in the failure modes it left open: every operation total, a typed `MoneyError`, **overflow reported and never wrapped** (`checked_add`/`checked_sub`), a non-positive divisor refused rather than saturated. `tests/golden/money.golden.json` stays as the canonical-answer fixture a second implementation must read. Carries no policy, which is why it survived ADR-0037 — and should be deleted outright if monitoring never handles money. Open follow-up: a currency type instead of `String`, owned by the standards module. (Accepted — owner-directed 2026-08-03)
+
 ---
 
 ## ADR-0001 — Two-language split: TypeScript domain logic + Python analytics/ML
 
-**Status:** Accepted (retroactive)
+**Status:** **Superseded by ADR-0033/ADR-0035** (owner-directed 2026-08-03)
+
+> **Both halves of the split are gone.** ADR-0035 moved the core to **Rust** — rules, invariants,
+> exact arithmetic, the hot path, ingestion — and confined **TypeScript to NestJS and Next.js** plus
+> the standards module, where it is no longer a lane owner. ADR-0033 fixed that as exclusive lanes
+> (ENG-R8). Python survives as the **tools layer** (models, statistics, optimization, ML) and as this
+> repository's gate scripts, not as "analytics" beside a TypeScript domain. ADR-0037 then deleted the
+> domain logic this ADR was describing: two TypeScript files remain and they are reference data.
 
 **Context:** The system needs both auditable business-rule logic (aggregates, validations,
 state machines) and heavy mathematical/ML models (forecasting, optimization, deep
@@ -172,7 +181,14 @@ knowledge); ad-hoc module growth (rejected: no external grounding).
 
 ## ADR-0005 — Event-sourced inventory; state-based elsewhere
 
-**Status:** Accepted (retroactive)
+**Status:** **Superseded by ADR-0037** (owner-directed 2026-08-03)
+
+> **A persistence choice for an application this repository no longer contains.** ADR-0037 deleted
+> the invented estate and established that the context holds **no company's data** — so there is no
+> inventory to source, event-wise or otherwise. Nothing here is retained as law: whether to
+> event-source a store is exactly the kind of design decision a *project* makes and declares, and the
+> context names the decision without answering it. The durable fragment ADR-0007 shared with it —
+> that a financial record is corrected, never erased — lives on as **SCM-R3**.
 
 **Context:** Inventory demands a tamper-evident audit trail (GAAP/IFRS IAS 2); most other
 aggregates only need current state.
@@ -195,7 +211,21 @@ mutable stock balance column (rejected: no audit trail).
 
 ## ADR-0006 — Data conventions: integer-cent Money, ISO 8601/UTC, GS1 UOM, immutable SKU
 
-**Status:** Accepted (retroactive) · **money clause superseded by ADR-0019**
+**Status:** **Superseded** (owner-directed 2026-08-03) — clause by clause, below
+
+> **Its four clauses went four different ways, which is why a single supersession note is the honest
+> form and a partial one was not.**
+>
+> - **Money** → ADR-0019 replaced the integer-cent clause with Decimal-everywhere, and **ADR-0047**
+>   has now replaced *that* for the Rust core: representation is integer minor units after all, with
+>   exact decimal as the computation medium. The clause ends where it started and the route matters,
+>   because ADR-0047 fixes the failure modes neither earlier statement addressed.
+> - **ISO 8601 / UTC** → survives as **SCM-R9**, and is externally fixed, so it is law rather than
+>   convention.
+> - **GS1 / UN/ECE units** → survives as **SCM-R10**, likewise externally fixed. This is the clause
+>   whose invented shorthand (`KG` for `KGM`) `CLAUDE.md` still names as an anti-pattern.
+> - **Immutable SKU** → **retired, not inherited.** It was a sound data-modelling convention and a
+>   convention is a choice; it left with **SCM-R11** under ADR-0037.
 
 > **Superseded in part:** the integer-cent `Money` clause below is replaced by ADR-0019
 > (arbitrary-precision Decimal). The other three conventions — ISO 8601/UTC dates, GS1
@@ -215,7 +245,15 @@ arithmetic must round at defined points. Now citable as SCM-R14..R11
 
 ## ADR-0007 — Soft-delete for financial records + idempotent inventory transactions
 
-**Status:** Accepted (retroactive)
+**Status:** **Superseded by ADR-0037** (owner-directed 2026-08-03)
+
+> **One clause was law wearing an implementation's clothes; the other was the implementation.**
+> The duty not to erase a financial record is real and externally grounded — retention under CSDDD
+> (**SCM-R7**), and a record corrected rather than deleted (**SCM-R3**) — but *soft-delete* is one
+> mechanism for it among several, and naming the mechanism as the decision is what made this ADR
+> project policy. **Idempotent inventory transactions** went further: `SCM-R12` (an
+> `idempotencyKey` on every transaction) was **retired** by ADR-0037 as belonging to the write path,
+> i.e. the `ENG` family, not to supply-chain law. Retry safety is a project's engineering decision.
 
 **Decision:** POs, invoices, stock movements, shipments and scorecards are **never
 hard-deleted** (`isDeleted` flag); inventory transactions carry an `idempotencyKey` and
@@ -251,7 +289,15 @@ revs. (−) standards versions must be reviewed periodically.
 
 ## ADR-0009 — Testing stack: Jest (TS) + pytest (Python)
 
-**Status:** Accepted (retroactive)
+**Status:** **Superseded by ADR-0035/ADR-0037** (owner-directed 2026-08-03)
+
+> **The stack went with the code it tested,** and the `Makefile` header says so in as many words.
+> ADR-0037 deleted the application; ADR-0035 made **Rust the core**, so the tests that matter are
+> `cargo test` (71 today) plus the doc gates, the gate mutation harness (ADR-0042) and the
+> context-adherence checkers (ADR-0043). **TypeScript now lives only inside NestJS and Next.js** and
+> the standards module, so its test framework is a decision that belongs with **M4**, when there is
+> TypeScript worth testing — not a retroactive one to ratify now. The one cross-language artefact
+> that survived is `tests/golden/money.golden.json`, kept for the reason ADR-0047 gives.
 
 **Decision:** TypeScript tests run under **Jest** (`tests/unit`, `--runInBand`); Python
 under **pytest**, with the stated goal that Python mirrors TS test coverage.
@@ -2226,6 +2272,82 @@ anything**. That limit is written into the template itself.
   ADR index, which is the honest answer.
 - (−) The declaration is unenforceable from here. Stated in the template, and it is the price of
   PLT-R2.
+
+## ADR-0047 — Money in the Rust core: integer minor units, exact decimal computation
+
+**Status:** Accepted (owner-directed 2026-08-03) · **Supersedes ADR-0019**
+**Materializes as:** `crates/scm-money`; **SCM-R14**; **ENG-R4/R5**; `tests/golden/money.golden.json`
+
+**Context.** ADR-0019 decided *"arbitrary-precision Decimal end-to-end"* and named the estate it
+applied to: `Money { amount: Decimal }` in TypeScript, `decimal.Decimal` in Python, `NUMERIC(19,4)`
+in `schema.sql`, strings over gRPC. **Every one of those is gone** — ADR-0037 deleted the
+application and ADR-0035 moved the core to Rust. What survived is `crates/scm-money`, and it does
+**not** implement ADR-0019's decision: the representation is `i64` minor units, with `Decimal` used
+as the *computation medium* rather than as the stored type. That reversal was never recorded, so the
+accepted decision and the shipped code have disagreed since the crate was written.
+
+**Decision — the two roles are separated, and that is the whole point.**
+
+- **Representation is integer minor units** (`i64`). A stored amount carries no scale ambiguity, no
+  trailing-zero question and no parse step; `Money { amount_cents: i64, currency: String }`.
+  `i64` and not an unsigned type because a **credit** — a refund, a reversal, a negative
+  adjustment — is a first-class value in this domain, not an error state.
+- **Computation is exact decimal.** Every multiply, divide and allocation runs in `Decimal`, never a
+  binary float, and quantizes **once**, at the boundary, with `roundTiesToEven` — IEEE 754-2019
+  §4.3.3, exposed as the single named constant `MONEY_ROUNDING`. A rate enters through
+  `Decimal::from_str_exact("0.0825")`, so no float ever reaches the calculation.
+- **Apportionment is largest-remainder**, whose defining property is the arithmetic identity
+  **SCM-R14**: the parts sum exactly to the whole. Independent rounding of each share does not have
+  that property, which is why the method is fixed rather than chosen.
+
+**Where this is more precise than ADR-0019, since that is the reason to replace it.** ADR-0019 fixed
+the *type* and left the failure modes open. This fixes the failures:
+
+- **Every operation is total.** `MoneyError` is a typed enum, so a caller matches a cause instead of
+  parsing a message: `CurrencyMismatch`, `NonPositiveDivisor`, `EmptyWeights`, `NegativeWeight`,
+  `NonPositiveWeightSum`, `Overflow`.
+- **Overflow is reported, never wrapped.** Addition and subtraction go through `checked_add` /
+  `checked_sub`. A silent wrap in money arithmetic is the worst available outcome, so it is an error
+  value and not a possibility.
+- **A non-positive divisor is an error, not a saturating result** — division by zero has no money
+  interpretation, and returning something plausible is worse than refusing.
+- **One rounding mode, one constant.** ADR-0019 said "explicit and banker's at defined boundaries";
+  here the boundaries are the four public functions and the mode is a `const` they all share, so
+  there is nowhere for a second convention to appear.
+
+**The cross-language mechanism is the reason the golden file survives.**
+`tests/golden/money.golden.json` was built when TypeScript and Python both had to agree; both are
+gone, and the fixture stays because it encodes the *canonical answers* — including the two-step
+refund quantization that a single round gets wrong by one minor unit. Today the Rust crate is its
+only consumer. **When the NestJS gateway or the Python tools layer next handle money they read this
+same file**, which is what keeps a second implementation from inventing its own rounding.
+
+**Why this carries no policy, and therefore belongs here at all.** Banker's rounding is fixed by
+IEEE 754; largest-remainder is a fixed method; the sum-preserving property is an identity. There is
+no threshold, tolerance or target anywhere in the crate, which is precisely why it survived the sweep
+that deleted ~25,700 lines. **If the monitoring application turns out never to handle money, the
+crate should be deleted rather than kept for its own sake** — a lane owner with no caller is not an
+asset.
+
+**Alternatives considered.**
+- *Keep ADR-0019 as written — `Decimal` as the stored representation.* Rejected on the ground that
+  killed it in practice: a stored `Decimal` needs a scale convention at every boundary it crosses
+  (DB column, wire format, telemetry row), and each convention is a place for the exactness to be
+  renegotiated. Integer minor units have one meaning everywhere.
+- *`i128` minor units.* Removes the overflow class outright. Rejected as unearned: `i64` minor units
+  reach ±9.2 × 10¹⁶, `checked_*` makes overflow an explicit error rather than a corruption, and the
+  wider type costs every downstream boundary a conversion. Revisit if a real amount approaches it.
+- *A dedicated currency type instead of `String`.* Genuinely better — ISO 4217 is a closed list and a
+  string admits `"EURO"`. Not adopted here because it belongs with the standards module that owns the
+  ISO 4217 table, and inventing a second source for it is the defect this repository exists to avoid.
+  **Recorded as the open follow-up**, not silently dropped.
+
+**Consequences.**
+- (+) The accepted decision and the shipped crate agree for the first time.
+- (+) Failure modes are typed and total; overflow cannot corrupt an amount.
+- (−) ADR-0019's estate-specific clauses (Postgres `NUMERIC`, gRPC strings) die with it. When those
+  surfaces return in M4 they need their own statement, and it must derive from this one.
+- (−) `currency: String` stays unvalidated until the follow-up above lands.
 
 > **File map:** this README is the canonical ADR index. New decisions are appended here
 > as `## ADR-NNNN — Title` (or as `docs/10-decisions/NNNN-title.md` when extensive).

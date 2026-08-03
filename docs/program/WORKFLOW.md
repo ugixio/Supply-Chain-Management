@@ -162,8 +162,21 @@ reached its ceiling and this was the structural answer, taken instead of a raise
   retroactive + 0010/0011 proposed, glossary (seeded), scm-core rule.md (13 cross-department rules),
   40-contexts knowledge map, program area + 6 templates, additive `CLAUDE.md` governance
   section. **Nothing existing was moved, renamed or rewritten.**
-- ⬜ **U2 · human** — Review & ratify ADR-0001..0009 (retroactive), decide ADR-0010/0011,
+- 🟦 **U2 · human** — Review & ratify ADR-0001..0009 (retroactive), decide ADR-0010/0011,
   and merge the branch.
+  **Halved 2026-08-03 by owner decision, and the half that went is the half that should not have been
+  ratified.** Reviewing the nine against the current tree found **five whose premise left with the
+  code ADR-0037 deleted** — ratifying those would have re-endorsed statements about an application
+  that no longer exists, which is the defect ADR-0037 was written to correct. **0001 · 0005 · 0006 ·
+  0007 · 0009 are now superseded**, each pointing at its real successor rather than carrying a generic
+  note (see the ADR index).
+  **Still open for the owner: 0002 · 0003 · 0004 · 0008** — OSI-only dependencies, English-only,
+  the fourteen departments, standards as a first-class feature. All four are load-bearing today and
+  none describes deleted code. **0010/0011 need no decision** — both already read `Accepted
+  (owner-authorized 2026-07-20)`; 0011's tag clause is narrowed by ADR-0046.
+  **One ADR was written rather than ratified:** the owner directed that money precision in the Rust
+  core get its own decision, and it did not have one — `crates/scm-money` had been contradicting
+  ADR-0019's `Decimal`-as-representation since it was written. That is **ADR-0047**.
 - ✅ **U3 · orchestrator** — Dedup pass: `CLAUDE.md` §Critical Business Rules /
   §Code Standards cite the rule IDs instead of restating them (SSOT).
 - ✅ **U4 · WHAT lane** — Per-department `rule.md` × 14: extract each department's
@@ -226,9 +239,22 @@ reached its ceiling and this was the structural answer, taken instead of a raise
   **Resolved 2026-07-19: keep grandfathered** (allowlisted in knowledge-architecture §3
   and enforced as such by `tools/verify.py`); typing it would shoehorn the closed `type`
   vocabulary. Revisit only if a standards/ document class is ever justified.
-- ⬜ **U10 · human** — Review & ratify ADR-0012 (context economics + gates) and ADR-0013
+- 🟦 **U10 · human** — Review & ratify ADR-0012 (context economics + gates) and ADR-0013
   (npm + lockfile) together with U2; ratifying ADR-0012 includes declaring the exemplar
   department (candidate: `01-procurement`).
+  **This entry asked for something incoherent and nobody noticed for two weeks: ADR-0013 has read
+  `Superseded by ADR-0022` since the pnpm decision.** Ratifying a superseded ADR means nothing.
+  Confirmed by the owner 2026-08-03 — pnpm only — and the entry is corrected rather than quietly
+  satisfied. **ADR-0012 stands and needs no re-ratification**; its two moved specifics (the gate
+  roster, the CI invocation) now carry an amendment note in the ADR itself.
+  **⚠ The exemplar department is still open, and it is not a formality.** ADR-0012 clause 3 says the
+  exemplar is *"always real code, never fabricated samples"* — and ADR-0037 deleted all department
+  code, so **the clause is unsatisfiable as written**. Two ways out and both are the owner's:
+  reinterpret the exemplar as one of **knowledge** (a department's concept nodes plus its `rule.md`
+  as the shape siblings copy — which exists, is real, and is what an agent actually reads before
+  authoring a node), or **retire the clause** because its premise left with the code. Whichever is
+  chosen needs an ADR naming it; the reason the clause existed is worth keeping either way —
+  *models imitate a real example more reliably than they deduce from prose.*
 - ⛔ **U11 · WHAT lane** — **order-management numbering collision RESOLVED by ADR-0029** (dir dissolved → dept 13 namespace; census fixed). Remaining: fine split of 3 agility/VaR fns → dept 10, blocked on a Python env. Rest of U11 below stands.
 - ⛔ **U11b · WHAT lane** — Domain dedup & modeling follow-ups surfaced by the toolchain
   repair: `Shipment.ts` redefines `TransportMode`/`TrackingEvent` already owned by

@@ -250,16 +250,34 @@ def check_unit_codes(answer: str, root: Path) -> list[str]:
 
 
 def check_rule_citation(answer: str, root: Path) -> list[str]:
-    """Failure class: a citation that reads as law and resolves to nothing (G12's class)."""
+    """Failure class: a citation that reads as law and resolves to nothing (G12's class).
+
+    **Scored on a declared block, not on prose, and this is the third payment for that lesson.**
+    The prose form failed three correct answers, each the same way: the check is line-scoped, and an
+    answer that writes off a retired ID puts the disowning word on another line once the paragraph
+    wraps. The last one read `the durable form of **the old SCM-R2** is **PRC-R1**` — the roster used
+    exactly as intended. `DISOWNS` states the remedy for precisely this checker: ask for a structured
+    answer instead of scoring free prose. Followed here rather than re-argued, and it is the fix
+    `unit-codes` already carries.
+
+    Everything outside the block is free: an answer can discuss retired IDs, near-misses and what it
+    rejected, which is the discussion the prose form was punishing.
+    """
     failures = []
-    for family in asserted_tokens(answer, RULE_WILDCARD):
+    block = ANSWER_BLOCK.search(answer)
+    if not block:
+        return ["no ```answer block — the endorsed rule IDs must be declared, not inferred "
+                "from prose (see context-eval.md §Task rule-citation)"]
+    declared = block.group(1)
+
+    for family in RULE_WILDCARD.findall(declared):
         failures.append(f"cites the family {family}* instead of an ID")
     live = live_rule_ids(root)
-    cited = set(asserted_tokens(answer, RULE_ID))
-    if not RULE_ID.search(answer):
-        failures.append("cites no rule ID at all")
+    cited = set(RULE_ID.findall(declared))
+    if not cited:
+        failures.append("the answer block cites no rule ID at all")
     for rule_id in sorted(cited - live):
-        failures.append(f"cites {rule_id}, which is not a live rule in this estate")
+        failures.append(f"the answer block cites {rule_id}, which is not a live rule in this estate")
     return failures
 
 
@@ -446,10 +464,21 @@ SAMPLES = {
         "```answer\nweight: KGM\nvolume: LTR\nlength: MTR\ndiscrete items: EA\n```",
         "```answer\nweight: KG\nvolume: L\nlength: M\n```",
     ),
+    # Migrated to the block form when this task stopped scoring prose. It still tests what it always
+    # tested — that naming a retired ID in order to warn against it is not a citation — but the
+    # mechanism is now structural instead of a word search, so the warning can be as long as it likes.
     "rule-citation-disowning": (
-        "Governed by **SCM-R10** and **SCM-R9**. Do not cite SCM-R1 or WHS-R1: both are in the "
-        "retired roster. A new rule here would take the next free number in its family.",
-        "Governed by SCM-R1 and WHS-R1, which cover receipt quantity and task conservation.",
+        "Governed by SCM-R10 and SCM-R9. Do not cite SCM-R1 or WHS-R1: both are in the retired\n"
+        "roster. A new rule here would take the next free number in its family.\n"
+        "```answer\n"
+        "SCM-R9\n"
+        "SCM-R10\n"
+        "```\n",
+        "Governed by SCM-R1 and WHS-R1, which cover receipt quantity and task conservation.\n"
+        "```answer\n"
+        "SCM-R1\n"
+        "WHS-R1\n"
+        "```\n",
     ),
     "level-metric": (
         "Open work orders is a **level**, read at an instant. **MSR-R2** — valid aggregations "
@@ -463,8 +492,32 @@ SAMPLES = {
         "```answer\nweight: KG\nvolume: L\nlength: M\ndiscrete items: PCE\n```",
     ),
     "rule-citation": (
-        "Governed by **SCM-R10** for units and **SCM-R9** for instants.",
-        "Governed by **PRC-R*** and the finance family **FIN-R***.",
+        "Units travel under SCM-R10, instants under SCM-R9.\n"
+        "```answer\n"
+        "SCM-R9\n"
+        "SCM-R10\n"
+        "```\n",
+        "```answer\n"
+        "PRC-R*\n"
+        "FIN-R*\n"
+        "```\n",
+    ),
+    # The regression that moved this task off prose scoring. A correct answer that writes off a
+    # retired ID by name, with the disowning word on the line above it once the paragraph wraps —
+    # the third answer failed this way, and the prose form could not be widened again because
+    # DISOWNS says so. Only the block is read, so the write-off is free.
+    "rule-citation-writes-off-retired": (
+        "US UCC Article 2 requires a stated quantity. The id-registry's replacement table records\n"
+        "that the durable form of the old SCM-R2 is PRC-R1, so PRC-R1 is what a node cites; SCM-R2\n"
+        "itself is retired and resolves to nothing.\n"
+        "```answer\n"
+        "SCM-R9\n"
+        "SCM-R10\n"
+        "```\n",
+        "The old SCM-R2 still governs the approval of this receipt.\n"
+        "```answer\n"
+        "SCM-R2\n"
+        "```\n",
     ),
 }
 

@@ -62,6 +62,12 @@ relations:
 - **When a false positive recurs, ask whether the previous fix named the concept or an instance of
   it.** `QUOTED_SPAN` fixed three *spellings* of quotation and the same correct answer failed one
   cycle later using a fourth. Prefer structure over vocabulary. (#37)
+- **On the third occurrence of a class, stop fixing instances and check whether an earlier author
+  already named the instrument.** `DISOWNS` had written down "ask for a structured answer" as the
+  remedy before any of the three failures; three local patches were applied instead. (#38)
+- **Score a declared block, not free prose, whenever the answer is a set of identifiers.** Prose
+  scoring punishes the discussion that makes an answer good — writing off a retired ID, naming a
+  near-miss — because the disowning word wraps onto another line. (#38)
 
 ### About rules, thresholds and sweeps
 

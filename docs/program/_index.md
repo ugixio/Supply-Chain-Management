@@ -31,5 +31,10 @@ relations:
     continuous-improvement log (ADR-0012). The **record** of incidents.
   - [known-pitfalls.md](known-pitfalls.md) — the decision rules those incidents distil to, each
     citing its row. The **readable** form, and what a reviewer loads instead of the register.
+  - [how-to/](how-to/) — task-shaped guides for **using this context** (ADR-0044):
+    [add a concept node](how-to/add-a-concept-node.md) ·
+    [change a rule](how-to/change-a-rule.md) ·
+    [run the evaluation](how-to/run-the-evaluation.md). A how-to about *running a department* would
+    be policy and does not belong here.
   - [templates/](templates/) — task · adr · spec · rule · skill · agent profile ·
     manifest.

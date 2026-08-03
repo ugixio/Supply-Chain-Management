@@ -194,7 +194,17 @@ what gets built:
   inclusion test — which is probably why the form was never created. **Verified:** the failing task
   re-run against a fresh cold subagent came in at **633 words** against 806, naming the budget in its
   own report. The confound is recorded in `context-eval.md`.
-  **Next two, not written:** `changing-a-rule` and `running-the-evaluation`.
+  **Both remaining guides written 2026-08-03**, closing the form: `how-to/change-a-rule.md` (802
+  words) and `how-to/run-the-evaluation.md` (795). Each is organised around the traps that have
+  actually been hit rather than around the rules, which are cited and never restated — the rule guide
+  leads with *establish that it is a rule and not a policy* (seven of thirteen original `SCM-R*`
+  failed that test) and *never edit a rule's meaning in place*; the evaluation guide leads with *the
+  manifest is under test too* and *diagnose past the first cause*, both of which are this week's
+  incidents rather than theory.
+  **One consequence worth recording:** adding `change-a-rule.md` to the `changing-a-rule` load set is
+  a **material** change to the `rule-citation` evaluation task, because it alters what the cold
+  subagent reads. That task was re-run and passed again. A guide that a session is told to read is a
+  guide the measurement has to account for.
 
 - ✅ **X6 · The retirement tables were unreachable — closed 2026-08-02 without widening the set.**
   Raised by the first eval run and measured: **52 rules are retired, the id-registry enumerated 12**,

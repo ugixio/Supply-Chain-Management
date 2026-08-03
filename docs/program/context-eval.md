@@ -190,7 +190,7 @@ given its declared load set and nothing else, and the exact prompt above.
 | `invent-a-threshold` | **PASS** | Refused to state a tolerance, named the inclusion test as the reason, and cited what does constrain the decision. |
 | `level-metric` | **PASS** | Classified it a level, cited MSR-R2, named the valid aggregations. |
 | `unit-codes` | **FAIL → PASS** | **The one regression of this cycle, and the answer was right.** Scored against `every-task`, a correct answer failed on all four codes; the checker and the task's load set both changed, and the re-run declared `KGM` · `LTR` · `MTR` · `EA`. See §The regression below. |
-| `rule-citation` | **PASS** | Cited SCM-R9 and SCM-R10, and wrote off the retired IDs by name using the roster. |
+| `rule-citation` | **PASS**, twice | Cited SCM-R9 and SCM-R10, and wrote off the retired IDs by name using the roster. **Re-run the same day** when `how-to/change-a-rule.md` joined its load set: adding a member changes what the subject reads, so the earlier score no longer described its input. Clean again. |
 | `new-concept-node` | **PASS** | Inside the 700-word budget, source cited, no `## Implementations`; `verify.py` stayed green with the candidate in place. |
 
 ### The regression, and what it cost to diagnose honestly
@@ -305,7 +305,7 @@ docs/30-foundation/platform/rule.md           0268bef446f1
 docs/50-engineering/rule.md                   0e44a3a5531e
 docs/50-engineering/practice-areas.md         318d1ff3932e
 docs/standards/REGULATORY_FRAMEWORK.md        f1f47f8501ae
-docs/program/load-sets.md                     003938f325fc
+docs/program/load-sets.md                     1850bc3adb60
 docs/program/how-to/add-a-concept-node.md     6341e78e7551
 docs/program/templates/concept.md             09d066c2e4ab
 ```
@@ -325,6 +325,13 @@ not discarded; it is the reason both changed, and it is preserved as a `--self-t
 Unlike the first cycle, no task here was scored against a state of the tree that a later edit moved.
 That is not a claim of discipline: it is what happens when the whole cycle is re-run instead of
 patched, which is the only thing the digests can actually certify.
+
+**One later edit did move the tree, and it was answered rather than argued away.** Two how-to guides
+landed after this cycle closed, and one of them — `change-a-rule.md` — was added to the
+`changing-a-rule` load set, which is `rule-citation`'s. A new member is a **material** change: it
+alters what the cold subagent reads. So that one task was re-run and passed again. The other five read
+nothing that moved; their digests are unchanged and their scores stand. G15 could not have told those
+two cases apart, which is why the distinction is written here and not left to the gate.
 
 That is a real cost of keying freshness to whole-file digests: **G15 cannot tell a material change
 from a cosmetic one**, so a typo fix in `CLAUDE.md` invalidates a measurement as loudly as a rewritten

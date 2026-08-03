@@ -112,6 +112,7 @@ changing-a-rule = 10000
   CLAUDE.md
   docs/_index.md
   docs/program/evaluation.md
+  docs/program/how-to/change-a-rule.md
   docs/00-governance/knowledge-architecture.md
   docs/00-governance/id-registry.md
   docs/50-engineering/rule.md

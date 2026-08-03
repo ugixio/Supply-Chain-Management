@@ -5,7 +5,7 @@ type: concept
 owner: orchestrator
 status: active
 since: 2026-07-20
-updated: 2026-08-02
+updated: 2026-08-03
 relations:
   - { type: part-of, target: index-docs }
   - { type: governed-by, target: index-adr }
@@ -34,6 +34,16 @@ relations:
   not per-department.
 - **Template:** [program/templates/concept.md](../program/templates/concept.md).
 
+
+## Who consumes this catalogue
+
+**Both** (owner, 2026-08-03): the company administering *itself*, where a definition read is a
+definition used and no code is needed; and a project whose product is in this domain, which selects
+and declares the nodes that apply (**PLT-R7**).
+
+Recorded because **160 of 167 nodes have no consumer in code** and a reader could not tell a reference
+library from an abandoned one. **A node nothing references is not unfinished** — ADR-0037 settled that
+the context defines and never implements.
 
 ## Measurement identities every node inherits
 

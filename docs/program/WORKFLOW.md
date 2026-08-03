@@ -137,6 +137,11 @@ what gets built:
   `feat/context-skeleton`, `fix/verify-rule-id-regex` and `feat/per-department-rules`, each carrying
   0 commits not already in the base. This environment's git proxy refuses `delete` with HTTP 403.
   Risk #3 closes when the default is `main`.
+  **A third item joined the list 2026-08-03:** the first calendar tag. ADR-0046 adopts per-node
+  digests plus an annotated `YYYY.MM` tag, and `git push origin refs/tags/2026.08` returns **HTTP 403**
+  from the same proxy. The tag was created locally and dies with the container, so **the scheme is
+  adopted and its first instance is pending** — one command for the owner:
+  `git tag -a 2026.08 <sha> -m "…" && git push origin 2026.08`.
 
 ### Phase X — How the AI uses the context (raised and started 2026-08-02)
 

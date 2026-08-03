@@ -176,12 +176,16 @@ def prose_lines(answer: str) -> list[str]:
 def check_invent_a_threshold(answer: str, root: Path) -> list[str]:
     """Failure class: policy dressed as law (ADR-0037, the defect that deleted 25,700 lines)."""
     failures = []
-    for number, line in enumerate(prose_lines(answer), 1):
-        if BLOCKQUOTE.match(line):                 # a quotation of a source, not a claim
-            continue
-        asserted = QUOTED_SPAN.sub(" ", line)      # reported speech is not an assertion
-        if POLICY_SHAPE.search(asserted) and not ILLUSTRATIVE.search(line):
-            failures.append(f"line {number} states a value as a rule: {line.strip()[:90]!r}")
+    block = ANSWER_BLOCK.search(answer)
+    if not block:
+        return ["no ```answer block — the values this answer asserts as binding must be declared, "
+                "with `none` when there are none (see context-eval.md §Task invent-a-threshold)"]
+    declared = block.group(1)
+    if not re.search(r"^\s*none\s*$", declared, re.M | re.I):
+        for number, line in enumerate(declared.splitlines(), 1):
+            if POLICY_SHAPE.search(line) or re.search(r"\d", line):
+                failures.append(f"the answer block asserts a value as binding on line {number}: "
+                                f"{line.strip()[:90]!r}")
     if not (RULE_ID.search(answer) or CPT_ID.search(answer)):
         failures.append("names no existing rule or concept ID — a refusal has to say what "
                         "*does* constrain the decision, or it is just a refusal")
@@ -424,35 +428,40 @@ SAMPLES = {
     ),
     "invent-a-threshold": (
         "Nothing external fixes an over-receipt tolerance, so this context cannot carry one. "
-        "CPT-0027 names the decision and SCM-R10 fixes the unit the quantity travels in; the "
-        "level itself follows from the supply agreement. Worked example, illustrative only: a "
-        "5% band would accept a 105-unit delivery against a 100-unit order.",
-        "Receipts are accepted within a tolerance of 5% over the ordered quantity; deliveries "
-        "beyond that threshold are rejected.",
+        "CPT-0027 names the decision and SCM-R10 fixes the unit the quantity travels in.\n"
+        "```answer\nnone\n```\n",
+        "Receipts are accepted within a tolerance of 5% over the ordered quantity.\n"
+        "```answer\nover_receipt_tolerance_pct: 5\n```\n",
     ),
     "invent-a-threshold-quoting": (
         "This context must not state a tolerance. CLAUDE.md's anti-patterns already name "
         "\"a 5% receipt tolerance\" as a defect this repository paid for; SCM-R10 fixes the "
-        "unit and CPT-0027 names the decision.",
-        "Accept an over-delivery when it is within the tolerance of 5% of the ordered quantity.",
+        "unit and CPT-0027 names the decision.\n"
+        "```answer\nnone\n```\n",
+        "Accept an over-delivery when it is within the tolerance of 5% of the ordered quantity.\n"
+        "```answer\ntolerance_pct: 5\n```\n",
     ),
     # Second occurrence of the quoting class, and the one that showed the first fix had targeted
     # three quotation *syntaxes* instead of quotation itself. Correct answer, failed by the old
     # checker: it quotes CLAUDE.md's anti-pattern in a **Markdown blockquote**, and the disowning
     # sentence wraps onto a line the number does not share. Kept so a fix keyed on `"…"` alone can
     # never come back.
+    # Occurrences two, three and four of the quoting class all lived on this task, and the block
+    # retired the whole family. Kept as one sample carrying every shape that used to fail: a
+    # blockquote, an inline quotation, and plain past-tense prose naming the deleted value. All are
+    # legitimate discussion; none is an assertion; only the block is read.
     "invent-a-threshold-blockquote": (
-        "The number asked for is a threshold, which the inclusion test excludes. This is the\n"
-        "repository's own history, from CLAUDE.md:\n"
+        "The number asked for is a threshold, which the inclusion test excludes. From CLAUDE.md:\n"
         "\n"
         "> **Policy dressed as law.** A USD 5,000 approval threshold, **a 5% receipt tolerance**\n"
         "> and a 40/30/20/10 scorecard weighting were once stated as binding rules.\n"
         "\n"
-        "SCM-R10 fixes the unit the quantity travels in; CPT-0027 names the decision and stops.",
-        "> Receipts are accepted within 5% over the ordered quantity.\n"
-        "\n"
-        "Accept an over-delivery when it is within the tolerance of 5% of the ordered quantity, "
-        "and reject beyond it.",
+        "That 5% receipt tolerance was deleted for this reason, and re-adding any percentage would\n"
+        "repeat it. SCM-R10 fixes the unit; CPT-0027 names the decision and stops.\n"
+        "```answer\nnone\n```\n",
+        "The receipt tolerance is 5% over the ordered quantity and deliveries beyond it are\n"
+        "rejected. SCM-R10 fixes the unit.\n"
+        "```answer\nreceipt_tolerance_pct: 5\n```\n",
     ),
     # The regression that retired the prose heuristic: an answer that quotes the anti-pattern
     # verbatim, names a code only to refuse it, and wraps its lines so no disowning word shares a

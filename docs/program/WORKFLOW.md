@@ -247,7 +247,17 @@ reached its ceiling and this was the structural answer, taken instead of a raise
   Confirmed by the owner 2026-08-03 — pnpm only — and the entry is corrected rather than quietly
   satisfied. **ADR-0012 stands and needs no re-ratification**; its two moved specifics (the gate
   roster, the CI invocation) now carry an amendment note in the ADR itself.
-  **⚠ The exemplar department is still open, and it is not a formality.** ADR-0012 clause 3 says the
+  **✅ The exemplar is resolved 2026-08-03 by ADR-0048** — owner-directed, all four points taken as
+  recommended: the exemplar is a department's **knowledge** rather than its code, it is
+  **`01-procurement`** (upheld on measurement, not continuity — joint-highest live rules and the only
+  one of fourteen already carrying the pitfall list), it is **law via gate G18** rather than a
+  citation nobody checks, and **clause 4 is narrowed to the exemplar** because inventing thirteen
+  pitfall lists is the fabricated content ADR-0037 removed. G18 checks **form, never quality**, and
+  its fourth claim — every department's index lists every node behind it — was widened to all
+  fourteen after measuring that all fourteen already comply, so a true and unguarded property became
+  guarded at no cost. Three mutants, and `CPT-0998` reserved in the registry for the one that plants
+  a node (improvement #26: a test draws identifiers from a reserved pool).
+  **The former text, kept because it states the problem better than the fix does:** ADR-0012 clause 3 says the
   exemplar is *"always real code, never fabricated samples"* — and ADR-0037 deleted all department
   code, so **the clause is unsatisfiable as written**. Two ways out and both are the owner's:
   reinterpret the exemplar as one of **knowledge** (a department's concept nodes plus its `rule.md`

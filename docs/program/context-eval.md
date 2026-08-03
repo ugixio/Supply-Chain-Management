@@ -77,12 +77,31 @@ being true.
 ```prompt
 The receiving team needs to know when an over-delivery should be accepted rather than returned.
 Add what this context should say about over-receipt tolerance.
+
+End your answer with a fenced block, opened with three backticks and the word `answer`, holding one
+`name: value` line per number you are **stating as binding in this context** — and the single line
+`none` if there are none. Only that block is scored; quote the anti-pattern, cite deleted values and
+give illustrative arithmetic freely outside it.
 ```
 
-**What the checker decides.** No line of prose may carry a value next to a normative word
-(`tolerance`, `threshold`, `limit`, `must not exceed`, …) unless it is marked illustrative; and the
-answer must name at least one real rule or concept ID. A refusal that says nothing about what *does*
-constrain the decision is not compliance, it is evasion.
+**What the checker decides.** Inside the `answer` block only: no value next to a normative word, and
+`none` is the compliant answer. Outside it, nothing is scored. The answer must still name at least one
+real rule or concept ID anywhere — a refusal that says nothing about what *does* constrain the
+decision is evasion, not compliance.
+
+**Why the block exists: this class failed four times, and the fourth was my own too-literal fix.**
+Every failure was a *correct* answer explaining why no tolerance belongs here, and each explanation
+tripped the prose scan by naming the value it was rejecting. The fixes went: a word list (widened four
+times), then `QUOTED_SPAN` for three quotation syntaxes, then Markdown blockquotes — and then an answer
+wrote *"that 5% receipt tolerance was deleted for this reason"* in plain prose and failed again.
+Improvement #37 had already recorded the lesson (*ask whether the previous fix named the concept or an
+instance of it*) one turn before the blockquote fix repeated the mistake.
+
+**The general rule this settles, and it is worth more than the fix:** an evaluation task whose failure
+class is *asserting something that should not be asserted* must be scored on a **declared block**, not
+on prose. Three tasks now are — `unit-codes`, `rule-citation`, `invent-a-threshold` — and they are
+exactly the three of that shape. `level-metric` and `what-is-this-for` check for the *presence* of
+correct reasoning, which prose scanning handles without this failure mode.
 
 ### Task `level-metric`
 
@@ -191,6 +210,39 @@ both accuses nobody; one that fails both accuses everybody. This is ADR-0042's d
 this file's own code — an untested checker would be the same hole in a new place.
 
 ## Last measurement
+
+**2026-08-03, fourth cycle — 6 of 6 conforming, after the fourth false positive of one class.**
+Re-run in full because ADR-0048 moved `CLAUDE.md` and `knowledge-architecture.md`, which sit in all
+four load sets. Six cold subagents, each with its declared set and nothing else.
+
+| Task | Verdict | What happened |
+|---|---|---|
+| `what-is-this-for` | **PASS** | Both axes, the portfolio, monitoring tied to what it watches. |
+| `invent-a-threshold` | **FAIL → PASS**, and **the checker was the defect for the fourth time** | The answer refused the tolerance and explained why by naming the deleted value in plain prose — *"that 5% receipt tolerance was deleted for this reason"*. Correct, and failed. The task now scores a declared block; the re-run declared `none`. See §The fourth occurrence. |
+| `level-metric` | **PASS** | Level, MSR-R2, valid aggregations named. |
+| `unit-codes` | **PASS** | `KGM` · `LTR` · `MTR` · `EA` in the scored block. |
+| `rule-citation` | **PASS** | Clean on the block form introduced one cycle earlier. |
+| `new-concept-node` | **PASS** | 647 words against the 700 budget, source cited, no `## Implementations`. |
+
+### The fourth occurrence — and this time the too-literal fix was mine
+
+The three earlier failures of this class were fixed by naming one more way of writing a quotation: a
+word list widened four times, then three quote syntaxes, then Markdown blockquotes. **Improvement #37
+recorded the lesson — *ask whether the previous fix named the concept or an instance of it* — and the
+blockquote fix, written one turn later, was another instance.** The next answer disowned the value in
+plain past-tense prose and failed.
+
+`invent-a-threshold` now ends with a declared ```answer block holding the values it asserts as
+binding, with **`none` as the compliant answer**, and only that block is scored. Three samples became
+one carrying every shape that used to fail — blockquote, inline quote, past-tense prose — so the whole
+family is one regression test.
+
+**The general rule, which is worth more than the fix: a task whose failure class is *asserting
+something that should not be asserted* is scored on a declared block, never on prose.** Exactly three
+tasks have that shape and all three now do it. `level-metric` and `what-is-this-for` check for the
+**presence** of correct reasoning and are unaffected — the distinction is the useful part.
+
+### Third cycle (superseded by the run above)
 
 **2026-08-03, third cycle — 6 of 6 conforming, and the cycle earned its keep by failing once.**
 Re-run in full because U12 changed `CLAUDE.md` — one sentence, describing what `make verify-full`
@@ -384,11 +436,11 @@ risk #11. Both are fixed and both are now permanent regression samples in `--sel
 
 ```context-digest
 # path                                        sha256:12 — G15 fails when any of these changes
-CLAUDE.md                                     53f838917f0c
+CLAUDE.md                                     ffd689d687b7
 docs/_index.md                                53f2766c9d3f
 docs/program/evaluation.md                    6e806b7f4e29
-docs/00-governance/knowledge-architecture.md  3706e4bb0421
-docs/00-governance/id-registry.md             d0e914a62618
+docs/00-governance/knowledge-architecture.md  4fe56eb711c6
+docs/00-governance/id-registry.md             3e9411d2d669
 docs/30-foundation/scm-core/rule.md           7e775c264869
 docs/30-foundation/measurement/rule.md        c2aadb2fd7f9
 docs/30-foundation/platform/rule.md           0268bef446f1

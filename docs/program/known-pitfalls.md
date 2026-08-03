@@ -68,6 +68,12 @@ relations:
 - **Score a declared block, not free prose, whenever the answer is a set of identifiers.** Prose
   scoring punishes the discussion that makes an answer good — writing off a retired ID, naming a
   near-miss — because the disowning word wraps onto another line. (#38)
+- **Generalised, after four occurrences: a check for “asserted something it should not” reads a
+  declared block, never prose.** The three tasks of that shape all do; tasks checking for the
+  *presence* of correct reasoning do not need it. (#39)
+- **Three consecutive fixes that each add one more way of writing the same thing means the scan is
+  wrong, not incomplete.** A word list, three quote syntaxes, then blockquotes — and the next answer
+  used plain prose. (#39)
 
 ### About rules, thresholds and sweeps
 

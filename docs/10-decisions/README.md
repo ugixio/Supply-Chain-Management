@@ -81,6 +81,8 @@ relations:
 
 - ADR-0047 — **Money in the Rust core: integer minor units, exact decimal computation:** ADR-0019 decided "arbitrary-precision Decimal end-to-end" and named an estate — TypeScript `Money { amount: Decimal }`, Python `decimal`, `NUMERIC(19,4)`, gRPC strings — of which **nothing survives**; `crates/scm-money` instead represents money as `i64` minor units and uses `Decimal` as the computation medium, a reversal never recorded, so the accepted decision and the shipped code had disagreed since the crate was written. Separates the two roles: **representation** is integer minor units (`i64`, because a credit is a first-class value), **computation** is exact decimal quantizing once with `roundTiesToEven` (IEEE 754-2019 §4.3.3) through the single `MONEY_ROUNDING` constant, and apportionment is largest-remainder because its sum-preserving property is the identity **SCM-R14**. The precision gain over ADR-0019 is in the failure modes it left open: every operation total, a typed `MoneyError`, **overflow reported and never wrapped** (`checked_add`/`checked_sub`), a non-positive divisor refused rather than saturated. `tests/golden/money.golden.json` stays as the canonical-answer fixture a second implementation must read. Carries no policy, which is why it survived ADR-0037 — and should be deleted outright if monitoring never handles money. Open follow-up: a currency type instead of `String`, owned by the standards module. (Accepted — owner-directed 2026-08-03)
 
+- ADR-0048 — **The exemplar is a department's knowledge, and a gate proves it whole:** ADR-0012 clause 3 declared an exemplar department whose shape siblings copy — *models imitate a real example more reliably than they deduce from prose* — and ended with "always real code, never fabricated samples"; ADR-0037 deleted every department's code, leaving the clause with neither option and unexecuted since, while the gap stayed measurable at **167 nodes and no declared pattern**. The exemplar becomes a department's **knowledge** (its `_index.md`, its concept nodes, its `rule.md`) — same reasoning, changed medium — and it is **`01-procurement`**, the candidate ADR-0012 named, upheld on measurement rather than continuity: 4 live rules (joint highest) and **the only one of fourteen already carrying the pitfall list**, chosen for complete shape over `03-demand-planning`'s larger volume. **Clause 4 is narrowed to the exemplar** because a legitimate pitfall comes from a correction that happened, and inventing thirteen lists is the defect ADR-0037 removed. **G18** makes it law and checks form, never quality: the exemplar declared in one machine-readable place, a `rule.md` with a live rule, the pitfall list present, and an `_index.md` listing every node — the last applied to all fourteen because measurement showed they already comply, so a true and unguarded property becomes guarded for free. (Accepted — owner-directed 2026-08-03)
+
 ---
 
 ## ADR-0001 — Two-language split: TypeScript domain logic + Python analytics/ML
@@ -2348,6 +2350,73 @@ asset.
 - (−) ADR-0019's estate-specific clauses (Postgres `NUMERIC`, gRPC strings) die with it. When those
   surfaces return in M4 they need their own statement, and it must derive from this one.
 - (−) `currency: String` stays unvalidated until the follow-up above lands.
+
+## ADR-0048 — The exemplar is a department's knowledge, and a gate proves it whole
+
+**Status:** Accepted (owner-directed 2026-08-03) · **Supersedes ADR-0012 clause 3, narrows clause 4**
+**Materializes as:** the `exemplar` block in `00-governance/knowledge-architecture.md`; gate **G18**
+
+**Context.** ADR-0012 clause 3 declared an **exemplar unit**: the first department completed to full
+satisfaction, named by an ADR, whose shape siblings copy — because *models imitate a real example
+more reliably than they deduce from prose*. It ended with a constraint: **"always real code, never
+fabricated samples."**
+
+ADR-0037 deleted every department's code. The clause was left with neither option: no real code to
+point at, and fabricated samples forbidden. It has sat unexecuted since, and the gap it was written
+to close is still open — **167 concept nodes exist and none is declared the pattern.** Clause 4 fared
+no better: it requires a `wrong → right` pitfall list in each of the fourteen `SKILL.md` files, and
+measurement says **1 of 14**.
+
+**Decision, in three parts.**
+
+1. **The exemplar is a department's *knowledge*, not its code.** The shape siblings copy is the
+   department's `_index.md`, its concept nodes and its `rule.md` — which exist, are real, and are
+   what an agent actually reads before authoring a node. The original reasoning survives intact; only
+   the medium changes, because the medium it named no longer exists.
+2. **The exemplar is `01-procurement`** — the candidate ADR-0012 itself named, and the choice holds up
+   on measurement rather than on continuity: 10 nodes, 4 carrying a `Project-chosen inputs` table, **4
+   live rules (joint highest)**, and **the only one of fourteen already carrying the pitfall list**.
+   `03-demand-planning` has more nodes (25) and more parameter tables (16) and was considered; it has
+   2 live rules and no pitfalls, so declaring it would have meant building the missing halves first.
+   **An exemplar is chosen for complete shape, not for volume.**
+3. **Clause 4 is narrowed to the exemplar.** Only the exemplar carries the pitfall list; the other
+   thirteen inherit it by reference. This is the honest form: a legitimate pitfall comes from a
+   correction that *happened*, and for thirteen departments those corrections mostly have not. Writing
+   them anyway would be fabricated content — the exact defect ADR-0037 deleted 25,700 lines to remove.
+
+**G18 makes it law rather than a suggestion, and checks form rather than quality.** Quality is not
+mechanically decidable and the gate does not pretend otherwise. Four claims:
+
+- The exemplar is **declared in one machine-readable place** and the department it names exists — the
+  gate reads the declaration instead of hardcoding it, so the ADR and the check cannot drift.
+- Its `rule.md` exists and carries **at least one live rule**.
+- Its `SKILL.md` carries the **pitfall list** — clause 4, now scoped here.
+- Its `_index.md` **lists every node in its directory**, so the department's front door is complete.
+
+**The fourth claim is applied to all fourteen, and that is a deliberate widening.** Measurement first:
+every department's index is already complete, so the wider check costs nothing today and protects a
+property that was true and unguarded. The exemplar earns it as law; the rest get it free.
+
+**Alternatives considered.**
+- *Retire clause 3 outright.* Defensible — its premise left with the code, and templates, gates and
+  how-tos now cover part of the ground. Rejected because the gap is measurable: 167 nodes, no
+  declared pattern, and improvement #3 records that exemplars move results more than added rules do.
+- *Name it and check nothing.* Cheapest. Rejected on this repository's own evidence:
+  `known-pitfalls.md` states that if the mechanism performing a discipline is *a person remembering*,
+  the entry is not done. Clause 3 sat unexecuted for two weeks and is itself the proof.
+- *Gate the exemplar's quality* — that its nodes are well written, its rules well chosen. Not
+  attempted: it is not decidable, and a gate that pretends to judge quality either passes everything
+  or blocks correct work.
+- *Write the thirteen missing pitfall lists.* Rejected under the inclusion test, above.
+
+**Consequences.**
+- (+) A clause that could not be executed becomes one that is, and the reason it existed is preserved.
+- (+) Department index completeness stops being an accident.
+- (−) An eighteenth gate to maintain, with its mutants.
+- (−) **The exemplar is now load-bearing.** Degrading `01-procurement` turns the gate red, which is
+  the intent, but it also means the choice is harder to revisit later than it was to make.
+- (−) Thirteen departments carry no pitfall list by decision. If a real correction lands in one of
+  them, the honest move is to write *that* entry, not to backfill the other twelve.
 
 > **File map:** this README is the canonical ADR index. New decisions are appended here
 > as `## ADR-NNNN — Title` (or as `docs/10-decisions/NNNN-title.md` when extensive).

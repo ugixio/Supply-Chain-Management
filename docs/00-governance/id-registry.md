@@ -95,6 +95,12 @@ were built for them, and the operational-telemetry question is recorded as open 
 **CPT-0167 = deployment rework rate**, the fifth DORA delivery metric, added 2026-08-03 when the
 platform catalogue was checked against the current published grouping and found to carry four of five.
 
+> **CPT-0998 is RESERVED for `tools/test_gates.py`.** G18's fourth-claim mutant plants a node in a
+> department directory to prove the index-completeness check fires. The node needs a CPT number to be
+> well formed, and improvement #26 says a test draws identifiers from a pool the allocation authority
+> has reserved — so the reservation is recorded here, in the commit that first uses it, rather than
+> the harness borrowing a live number or the eval's 0999.
+
 > **CPT-0999 is RESERVED and never allocated to a real node.** The context-adherence evaluation
 > (ADR-0043) asks a cold subagent to author a node with a stated number, and its answer is scored by
 > running the gates over a throwaway worktree. If that number were a live allocation the task would
@@ -125,7 +131,7 @@ platform catalogue was checked against the current published grouping and found 
 ## 3. Decision (ADR) numbers
 
 - Format: `ADR-NNNN`, strictly increasing, allocated at proposal time.
-- Allocated: **ADR-0001 … ADR-0047** (see `docs/10-decisions/README.md`).
+- Allocated: **ADR-0001 … ADR-0048** (see `docs/10-decisions/README.md`).
   This line read `ADR-0038` until 2026-08-03 while nine more existed — the same blind spot that let
   `README.md` claim "G1-G16": a **range** is invisible to a sweep looking for a count beside a noun.
 - **Retroactive ADRs superseded 2026-08-03 by owner decision**, because their premises left with the
@@ -182,7 +188,7 @@ ADR-0037; the keys are unaffected.)*
 ## 6. Gate-invariant IDs (fixed)
 
 `G1`–`G8` name the knowledge-architecture §11 invariants. New gates append (G9+).
-Allocated: **G1–G17** (G9 context budget, ADR-0012; G10 **standards provenance** — was concept
+Allocated: **G1–G18** (G9 context budget, ADR-0012; G10 **standards provenance** — was concept
 coverage under ADR-0015, rewritten by ADR-0037 when the code it policed was deleted; **G11
 retired rules stay retired**, added at Phase C3 because a citation of a retired ID is invisible to
 G4 — it is not a broken link, it silently resolves to nothing and reads as law; **G12 a rule

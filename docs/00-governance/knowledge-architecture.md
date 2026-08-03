@@ -138,9 +138,27 @@ Every non-allowlisted `.md` carries YAML front-matter:
 - Every document has exactly one owner. **human** owns the contract and final approvals;
   **orchestrator** owns program/process and (until lanes are formalized) the docs tree.
 
+## 10b. The exemplar department (ADR-0048)
+
+**One department is declared the exemplar**, and its knowledge is the shape a sibling copies:
+its `_index.md`, its concept nodes, its `rule.md`. ADR-0012 clause 3 asked for *real code* and
+ADR-0037 deleted all of it; the medium changed, the reasoning did not — **a model imitates a real
+example more reliably than it deduces from prose.** The declaration lives in one fenced block so the
+ADR and gate **G18** cannot drift apart, exactly as `load-sets.md` does for G14:
+
+```exemplar
+01-procurement
+```
+
+**It is the only department required to carry a `wrong → right` pitfall list** in its `SKILL.md`
+(ADR-0012 clause 4, narrowed by ADR-0048): a legitimate pitfall records a correction that *happened*,
+and inventing twelve more would be the fabricated content ADR-0037 removed. The others inherit by
+reference.
+
 ## 11. Enforcement (gates)
 
-All sixteen are wired into `tools/verify.py` and run by `make verify` (ADR-0012):
+All eighteen are wired into `tools/verify.py` and run by `make verify` (ADR-0012) — the count read
+"sixteen" while seventeen existed, the same range-versus-count blind spot the ID registry had:
 - **G1** no stray docs · **G2** front-matter validity · **G3** ID uniqueness ·
   **G4** link integrity · **G5** no orphans (`part-of` traversal) · **G6** authority
   acyclicity · **G7** status/supersession integrity · **G8** English-only, screened for
@@ -153,7 +171,11 @@ All sixteen are wired into `tools/verify.py` and run by `make verify` (ADR-0012)
   **G16** the ID registry's retired roster equals the union of the retirement tables, both ways ·
   **G17** every Markdown table row carries the cell count its header declares — a short row renders
   as an empty cell, so a missing field is invisible (fourteen register rows lost their status that
-  way, and a catalogue column with an empty heading went unfilled by fourteen of fifteen rows).
+  way, and a catalogue column with an empty heading went unfilled by fourteen of fifteen rows) ·
+  **G18** the exemplar department (§10b) is whole — declared once, its `rule.md` carrying a live
+  rule, its `SKILL.md` carrying the pitfall list, and every department's `_index.md` listing every
+  node in its directory (ADR-0048; the last claim covers all fourteen because measurement showed they
+  already comply, so a true and unguarded property became guarded at no cost).
 
 **A gate that cannot check must say so.** `tools/verify.py` distinguishes *passed* from *could not
 run*: where a check depends on the environment — G13 needs HEAD's parent present to diff against —

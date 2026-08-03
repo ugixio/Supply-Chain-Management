@@ -48,12 +48,46 @@ EVAL_RECORD = "docs/program/context-eval.md"
 DEPT_RULE = "docs/40-contexts/06-warehouse-management/rule.md"
 REGISTRY = "docs/00-governance/id-registry.md"
 ADR_INDEX = "docs/10-decisions/README.md"
+ARCH = "docs/00-governance/knowledge-architecture.md"
+EXEMPLAR_SKILL = ".claude/skills/procurement/SKILL.md"
+DEPT_INDEX = "docs/25-concepts/06-warehouse-management/_index.md"
+UNLISTED_NODE = "docs/25-concepts/06-warehouse-management/__planted-node.md"
+
+# A well-formed concept node, so G18's fourth-claim mutant fires **G18 and nothing else**: valid
+# front-matter (G2), reachable by `part-of` (G5), governed upward (G6), a cited source and no
+# `## Implementations` (G10), inside the word budget (G9). CPT-0998 is reserved for this harness in
+# the ID registry — improvement #26: a test draws identifiers from a pool the authority has reserved.
+PLANTED_NODE = """---
+id: concept-planted-by-the-gate-harness
+title: "Planted Node (CPT-0998)"
+type: concept
+owner: orchestrator
+status: active
+updated: __TODAY__
+since: __TODAY__
+relations:
+  - { type: part-of, target: index-concepts-06-warehouse-management }
+  - { type: governed-by, target: index-adr }
+---
+# Planted Node (CPT-0998)
+
+> Written by `tools/test_gates.py` to prove G18's index-completeness claim fires. It is well formed
+> on every other axis on purpose: a mutant that trips four gates proves nothing about one of them.
+
+## Formula
+
+None. This node exists to occupy a directory slot.
+
+## References
+
+- ADR-0048 — the decision this planted node exercises.
+"""
 RETIRED_RULE_ID = "SCM-R1"    # retired by ADR-0037; declared in 30-foundation/scm-core
 
 # Every path any mutant may create or modify. The harness restores all of them between
 # mutants, so this list must stay in step with the mutations below.
 TOUCHABLE = (CONCEPT, CONCEPT_B, STRAY, MANIFEST, EVAL_RECORD, DEPT_RULE, REGISTRY,
-             ADR_INDEX)
+             ADR_INDEX, ARCH, EXEMPLAR_SKILL, DEPT_INDEX, UNLISTED_NODE)
 
 
 # --- worktree plumbing ----------------------------------------------------------------
@@ -221,6 +255,36 @@ def mutate_g9_adr_orphan_entry(wt: Path) -> list[str]:
     return [ADR_INDEX]
 
 
+def mutate_g18_no_exemplar(wt: Path) -> list[str]:
+    """The exemplar block naming a department that does not exist (G18's first claim)."""
+    text = read(wt, ARCH)
+    write(wt, ARCH, re.sub(r"(?m)^```exemplar$\n.*?\n```$",
+                           "```exemplar\n99-nonexistent\n```", text, count=1, flags=re.S))
+    return [ARCH]
+
+
+def mutate_g18_no_pitfalls(wt: Path) -> list[str]:
+    """The exemplar's SKILL.md with its pitfall section gone (G18's third claim).
+
+    ADR-0012 clause 4 as narrowed by ADR-0048: the exemplar is the one department required to
+    carry the list, so its absence there is the whole of the remaining obligation.
+    """
+    text = read(wt, EXEMPLAR_SKILL)
+    write(wt, EXEMPLAR_SKILL, re.sub(r"(?mi)^##+ .*pitfall.*$", "## Removed by the harness",
+                                     text, count=1))
+    return [EXEMPLAR_SKILL]
+
+
+def mutate_g18_unlisted_node(wt: Path) -> list[str]:
+    """A node in a department directory that its `_index.md` does not list (G18's fourth claim).
+
+    Planted in warehouse rather than the exemplar because this claim covers all fourteen: the
+    reader arriving at any department's front door must find everything behind it.
+    """
+    write(wt, UNLISTED_NODE, PLANTED_NODE.replace("__TODAY__", TODAY))
+    return [UNLISTED_NODE]
+
+
 def mutate_g10(wt: Path) -> list[str]:
     """A concept node that cites no source."""
     text = restamp(read(wt, CONCEPT))
@@ -330,6 +394,13 @@ MUTANTS = [
     ("G16", "roster fallen behind the retirement tables", mutate_g16_missing, {"G15"}),
     ("G16", "roster claiming a retirement nobody declared", mutate_g16_extra, {"G15"}),
     ("G17", "table row one cell short of its header", mutate_g17, set()),
+    # G15 fires too: knowledge-architecture.md is a watched context file, so touching it invalidates
+    # the recorded measurement. That is the gate working, not collateral damage.
+    ("G18", "exemplar block naming no real department", mutate_g18_no_exemplar, {"G15"}),
+    ("G18", "exemplar SKILL.md with no pitfall list (G18's third claim)",
+     mutate_g18_no_pitfalls, set()),
+    ("G18", "a node its department index does not list (G18's fourth claim)",
+     mutate_g18_unlisted_node, set()),
 ]
 # The `also` column declares collateral that is real rather than tolerated. G14's and G16's mutants
 # edit `load-sets.md` and `id-registry.md`, both of which the context-adherence measurement is

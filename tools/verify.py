@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Doc gates — the executable form of docs/00-governance/knowledge-architecture.md §11.
 
-Implements gates G1-G17 over the tracked knowledge tree (ADR-0012, from the ugixio context
+Implements gates G1-G18 over the tracked knowledge tree (ADR-0012, from the ugixio context
 skeleton ADR-0001/0004). Python 3, standard library only.
 
 G8 (English-only) and G13 (`updated:` truthfulness) were both added on 2026-07-29, and both
@@ -114,6 +114,23 @@ SLICES = {"adr-index": ADR_INDEX_LINE}
 CONTEXT_EVAL_DOC = f"{DOCS_DIR}/program/context-eval.md"
 DIGEST_FENCE = re.compile(r"^```context-digest$(.*?)^```$", re.M | re.S)
 DIGEST_UNMEASURED = "(unmeasured)"
+
+# --- G18 — the exemplar department is whole (ADR-0048) ------------------------------------
+#
+# ADR-0012 clause 3 declared an exemplar department whose shape siblings copy, and ended with
+# "always real code, never fabricated samples". ADR-0037 deleted every department's code, so the
+# clause had neither option and sat unexecuted for two weeks while the gap it addressed stayed
+# measurable: 167 concept nodes and none declared the pattern. ADR-0048 moves the exemplar to a
+# department's **knowledge** and makes this gate the mechanism, because `known-pitfalls.md` says a
+# discipline whose mechanism is "a person remembering" is not done — and clause 3 is the proof.
+#
+# **Form, never quality.** Whether the exemplar's nodes are *well written* is not decidable here, and
+# a gate pretending to judge it would either pass everything or block correct work.
+#
+# The exemplar is read from a fenced block rather than hardcoded, so the ADR, the prose and the check
+# cannot drift — the same reason G14 parses `load-sets.md`.
+EXEMPLAR_FENCE = re.compile(r"^```exemplar$(.*?)^```$", re.M | re.S)
+PITFALL_HEADING = re.compile(r"^##+ .*pitfall", re.M | re.I)
 
 # --- G17 — table shape ------------------------------------------------------------------
 # The delimiter row (`|---|---|`) is what makes a pipe-delimited line a table header in GFM.
@@ -355,6 +372,7 @@ class Gates:
             "G15": "the context-adherence measurement is not stale",
             "G16": "the retired roster is complete and true",
             "G17": "every table row has the cells its header declares",
+            "G18": "the exemplar department is whole",
         }
         ok = True
         for gate in sorted(names, key=lambda name: int(name[1:])):
@@ -747,6 +765,57 @@ def main() -> int:
                 gates.fail("G17", f"{path}:{number} has {found} cells; the header on line "
                                   f"{header_line} declares {header_cells} — a short row renders "
                                   f"as an empty cell, so the missing field is invisible")
+
+    # G18 — the exemplar department is whole (ADR-0048).
+    #
+    # Four claims. The first three are about the exemplar and are why the gate exists; the fourth
+    # covers every department because measurement showed all fourteen already comply, so a property
+    # that was true and unguarded became guarded at no cost.
+    arch_path = f"{DOCS_DIR}/00-governance/knowledge-architecture.md"
+    arch_text = checked.get(arch_path, (None, ""))[1]
+    fence = EXEMPLAR_FENCE.search(arch_text)
+    if not fence:
+        gates.fail("G18", f"{arch_path}: no ```exemplar block — the exemplar department is declared "
+                          f"there so the ADR and this gate cannot drift (ADR-0048 §10b)")
+    else:
+        declared = [line.strip() for line in fence.group(1).splitlines() if line.strip()]
+        if len(declared) != 1:
+            gates.fail("G18", f"{arch_path}: the exemplar block names {len(declared)} departments; "
+                              f"exactly one is the exemplar (ADR-0048)")
+        for dept in declared[:1]:
+            concepts = f"{CONCEPTS_DIR}/{dept}"
+            if not os.path.isdir(concepts):
+                gates.fail("G18", f"the declared exemplar '{dept}' has no concept directory at "
+                                  f"{concepts} — an exemplar nobody can read is not one")
+                continue
+            rule_path = f"{DOCS_DIR}/40-contexts/{dept}/rule.md"
+            if rule_path not in checked:
+                gates.fail("G18", f"exemplar '{dept}' has no {rule_path} — the shape a sibling "
+                                  f"copies includes its rule family")
+            elif not any(RULE_ID_DEF.match(line) for line in checked[rule_path][1].splitlines()):
+                gates.fail("G18", f"exemplar '{dept}': {rule_path} defines no live rule, so there "
+                                  f"is no rule shape to copy")
+            # Clause 4 of ADR-0012, narrowed by ADR-0048 to the exemplar alone.
+            skill = f".claude/skills/{dept[3:]}/SKILL.md"
+            if not os.path.exists(skill):
+                gates.fail("G18", f"exemplar '{dept}' has no {skill}")
+            elif not PITFALL_HEADING.search(open(skill, encoding="utf-8").read()):
+                gates.fail("G18", f"exemplar '{dept}': {skill} carries no pitfall section — it is "
+                                  f"the one department ADR-0048 requires to have one")
+
+    # Fourth claim, all fourteen: a department's front door lists every node behind it. A node
+    # missing from its index is reachable by `part-of` (so G5 is content) and invisible to a reader
+    # arriving at the department — which is the reader the index exists for.
+    for index_path, (_meta, index_text) in checked.items():
+        if not (index_path.startswith(f"{CONCEPTS_DIR}/") and index_path.endswith("/_index.md")):
+            continue
+        directory = os.path.dirname(index_path)
+        for node in sorted(glob.glob(f"{directory}/*.md")):
+            name = os.path.basename(node)
+            if name == "_index.md" or name in index_text:
+                continue
+            gates.fail("G18", f"{index_path} does not list '{name}', which sits in the same "
+                              f"directory — a reader arriving at the department cannot find it")
 
     # G8 — English only (ADR-0003), screened. A word list cannot certify that prose reads as
     # English, so this gate does not claim to: it catches the *carrier* of the failure this

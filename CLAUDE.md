@@ -164,7 +164,7 @@ Dependencies stay OSI-licensed, commercially usable and modifiable (ADR-0002).
 
 ## Gates
 
-`make verify` — doc gates G1–G17, typecheck, Rust tests. Run after **every** layer.
+`make verify` — doc gates G1–G18, typecheck, Rust tests. Run after **every** layer.
 `make verify-full` — the merge gate: adds the gate mutation tests, the lockfile check,
 `cargo fmt --check`, `clippy -D warnings` and `eslint --max-warnings 0`.
 `make verify-schema` — the telemetry schema against a real ClickHouse. CI runs both gates.
@@ -176,7 +176,8 @@ G12 a rule citation names an ID (never a family wildcard) · G13 `updated:` is t
 G14 a load set is priced as a whole (`docs/program/load-sets.md`) ·
 G15 the context-adherence measurement is not stale (`docs/program/context-eval.md`) ·
 G16 the retired roster in the ID registry is complete and true ·
-G17 a table row carries the cells its header declares.
+G17 a table row carries the cells its header declares ·
+G18 the exemplar department is whole (`docs/00-governance/knowledge-architecture.md` §10b).
 
 The gates themselves are tested: `tools/test_gates.py` plants one violation per gate and
 requires that gate — and no other — to fire (ADR-0042).

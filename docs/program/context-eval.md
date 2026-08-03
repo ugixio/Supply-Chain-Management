@@ -224,6 +224,12 @@ four load sets. Six cold subagents, each with its declared set and nothing else.
 | `rule-citation` | **PASS** | Clean on the block form introduced one cycle earlier. |
 | `new-concept-node` | **PASS** | 647 words against the 700 budget, source cited, no `## Implementations`. |
 
+**A later edit moved `load-sets.md` and no task was re-scored — stated, not assumed.** The pre-M4
+readiness check archived Phase C and rewrote the `planning` set's recorded exit. `planning` is read by
+**no evaluation task**, and no member of any task's set changed content, so nothing could be scored
+differently. The block below is refreshed so G15 reads true. This is the case G15 cannot distinguish
+from a material change, which is why it is written down every time it happens.
+
 ### The fourth occurrence — and this time the too-literal fix was mine
 
 The three earlier failures of this class were fixed by naming one more way of writing a quotation: a
@@ -447,7 +453,7 @@ docs/30-foundation/platform/rule.md           0268bef446f1
 docs/50-engineering/rule.md                   0e44a3a5531e
 docs/50-engineering/practice-areas.md         318d1ff3932e
 docs/standards/REGULATORY_FRAMEWORK.md        f1f47f8501ae
-docs/program/load-sets.md                     51fd39bc8e72
+docs/program/load-sets.md                     d873a9337fe2
 docs/program/how-to/add-a-concept-node.md     6341e78e7551
 docs/program/how-to/change-a-rule.md          6b2bee8a3822
 docs/program/templates/concept.md             09d066c2e4ab

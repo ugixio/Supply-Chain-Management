@@ -118,7 +118,7 @@ discipline for domain aggregates at the time of adoption).
 
 ## ADR-0002 — OSI open-source-only dependency policy
 
-**Status:** Accepted (retroactive)
+**Status:** Accepted (retroactive) · **ratified by the owner 2026-08-03**
 
 **Context:** The repo must remain buildable and distributable without proprietary
 services or non-OSI licenses.
@@ -143,7 +143,7 @@ redistribution risk).
 
 ## ADR-0003 — English-only for all repo artifacts
 
-**Status:** Accepted (retroactive)
+**Status:** Accepted (retroactive) · **ratified by the owner 2026-08-03**
 
 **Context:** The repo was partially written in Spanish; international standards, external
 collaboration and consistency demand one working language.
@@ -161,7 +161,7 @@ migration cost (already paid).
 
 ## ADR-0004 — 14-department structure aligned to SCOR-DS
 
-**Status:** Accepted (retroactive)
+**Status:** Accepted (retroactive) · **ratified by the owner 2026-08-03**
 
 **Context:** The domain needs an organizing principle that scales and maps to how real
 enterprises structure supply chains.
@@ -270,7 +270,7 @@ rows. Citable as SCM-R3; retry safety is an engineering concern (`ENG-R*`).
 
 ## ADR-0008 — Standards & regulatory grounding as a first-class feature
 
-**Status:** Accepted (retroactive)
+**Status:** Accepted (retroactive) · **ratified by the owner 2026-08-03**
 
 **Context:** The product's differentiator is that KPIs, algorithms and compliance logic
 are grounded in **named, versioned external standards**, not invented.
@@ -883,8 +883,25 @@ and the SSOT principle; would immediately drift from `docs/`.
 
 ## ADR-0020 — The Python calculation core is a gRPC service
 
-**Status:** Accepted (owner-authorized 2026-07-20)
-**Extends:** ADR-0001, ADR-0019
+**Status:** **Superseded by ADR-0035/ADR-0037** (owner-directed 2026-08-03)
+**Extended:** ADR-0001, ADR-0019 — **both now superseded themselves**
+
+> **Every premise of this decision is gone, and it was found by asking what M4 needs on day one
+> rather than by any sweep.** Its opening sentence — *"ADR-0001 puts all math in Python"* — is false:
+> ADR-0035 made **Rust the complete core**, and ADR-0037 deleted the Python calculation service this
+> ADR was the contract for. `proto/` does not exist. It also escaped the retroactive review because
+> that batch was 0001–0009 and this is 0020: **a stale decision hides in the gap between the ranges
+> people think to check.**
+>
+> **What survives is the constraint, not the mechanism:** a monetary value must not cross a process
+> boundary as a binary float — protobuf `double` is IEEE-754 and would reintroduce exactly the error
+> being avoided. That duty is now carried by **SCM-R14** and **ENG-R4/R5**, and ADR-0047 states it for
+> the Rust core.
+>
+> **The successor question is open and belongs to M4:** how the NestJS gateway reaches the Rust core —
+> in-process (a Node addon or WASM), a local service, or the core reached only through data already
+> written to Postgres and ClickHouse. Nothing decides it today, and ENG-R8 forbids guessing at a lane
+> boundary, so it is a decision before it is code.
 
 **Context:** ADR-0001 puts all math in Python; the app is TypeScript (NestJS). The two must
 talk, and the payloads are **financial** — serialization must not lose precision (ADR-0019).

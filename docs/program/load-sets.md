@@ -87,10 +87,14 @@ every-task = 3400
 # term that was not the problem. Named as not fitting rather than executed (known pitfall #29), and
 # the instrument used instead was the risk register's: the two closed triages (2026-07-29, 2026-08-02)
 # moved verbatim to WORKFLOW-archive.md, nothing deleted, 20,142 -> 18,338.
-#   NEXT TIME, ask which member grew before reaching for either exit. WORKFLOW.md is the dominant
-# term and its closed phases are the supply: Phase U, Phase P and the closed half of Phase C are all
-# complete records that a "what next?" session does not read. Shortening the ADR entries remains
-# available and is the smaller lever. Do not raise this.
+#   REACHED AGAIN 2026-08-03 at 20,035, during the pre-M4 readiness check, and this time the exit
+# recorded above was the right one and was simply taken: **Phase C — nine items, all closed, 3,010
+# words — moved verbatim to WORKFLOW-archive.md.** 20,035 -> ~17,000. The check that made it possible
+# was measuring which member grew before choosing, which is what the previous occurrence added here.
+#   NEXT TIME the supply is the same: Phase X and Phase P are the next largest with few open items,
+# and moving an open item out of a phase before archiving it is legitimate — an open item belongs to
+# the live backlog, not to the phase that happened to raise it. Shortening the ADR entries remains
+# the smaller lever. Do not raise this.
 planning = 20000
   CLAUDE.md
   docs/_index.md

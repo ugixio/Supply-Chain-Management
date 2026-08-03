@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Doc gates — the executable form of docs/00-governance/knowledge-architecture.md §11.
 
-Implements gates G1-G16 over the tracked knowledge tree (ADR-0012, from the ugixio context
+Implements gates G1-G17 over the tracked knowledge tree (ADR-0012, from the ugixio context
 skeleton ADR-0001/0004). Python 3, standard library only.
 
 G8 (English-only) and G13 (`updated:` truthfulness) were both added on 2026-07-29, and both
@@ -114,6 +114,21 @@ SLICES = {"adr-index": ADR_INDEX_LINE}
 CONTEXT_EVAL_DOC = f"{DOCS_DIR}/program/context-eval.md"
 DIGEST_FENCE = re.compile(r"^```context-digest$(.*?)^```$", re.M | re.S)
 DIGEST_UNMEASURED = "(unmeasured)"
+
+# --- G17 — table shape ------------------------------------------------------------------
+# The delimiter row (`|---|---|`) is what makes a pipe-delimited line a table header in GFM.
+TABLE_DELIMITER = re.compile(r"\|[\s:|-]+\|")
+# GFM splits cells on every pipe, including one inside a code span; only `\|` is a literal.
+# `docs/25-concepts/03-demand-planning/tracking-signal-and-bias.md` writes `\|ME\|` for an
+# absolute value and is correct — a splitter that ignored the escape would call it a defect.
+UNESCAPED_PIPE = re.compile(r"(?<!\\)\|")
+
+
+def table_cells(line: str) -> list[str]:
+    """The cells of a Markdown table row, outer pipes discarded."""
+    body = line.strip()
+    return UNESCAPED_PIPE.split(body[1:-1])
+
 
 # --- G16 — the retired roster is complete and true (ADR-0043 follow-up) ---------------
 #
@@ -300,6 +315,7 @@ class Gates:
             "G14": "load-set budgets (what is read together)",
             "G15": "the context-adherence measurement is not stale",
             "G16": "the retired roster is complete and true",
+            "G17": "every table row has the cells its header declares",
         }
         ok = True
         for gate in sorted(names, key=lambda name: int(name[1:])):
@@ -646,6 +662,43 @@ def main() -> int:
                 gates.fail("G12", f"{path}:{number} cites {family}* — a family wildcard is not a "
                                   f"citation: it reads as law and resolves to no rule. Name the "
                                   f"live ID, or say plainly that no rule fixes this")
+
+    # G17 — a table row carries the cells its header declares. Same full estate as G11/G12.
+    #
+    # Why this is a gate and not a proofreading habit: a Markdown table row with a missing trailing
+    # cell **renders as an empty cell**. Nothing looks broken. Fourteen consecutive rows of the
+    # improvement register lost their `Status` column that way and the estate stayed green for two
+    # days, while the register's own instructions say the owner reviews rows by status — the field
+    # that decides whether a lesson is closed was silently absent from every recent row. The
+    # concepts index had the mirror image: a third column with an empty heading that only one of
+    # fifteen rows filled. Both are the same defect, and a cell count catches both.
+    for path, (_meta, text) in checked.items():
+        header_cells, header_line, in_fence = None, 0, False
+        lines = text.splitlines()
+        for number, line in enumerate(lines, 1):
+            if line.lstrip().startswith("```"):
+                in_fence, header_cells = not in_fence, None
+                continue
+            if in_fence:
+                continue
+            stripped = line.strip()
+            if not (stripped.startswith("|") and stripped.endswith("|") and len(stripped) > 1):
+                header_cells = None
+                continue
+            if TABLE_DELIMITER.fullmatch(stripped):
+                continue
+            if header_cells is None:
+                # A pipe-delimited line is a table header only if a delimiter row follows it.
+                # Without that check, prose containing pipes would be read as a one-row table.
+                following = lines[number].strip() if number < len(lines) else ""
+                if TABLE_DELIMITER.fullmatch(following):
+                    header_cells, header_line = len(table_cells(stripped)), number
+                continue
+            found = len(table_cells(stripped))
+            if found != header_cells:
+                gates.fail("G17", f"{path}:{number} has {found} cells; the header on line "
+                                  f"{header_line} declares {header_cells} — a short row renders "
+                                  f"as an empty cell, so the missing field is invisible")
 
     # G8 — English only (ADR-0003), screened. A word list cannot certify that prose reads as
     # English, so this gate does not claim to: it catches the *carrier* of the failure this

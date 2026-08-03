@@ -19,6 +19,34 @@ inside an already-adopted lane, so it needed no new ADR (`CLAUDE.md` working agr
   and a cutover — ADR-0036 records this as the accepted cost of paying aggregation at insert time.
 - **The metric names are governed.** Every value of `metric` corresponds to a `CPT-*` node
   (CPT-0155..0160 today). A rollup without its concept node is an ungoverned calculation.
+- **Columns are appended, never inserted.** A materialized view declared `TO <table>` maps its
+  `SELECT` to the destination **by position**, so a column added with `AFTER` shifts every later
+  value into the wrong column — silently, with plausible numbers. Migration 0006 is written this way
+  on purpose and says so.
+
+## The metric kind, and why an invalid aggregation is *absent* rather than documented
+
+`samples` carries a `kind` — `flow`, `level` or `event_count` — added by migration 0006 to close
+risk #14. Three things about it matter more than the column itself:
+
+- **It is stamped by the ingester from its registry, never read off the sample.** An emitter that
+  could declare its own metric a flow could turn a level into one, and the corrupted rollup would be
+  indistinguishable from data. `crates/scm-ingest` owns the classification; a sample carries no kind
+  field at all, and a metric with no registry entry is dropped rather than written with a blank one.
+- **The read surface is split, and the split is the enforcement.** `telemetry.levels_1m` exposes
+  `last_value`, `minimum`, `maximum` and `readings` — and **no sum**, because MSR-R2 says a level is
+  never summed and a column that does not exist cannot be selected by mistake. `telemetry.flows_1m`
+  exposes `total` and `p95` and **no `last_value`**, because the last interval's count is not the
+  period's level. `apply.py`'s `VIEW_ASSERTIONS` fail on either absence being filled in.
+- **The "last reading" aggregate is `argMax(value, ts)`, not `anyLast(value)`.** `anyLast` returns
+  whichever row the engine happened to merge last, which under parallel inserts and background
+  merges is not the newest reading — a nondeterministic pick that usually looks right and diverges
+  exactly under load, when rows arrive out of order. `argMax` is defined by the data, not by the
+  execution order.
+
+**A duration has no kind yet** — see risk #15. Lead time (CPT-0156) and recovery time (CPT-0158) are
+neither levels nor flows, and the fourth kind is deliberately not invented until a real emitter
+needs it.
 
 ## Retention — this application's own decision
 

@@ -70,23 +70,23 @@ reviewer, and the anti-states in
 
 ## Groups
 
-| # | Group | |
-|---|---|---|
-| 00 | [00-platform](00-platform/_index.md) | delivery metrics — the monitoring application |
-| 03 | [03-demand-planning](03-demand-planning/_index.md)  |
-| 01 | [01-procurement](01-procurement/_index.md)  |
-| 02 | [02-supplier-management](02-supplier-management/_index.md)  |
-| 04 | [04-supply-planning](04-supply-planning/_index.md)  |
-| 05 | [05-inventory-management](05-inventory-management/_index.md)  |
-| 06 | [06-warehouse-management](06-warehouse-management/_index.md)  |
-| 07 | [07-logistics-transportation](07-logistics-transportation/_index.md)  |
-| 08 | [08-quality-management](08-quality-management/_index.md)  |
-| 09 | [09-compliance-regulatory](09-compliance-regulatory/_index.md)  |
-| 10 | [10-risk-management](10-risk-management/_index.md)  |
-| 11 | [11-finance-controlling](11-finance-controlling/_index.md)  |
-| 12 | [12-sop-planning](12-sop-planning/_index.md)  |
-| 13 | [13-order-management](13-order-management/_index.md)  |
-| 14 | [14-supplier-development](14-supplier-development/_index.md)  |
+| # | Group |
+|---|---|
+| 00 | [00-platform](00-platform/_index.md) |
+| 01 | [01-procurement](01-procurement/_index.md) |
+| 02 | [02-supplier-management](02-supplier-management/_index.md) |
+| 03 | [03-demand-planning](03-demand-planning/_index.md) |
+| 04 | [04-supply-planning](04-supply-planning/_index.md) |
+| 05 | [05-inventory-management](05-inventory-management/_index.md) |
+| 06 | [06-warehouse-management](06-warehouse-management/_index.md) |
+| 07 | [07-logistics-transportation](07-logistics-transportation/_index.md) |
+| 08 | [08-quality-management](08-quality-management/_index.md) |
+| 09 | [09-compliance-regulatory](09-compliance-regulatory/_index.md) |
+| 10 | [10-risk-management](10-risk-management/_index.md) |
+| 11 | [11-finance-controlling](11-finance-controlling/_index.md) |
+| 12 | [12-sop-planning](12-sop-planning/_index.md) |
+| 13 | [13-order-management](13-order-management/_index.md) |
+| 14 | [14-supplier-development](14-supplier-development/_index.md) |
 
 ## How to extend
 

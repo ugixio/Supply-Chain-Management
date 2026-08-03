@@ -41,10 +41,38 @@ structural answer attached**, because a ratchet over a monotonic quantity schedu
 and a gate that reddens correct work gets disabled rather than obeyed. The classification is stated
 per set below and it is the first thing to get right when adding one.
 
+**Ask it of *sections*, not of documents — and the answer is that every set is a ceiling.** The test
+was applied three times as "does this set contain an append-only *file*", and each time it missed the
+one member every set has: `CLAUDE.md`, whose **gate roster is append-only**. Gate IDs are fixed and
+new gates append (id-registry §6); a retired gate would stay listed exactly as a retired rule does.
+So adding G17 pushed `every-task` past a ratchet that had one word of headroom, on a change that was
+entirely correct — the fifth appearance of this class, and the first one the *rule* caught instead of
+the gate catching it by surprise. **Both remaining ratchets are now ceilings**, and the general form
+is worth more than the two reclassifications: a set is a ceiling if **any part of any member** grows
+by design, and a roster of identifiers inside an otherwise bounded document is such a part.
+
 ```load-sets
-# RATCHET — all members bounded.
-# Loaded before anything else, every single task.
-every-task = 3200
+# Recording a quantity against a standard: which unit code, which identifier, which instant.
+# CEILING — CLAUDE.md's gate roster, and the regulatory reference carries a verified-on date per
+# entry that grows as entries are re-verified (risk #12). When 4300 is reached the answer is a
+# slice selector over the reference's code tables, the same treatment `planning` gives the ADR index.
+#   This set exists because the `unit-codes` evaluation task was declared against `every-task`, which
+# carries no code list at all: the three codes the task needs appear there only as an illustration
+# inside an anti-pattern bullet, and the fourth appears nowhere. Two runs answered honestly and one
+# of them was scored as a failure. **A task can only be scored against a set that can answer it**,
+# and the set — not the answer — was what was wrong (ADR-0043).
+recording-a-quantity = 4300
+  CLAUDE.md
+  docs/_index.md
+  docs/standards/REGULATORY_FRAMEWORK.md
+
+# CEILING — contains CLAUDE.md, whose gate roster appends a line per gate and never removes one.
+# Held at a ratchet until 2026-08-03, when adding G17 put it 10 words over with correct work.
+# When 3400 is reached the answer is compressing that roster to gate names only: the one-line
+# descriptions are already carried in full by knowledge-architecture.md §11, so the entry point can
+# cite the section instead of duplicating it. Do not raise this; do not trim prose that earns its
+# place to make room for a roster that has a better home.
+every-task = 3400
   CLAUDE.md
   docs/_index.md
   docs/program/evaluation.md
@@ -61,8 +89,10 @@ planning = 20000
   docs/program/WORKFLOW.md
   docs/10-decisions/README.md#adr-index
 
-# RATCHET — all members bounded.
-# Adding or changing a concept node.
+# CEILING — contains CLAUDE.md (its gate roster) and knowledge-architecture.md (the same roster in
+# full), both append-only in the part that matters. When 8200 is reached the answer is the same one
+# `every-task` names, taken in the other direction: §11 keeps the descriptions, CLAUDE.md keeps only
+# the names, and this set pays for one copy instead of two.
 authoring-a-concept = 8200
   CLAUDE.md
   docs/_index.md
@@ -86,31 +116,46 @@ changing-a-rule = 10000
   docs/00-governance/id-registry.md
   docs/50-engineering/rule.md
 
-# CEILING — contains the improvement register AND the risk register, both append-only (closed risks
-# stay listed; lessons are never deleted). REACHED 2026-08-03 at 12,069 words, and the declared exit
-# was taken rather than re-argued: eight closed risk rows moved to risk-register-archive.md, nothing
-# deleted. Back to 11,523. The next time this is reached, the improvement register's `done` rows are
-# the remaining candidate — and the number still does not move.
+# CEILING — contains the risk register, which is append-only (a closed risk stays listed so old
+# references resolve). REACHED TWICE. First on 2026-08-03 at 12,069 words: the declared exit was
+# taken rather than re-argued — eight closed risk rows moved to risk-register-archive.md, nothing
+# deleted, back to 11,523. Reached AGAIN the same day at 12,275, and the exit named for that
+# occurrence (archive the improvement register's `done` rows) turned out to be the wrong instrument:
+# every remaining closed row carries a live review trigger, and filing away a live warning to satisfy
+# a word count inverts what the budget is for. So the set changed shape instead. The improvement
+# register LEFT the set: it is the *record* of incidents, its distillation into decision rules now
+# lives in known-pitfalls.md (a document review-protocol.md already pointed at and which did not
+# exist). 12,275 → 7,004 — the same fix as `planning`'s slice, applied to a document instead of a
+# file range: load the unit that is actually read.
+#   The pitfall list was FIRST appended to evaluation.md, which was already a member — and that broke
+# `every-task`, `authoring-a-concept` and `changing-a-rule`, because evaluation.md belongs to four
+# sets. G14 caught it immediately, which is the second time this gate has priced a placement decision
+# the author had not thought of as one. Hence its own file, in this set only.
+# The next exit, when 12000 is reached again: the pitfall list is the thing that will have grown, and
+# a pitfall whose enforcement is a gate can be dropped to a citation of that gate.
 reviewing-the-estate = 12000
   CLAUDE.md
   docs/_index.md
   docs/program/evaluation.md
   docs/program/review-protocol.md
+  docs/program/known-pitfalls.md
   docs/00-governance/risk-register.md
-  docs/program/improvement-register.md
 ```
 
 ## What the numbers say today
 
-Measured 2026-08-02, at the moment the gate was written:
+Measured 2026-08-03. **Every set is a ceiling** — see the section test above.
 
-| Set | Kind | Words | ≈ Tokens | Budget |
-|---|---|---|---|---|
-| `every-task` | ratchet | 2,992 | 3,979 | 3,200 |
-| `authoring-a-concept` | ratchet | 6,722 | 8,940 | 7,200 |
-| `changing-a-rule` | **ceiling** | 8,157 | 10,849 | 10,000 |
-| `reviewing-the-estate` | **ceiling** | 11,523 | 15,326 | 12,000 |
-| **`planning`** | **ceiling** | **17,409** | **23,153** | 20,000 |
+| Set | Words | ≈ Tokens | Budget |
+|---|---|---|---|
+| `every-task` | 3,210 | 4,269 | 3,400 |
+| `reviewing-the-estate` | 7,004 | 9,315 | 12,000 |
+| `authoring-a-concept` | 7,724 | 10,273 | 8,200 |
+| `changing-a-rule` | 8,267 | 10,995 | 10,000 |
+| **`planning`** | **18,993** | **25,260** | 20,000 |
+
+The gate prints these on every run, so the table is a snapshot for reading, never the source of
+truth — and it is the one place in this file that can go stale without anything failing.
 
 **`planning` was 35,453 words and is 17,409 — halved without moving a file.** The whole difference is
 the `adr-index` slice: the ADR file is 20,200 words, of which 1,950 are the entries a planning
@@ -119,8 +164,8 @@ session actually scans. Neither it nor `WORKFLOW.md` carries a G9 budget, becaus
 the two `CLAUDE.md` instructs a session to load on every planning task — and pricing the *unit that
 is read* rather than the file it sits in was the whole fix.
 
-**The gate caught the same mistake three times, which is how the ratchet/ceiling distinction got
-made — and the third time was after the rule for it had been written.**
+**The gate caught the same mistake five times, which is how the ratchet/ceiling distinction got made
+— and only the last one was caught by the rule rather than by the gate.**
 
 - **First**, on the commit that introduced G14: `planning` measured 32,009 and the budget was set at
   33,000 as a ratchet. Writing the two ADRs that adopt G14 and the mutation harness added 1,674
@@ -135,7 +180,18 @@ made — and the third time was after the rule for it had been written.**
   already written when this happened; **it had been written and not applied to the sets that already
   existed**, which is improvement #15's lesson for the third time in the same file.
 
-Both ceilings carry a structural answer, not just headroom — and `planning`'s changed.
+- **A fourth time, on `reviewing-the-estate` again**, hours after its exit had been taken — and the
+  exit named for the *next* occurrence turned out to be the wrong instrument. Every remaining closed
+  risk row carries a live review trigger, so archiving one to save words would have filed away a live
+  warning. The set changed shape instead: the improvement register left it, and the pitfall list it
+  distils to took its place. **A declared exit is a hypothesis about the next breach, and it can be
+  wrong; what it must never be is a raise nobody argued for.**
+- **A fifth time, on `every-task`** — 10 words over, from adding G17 to `CLAUDE.md`'s gate roster.
+  This is the first occurrence the *rule* caught rather than the gate: the roster is append-only, so
+  the set was never a ratchet, and asking the classification question of **sections** rather than
+  files is what the previous four sweeps had all missed.
+
+Every ceiling carries a structural answer, not just headroom — and `planning`'s changed.
 
 **Splitting the ADR bodies into files was the obvious answer and the owner rejected it** (backlog
 X3): the index is to keep working by index search, because splitting would collide with planned work.

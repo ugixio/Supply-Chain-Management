@@ -12,7 +12,7 @@ use std::fs;
 use std::path::PathBuf;
 use std::time::Duration;
 
-use scm_ingest::Sample;
+use scm_ingest::{MetricKind, MetricRegistry, Sample};
 use scm_ingest_clickhouse::{
     DeadLetter, Outcome, RetryPolicy, Sleeper, Transport, TransportError, Writer,
 };
@@ -112,6 +112,14 @@ fn policy() -> RetryPolicy {
     RetryPolicy::new(4, Duration::from_millis(10), Duration::from_millis(100))
 }
 
+/// The kinds the writer stamps from. Only the metric names these tests emit need to be here.
+fn registry() -> MetricRegistry {
+    MetricRegistry::new(vec![
+        ("deployment_frequency".to_owned(), MetricKind::Flow),
+        ("open_work_orders".to_owned(), MetricKind::Level),
+    ])
+}
+
 #[test]
 fn a_healthy_write_costs_one_attempt_and_no_waiting() {
     let dir = TempDir::new("happy");
@@ -120,6 +128,7 @@ fn a_healthy_write_costs_one_attempt_and_no_waiting() {
         CountingSleeper::default(),
         policy(),
         DeadLetter::new(dir.file("dl.ndjson"), 4096).unwrap(),
+        registry(),
     );
 
     let outcome = writer.write(&[sample("p", 1), sample("p", 2)]);
@@ -151,6 +160,7 @@ fn a_transient_failure_is_retried_and_then_succeeds() {
         CountingSleeper::default(),
         policy(),
         DeadLetter::new(dir.file("dl.ndjson"), 4096).unwrap(),
+        registry(),
     );
 
     let outcome = writer.write(&[sample("p", 1)]);
@@ -179,6 +189,7 @@ fn a_retry_past_an_ambiguous_failure_is_reported_as_possibly_duplicated() {
         CountingSleeper::default(),
         policy(),
         DeadLetter::new(dir.file("dl.ndjson"), 4096).unwrap(),
+        registry(),
     );
 
     let outcome = writer.write(&[sample("p", 1)]);
@@ -206,6 +217,7 @@ fn a_refusal_is_not_retried_and_goes_straight_to_the_dead_letter() {
         CountingSleeper::default(),
         policy(),
         DeadLetter::new(&path, 4096).unwrap(),
+        registry(),
     );
 
     let outcome = writer.write(&[sample("p", 1)]);
@@ -239,6 +251,7 @@ fn an_exhausted_budget_dead_letters_every_sample_with_the_last_reason() {
         sleeper,
         policy(),
         DeadLetter::new(&path, 65_536).unwrap(),
+        registry(),
     );
 
     let batch = vec![sample("p", 1), sample("p", 2), sample("p", 3)];
@@ -279,6 +292,7 @@ fn every_attempt_sends_byte_identical_content() {
         CountingSleeper::default(),
         policy(),
         DeadLetter::new(dir.file("dl.ndjson"), 4096).unwrap(),
+        registry(),
     );
     writer.write(&[sample("p", 1), sample("p", 2)]);
 
@@ -304,6 +318,7 @@ fn an_empty_batch_is_not_counted_as_a_write() {
         CountingSleeper::default(),
         policy(),
         DeadLetter::new(dir.file("dl.ndjson"), 4096).unwrap(),
+        registry(),
     );
 
     assert_eq!(writer.write(&[]), Outcome::Empty);
@@ -323,6 +338,7 @@ fn a_single_attempt_policy_never_retries() {
         CountingSleeper::default(),
         RetryPolicy::new(1, Duration::from_millis(10), Duration::from_millis(10)),
         DeadLetter::new(dir.file("dl.ndjson"), 4096).unwrap(),
+        registry(),
     );
 
     match writer.write(&[sample("p", 1)]) {
@@ -347,6 +363,7 @@ fn a_zero_attempt_policy_is_corrected_to_one_rather_than_dropping_silently() {
         CountingSleeper::default(),
         RetryPolicy::new(0, Duration::from_millis(1), Duration::from_millis(1)),
         DeadLetter::new(dir.file("dl.ndjson"), 4096).unwrap(),
+        registry(),
     );
 
     assert!(matches!(
@@ -364,6 +381,7 @@ fn waiting_between_attempts_follows_the_capped_backoff() {
         CountingSleeper::default(),
         RetryPolicy::new(5, Duration::from_millis(10), Duration::from_millis(30)),
         DeadLetter::new(dir.file("dl.ndjson"), 4096).unwrap(),
+        registry(),
     );
     writer.write(&[sample("p", 1)]);
 
@@ -382,6 +400,7 @@ fn a_transport_that_never_recovers_still_bounds_the_dead_letter() {
         CountingSleeper::default(),
         RetryPolicy::new(1, Duration::from_millis(1), Duration::from_millis(1)),
         DeadLetter::new(&path, 512).unwrap(),
+        registry(),
     );
 
     for n in 0..40 {
@@ -416,6 +435,7 @@ fn the_schema_guard_reads_through_the_transport() {
         "value\tFloat64",
         "environment\tLowCardinality(String)",
         "unit\tLowCardinality(String)",
+        "kind\tLowCardinality(String)",
     ]
     .join("\n");
     let writer = Writer::new(
@@ -423,6 +443,7 @@ fn the_schema_guard_reads_through_the_transport() {
         CountingSleeper::default(),
         policy(),
         DeadLetter::new(dir.file("dl.ndjson"), 4096).unwrap(),
+        registry(),
     );
     assert_eq!(writer.verify_schema(), Ok(()));
 }
@@ -436,6 +457,7 @@ fn the_schema_guard_refuses_a_table_that_has_not_been_migrated() {
         CountingSleeper::default(),
         policy(),
         DeadLetter::new(dir.file("dl.ndjson"), 4096).unwrap(),
+        registry(),
     );
     assert!(
         writer.verify_schema().is_err(),

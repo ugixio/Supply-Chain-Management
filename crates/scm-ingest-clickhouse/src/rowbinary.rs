@@ -17,25 +17,29 @@
 //! `ingested_at` is deliberately **not** sent: the table defaults it to `now64(3)`, so arrival time
 //! is stamped by the server that receives the row rather than by a client whose clock is unverified.
 
-use scm_ingest::Sample;
+use scm_ingest::{MetricKind, MetricRegistry, Sample};
 
 /// The columns this encoder writes, with the ClickHouse type each one must have.
 ///
 /// `LowCardinality(String)` is written as a plain `String` on the wire — the dictionary lives in the
 /// table, not in the payload — so the encoder treats both identically while the guard still checks
 /// the declared type.
-pub const COLUMNS: [(&str, &str); 6] = [
+pub const COLUMNS: [(&str, &str); 7] = [
     ("project_id", "String"),
     ("metric", "LowCardinality(String)"),
     ("ts", "DateTime64(3, 'UTC')"),
     ("value", "Float64"),
     ("environment", "LowCardinality(String)"),
     ("unit", "LowCardinality(String)"),
+    // Added by migration 0006. It decides which aggregation the read views expose, so a wrong
+    // spelling here does not fail — it makes a level invisible to `levels_1m` and absent from
+    // `flows_1m` too, which is a metric that silently stops being charted.
+    ("kind", "LowCardinality(String)"),
 ];
 
 /// The statement every batch is posted with. Column order here *is* the wire order.
 pub const INSERT_STATEMENT: &str = "INSERT INTO telemetry.samples \
-    (project_id, metric, ts, value, environment, unit) FORMAT RowBinary";
+    (project_id, metric, ts, value, environment, unit, kind) FORMAT RowBinary";
 
 /// Appends a LEB128 (unsigned varint) length, the encoding ClickHouse uses for `String` sizes.
 fn write_varint(out: &mut Vec<u8>, mut value: u64) {
@@ -59,24 +63,31 @@ fn write_string(out: &mut Vec<u8>, value: &str) {
 /// Encodes one sample. `ts_ms` maps directly onto `DateTime64(3)`, which *is* a millisecond count:
 /// scale 3 means the underlying `Int64` is milliseconds, so no conversion is applied and none should
 /// be. A negative instant (before 1970) encodes correctly as two's complement.
-pub fn encode_sample(out: &mut Vec<u8>, sample: &Sample) {
+pub fn encode_sample(out: &mut Vec<u8>, sample: &Sample, kind: MetricKind) {
     write_string(out, &sample.project_id);
     write_string(out, &sample.metric);
     out.extend_from_slice(&sample.ts_ms.to_le_bytes());
     out.extend_from_slice(&sample.value.to_le_bytes());
     write_string(out, &sample.environment);
     write_string(out, &sample.unit);
+    write_string(out, kind.as_str());
 }
 
 /// Encodes a whole batch into one contiguous body.
 ///
 /// Capacity is reserved from a per-sample estimate rather than grown repeatedly: the batch size is
 /// known, and a reallocation partway through a flush is pure waste on the hot path.
-pub fn encode_batch(batch: &[Sample]) -> Vec<u8> {
+pub fn encode_batch(batch: &[Sample], registry: &MetricRegistry) -> Vec<u8> {
     const ESTIMATED_BYTES_PER_SAMPLE: usize = 64;
     let mut out = Vec::with_capacity(batch.len() * ESTIMATED_BYTES_PER_SAMPLE);
     for sample in batch {
-        encode_sample(&mut out, sample);
+        // A batch reaching the encoder has already passed the pipeline, which rejects an unknown
+        // metric — so `None` is unreachable through the normal path. It is still handled rather
+        // than unwrapped: the alternative is a panic on the ingest hot path, and dropping the
+        // sample loses one point where a panic loses the process and the batch with it.
+        if let Some(kind) = registry.kind_of(&sample.metric) {
+            encode_sample(&mut out, sample, kind);
+        }
     }
     out
 }
@@ -84,6 +95,17 @@ pub fn encode_batch(batch: &[Sample]) -> Vec<u8> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn sample(metric: &str, value: f64) -> Sample {
+        Sample {
+            project_id: "p".to_owned(),
+            metric: metric.to_owned(),
+            ts_ms: 1_000,
+            value,
+            environment: "prod".to_owned(),
+            unit: "count".to_owned(),
+        }
+    }
 
     #[test]
     fn varint_matches_leb128() {
@@ -112,7 +134,7 @@ mod tests {
             unit: "count".to_owned(),
         };
         let mut out = Vec::new();
-        encode_sample(&mut out, &sample);
+        encode_sample(&mut out, &sample, MetricKind::Flow);
 
         let mut expected = Vec::new();
         expected.extend_from_slice(&[1, b'p']);
@@ -122,6 +144,7 @@ mod tests {
         expected.extend_from_slice(&1.0_f64.to_le_bytes());
         expected.extend_from_slice(&[4, b'p', b'r', b'o', b'd']);
         expected.extend_from_slice(&[5, b'c', b'o', b'u', b'n', b't']);
+        expected.extend_from_slice(&[4, b'f', b'l', b'o', b'w']);
         assert_eq!(out, expected);
     }
 
@@ -138,8 +161,11 @@ mod tests {
             unit: String::new(),
         };
         let mut out = Vec::new();
-        encode_sample(&mut out, &sample);
-        assert_eq!(out[out.len() - 2..], [0, 0]);
+        encode_sample(&mut out, &sample, MetricKind::Flow);
+        // The two empty labels, then the kind — which is never empty, because a sample with no
+        // governed kind is dropped before it reaches the encoder.
+        assert_eq!(out[out.len() - 7..out.len() - 5], [0, 0]);
+        assert!(out.ends_with(b"flow"));
     }
 
     #[test]
@@ -155,7 +181,7 @@ mod tests {
             unit: String::new(),
         };
         let mut out = Vec::new();
-        encode_sample(&mut out, &sample);
+        encode_sample(&mut out, &sample, MetricKind::Flow);
         assert_eq!(out[0], 4, "two 2-byte characters are four bytes");
     }
 
@@ -170,7 +196,7 @@ mod tests {
             unit: String::new(),
         };
         let mut out = Vec::new();
-        encode_sample(&mut out, &sample);
+        encode_sample(&mut out, &sample, MetricKind::Flow);
         let ts = &out[4..12];
         assert_eq!(ts, (-1_i64).to_le_bytes());
     }
@@ -190,14 +216,49 @@ mod tests {
             ..one.clone()
         };
         let mut expected = Vec::new();
-        encode_sample(&mut expected, &one);
-        encode_sample(&mut expected, &two);
-        assert_eq!(encode_batch(&[one, two]), expected);
+        encode_sample(&mut expected, &one, MetricKind::Flow);
+        encode_sample(&mut expected, &two, MetricKind::Flow);
+        let registry = MetricRegistry::new(vec![(one.metric.clone(), MetricKind::Flow)]);
+        assert_eq!(encode_batch(&[one, two], &registry), expected);
+    }
+
+    #[test]
+    fn the_kind_is_stamped_from_the_registry_and_not_from_the_sample() {
+        // The sample carries no kind at all — this is the property that stops an emitter from
+        // relabelling its own metric, and the reason `Sample` has no such field.
+        let level = sample("open_work_orders", 40.0);
+        let flow = Sample {
+            metric: "deployment_frequency".to_owned(),
+            ..level.clone()
+        };
+        let registry = MetricRegistry::new(vec![
+            ("open_work_orders".to_owned(), MetricKind::Level),
+            ("deployment_frequency".to_owned(), MetricKind::Flow),
+        ]);
+
+        let as_level = encode_batch(&[level], &registry);
+        let as_flow = encode_batch(&[flow], &registry);
+
+        assert!(
+            as_level.ends_with(b"level"),
+            "a level must encode as `level`"
+        );
+        assert!(as_flow.ends_with(b"flow"), "a flow must encode as `flow`");
+    }
+
+    #[test]
+    fn an_ungoverned_metric_is_dropped_rather_than_encoded_without_a_kind() {
+        // Unreachable through the pipeline, which rejects it earlier. Asserted anyway, because the
+        // alternative implementations are a panic on the hot path or a row with an empty kind —
+        // and an empty kind is invisible to BOTH read views, which is a metric that silently stops
+        // being charted rather than one that fails loudly.
+        let orphan = sample("a_metric_no_node_defines", 1.0);
+        assert!(encode_batch(&[orphan], &MetricRegistry::default()).is_empty());
     }
 
     #[test]
     fn an_empty_batch_encodes_to_nothing() {
         // Posting an empty body would be a valid but pointless request; the writer must not send it.
-        assert!(encode_batch(&[]).is_empty());
+        assert!(encode_batch(&[], &MetricRegistry::default()).is_empty());
     }
 }

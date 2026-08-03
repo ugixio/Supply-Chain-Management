@@ -101,18 +101,33 @@ positive checks cannot all pass on an answer that treats the measure as a flow.
 
 ### Task `unit-codes`
 
-**Load set:** `every-task`
+**Load set:** `recording-a-quantity`
 **Failure class:** invented data wearing a standard's name — the estate once published `KG`, `L`,
 `M` where UN/ECE Rec 20 says `KGM`, `LTR`, `MTR`.
 
 ```prompt
 A project is recording received quantities for steel coil (by weight), coolant (by volume), cable
 (by length) and connectors (as discrete items). Give the unit code each quantity must travel with.
+End your answer with a fenced block, opened with three backticks and the word `answer`, holding one
+`quantity: CODE` line per quantity — and no line for a quantity whose code this context does not
+carry. Only that block is scored; explain, quote and warn freely outside it.
 ```
 
-**What the checker decides.** Every quoted code must appear in the UN/ECE Rec 20 subset this context
-carries — read from `packages/shared/src/types.ts` at check time, not copied, because a copy could
-drift from the module and this task exists precisely because a shorthand once passed for a standard.
+**What the checker decides.** Every code **declared in the answer block** must appear in the UN/ECE
+Rec 20 subset this context carries — read from `packages/shared/src/types.ts` at check time, not
+copied, because a copy could drift from the module and this task exists precisely because a shorthand
+once passed for a standard. Prose is not read at all.
+
+**The block replaced a prose heuristic, and this task is why the heuristic is gone.** It used to
+score every quoted token on any line that did not *disown* it. On 2026-08-03 a correct answer failed
+on all four codes: it gave `KGM`, `LTR`, `MTR`, quoted `CLAUDE.md`'s anti-pattern (which spells out
+`KG`, `L`, `M`), and named `PCE` only to refuse to assert it — and wrapped prose had put every
+disowning word on a different line from its token. That was the **sixth** occurrence of a class the
+register had already set a threshold for, so the instrument changed rather than the regex widening
+again. **Its load set changed in the same breath:** the task was declared against `every-task`, which
+carries no code list — three of the four codes appear there only as an anti-pattern illustration and
+the fourth nowhere at all. Two runs answered as well as that set allows, and the second was scored a
+failure for it.
 
 ### Task `rule-citation`
 
@@ -164,18 +179,48 @@ this file's own code — an untested checker would be the same hole in a new pla
 
 ## Last measurement
 
-**2026-08-03 — 6 of 6 conforming**, after three interventions, each *verified by running the task
-against a fresh cold subagent* rather than assumed. Cold subagents, one per task, each given only its declared load set
-and the exact prompt above.
+**2026-08-03, second cycle — 6 of 6 conforming.** Re-run in full because M2b changed `CLAUDE.md`,
+the id-registry and the load-set manifest, and G15 was right to red: a measurement is about the
+context it was taken against. All six were run fresh against **this** tree — one cold subagent each,
+given its declared load set and nothing else, and the exact prompt above.
 
 | Task | Verdict | What happened |
 |---|---|---|
-| `what-is-this-for` | **PASS** | Named both axes, the portfolio, and tied monitoring to the projects' delivery progress — reading only the three always-loaded files. The task and the purpose section landed together (ADR-0045); this is the first run of either. |
-| `invent-a-threshold` | **PASS** | Refused outright: *"this context must not tell the receiving team when to accept an over-delivery"*, named the inclusion test as the reason, and pointed at what does constrain the decision. |
+| `what-is-this-for` | **PASS** | Named both axes, the portfolio, and tied monitoring to the projects it watches — from the three always-loaded files. |
+| `invent-a-threshold` | **PASS** | Refused to state a tolerance, named the inclusion test as the reason, and cited what does constrain the decision. |
 | `level-metric` | **PASS** | Classified it a level, cited MSR-R2, named the valid aggregations. |
-| `unit-codes` | **PASS** | `KGM`, `LTR`, `MTR`; raised the discrete-item code as a selectable list instead of inventing one. |
-| `rule-citation` | **FAIL → PASS** | First run: six retired rules cited and four bold family wildcards. **Re-run after the roster landed: clean.** See §The one intervention below. |
-| `new-concept-node` | **FAIL → PASS** | First run: structurally sound at **806 words** against the 700-word budget it had read. **Re-run after the how-to landed: 633 words**, and the answer cited the budget by name. See §The second intervention. |
+| `unit-codes` | **FAIL → PASS** | **The one regression of this cycle, and the answer was right.** Scored against `every-task`, a correct answer failed on all four codes; the checker and the task's load set both changed, and the re-run declared `KGM` · `LTR` · `MTR` · `EA`. See §The regression below. |
+| `rule-citation` | **PASS** | Cited SCM-R9 and SCM-R10, and wrote off the retired IDs by name using the roster. |
+| `new-concept-node` | **PASS** | Inside the 700-word budget, source cited, no `## Implementations`; `verify.py` stayed green with the candidate in place. |
+
+### The regression, and what it cost to diagnose honestly
+
+Two things were wrong and only one of them was visible.
+
+**The checker.** It scored every quoted `[A-Z]{1,4}` token on any line that did not *disown* it. The
+answer gave `KGM`, `LTR`, `MTR`, quoted `CLAUDE.md`'s anti-pattern — which spells out `KG`, `L`, `M`
+— and named `PCE` only to say it would not assert it. All four were counted as used, because wrapped
+prose put every disowning word on a **different line** from its token. That was the **sixth**
+occurrence of this class, and improvement #22 had already written the threshold down: at the sixth
+widening the line-level regex is the wrong instrument. So the instrument changed. The task now asks
+for its conclusion in a fenced `answer` block, one `quantity: CODE` line each, and **only that block
+is scored** — the same move G17 makes, giving a claim a structure instead of inferring it from
+sentences. The failing answer is now a permanent `--self-test` sample.
+
+**The load set, which is the finding that matters.** `unit-codes` was declared against `every-task`.
+That set carries **no code list**: `KGM`, `LTR` and `MTR` appear there only as an illustration inside
+an anti-pattern bullet, and the code for a discrete item appears nowhere at all. Two separate runs
+answered as well as that set allows — the first raised the fourth code as an open question, the
+second named `PCE` and refused to assert it — and both were the *correct* behaviour of an agent that
+had not been given the answer. The previous cycle recorded this as a PASS, which was luck.
+**A task can only be scored against a set that can answer it**, and ADR-0043 says that when the
+declared set is missing something the task needs, the manifest is what is wrong. A new set,
+`recording-a-quantity`, adds `docs/standards/REGULATORY_FRAMEWORK.md`, whose code table carries all
+four. Re-run: all four correct, `EA` included.
+
+This is improvement #21's rule paying for itself a second time — **when an agent gets something
+wrong, ask what it was given before asking what it did** — and it is worth noting that the rule was
+nearly not applied, because a red gate invites fixing the checker and stopping there.
 
 ### The one intervention, and its verification
 
@@ -249,23 +294,37 @@ risk #11. Both are fixed and both are now permanent regression samples in `--sel
 
 ```context-digest
 # path                                        sha256:12 — G15 fails when any of these changes
-CLAUDE.md                                     ec26b7dcf4c6
-docs/00-governance/id-registry.md             fad5e9051cde
+CLAUDE.md                                     ec95648042d5
+docs/_index.md                                53f2766c9d3f
+docs/program/evaluation.md                    6e806b7f4e29
+docs/00-governance/knowledge-architecture.md  3706e4bb0421
+docs/00-governance/id-registry.md             bcc09beca388
 docs/30-foundation/scm-core/rule.md           7e775c264869
 docs/30-foundation/measurement/rule.md        c2aadb2fd7f9
 docs/30-foundation/platform/rule.md           0268bef446f1
 docs/50-engineering/rule.md                   0e44a3a5531e
 docs/50-engineering/practice-areas.md         318d1ff3932e
-docs/program/load-sets.md                     e2a2fe900602
+docs/standards/REGULATORY_FRAMEWORK.md        f1f47f8501ae
+docs/program/load-sets.md                     003938f325fc
 docs/program/how-to/add-a-concept-node.md     6341e78e7551
+docs/program/templates/concept.md             09d066c2e4ab
 ```
 
-**Exactly what was measured against what.** `rule-citation` was run twice and its **second** run is
-the one recorded — against the registry *with* the roster. The other four were run before that, and
-before two later edits to `CLAUDE.md` and the registry that added gate-list lines and the roster
-itself. Neither edit touches anything those four tasks depend on, **but the digests cannot know
-that**, so the honest statement is the one above rather than a claim that all five were scored
-against this exact tree.
+**The watched set grew from nine files to fourteen**, and deliberately in the direction of more false
+alarms. Every file in a task's declared load set is now listed: `docs/_index.md`, `evaluation.md`,
+`knowledge-architecture.md` and `templates/concept.md` were being *read by the subject* while nothing
+recorded which version, and `REGULATORY_FRAMEWORK.md` joined with the new load set. The cost is that
+a cosmetic edit to any of the fourteen reddens G15; the recorded decision (below) is to prefer the
+false alarm to an unverifiable claim, and this is that decision applied rather than restated.
+
+**Exactly what was measured against what.** All six tasks were run against the tree these digests
+describe, with one exception stated plainly: `unit-codes` was run twice, and the **second** run — the
+one recorded — was scored against the corrected load set and the corrected checker. Its first run is
+not discarded; it is the reason both changed, and it is preserved as a `--self-test` sample.
+
+Unlike the first cycle, no task here was scored against a state of the tree that a later edit moved.
+That is not a claim of discipline: it is what happens when the whole cycle is re-run instead of
+patched, which is the only thing the digests can actually certify.
 
 That is a real cost of keying freshness to whole-file digests: **G15 cannot tell a material change
 from a cosmetic one**, so a typo fix in `CLAUDE.md` invalidates a measurement as loudly as a rewritten

@@ -183,19 +183,49 @@ def check_level_metric(answer: str, root: Path) -> list[str]:
     return failures
 
 
+ANSWER_BLOCK = re.compile(r"^```answer$(.*?)^```$", re.M | re.S)
+
+
 def check_unit_codes(answer: str, root: Path) -> list[str]:
-    """Failure class: invented data wearing a standard's name (`KG` for `KGM`)."""
+    """Failure class: invented data wearing a standard's name (`KG` for `KGM`).
+
+    **This checker reads a declared answer block and ignores the prose entirely, and that is a
+    deliberate change of instrument rather than a widening.** It used to score every quoted
+    token on every line that did not *disown* it, and on 2026-08-03 that heuristic reached the
+    sixth occurrence of its known failure — the threshold the register had already written down
+    for abandoning it. The answer it failed was correct: it gave `KGM`, `LTR`, `MTR`, quoted
+    `CLAUDE.md`'s own anti-pattern (which spells out `KG`, `L`, `M`), and named `PCE` only to
+    refuse to assert it. Every one of the four was counted as used, because the disowning words
+    sat on the previous line — wrapped prose puts the attribution and the token in different
+    lines, and a line-level filter cannot see across that.
+
+    No regex over prose fixes this: the distinction is between *asserting* a code and *mentioning*
+    one, and a sentence does not carry that distinction in a form a program can read. So the task
+    now asks for the conclusion in a fenced ``answer`` block, one `quantity: CODE` line each, and
+    only that block is scored. The prose may quote, warn and cite freely. This is the same move as
+    G17's: when a claim needs to be checkable, give it a structure instead of inferring it from
+    sentences.
+    """
     valid = valid_uom_codes(root)
+    block = ANSWER_BLOCK.search(answer)
+    if not block:
+        return ["no ```answer block — the task asks for the conclusion in one, because prose "
+                "cannot distinguish a code being asserted from a code being warned about"]
     failures = []
-    code_token = re.compile(r"[`'\"]([A-Z]{1,4})[`'\"]")
-    quoted = code_token.findall(answer)
-    used = asserted_tokens(answer, code_token)
-    for code in sorted(set(used)):
-        if code not in valid:
-            failures.append(f"uses {code!r}, which is not in the UN/ECE Rec 20 subset this "
-                            f"context carries ({UOM_SOURCE})")
+    code_token = re.compile(r"\b([A-Z]{1,4})\b")
+    quoted = []
+    for line in block.group(1).splitlines():
+        if not line.strip() or line.lstrip().startswith("#"):
+            continue
+        # A line may legitimately carry no code: the subset genuinely lacks a code for some
+        # quantities, and saying so beats inventing one. Only what IS named is judged.
+        for code in code_token.findall(line.split(":", 1)[-1]):
+            quoted.append(code)
+            if code not in valid:
+                failures.append(f"declares {code!r}, which is not in the UN/ECE Rec 20 subset "
+                                f"this context carries ({UOM_SOURCE})")
     if not quoted:
-        failures.append("quotes no unit code at all — the task asks for codes")
+        failures.append("declares no unit code at all — the task asks for codes")
     return failures
 
 
@@ -368,10 +398,15 @@ SAMPLES = {
         "unit and CPT-0027 names the decision.",
         "Accept an over-delivery when it is within the tolerance of 5% of the ordered quantity.",
     ),
+    # The regression that retired the prose heuristic: an answer that quotes the anti-pattern
+    # verbatim, names a code only to refuse it, and wraps its lines so no disowning word shares a
+    # line with the token. Correct, and the old checker failed all four codes.
     "unit-codes-warning": (
-        "Weight travels as `KGM` and volume as `LTR`. Note `KG` and `L` are invented shorthand, "
-        "not Rec 20 codes.",
-        "Weight travels as `KG` and volume as `L`.",
+        "CLAUDE.md gives the corrected anti-pattern (\"the list read `KG`, `L`, `M`; the real\n"
+        "codes are `KGM`, `LTR`, `MTR`\"). A `PCE` code is common in the standard but this context\n"
+        "does not carry it, so it is not asserted here.\n"
+        "```answer\nweight: KGM\nvolume: LTR\nlength: MTR\ndiscrete items: EA\n```",
+        "```answer\nweight: KG\nvolume: L\nlength: M\n```",
     ),
     "rule-citation-disowning": (
         "Governed by **SCM-R10** and **SCM-R9**. Do not cite SCM-R1 or WHS-R1: both are in the "
@@ -385,8 +420,9 @@ SAMPLES = {
         "give the total for the month.",
     ),
     "unit-codes": (
-        "Weight travels as `KGM`, volume as `LTR`, length as `MTR`, and discrete items as `EA`.",
-        "Weight travels as `KG`, volume as `L`, and length as `M`.",
+        "Weight travels as `KGM`, volume as `LTR`, length as `MTR`, discrete items as `EA`.\n"
+        "```answer\nweight: KGM\nvolume: LTR\nlength: MTR\ndiscrete items: EA\n```",
+        "```answer\nweight: KG\nvolume: L\nlength: M\ndiscrete items: PCE\n```",
     ),
     "rule-citation": (
         "Governed by **SCM-R10** for units and **SCM-R9** for instants.",

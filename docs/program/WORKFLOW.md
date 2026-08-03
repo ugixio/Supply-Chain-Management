@@ -795,12 +795,32 @@ what gets built:
   **M3b remaining:** the transport adapter (ingress) and the ClickHouse client that performs the
   batched insert, plus the retry/dead-letter mechanics the owner chose. Both are adapter work by
   ENG-R10.1, so they belong outside this crate.
-- ⬜ **M2b · HOW** — **Close risk #14: make the rollup safe for levels.** Decided 2026-08-02 with
-  W6b answered *no*, because the defect does not need the scope change to bite. A metric `kind`
-  (flow · level · event-count) declared per series and enforced at ingest, plus `argMaxState` /
-  `anyLastState` alongside the existing `sumState`/`min`/`max`/p95 in `samples_1m`, so a level
-  aggregates by last / max / min and never by sum (**MSR-R2**). Forward-only migration per
-  ADR-0036; `make verify-schema` must cover the new columns.
+- ✅ **M2b · HOW** — **Close risk #14: make the rollup safe for levels.** Decided 2026-08-02 with
+  W6b answered *no*, because the defect does not need the scope change to bite. **Landed
+  2026-08-03**, and the shape changed once during the work in a way worth recording.
+  **What was built.** `db/clickhouse/migrations/0006_metric_kind.sql` adds `kind` to `samples`
+  (`LowCardinality(String)`, `DEFAULT ''` per ADR-0036's no-`Nullable` rule) and to all three
+  rollups, plus a `last_state` per rollup, and recreates the three materialized views. In
+  `crates/scm-ingest`, `MetricKind` and `MetricRegistry` replace the flat governed-metric list:
+  validation now asks `registry.kind_of(metric)`, and `Sample` deliberately has **no** `kind` field
+  so an emitter cannot declare its own metric a flow. `crates/scm-ingest-clickhouse` carries the
+  column as the 7th in `COLUMNS`/`INSERT_STATEMENT`; `encode_batch` takes the registry and **drops**
+  an ungoverned metric rather than encoding a blank kind.
+  **The enforcement is a missing column, not a warning.** The plan said "`argMaxState` alongside
+  `sumState`, so a level aggregates by last and never by sum" — an instruction to the reader.
+  Instead the read surface splits: `telemetry.levels_1m` has **no sum column at all** and
+  `telemetry.flows_1m` has no `last_value`, so MSR-R2's forbidden aggregation is not selectable.
+  `apply.py` gains `VIEW_ASSERTIONS` that fail if either absence is ever filled in — the gate checks
+  what is *not* there, which is the only kind of check that survives a helpful future contributor.
+  **Two corrections to the plan itself.** `anyLastState` was wrong and the risk row had named it as
+  an alternative to `argMaxState`: `anyLast` returns whichever row the engine merged last, a
+  nondeterministic pick that diverges from the newest reading exactly under load. And **no ADR was
+  needed** — the fix changes nothing about what the product measures, only that a level may not be
+  summed, which MSR-R2 already fixes.
+  **Not executed in this environment.** No Docker daemon and no `clickhouse-local`, so the migration
+  is unrun locally; `python3 db/clickhouse/apply.py --check-only` fails as designed rather than
+  skipping. CI's `verify-schema` job is what proves the DDL. A duration metric still has no correct
+  kind — recorded as risk #15 rather than guessed at.
 - ⬜ **M4 · HOW** — NestJS + GraphQL as the only counterpart the frontend has; Next.js dashboards.
   **Scope confirmed 2026-08-02:** with P3/P4 kept alive, the gateway serves **two** read surfaces —
   the knowledge read model (ADR-0024/0025) and the telemetry tier (ADR-0036) — and the octagon

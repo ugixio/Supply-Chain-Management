@@ -229,6 +229,18 @@ def mutate_g13(wt: Path) -> list[str]:
     return [CONCEPT]
 
 
+def mutate_g17(wt: Path) -> list[str]:
+    """A table row one cell short of its header.
+
+    The mutant is a three-column table whose second row supplies two cells. Rendered, that row
+    simply shows an empty third cell — which is exactly why the real instance survived two days in
+    the improvement register and fourteen consecutive rows deep.
+    """
+    write(wt, CONCEPT, restamp(read(wt, CONCEPT)) +
+          "\n| Term | Unit | Source |\n|---|---|---|\n| a | b | c |\n| d | e |\n")
+    return [CONCEPT]
+
+
 def mutate_g14(wt: Path) -> list[str]:
     """A load set that reads far more than it declares."""
     text = restamp(read(wt, MANIFEST)).replace(
@@ -296,6 +308,7 @@ MUTANTS = [
     ("G15", "measurement recorded against a changed context", mutate_g15, set()),
     ("G16", "roster fallen behind the retirement tables", mutate_g16_missing, {"G15"}),
     ("G16", "roster claiming a retirement nobody declared", mutate_g16_extra, {"G15"}),
+    ("G17", "table row one cell short of its header", mutate_g17, set()),
 ]
 # The `also` column declares collateral that is real rather than tolerated. G14's and G16's mutants
 # edit `load-sets.md` and `id-registry.md`, both of which the context-adherence measurement is

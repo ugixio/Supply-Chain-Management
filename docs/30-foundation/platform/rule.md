@@ -5,7 +5,7 @@ type: rule
 owner: orchestrator
 status: active
 since: 2026-07-22
-updated: 2026-07-29
+updated: 2026-08-03
 relations:
   - { type: part-of, target: index-foundation }
   - { type: governed-by, target: index-adr }
@@ -61,9 +61,14 @@ relations:
   reference edge — no free-floating project, no project spanning two branches at the top
   level (sub-work in another branch is a linked node, not a second home).
 
+- **PLT-R7 — Governing knowledge is selected and declared, never assumed (ADR-0045):** no project
+  uses the whole context. Before development, the parts that apply are **chosen and reported to the
+  owner**. Knowledge nobody named does not govern; no reader can tell omission from decision.
+
 ## Anti-states (the system must never allow)
 
 - An unrefined prompt reaching execution (PLT-R1).
+- Development under unnamed governing knowledge (PLT-R7).
 - A project writing to, or forking-and-editing, Global Context knowledge (PLT-R2).
 - Guessing a detail whose absence changes the result, or asking for it in prose when a selectable
   list is required (PLT-R6).

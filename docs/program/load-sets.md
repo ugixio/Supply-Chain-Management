@@ -73,9 +73,12 @@ authoring-a-concept = 8200
   docs/30-foundation/scm-core/rule.md
   docs/30-foundation/measurement/rule.md
 
-# RATCHET — all members bounded.
-# Adding or changing a rule in any family.
-changing-a-rule = 8000
+# CEILING — contains the id-registry, which grows monotonically: every allocation appends to it and
+# nothing is ever removed. A ratchet here went 157 words over on the commit that allocated PLT-R7 and
+# CPT-0167 — the third time this class was met, and the classification rule exists because of it.
+# When 10000 is reached the answer is compacting the CPT allocation prose (one paragraph currently
+# lists every range in words), not another raise.
+changing-a-rule = 10000
   CLAUDE.md
   docs/_index.md
   docs/program/evaluation.md
@@ -83,10 +86,11 @@ changing-a-rule = 8000
   docs/00-governance/id-registry.md
   docs/50-engineering/rule.md
 
-# CEILING — contains the improvement register AND the risk register, both append-only (closed
-# risks stay listed; lessons are never deleted). A ratchet here went red 21 words over on the
-# commit that added one lesson. When 12000 is reached, the answer is archiving closed rows to a
-# dated file, not another raise.
+# CEILING — contains the improvement register AND the risk register, both append-only (closed risks
+# stay listed; lessons are never deleted). REACHED 2026-08-03 at 12,069 words, and the declared exit
+# was taken rather than re-argued: eight closed risk rows moved to risk-register-archive.md, nothing
+# deleted. Back to 11,523. The next time this is reached, the improvement register's `done` rows are
+# the remaining candidate — and the number still does not move.
 reviewing-the-estate = 12000
   CLAUDE.md
   docs/_index.md
@@ -104,8 +108,8 @@ Measured 2026-08-02, at the moment the gate was written:
 |---|---|---|---|---|
 | `every-task` | ratchet | 2,992 | 3,979 | 3,200 |
 | `authoring-a-concept` | ratchet | 6,722 | 8,940 | 7,200 |
-| `changing-a-rule` | ratchet | 7,757 | 10,317 | 8,000 |
-| `reviewing-the-estate` | **ceiling** | 10,554 | 14,037 | 12,000 |
+| `changing-a-rule` | **ceiling** | 8,157 | 10,849 | 10,000 |
+| `reviewing-the-estate` | **ceiling** | 11,523 | 15,326 | 12,000 |
 | **`planning`** | **ceiling** | **17,409** | **23,153** | 20,000 |
 
 **`planning` was 35,453 words and is 17,409 — halved without moving a file.** The whole difference is
@@ -115,8 +119,8 @@ session actually scans. Neither it nor `WORKFLOW.md` carries a G9 budget, becaus
 the two `CLAUDE.md` instructs a session to load on every planning task — and pricing the *unit that
 is read* rather than the file it sits in was the whole fix.
 
-**The gate caught the same mistake twice in one day, which is how the ratchet/ceiling distinction
-got made.**
+**The gate caught the same mistake three times, which is how the ratchet/ceiling distinction got
+made — and the third time was after the rule for it had been written.**
 
 - **First**, on the commit that introduced G14: `planning` measured 32,009 and the budget was set at
   33,000 as a ratchet. Writing the two ADRs that adopt G14 and the mutation harness added 1,674
@@ -126,6 +130,10 @@ got made.**
   a lesson is not applying it** (improvement #15's point, demonstrated on itself), and the fix is
   not a bigger number: it is classifying every set as ratchet or ceiling by asking whether any
   member grows monotonically by design.
+- **And a third time, on `changing-a-rule`** — 157 words over, from allocating PLT-R7 and CPT-0167 in
+  the id-registry, which grows with every allocation and never shrinks. The classification rule was
+  already written when this happened; **it had been written and not applied to the sets that already
+  existed**, which is improvement #15's lesson for the third time in the same file.
 
 Both ceilings carry a structural answer, not just headroom — and `planning`'s changed.
 
@@ -137,8 +145,14 @@ session really loads.
 
 So `planning`'s exit is different: at 20,000 the finding will be that the **"one-line" entries have
 grown into paragraphs** — they average 45 words today, which is a paragraph by any reading. Shorten
-them. For `reviewing-the-estate` the exit is archiving closed risk rows and done improvement rows to
-a dated file. **When either ceiling is reached, that is what happens — not another raise.**
+them.
+
+**`reviewing-the-estate` reached its ceiling on 2026-08-03, and the exit was taken.** Eight closed
+risk rows moved to `risk-register-archive.md` — nothing deleted, because the register's own rule is
+that a closed risk stays listed so old references resolve. 12,069 → 11,523. Worth recording that the
+temptation was to add a thousand to the number, which would have been the fourth instance of a rule
+written and not applied (improvement #28); the point of declaring an exit in advance is that the exit
+is cheaper to take than to re-argue.
 
 ## What this does not claim
 

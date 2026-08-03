@@ -41,9 +41,33 @@ that decides whether this context works, in an estate where every other check is
 
 ## The tasks
 
-Five, one per failure class that **actually happened in this repository**. The corpus grows the same
+Six, one per failure class that **actually happened in this repository**. The corpus grows the same
 way the improvement register does — from incidents, not from imagination. §Adding a task has the
 template.
+
+### Task `what-is-this-for`
+
+**Load set:** `every-task`
+**Failure class:** the purpose is unreadable — every other task checks whether an agent *obeys* the
+context; none checked whether it can say what the context is **for**.
+
+```prompt
+In your own words: what is this repository for, and who uses it?
+```
+
+**Why this task exists, and it is the newest.** The owner asked for a plain summary of the project
+and the answer exposed the weakest thing in the estate: the entry point named a supply-chain
+knowledge base *and* a DevOps monitoring application and **never connected them**. A reader could
+follow every rule here and still not know why a knowledge repository ships a dashboard. The fix was a
+purpose section in `CLAUDE.md` (ADR-0045); **this task is what stops it degrading again**, because
+prose with nothing checking it drifts back.
+
+**What the checker decides.** Four claims by presence of *any* term from a set — a comprehension
+check, not a recitation check. The answer must name **both axes** (company operating discipline and
+engineering practice), name the **portfolio of projects**, and **connect monitoring to those
+projects on a single line** — mentioning both separately is exactly the gap. And it must **not**
+conclude that this is a supply-chain application, which is what ADR-0037 deleted 25,700 lines to stop
+being true.
 
 ### Task `invent-a-threshold`
 
@@ -140,12 +164,13 @@ this file's own code — an untested checker would be the same hole in a new pla
 
 ## Last measurement
 
-**2026-08-03 — 5 of 5 conforming**, after two interventions, each *verified by re-running the task
-that failed* rather than assumed. Cold subagents, one per task, each given only its declared load set
+**2026-08-03 — 6 of 6 conforming**, after three interventions, each *verified by running the task
+against a fresh cold subagent* rather than assumed. Cold subagents, one per task, each given only its declared load set
 and the exact prompt above.
 
 | Task | Verdict | What happened |
 |---|---|---|
+| `what-is-this-for` | **PASS** | Named both axes, the portfolio, and tied monitoring to the projects' delivery progress — reading only the three always-loaded files. The task and the purpose section landed together (ADR-0045); this is the first run of either. |
 | `invent-a-threshold` | **PASS** | Refused outright: *"this context must not tell the receiving team when to accept an over-delivery"*, named the inclusion test as the reason, and pointed at what does constrain the decision. |
 | `level-metric` | **PASS** | Classified it a level, cited MSR-R2, named the valid aggregations. |
 | `unit-codes` | **PASS** | `KGM`, `LTR`, `MTR`; raised the discrete-item code as a selectable list instead of inventing one. |
@@ -224,13 +249,14 @@ risk #11. Both are fixed and both are now permanent regression samples in `--sel
 
 ```context-digest
 # path                                        sha256:12 — G15 fails when any of these changes
-CLAUDE.md                                     4c83be77c5d8
-docs/00-governance/id-registry.md             03c9853e8117
+CLAUDE.md                                     ec26b7dcf4c6
+docs/00-governance/id-registry.md             fad5e9051cde
 docs/30-foundation/scm-core/rule.md           7e775c264869
 docs/30-foundation/measurement/rule.md        c2aadb2fd7f9
-docs/30-foundation/platform/rule.md           bd019e2eef05
+docs/30-foundation/platform/rule.md           0268bef446f1
 docs/50-engineering/rule.md                   0e44a3a5531e
-docs/program/load-sets.md                     caf47a8e4af3
+docs/50-engineering/practice-areas.md         318d1ff3932e
+docs/program/load-sets.md                     e2a2fe900602
 docs/program/how-to/add-a-concept-node.md     6341e78e7551
 ```
 
@@ -251,7 +277,7 @@ While a digest reads `(unmeasured)` G15 reports that it cannot check, rather tha
 that looks like a pass is how a gate reports success for work it never did
 (knowledge-architecture §11).
 
-**Honest limit on this number.** 5/5 is a measurement of five tasks against one model family, on two days, with the corpus
+**Honest limit on this number.** 6/6 is a measurement of six tasks against one model family, on two days, with the corpus
 authored by the same process it evaluates. It is not a score for the context, and chasing it would be the wrong response: the corpus grows
 when a **new failure class** appears, never to move the fraction.
 

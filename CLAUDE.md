@@ -2,13 +2,27 @@
 
 ## What this repository is
 
-A **Global Context**: the source a project consults to learn **which supply-chain departments it
-needs and how to implement them**. It is not a supply-chain product and holds no company's data
-(ADR-0037).
+**The Global Context.** The knowledge a technology company needs to *run itself* and to *build
+software well* — written once, consulted by every project. It carries **two axes**: how a company is
+run (the fourteen supply-chain departments, which are the operating disciplines of any firm that
+buys, builds, delivers and accounts for things) and how software is engineered (the practice areas a
+professional build rests on — `docs/50-engineering/practice-areas.md`). Neither axis describes *this*
+repository: both exist for the projects that read it. It is **not** a supply-chain product and holds
+no company's data (ADR-0037).
 
-The one application built here is **monitoring** — real-time dashboards and delivery metrics over
-a project's development progress (ADR-0031/0034/0036). Everything else in this repository is
-knowledge: standards, department definitions, concepts, and the rules that keep all of it honest.
+**The portfolio of projects.** The context governs a workspace of projects across every technology
+branch — AI, machine learning, data engineering, DevOps, databases, web. A project references context
+nodes by stable ID and overlays its own choices, never mutating them (ADR-0030), and the same bases
+extend to projects outside this workspace. **No project uses all of the knowledge**: which parts
+apply is selected per project and **declared to the owner before development begins**, never assumed
+(PLT-R7).
+
+**Why monitoring is the one application built here.** A company selling technology has to see the
+state of what it is building — progress, production health, tests, delivery telemetry — to decide
+like a company and not like a hobby. The monitoring application is that instrument, and it watches
+**the portfolio this context governs**. That is the whole reason a knowledge repository ships a
+dashboard and nothing else (ADR-0031/0034/0036). Everything else here is knowledge: standards,
+definitions, and the rules that keep them honest.
 
 ## The inclusion test — apply it to every change
 
@@ -47,7 +61,7 @@ docs/              The context itself — tiered knowledge; map: docs/_index.md
   25-concepts/       CPT-NNNN concept nodes, per department
   30-foundation/     Cross-cutting rules (SCM-R*, PLT-*, MSR-*)
   40-contexts/       Per-department rules (PRC-*, DMD-*, INV-* …)
-  50-engineering/    ENG-R* build-time rules
+  50-engineering/    ENG-R* build-time rules; practice-areas.md = the engineering axis roster
   program/           Backlog, operating model, evaluation protocol, templates
 apps/              web · api — the monitoring application (not yet built)
 packages/shared/   @scm/shared — standards reference data only
@@ -79,7 +93,8 @@ tools/context_eval.py  Does an agent *reading* this context comply with it? (ADR
 | US UCC Article 2 | Sale of goods; a quantity must be stated |
 | IEEE 754-2019 §4.3.3 | `roundTiesToEven` — the money rounding rule (SCM-R14) |
 
-Full reference: `docs/standards/REGULATORY_FRAMEWORK.md`.
+Full reference: `docs/standards/REGULATORY_FRAMEWORK.md`. The **engineering axis** anchors its own
+areas — ISO/IEC, OWASP, OCI, OpenTelemetry, and identities — in `docs/50-engineering/practice-areas.md`.
 
 ## Rules (cited by ID, never restated)
 
@@ -89,7 +104,7 @@ Full reference: `docs/standards/REGULATORY_FRAMEWORK.md`.
   (ENG-R4/R5), generated artefacts, exclusive technology lanes (ENG-R8), the six-check
   best-option gate (ENG-R9), the Rust core boundary (ENG-R10), the integration model (ENG-R11).
 - **`PLT-*`** — `docs/30-foundation/platform/rule.md`. Prompt-refinement gate, read-only project
-  reference, everything-connected, node/edge typing.
+  reference, everything-connected, node/edge typing, selected-and-declared knowledge (PLT-R7).
 - **`MSR-*`** — `docs/30-foundation/measurement/rule.md`. Measurement identities: a ratio aggregates
   from its components (MSR-R1), a level is never summed (MSR-R2). Cited, never restated.
 - Per-department families live in `docs/40-contexts/<NN-dept>/rule.md`.

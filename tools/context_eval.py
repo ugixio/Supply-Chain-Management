@@ -213,6 +213,57 @@ def check_rule_citation(answer: str, root: Path) -> list[str]:
     return failures
 
 
+def check_what_is_this_for(answer: str, root: Path) -> list[str]:
+    """Failure class: the purpose is unreadable — the gap the owner found by asking.
+
+    Every other task checks whether an agent **obeys** the context. None checked whether it can say
+    what the context is *for*, and that turned out to be the weakest thing in the estate: an entry
+    point that named a supply-chain knowledge base and a DevOps monitoring app without connecting
+    them. A reader who cannot state the purpose will apply the rules and miss the point.
+
+    Three claims must appear, and one must not. They are checked by presence of *either* vocabulary
+    from a set, never by wording — this is a comprehension check, not a recitation check.
+    """
+    failures = []
+    lowered = answer.lower()
+
+    company_axis = ("supply chain", "supply-chain", "operating discipline", "how a company is run",
+                    "run itself", "departments")
+    engineering_axis = ("engineering", "software practice", "practice area", "best practice",
+                        "how software is", "devops", "architecture")
+    portfolio = ("portfolio", "workspace of projects", "projects that read", "every project",
+                 "other projects")
+    monitoring = ("monitor", "dashboard", "telemetry", "delivery metric")
+
+    if not any(term in lowered for term in company_axis):
+        failures.append("never mentions the company-operating axis (the supply-chain departments) — "
+                        "half of what the context carries")
+    if not any(term in lowered for term in engineering_axis):
+        failures.append("never mentions the engineering-practice axis — the other half")
+    if not any(term in lowered for term in portfolio):
+        failures.append("never mentions the portfolio of projects the context governs, so the "
+                        "context reads as knowledge for nobody")
+
+    # The connection is the part that was missing from the estate, so it is checked at line level:
+    # some single line must tie monitoring to the projects, not merely mention both somewhere.
+    connected = any(any(m in line.lower() for m in monitoring)
+                    and any(p in line.lower() for p in ("project", "portfolio", "delivery",
+                                                        "progress"))
+                    for line in answer.splitlines())
+    if not connected:
+        failures.append("never connects the monitoring application to the projects it watches — "
+                        "mentioning both separately is exactly the gap this task exists for")
+
+    # The one thing an answer must not conclude.
+    for number, line in enumerate(answer.splitlines(), 1):
+        if re.search(r"(supply[- ]chain (application|product|system|software|tool))"
+                     r"|manages? (inventory|warehouses|shipments)", line, re.I) \
+                and not DISOWNS.search(line):
+            failures.append(f"line {number} calls this a supply-chain product, which ADR-0037 "
+                            f"deleted 25,700 lines to stop being true: {line.strip()[:80]!r}")
+    return failures
+
+
 def check_new_concept_node(answer: str, root: Path) -> list[str]:
     """Failure class: structural non-conformance. Decided by the gates, not by this file.
 
@@ -263,6 +314,7 @@ def check_new_concept_node(answer: str, root: Path) -> list[str]:
 
 
 CHECKS = {
+    "what-is-this-for": check_what_is_this_for,
     "invent-a-threshold": check_invent_a_threshold,
     "level-metric": check_level_metric,
     "unit-codes": check_unit_codes,
@@ -293,6 +345,15 @@ def checker_for(sample_id: str):
 # everybody. Same discipline as tools/test_gates.py, applied to this file.
 
 SAMPLES = {
+    "what-is-this-for": (
+        "This is a Global Context: knowledge a technology company uses to run itself — the "
+        "supply-chain departments — and to engineer software well, the practice areas. It governs "
+        "a portfolio of projects across every technology branch, which reference its nodes by ID.\n"
+        "The one application built here is monitoring, and it watches the delivery progress of "
+        "those projects so the company can decide from evidence.",
+        "This repository is a supply-chain application for managing inventory and shipments across "
+        "fourteen departments.",
+    ),
     "invent-a-threshold": (
         "Nothing external fixes an over-receipt tolerance, so this context cannot carry one. "
         "CPT-0027 names the decision and SCM-R10 fixes the unit the quantity travels in; the "

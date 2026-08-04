@@ -127,6 +127,28 @@ def neighbours(path: str, by_id: dict[str, str],
     return [p for p in seen if p != path]
 
 
+EXEMPLAR_FENCE = re.compile(r"^```exemplar$(.*?)^```$", re.M | re.S)
+ARCH = f"{DOCS}/00-governance/knowledge-architecture.md"
+
+# Tasks for which the exemplar is part of the answer. ADR-0048 declared a department the exemplar
+# because *a model imitates a real example more reliably than it deduces from prose* — and then the
+# exemplar sat in no load set, so no session could read it. Authoring is the task that needs it; a
+# planning or quantity-recording session does not.
+EXEMPLAR_TASKS = ("authoring-a-concept",)
+
+
+def exemplar_department() -> str:
+    """The department declared exemplar in knowledge-architecture §10b, or '' if none."""
+    try:
+        fence = EXEMPLAR_FENCE.search(open(ARCH, encoding="utf-8").read())
+    except OSError:
+        return ""
+    if not fence:
+        return ""
+    declared = [line.strip() for line in fence.group(1).splitlines() if line.strip()]
+    return declared[0] if declared else ""
+
+
 def words(path: str) -> int:
     try:
         return len(open(path, encoding="utf-8").read().split())
@@ -140,6 +162,8 @@ def main() -> int:
     parser.add_argument("--target", help="a document the task is about; pulls its graph neighbourhood")
     parser.add_argument("--depth", type=int, default=1, help="graph hops from --target (default 1)")
     parser.add_argument("--paths-only", action="store_true", help="print paths and nothing else")
+    parser.add_argument("--no-exemplar", action="store_true",
+                        help="omit the exemplar department's index on an authoring task")
     args = parser.parse_args()
 
     sets = parse_manifest()
@@ -156,6 +180,13 @@ def main() -> int:
         else:
             declared.append(member.split("#")[0])
 
+    exemplar = []
+    if args.task in EXEMPLAR_TASKS and not args.no_exemplar:
+        dept = exemplar_department()
+        index = f"{DOCS}/25-concepts/{dept}/_index.md" if dept else ""
+        if index and os.path.exists(index):
+            exemplar.append(index)
+
     pulled = []
     if args.target:
         if not os.path.exists(args.target):
@@ -166,7 +197,7 @@ def main() -> int:
             pulled.insert(0, args.target)
 
     seen, ordered = set(), []
-    for path in declared + expanded + pulled:
+    for path in declared + expanded + exemplar + pulled:
         if path not in seen:
             seen.add(path)
             ordered.append(path)
@@ -176,7 +207,8 @@ def main() -> int:
         return 0
 
     total = 0
-    for label, group in (("declared", declared), ("graph member", expanded), ("pulled by target", pulled)):
+    for label, group in (("declared", declared), ("graph member", expanded),
+                        ("exemplar (ADR-0048)", exemplar), ("pulled by target", pulled)):
         group = [p for p in group if p in seen]
         if not group:
             continue
@@ -185,12 +217,20 @@ def main() -> int:
             count = words(path)
             total += count
             print(f"  {count:6}  {path}")
-    print(f"\n  {total:6}  TOTAL for '{args.task}'"
+    declared_total = sum(words(p) for p in declared)
+    print(f"\n  {declared_total:6}  declared members — the quantity G14 governs, ceiling {budget}")
+    print(f"  {total:6}  SESSION TOTAL for '{args.task}'"
           f"{f' + {args.target}' if args.target else ''}")
-    print(f"  {budget:6}  declared ceiling (G14 prices the declaration; this is the session)")
-    if total > budget:
-        print(f"\n  OVER by {total - budget} words. Not truncated on purpose: decide what to drop, or"
-              f"\n  take the structural exit the manifest records for this set (ADR-0041/0050).")
+    # G14's ceiling governs the *declaration*; ADR-0050 split the two on purpose, so a session total
+    # above it is information and not a violation. Saying "OVER" here would conflate the quantity the
+    # gate polices with the one it deliberately does not.
+    if declared_total > budget:
+        print(f"\n  G14 WOULD FAIL: the declaration itself is {declared_total - budget} words over"
+              f"\n  its ceiling. Take the structural exit the manifest records for this set.")
+    elif total > budget:
+        print(f"\n  The session reads {total - budget} words more than the declared ceiling — which is"
+              f"\n  allowed and unpoliced (ADR-0050). Nothing is truncated; the number is the point,"
+              f"\n  so the cost of reaching an example is a decision you make seeing it.")
     return 0
 
 

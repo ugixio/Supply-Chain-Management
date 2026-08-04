@@ -49,6 +49,7 @@ DEPT_RULE = "docs/40-contexts/06-warehouse-management/rule.md"
 REGISTRY = "docs/00-governance/id-registry.md"
 ADR_INDEX = "docs/10-decisions/README.md"
 ARCH = "docs/00-governance/knowledge-architecture.md"
+NODE_MODEL = "docs/20-product-model/node-model.md"
 EXEMPLAR_SKILL = ".claude/skills/procurement/SKILL.md"
 DEPT_INDEX = "docs/25-concepts/06-warehouse-management/_index.md"
 UNLISTED_NODE = "docs/25-concepts/06-warehouse-management/__planted-node.md"
@@ -87,7 +88,7 @@ RETIRED_RULE_ID = "SCM-R1"    # retired by ADR-0037; declared in 30-foundation/s
 # Every path any mutant may create or modify. The harness restores all of them between
 # mutants, so this list must stay in step with the mutations below.
 TOUCHABLE = (CONCEPT, CONCEPT_B, STRAY, MANIFEST, EVAL_RECORD, DEPT_RULE, REGISTRY,
-             ADR_INDEX, ARCH, EXEMPLAR_SKILL, DEPT_INDEX, UNLISTED_NODE)
+             ADR_INDEX, ARCH, EXEMPLAR_SKILL, DEPT_INDEX, UNLISTED_NODE, NODE_MODEL)
 
 
 # --- worktree plumbing ----------------------------------------------------------------
@@ -285,6 +286,38 @@ def mutate_g18_unlisted_node(wt: Path) -> list[str]:
     return [UNLISTED_NODE]
 
 
+def mutate_g19_unanswerable_task(wt: Path) -> list[str]:
+    """A task whose declared set cannot reach what the task must reach (ADR-0051).
+
+    Improvement #34's class, made mechanical: `unit-codes` was scored against a set carrying no unit
+    codes, and two correct answers were failed before the manifest was identified as the defect. The
+    planted token is deliberately absurd so the mutant tests the *check*, not a real coverage gap.
+    """
+    text = restamp(read(wt, EVAL_RECORD))
+    write(wt, EVAL_RECORD, text.replace(
+        "**Must reach:** `MSR-R2`",
+        "**Must reach:** `MSR-R2` · `a-token-no-member-carries`", 1))
+    return [EVAL_RECORD]
+
+
+def mutate_g20_dead_relation(wt: Path) -> list[str]:
+    """A relation type declared, used by nothing, and not declared reserved (ADR-0051).
+
+    This is how `implements` outlived ADR-0037: a legal edge type letting a node point at code long
+    after nodes stopped owning any, which is the affordance that let ENG-R10.7 contradict G10 for six
+    weeks. The harness plants the same shape rather than the same name.
+    """
+    text = restamp(read(wt, ARCH))
+    write(wt, ARCH, text.replace("```reserved-relations\n",
+                                 "```reserved-relations\n", 1))
+    # Reserve a type that IS in use: reserved-and-used is the contradiction the gate must catch.
+    write(wt, ARCH, read(wt, ARCH).replace(
+        "supersedes      G7 needs it",
+        "part-of         planted by the harness: reserved while every document uses it\n"
+        "supersedes      G7 needs it", 1))
+    return [ARCH]
+
+
 def mutate_g10(wt: Path) -> list[str]:
     """A concept node that cites no source."""
     text = restamp(read(wt, CONCEPT))
@@ -414,6 +447,14 @@ MUTANTS = [
      mutate_g18_no_pitfalls, set()),
     ("G18", "a node its department index does not list (G18's fourth claim)",
      mutate_g18_unlisted_node, set()),
+    # G15 does not fire: its digest block lists other files, not `context-eval.md` itself.
+    ("G19", "task must-reach token no member carries", mutate_g19_unanswerable_task, set()),
+    # G14 fires too, and the reason is worth leaving visible: `knowledge-architecture.md` sits in
+    # `authoring-a-concept`, which ADR-0051 left at 8,195 of 8,200. Any line added to that file
+    # breaks the ceiling — the append-only roster pressure the manifest already records.
+    # ...and G15, because that file is also a watched context file: touching it invalidates the
+    # recorded measurement. Both are the gates working, not collateral damage.
+    ("G20", "a relation type reserved while in use", mutate_g20_dead_relation, {"G14", "G15"}),
 ]
 # The `also` column declares collateral that is real rather than tolerated. G14's and G16's mutants
 # edit `load-sets.md` and `id-registry.md`, both of which the context-adherence measurement is

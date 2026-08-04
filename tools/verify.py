@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Doc gates — the executable form of docs/00-governance/knowledge-architecture.md §11.
 
-Implements gates G1-G18 over the tracked knowledge tree (ADR-0012, from the ugixio context
+Implements gates G1-G20 over the tracked knowledge tree (ADR-0012, from the ugixio context
 skeleton ADR-0001/0004). Python 3, standard library only.
 
 G8 (English-only) and G13 (`updated:` truthfulness) were both added on 2026-07-29, and both
@@ -34,8 +34,11 @@ TYPES = {
 }
 OWNERS = {"human", "orchestrator"}  # extend when agent lanes are formalized
 STATUSES = {"draft", "active", "superseded", "deprecated", "archived"}
+# `implements` was retired by ADR-0051: it let a node point at code, which ADR-0037 forbade, G10
+# rejects and ENG-R10.7 was still instructing until it was corrected. Zero documents used it, and G20
+# now refuses to keep an unused type that contradicts a live decision.
 RELATION_TYPES = {
-    "governed-by", "implements", "refines", "depends-on",
+    "governed-by", "refines", "depends-on",
     "supersedes", "superseded-by", "traces-to", "part-of",
 }
 
@@ -131,6 +134,34 @@ DIGEST_UNMEASURED = "(unmeasured)"
 # cannot drift — the same reason G14 parses `load-sets.md`.
 EXEMPLAR_FENCE = re.compile(r"^```exemplar$(.*?)^```$", re.M | re.S)
 PITFALL_HEADING = re.compile(r"^##+ .*pitfall", re.M | re.I)
+
+# --- G19 — an evaluation task can be answered from its declared set (ADR-0051) --------------
+#
+# **A task can only be scored against a set that can answer it.** Improvement #34 found that the hard
+# way: `unit-codes` was declared against a set carrying no unit codes, two *correct* answers were
+# scored as failures, and the manifest — not the answer — was the defect. It was found by accident.
+#
+# Each task now declares `**Must reach:**` tokens in `context-eval.md`; this asserts each appears
+# somewhere in that task's load set. A set that stops being able to answer its own question turns the
+# gate red **before** a cold subagent is spent misreading the result.
+#
+# Tokens rather than semantics on purpose: whether a set *suffices* is not decidable, but whether the
+# identifier an answer must cite is physically present is.
+MUST_REACH = re.compile(r"^### Task `([a-z-]+)`(.*?)(?=^### |\Z)", re.M | re.S)
+MUST_REACH_LINE = re.compile(r"^\*\*Must reach:\*\*\s*(.+)$", re.M)
+TASK_LOAD_SET = re.compile(r"^\*\*Load set:\*\*\s*`([^`]+)`", re.M)
+
+# --- G20 — the relation vocabulary is exercised or declared reserved (ADR-0051) -------------
+#
+# `RELATION_TYPES` is the closed edge vocabulary. A type declared and used by nothing is dead
+# vocabulary, and dead vocabulary invites the defect it was written for: **`implements` survived
+# ADR-0037 as a legal edge type long after nodes stopped owning code**, which is exactly the direction
+# ENG-R10.7 was still instructing when it was corrected. A gate cannot judge a semantic contradiction
+# between prose and code — but it can refuse to keep an unused affordance that makes one possible.
+#
+# Reserved is legitimate and must be *declared*: `supersedes` / `superseded-by` are unused because no
+# document has been superseded yet, and G7 depends on them the moment one is.
+RESERVED_RELATIONS_FENCE = re.compile(r"^```reserved-relations$(.*?)^```$", re.M | re.S)
 
 # --- G17 — table shape ------------------------------------------------------------------
 # The delimiter row (`|---|---|`) is what makes a pipe-delimited line a table header in GFM.
@@ -373,6 +404,8 @@ class Gates:
             "G16": "the retired roster is complete and true",
             "G17": "every table row has the cells its header declares",
             "G18": "the exemplar department is whole",
+            "G19": "an evaluation task can be answered from its declared set",
+            "G20": "the relation vocabulary is exercised or declared reserved",
         }
         ok = True
         for gate in sorted(names, key=lambda name: int(name[1:])):
@@ -816,6 +849,59 @@ def main() -> int:
                 continue
             gates.fail("G18", f"{index_path} does not list '{name}', which sits in the same "
                               f"directory — a reader arriving at the department cannot find it")
+
+    # G19 — every evaluation task can be answered from its declared load set (ADR-0051).
+    eval_text = checked.get(CONTEXT_EVAL_DOC, (None, ""))[1]
+    members_by_set = parse_load_sets()
+    tasks_seen = 0
+    for block in MUST_REACH.finditer(eval_text):
+        task, body = block.group(1), block.group(2)
+        load_set = TASK_LOAD_SET.search(body)
+        must = MUST_REACH_LINE.search(body)
+        if not load_set:
+            continue
+        tasks_seen += 1
+        if not must:
+            gates.fail("G19", f"{CONTEXT_EVAL_DOC}: task '{task}' declares no '**Must reach:**' line "
+                              f"— a task whose inputs are unstated cannot have them checked")
+            continue
+        corpus = []
+        for member in members_by_set.get(load_set.group(1), ()):
+            path = member.split("#")[0]
+            if path.startswith("graph:"):
+                wanted = path.split(":", 1)[1]
+                path = next((p_ for p_, (m_, _) in docs.items() if m_.get("id") == wanted), "")
+            if path and os.path.exists(path):
+                corpus.append(open(path, encoding="utf-8").read())
+        haystack = "\n".join(corpus)
+        for token in re.findall(r"`([^`]+)`", must.group(1)):
+            if token not in haystack:
+                gates.fail("G19", f"task '{task}' must reach `{token}`, which appears in no member of "
+                                  f"its '{load_set.group(1)}' load set — the manifest cannot answer "
+                                  f"the question, so a failure would accuse the answer wrongly")
+    if tasks_seen == 0:
+        gates.fail("G19", f"{CONTEXT_EVAL_DOC}: no evaluation task found — the coverage claim has "
+                          f"nothing to check, which is a defect in the reader, not an empty estate")
+
+    # G20 — the relation vocabulary is exercised, or declared reserved (ADR-0051).
+    arch_for_relations = checked.get(f"{DOCS_DIR}/00-governance/knowledge-architecture.md",
+                                    (None, ""))[1]
+    used_relations = set()
+    for _path, (meta, _text) in docs.items():
+        used_relations |= {rel for rel, _t in meta["relations"]}
+    fence = RESERVED_RELATIONS_FENCE.search(arch_for_relations)
+    reserved = set()
+    if fence:
+        reserved = {line.split()[0] for line in fence.group(1).splitlines() if line.strip()}
+    for relation in sorted(RELATION_TYPES - used_relations - reserved):
+        gates.fail("G20", f"relation type '{relation}' is declared, used by no document, and not "
+                          f"listed as reserved — dead vocabulary is an affordance for the defect it "
+                          f"was written for (`implements` outlived ADR-0037 that way)")
+    for relation in sorted(reserved & used_relations):
+        gates.fail("G20", f"relation type '{relation}' is listed as reserved but {sum(1 for _p, (m, _t) in docs.items() if any(r == relation for r, _ in m['relations']))} "
+                          f"document(s) use it — reserved and in use is a contradiction")
+    for relation in sorted(reserved - RELATION_TYPES):
+        gates.fail("G20", f"'{relation}' is reserved but is not in the declared vocabulary")
 
     # G8 — English only (ADR-0003), screened. A word list cannot certify that prose reads as
     # English, so this gate does not claim to: it catches the *carrier* of the failure this

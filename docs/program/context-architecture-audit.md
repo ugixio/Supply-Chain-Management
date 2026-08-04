@@ -126,6 +126,41 @@ deterministic, costs no new dependency, and attacks a failure this estate has ac
 search. The proposal's own requirement 28 says not to implement a technique merely because it appears
 on the list — this audit takes that seriously.
 
+## 7. What was built, and what the building found (2026-08-04)
+
+**ADR-0050 and ADR-0051 implemented §6's recommendation.** The four weaknesses this audit named are
+now mechanised, and the work found two defects the audit had not:
+
+| Weakness | Closed by | Status |
+|---|---|---|
+| W1 retrieval reaches 7% | `tools/context_set.py` + the `graph:` selector + exemplar reach | done |
+| W2 coverage unchecked | **G19** — `Must reach:` per task, asserted against its set | done |
+| W3 no contradiction detection | **G20** — vocabulary exercised or reserved; `implements` retired | done, narrowly |
+| W4 graph unused for assembly | the resolver traverses `part-of`/`depends-on`/`traces-to`/`refines` | done |
+| W5 G14 prices the declaration | the resolver reports both quantities, separately | done |
+
+**W3 deserves its qualifier.** A semantic contradiction between prose and code is **not decidable**,
+and this estate has paid four times for prose heuristics that fire on text merely *naming* a defect.
+G20 does not attempt the general problem: it removes the **affordance**. ENG-R10.7 could express its
+contradiction because the vocabulary still offered an `implements` edge; with the type retired, the
+sentence has nothing to point at. That is a narrower claim than the proposal's requirement 11, and it
+is one a gate can honestly make.
+
+**Two defects the audit missed, found by building rather than by reading.**
+
+- **A fabricated concept ID passed the evidence check.** `CPT_ID` was only ever asked whether
+  *something* CPT-shaped appeared; `CPT-4242` satisfied the check whose whole purpose is that answers
+  rest on evidence — the mirror of a validation rule IDs had all along. This is the single clearest
+  hallucination vector the estate had, and the audit did not see it because it read the *architecture*
+  and not the *predicates*.
+- **The exemplar was unreadable.** ADR-0048 declared `01-procurement` the exemplar *because a model
+  imitates a real example more reliably than it deduces from prose*, and then it sat in no load set.
+  Declared and unreachable is the same failure as W1, one layer up.
+
+**The lesson for the next audit: read the predicates, not only the components.** W1 through W5 were
+found by measuring structure. Both of these were found by measuring what a check actually *asserts*,
+which is a different sweep and the one that caught the hallucination.
+
 ## References
 
 - Measurements taken 2026-08-04 against commit `32d9140`: `git ls-files`, front-matter relation parse,

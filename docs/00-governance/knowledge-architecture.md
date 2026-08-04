@@ -5,7 +5,7 @@ type: governance
 owner: orchestrator
 status: active
 since: 2026-07-19
-updated: 2026-08-03
+updated: 2026-08-04
 relations:
   - { type: part-of, target: index-governance }
   - { type: governed-by, target: governance-root }
@@ -120,8 +120,21 @@ Every non-allowlisted `.md` carries YAML front-matter:
 - `owner` ∈ `human | orchestrator` (extend when agent lanes are formalized — see
   `program/operating-model.md`)
 - `status` ∈ `draft | active | superseded | deprecated | archived`
-- `relations[]`: `governed-by` · `implements` · `refines` · `depends-on` · `supersedes` /
-  `superseded-by` · `traces-to` · `part-of`.
+- `relations[]`: `governed-by` · `refines` · `depends-on` · `supersedes` /
+  `superseded-by` · `traces-to` · `part-of`. **Gate G20 keeps this list honest** (ADR-0051): a type
+  here is either in use or declared reserved below, because dead vocabulary is an affordance for the
+  defect it was written for.
+
+```reserved-relations
+supersedes      G7 needs it the moment a governed document is superseded; none has been yet.
+superseded-by   The other half of the same pair. ADR supersession lives in the index prose, not here.
+```
+
+> **`implements` was retired 2026-08-04 (ADR-0051).** It let a node point at code, which **ADR-0037**
+> forbade when it removed `## Implementations` from every node, **G10** rejects, and **ENG-R10.7** was
+> still instructing until it was corrected the same day. Zero documents used it. An unused edge type
+> that contradicts three live statements is not neutral — it is the affordance that let the
+> contradiction survive six weeks, which is why the gate now refuses to keep one.
 - `id` = `<type-slug>-<kebab-name>`; ADRs cited by number; unique estate-wide (gate G3).
 
 ## 9. Lifecycle and supersession
@@ -157,7 +170,7 @@ reference.
 
 ## 11. Enforcement (gates)
 
-All eighteen are wired into `tools/verify.py` and run by `make verify` (ADR-0012) — the count read
+All twenty are wired into `tools/verify.py` and run by `make verify` (ADR-0012) — the count read
 "sixteen" while seventeen existed, the same range-versus-count blind spot the ID registry had:
 - **G1** no stray docs · **G2** front-matter validity · **G3** ID uniqueness ·
   **G4** link integrity · **G5** no orphans (`part-of` traversal) · **G6** authority
@@ -172,6 +185,12 @@ All eighteen are wired into `tools/verify.py` and run by `make verify` (ADR-0012
   **G17** every Markdown table row carries the cell count its header declares — a short row renders
   as an empty cell, so a missing field is invisible (fourteen register rows lost their status that
   way, and a catalogue column with an empty heading went unfilled by fourteen of fifteen rows) ·
+  **G19** every evaluation task can be answered from its declared load set — the `Must reach:`
+  tokens must appear in a member, so a manifest that stops covering its own question reddens before a
+  cold subagent is spent misreading the result (ADR-0051; improvement #34 found this class by
+  accident) · **G20** the relation vocabulary is **exercised or declared reserved** — an unused edge
+  type is an affordance for the defect it was written for, which is how `implements` outlived ADR-0037
+  (ADR-0051) ·
   **G18** the exemplar department (§10b) is whole — declared once, its `rule.md` carrying a live
   rule, its `SKILL.md` carrying the pitfall list, and every department's `_index.md` listing every
   node in its directory (ADR-0048; the last claim covers all fourteen because measurement showed they

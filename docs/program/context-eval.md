@@ -41,6 +41,12 @@ that decides whether this context works, in an estate where every other check is
 
 ## The tasks
 
+> **`Must reach:` is a claim about the *inputs*, and gate G19 checks it (ADR-0051).** A task can only
+> be scored against a set that can answer it — improvement #34 found that by accident after two correct
+> answers were failed, and the manifest was the defect. These tokens must appear somewhere in the
+> task's declared load set, so a set that stops being able to answer its own question turns the gate
+> red **before** anyone spends a cold subagent misreading the result.
+
 Six, one per failure class that **actually happened in this repository**. The corpus grows the same
 way the improvement register does — from incidents, not from imagination. §Adding a task has the
 template.
@@ -50,6 +56,7 @@ template.
 **Load set:** `every-task`
 **Failure class:** the purpose is unreadable — every other task checks whether an agent *obeys* the
 context; none checked whether it can say what the context is **for**.
+**Must reach:** `portfolio`
 
 ```prompt
 In your own words: what is this repository for, and who uses it?
@@ -73,6 +80,7 @@ being true.
 
 **Load set:** `authoring-a-concept`
 **Failure class:** policy dressed as law — the defect ADR-0037 corrected by deleting ~25,700 lines.
+**Must reach:** `SCM-R10` · `inclusion test`
 
 ```prompt
 The receiving team needs to know when an over-delivery should be accepted rather than returned.
@@ -107,6 +115,7 @@ correct reasoning, which prose scanning handles without this failure mode.
 
 **Load set:** `authoring-a-concept`
 **Failure class:** a level aggregated as a flow — open risk #14, latent in the telemetry schema.
+**Must reach:** `MSR-R2`
 
 ```prompt
 Define, for this context, the measure "open work orders at an instant". State how it may be
@@ -123,6 +132,7 @@ positive checks cannot all pass on an answer that treats the measure as a flow.
 **Load set:** `recording-a-quantity`
 **Failure class:** invented data wearing a standard's name — the estate once published `KG`, `L`,
 `M` where UN/ECE Rec 20 says `KGM`, `LTR`, `MTR`.
+**Must reach:** `KGM` · `LTR` · `MTR` · `EA`
 
 ```prompt
 A project is recording received quantities for steel coil (by weight), coolant (by volume), cable
@@ -153,6 +163,7 @@ failure for it.
 **Load set:** `changing-a-rule`
 **Failure class:** a citation that reads as law and resolves to nothing — G12's class, 47 instances
 found in one sweep.
+**Must reach:** `SCM-R9` · `SCM-R10`
 
 ```prompt
 A new node records the quantity and the timestamp of a goods receipt. State which rules of this
@@ -179,6 +190,7 @@ and it is the same fix `unit-codes` already carries.
 
 **Load set:** `authoring-a-concept`
 **Failure class:** structural non-conformance of authored knowledge.
+**Must reach:** `## References` · `700`
 
 ```prompt
 Add a concept node to this context for "mean time to restore" as a project-delivery measure.
@@ -210,6 +222,50 @@ both accuses nobody; one that fails both accuses everybody. This is ADR-0042's d
 this file's own code — an untested checker would be the same hole in a new place.
 
 ## Last measurement
+
+**2026-08-04, fifth cycle — 6 of 6 conforming, and it found the root cause of five false positives.**
+Re-run in full because ADR-0051 moved `CLAUDE.md` and `knowledge-architecture.md`, which sit in all
+four load sets.
+
+| Task | Verdict | What happened |
+|---|---|---|
+| `what-is-this-for` | **FAIL → PASS**, and **the fifth false positive of one class** | The answer said *"it is not itself a / supply-chain product"* — a denial, with the `not` on the previous line. Failed. See §The unit of analysis. |
+| `invent-a-threshold` | **PASS** | Declared `none`; cited UCC Art. 2 as the only external anchor. |
+| `level-metric` | **PASS** | Level, MSR-R2, the four valid shift aggregations, sum barred. |
+| `unit-codes` | **PASS** | `KGM` · `LTR` · `MTR` · `EA`. |
+| `rule-citation` | **PASS** | Clean on the block form. |
+| `new-concept-node` | **PASS** | Inside budget, source cited, no `## Implementations`. |
+
+### The unit of analysis — the common cause of all five, seen only on the fifth
+
+Five correct answers have now been failed by these checkers, and the four earlier fixes each treated a
+symptom:
+
+| # | The answer said | The fix applied |
+|---|---|---|
+| 1 | `names "a 5% receipt tolerance"` | widen a word list (fourth widening) |
+| 2 | the same, in a **blockquote** | add Markdown blockquotes to reported speech |
+| 3 | `the durable form of **the old** ⟨retired id⟩ is PRC-R1` | score a declared `answer` block |
+| 4 | `that 5% receipt tolerance **was deleted** for this reason` | score a declared block here too |
+| 5 | `it is **not** itself a` ⏎ `supply-chain product` | — |
+
+**Every one of them is the same defect: the checkers read `splitlines()`, and prose wraps.** A claim
+and the word disowning it land on different lines the moment a paragraph runs past the margin. The
+word list, the quotation syntaxes, the blockquotes and the declared blocks were all real improvements
+and none of them was the cause.
+
+**The unit is now the paragraph** — split on blank lines, wrapped lines joined — because *a line is an
+artefact of wrapping and a paragraph is what someone wrote*. The same change fixed a **false negative**
+hiding beside it: the `connected` check demanded that one *line* tie monitoring to the projects, so a
+sentence making that connection while wrapping would have been reported as never making it.
+
+**A sixth finding, from the regression sample rather than from an answer.** Writing the sample in
+`CLAUDE.md`'s own words — *and to engineer software well* — was rejected for never mentioning the
+engineering axis, because the vocabulary held `engineering` and not `engineer software`. Widened, and
+the distinction is worth keeping: widening a **positive presence** vocabulary lowers false negatives
+and cannot create a false accusation, which is the opposite of widening a defect-shape pattern.
+
+### Fourth cycle (superseded by the run above)
 
 **2026-08-03, fourth cycle — 6 of 6 conforming, after the fourth false positive of one class.**
 Re-run in full because ADR-0048 moved `CLAUDE.md` and `knowledge-architecture.md`, which sit in all
@@ -463,11 +519,11 @@ risk #11. Both are fixed and both are now permanent regression samples in `--sel
 
 ```context-digest
 # path                                        sha256:12 — G15 fails when any of these changes
-CLAUDE.md                                     ffd689d687b7
+CLAUDE.md                                     ebd5922f5dd9
 docs/_index.md                                53f2766c9d3f
 docs/program/evaluation.md                    6e806b7f4e29
-docs/00-governance/knowledge-architecture.md  4fe56eb711c6
-docs/00-governance/id-registry.md             3e9411d2d669
+docs/00-governance/knowledge-architecture.md  b28b1be054b8
+docs/00-governance/id-registry.md             a73e6e21d7d4
 docs/30-foundation/scm-core/rule.md           7e775c264869
 docs/30-foundation/measurement/rule.md        c2aadb2fd7f9
 docs/30-foundation/platform/rule.md           0268bef446f1

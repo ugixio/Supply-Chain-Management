@@ -5,7 +5,7 @@ type: governance
 owner: orchestrator
 status: active
 since: 2026-07-19
-updated: 2026-08-03
+updated: 2026-08-04
 relations:
   - { type: part-of, target: index-governance }
   - { type: governed-by, target: knowledge-architecture }
@@ -131,7 +131,7 @@ platform catalogue was checked against the current published grouping and found 
 ## 3. Decision (ADR) numbers
 
 - Format: `ADR-NNNN`, strictly increasing, allocated at proposal time.
-- Allocated: **ADR-0001 … ADR-0048** (see `docs/10-decisions/README.md`).
+- Allocated: **ADR-0001 … ADR-0051** (see `docs/10-decisions/README.md`).
   This line read `ADR-0038` until 2026-08-03 while nine more existed — the same blind spot that let
   `README.md` claim "G1-G16": a **range** is invisible to a sweep looking for a count beside a noun.
 - **Retroactive ADRs superseded 2026-08-03 by owner decision**, because their premises left with the
@@ -188,7 +188,7 @@ ADR-0037; the keys are unaffected.)*
 ## 6. Gate-invariant IDs (fixed)
 
 `G1`–`G8` name the knowledge-architecture §11 invariants. New gates append (G9+).
-Allocated: **G1–G18** (G9 context budget, ADR-0012; G10 **standards provenance** — was concept
+Allocated: **G1–G20** (G9 context budget, ADR-0012; G10 **standards provenance** — was concept
 coverage under ADR-0015, rewritten by ADR-0037 when the code it policed was deleted; **G11
 retired rules stay retired**, added at Phase C3 because a citation of a retired ID is invisible to
 G4 — it is not a broken link, it silently resolves to nothing and reads as law; **G12 a rule

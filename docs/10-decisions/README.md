@@ -87,6 +87,8 @@ relations:
 
 - ADR-0050 — **The context layer is improved by gates, not by a retrieval stack:** a Context-OS proposal was audited before any code and the repository turned out to have **no retrieval layer to improve** — zero embeddings, vector store, LLM SDK or caches, and `dependencies: {}`. The measurement that decided it: the six load sets reach **17 of 241 documents, with zero concept nodes and zero department rule files**, while **559 typed edges** already state what each node needs and are read by nothing. So retrieval becomes **graph-derived** through a `graph:` selector, the artefact is a **resolver** (`tools/context_set.py`) that assembles and prices what a session will actually open — closing G14's gap between the declaration and the session — and the retrieval stack is **deferred with a stated condition**: a corpus where traversal from a declared root cannot reach what a task needs. **No model judges the context** (ADR-0043's rejected judge), so reflection loops and model-scored confidence are out of scope rather than pending. Nine of the proposal's requirements were already satisfied deterministically; rebuilding them with a model would be a regression, and its own requirement 28 forbids adopting a technique merely because it is listed. **Narrows ADR-0041.** (Accepted — owner-directed 2026-08-04)
 
+- ADR-0051 — **Coverage, vocabulary hygiene, and a fabricated citation that used to pass:** building ADR-0050's remaining checks produced two gates and found a third defect nobody was looking for. **G19** asserts each evaluation task's `Must reach:` tokens appear in a member of its load set — tokens rather than semantics, because whether a set *suffices* is undecidable while whether an identifier is physically present is not; this makes improvement #34 mechanical, where two **correct** answers were failed by a set carrying no unit codes and the manifest was the defect. **G20** asserts the relation vocabulary is exercised or **declared reserved**, because an unused edge type is an *affordance* for the defect it was written for: **`implements` is retired** — zero documents used it while ADR-0037 forbade node-to-code links, G10 rejects them and ENG-R10.7 was still instructing them. That is also the honest form of contradiction detection: a semantic clash between prose and code is undecidable and four prose heuristics have already failed here, so G20 removes the affordance instead of guessing at the meaning. **The third find: a cited concept ID never had to resolve** — a fabricated `CPT-4242` satisfied the check whose whole purpose is that answers rest on evidence, the mirror of what `live_rule_ids` prevented for rules all along; now validated, with a regression sample. And **the resolver reaches the exemplar**, which ADR-0048 declared and no load set could read. (Accepted — owner-directed 2026-08-04)
+
 ---
 
 ## ADR-0001 — Two-language split: TypeScript domain logic + Python analytics/ML
@@ -2537,6 +2539,71 @@ is exactly the trade the manifest exists to manage.
 - (−) A resolver is a tool a session must run; a session that skips it reads the old 17 files.
 - (−) Graph expansion can exceed a ceiling. The resolver reports the total rather than silently
   truncating — the budget conversation stays visible, which is what ADR-0041 wanted.
+
+## ADR-0051 — Coverage, vocabulary hygiene, and a fabricated citation that used to pass
+
+**Status:** Accepted (owner-directed 2026-08-04)
+**Materializes as:** gates **G19** and **G20**; `live_concept_ids` in `tools/context_eval.py`; the
+`reserved-relations` block; the resolver's exemplar reach
+**Retires:** the `implements` relation type
+
+**Context.** ADR-0050 authorised the context layer's remaining checks: coverage against the question,
+and the contradiction class that let **ENG-R10.7 instruct what G10 rejects for six weeks**. Building
+them surfaced a third thing that neither had been looking for.
+
+**Decision.**
+
+1. **G19 — a task must be answerable from its declared set.** Each evaluation task declares
+   `**Must reach:**` tokens; the gate asserts each appears in a member of that task's load set.
+   *Tokens, not semantics:* whether a set **suffices** is not decidable, but whether the identifier an
+   answer must cite is physically present is. This makes improvement #34 mechanical — `unit-codes` was
+   scored against a set carrying no unit codes, two **correct** answers were failed, and the manifest
+   was the defect. It was found by accident; now a manifest that stops covering its own question
+   reddens **before** a cold subagent is spent misreading the result.
+2. **G20 — the relation vocabulary is exercised or declared reserved.** An edge type that no document
+   uses is dead vocabulary, and dead vocabulary is an **affordance** for the defect it was written for.
+   `supersedes` / `superseded-by` are reserved with the reason stated (G7 needs them the moment a
+   governed document is superseded; none has been).
+3. **`implements` is retired.** It let a node point at code — which **ADR-0037** forbade when it
+   removed `## Implementations` from every node, **G10** rejects, and **ENG-R10.7** was still
+   instructing until it was corrected the same day. **Zero documents used it.** An unused type that
+   contradicts three live statements is not neutral: it is the affordance that let the contradiction
+   survive, which is the general lesson G20 exists to enforce.
+4. **A cited concept ID must resolve.** `CPT_ID` was only ever asked whether *something* CPT-shaped
+   appeared in an answer. **A fabricated `CPT-4242` satisfied the check whose entire purpose is that
+   answers rest on evidence** — the mirror of what `live_rule_ids` had prevented for rule IDs all
+   along. Now validated against every node's declared number, with the reserved harness numbers
+   counted live, and carrying a permanent regression sample.
+5. **The resolver reaches the exemplar.** ADR-0048 declared `01-procurement` the exemplar *because a
+   model imitates a real example more reliably than it deduces from prose* — and then the exemplar sat
+   in no load set, so no session could read it. An authoring task now assembles its index.
+
+**On why G20 is the honest form of contradiction detection.** A semantic contradiction between prose
+and code is **not decidable**, and this estate has paid four times for prose heuristics that fire on
+text merely naming a defect. G20 does not attempt it. It removes the *affordance* instead: the
+contradiction ENG-R10.7 carried was expressible because the vocabulary still offered an edge for it.
+That is a narrower claim than the proposal's requirement 11 and it is one a gate can actually make.
+
+**Alternatives considered.**
+- *A prose scan for clauses contradicting a gate.* Rejected on this repository's own record: four
+  false positives across three checkers, each fixed by naming one more way of writing the same thing.
+- *Judge coverage with a model.* Rejected by ADR-0043's recorded bias data, and it would replace a
+  decidable check with an opinion.
+- *Declare must-reach tokens generously.* Tried and abandoned: declaring `CPT-0027` for
+  `invent-a-threshold` reddened G19 immediately, because the node is real, in the exemplar department,
+  and reachable by **no** declared set. The right answer was the resolver, not a looser gate — and the
+  attempt is what found the fabricated-citation hole.
+
+**Consequences.**
+- (+) The manifest's ability to answer its own questions is now checked, not assumed.
+- (+) A fabricated identifier can no longer pass as evidence.
+- (+) The exemplar becomes readable by the task it was declared for.
+- (−) Twenty gates and twenty-six mutants to maintain.
+- (−) `authoring-a-concept`'s declaration sits at **8,195 of 8,200** after this change: five words of
+  headroom, all of it consumed by CLAUDE.md's append-only gate roster. The manifest already names the
+  exit; the next gate added forces it.
+- (−) `Must reach:` tokens are a hand-written claim. G19 checks they are *satisfied*, not that they are
+  the *right* tokens — that judgement stays with whoever adds a task.
 
 > **File map:** this README is the canonical ADR index. New decisions are appended here
 > as `## ADR-NNNN — Title` (or as `docs/10-decisions/NNNN-title.md` when extensive).

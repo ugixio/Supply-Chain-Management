@@ -77,6 +77,15 @@ relations:
 - **Three consecutive fixes that each add one more way of writing the same thing means the scan is
   wrong, not incomplete.** A word list, three quote syntaxes, then blockquotes — and the next answer
   used plain prose. (#39)
+- **A line is an artefact of wrapping; a paragraph is what someone wrote.** Five false positives had
+  one cause — checkers reading `splitlines()` while a claim and its disowning word sat on different
+  lines. Four fixes treated symptoms first. Analyse the paragraph. (#43)
+- **Widening a *positive presence* vocabulary is safe; widening a *defect-shape* pattern is not.** The
+  first lowers false negatives and cannot accuse anyone; the second is how four false positives were
+  built. (#43)
+- **When you write a generalisation, apply it by re-classifying every case, not the ones that
+  prompted it.** #39's rule was correct and `what-is-this-for` was exempted on its dominant shape
+  while carrying exactly the clause the rule was about. (#43)
 
 ### About rules, thresholds and sweeps
 

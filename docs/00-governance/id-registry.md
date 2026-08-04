@@ -59,6 +59,7 @@ relations:
 | ENG | Engineering (build-time, cross-cutting) | `docs/50-engineering/rule.md` | ENG-R11 |
 | PLT | Platform / workspace (above the 14 depts) | `docs/30-foundation/platform/rule.md` | PLT-R7 |
 | MSR | Measurement identities (how a measure aggregates, cross-department) | `docs/30-foundation/measurement/rule.md` | MSR-R2 |
+| SEC | Agent-plane security — what may enter this estate, from where, under what record (ADR-0055) | `docs/30-foundation/security/rule.md` | SEC-R3 |
 
 ### Concept IDs — LIVE (ADR-0015)
 
@@ -131,7 +132,7 @@ platform catalogue was checked against the current published grouping and found 
 ## 3. Decision (ADR) numbers
 
 - Format: `ADR-NNNN`, strictly increasing, allocated at proposal time.
-- Allocated: **ADR-0001 … ADR-0054** (see `docs/10-decisions/README.md`).
+- Allocated: **ADR-0001 … ADR-0055** (see `docs/10-decisions/README.md`).
   This line read `ADR-0038` until 2026-08-03 while nine more existed — the same blind spot that let
   `README.md` claim "G1-G16": a **range** is invisible to a sweep looking for a count beside a noun.
 - **Retroactive ADRs superseded 2026-08-03 by owner decision**, because their premises left with the

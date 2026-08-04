@@ -5,7 +5,7 @@ type: program
 owner: orchestrator
 status: active
 since: 2026-07-19
-updated: 2026-08-03
+updated: 2026-08-04
 relations:
   - { type: part-of, target: index-docs }
   - { type: governed-by, target: governance-root }
@@ -31,6 +31,11 @@ relations:
     continuous-improvement log (ADR-0012). The **record** of incidents.
   - [known-pitfalls.md](known-pitfalls.md) — the decision rules those incidents distil to, each
     citing its row. The **readable** form, and what a reviewer loads instead of the register.
+  - [context-architecture-audit.md](context-architecture-audit.md) — the audit that precedes any
+    Context-OS work: what the context mechanism actually is (a declared manifest, a typed graph,
+    deterministic gates), the five measured weaknesses, and which of a 28-point proposal this estate
+    needs. **Headline: the declared load sets reach 17 of 240 governed documents and zero concept
+    nodes.**
   - [how-to/](how-to/) — task-shaped guides for **using this context** (ADR-0044):
     [add a concept node](how-to/add-a-concept-node.md) ·
     [change a rule](how-to/change-a-rule.md) ·

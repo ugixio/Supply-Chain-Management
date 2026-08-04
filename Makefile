@@ -20,11 +20,12 @@
 #
 # CI runs: make verify-full  &&  make verify-schema
 
-.PHONY: verify verify-full verify-schema doc-gates gate-mutants typecheck deps-locked test-rs lint-rs
+.PHONY: verify verify-full verify-schema doc-gates gate-mutants typecheck deps-locked test-rs \
+        lint-rs lint-ts
 
 verify: doc-gates typecheck test-rs
 
-verify-full: verify gate-mutants deps-locked lint-rs
+verify-full: verify gate-mutants deps-locked lint-rs lint-ts
 
 doc-gates:
 	python3 tools/verify.py
@@ -56,6 +57,13 @@ test-rs:
 lint-rs:
 	cargo fmt --all -- --check
 	cargo clippy --workspace --all-targets -- -D warnings
+
+# The TypeScript half of the same bar (WORKFLOW U12). `--max-warnings 0` is the bar itself and it
+# lives here rather than in eslint.config.mjs: a severity written into the config can be argued
+# down one rule at a time, a count at the invocation cannot. Merge-gate for the same reason as
+# lint-rs — it earns its cost at integration, not on every edit.
+lint-ts:
+	pnpm -s exec eslint . --max-warnings 0
 
 # The ClickHouse telemetry schema (ADR-0036). Applies the migrations, proves they are idempotent by
 # applying them twice, then asserts the sort key, partitioning, codecs, TTLs, aggregate states and

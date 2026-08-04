@@ -5,7 +5,7 @@ type: program
 owner: orchestrator
 status: active
 since: 2026-07-19
-updated: 2026-07-19
+updated: 2026-08-03
 relations:
   - { type: part-of, target: index-program }
   - { type: governed-by, target: governance-root }
@@ -39,12 +39,16 @@ relations:
 layer. The skeleton adds layers 1 (decisions + stable rules) and 4 (spec template), and
 leaves layer 2 optional.
 
-**The exemplar unit (ADR-0012).** The first department completed to full satisfaction
-(candidate: `01-procurement`) is declared the exemplar by an ADR that names it. Skills
-cite it, sibling departments copy its shape, and the AI reads it before building a
-sibling. Rules say what must hold; the exemplar shows what good looks like — models
-imitate real code more reliably than they deduce from prose. It is always real code,
-never fabricated samples.
+**The exemplar unit (ADR-0012 clause 3, superseded by ADR-0048).** **`01-procurement` is the
+exemplar**, declared in `knowledge-architecture.md` §10b and enforced by gate **G18**. Skills cite
+it, siblings copy its shape, and the AI reads it before building a sibling. Rules say what must hold;
+the exemplar shows what good looks like — **a model imitates a real example more reliably than it
+deduces from prose**, and that is the whole reason the clause exists.
+**What changed and why:** ADR-0012 said *always real code, never fabricated samples*, and ADR-0037
+deleted every department's code — leaving the clause with neither option, unexecuted, while the gap
+stayed measurable at 167 nodes and no declared pattern. The exemplar is now the department's
+**knowledge**: its `_index.md`, its concept nodes, its `rule.md`. Same reasoning, changed medium.
+It is still never fabricated — it is the real estate, which is what an agent actually reads.
 
 ## 2. Lanes (default trio — activate via the agent-lanes decision)
 

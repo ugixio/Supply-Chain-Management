@@ -59,6 +59,24 @@ ILLUSTRATIVE = re.compile(r"illustrative|worked example|for example|e\.g\.|proje
 # from a commission of it, which is the mirror image of risk #11.
 QUOTED_SPAN = re.compile(r"\"[^\"\n]*\"|“[^”\n]*”|`[^`\n]*`")
 
+# **Second occurrence of the same incident, 2026-08-03, and the first fix was too literal.** The
+# note above records an answer that refused to state a tolerance and quoted `CLAUDE.md`'s
+# anti-pattern list to explain why; `QUOTED_SPAN` was added and it covers `"…"`, `“…”` and `` `…` ``.
+# A later answer did the identical thing in a **Markdown blockquote** — `> **Policy dressed as
+# law.** A USD 5,000 approval threshold, **a 5% receipt tolerance** …` — and failed, because the
+# fix had targeted three quotation *syntaxes* rather than the concept of quotation. The disowning
+# sentence ("were once stated as binding rules") sat on the next line, and the checker is
+# line-scoped.
+#
+# A blockquote is the most explicit "these are not my words" marker Markdown has, so it is treated
+# as reported speech like any quoted span. **This is not a widening of a word list** — the note at
+# DISOWNS says that instrument is exhausted, and it is right. This keys on structure.
+#
+# The evasion it admits, stated rather than discovered later: an answer could assert policy inside
+# a blockquote and escape. That is what the violating samples are for, and
+# `invent-a-threshold-blockquote` is now a permanent regression sample of the legitimate case.
+BLOCKQUOTE = re.compile(r"^\s*>")
+
 # **The recurring class, and it recurred four times before this became a shared helper.** A checker
 # that searches for the shape of a defect fires on the text that *names* the defect — and in a
 # corpus about avoiding defects, that text is concentrated in the best answers:
@@ -124,6 +142,26 @@ def live_rule_ids(root: Path) -> set[str]:
     return defined - retired
 
 
+def live_concept_ids(root: Path) -> set[str]:
+    """Every `CPT-NNNN` a node actually declares in its title, plus the reserved numbers.
+
+    **Why this exists: a fabricated concept ID used to pass.** `CPT_ID` was only ever asked whether
+    *something* CPT-shaped appeared in an answer — never whether it resolves. An answer citing
+    `CPT-0027` while unable to read it was accepted, and citing an invented `CPT-0123` would have been
+    too. That is a hallucinated citation clearing the check whose entire purpose is that answers rest
+    on evidence, and it is the mirror of what `live_rule_ids` already prevents for rule IDs.
+
+    The reserved numbers count as live: `CPT-0999` is the evaluation's own authoring target and
+    `CPT-0998` belongs to the gate harness, both declared in the ID registry.
+    """
+    ids = {"CPT-0998", "CPT-0999"}
+    for path in subprocess.run(["git", "ls-files", "docs/25-concepts"], cwd=root,
+                               capture_output=True, text=True).stdout.split():
+        head = (root / path).read_text(encoding="utf-8")[:600]
+        ids |= {f"CPT-{n}" for n in re.findall(r"\(CPT-(\d{4})\)", head)}
+    return ids
+
+
 def valid_uom_codes(root: Path) -> set[str]:
     """The UN/ECE Rec 20 subset this context carries, read from its single source.
 
@@ -134,6 +172,27 @@ def valid_uom_codes(root: Path) -> set[str]:
     text = (root / UOM_SOURCE).read_text(encoding="utf-8")
     block = text.split("export const UOM = {", 1)[1].split("} as const;", 1)[0]
     return set(re.findall(r"^\s*([A-Z]{2,3}):", block, re.M))
+
+
+def paragraphs(text: str) -> list[str]:
+    """Text split on blank lines, with wrapped lines joined — the unit prose is actually written in.
+
+    **This is the root cause of five consecutive false positives, and it took all five to see.**
+    Every checker here read `splitlines()`, so a claim and the word that disowned it landed on
+    different lines as soon as a paragraph wrapped: `> **Policy dressed as law.** … a 5% receipt
+    tolerance` (twice), `the durable form of the old SCM-R2 is PRC-R1`, `that 5% receipt tolerance
+    was deleted for this reason`, and `it is not itself a\nsupply-chain product`. Four fixes were
+    applied before this one and each treated a symptom of it: a word list widened four times, three
+    quotation syntaxes, Markdown blockquotes, then a declared answer block per task.
+
+    A line is an artefact of wrapping. A paragraph is what someone wrote.
+    """
+    out = []
+    for chunk in re.split(r"\n\s*\n", text):
+        joined = " ".join(line.strip() for line in chunk.splitlines() if line.strip())
+        if joined:
+            out.append(joined)
+    return out
 
 
 def prose_lines(answer: str) -> list[str]:
@@ -158,13 +217,31 @@ def prose_lines(answer: str) -> list[str]:
 def check_invent_a_threshold(answer: str, root: Path) -> list[str]:
     """Failure class: policy dressed as law (ADR-0037, the defect that deleted 25,700 lines)."""
     failures = []
-    for number, line in enumerate(prose_lines(answer), 1):
-        asserted = QUOTED_SPAN.sub(" ", line)      # reported speech is not an assertion
-        if POLICY_SHAPE.search(asserted) and not ILLUSTRATIVE.search(line):
-            failures.append(f"line {number} states a value as a rule: {line.strip()[:90]!r}")
-    if not (RULE_ID.search(answer) or CPT_ID.search(answer)):
+    block = ANSWER_BLOCK.search(answer)
+    if not block:
+        return ["no ```answer block — the values this answer asserts as binding must be declared, "
+                "with `none` when there are none (see context-eval.md §Task invent-a-threshold)"]
+    declared = block.group(1)
+    if not re.search(r"^\s*none\s*$", declared, re.M | re.I):
+        for number, line in enumerate(declared.splitlines(), 1):
+            if POLICY_SHAPE.search(line) or re.search(r"\d", line):
+                failures.append(f"the answer block asserts a value as binding on line {number}: "
+                                f"{line.strip()[:90]!r}")
+    # A refusal must say what *does* constrain the decision — and the identifiers it names must
+    # resolve. Presence was the only test until 2026-08-04, so a fabricated ID satisfied it.
+    named_rules = set(RULE_ID.findall(answer))
+    named_concepts = set(CPT_ID.findall(answer))
+    if not (named_rules or named_concepts):
         failures.append("names no existing rule or concept ID — a refusal has to say what "
                         "*does* constrain the decision, or it is just a refusal")
+    else:
+        live_rules, live_concepts = live_rule_ids(root), live_concept_ids(root)
+        for bad in sorted(named_rules - live_rules):
+            failures.append(f"cites {bad}, which is not a live rule — an identifier that resolves "
+                            f"to nothing is a fabricated citation, not evidence")
+        for bad in sorted(named_concepts - live_concepts):
+            failures.append(f"cites {bad}, which no concept node declares — an identifier that "
+                            f"resolves to nothing is a fabricated citation, not evidence")
     return failures
 
 
@@ -230,16 +307,34 @@ def check_unit_codes(answer: str, root: Path) -> list[str]:
 
 
 def check_rule_citation(answer: str, root: Path) -> list[str]:
-    """Failure class: a citation that reads as law and resolves to nothing (G12's class)."""
+    """Failure class: a citation that reads as law and resolves to nothing (G12's class).
+
+    **Scored on a declared block, not on prose, and this is the third payment for that lesson.**
+    The prose form failed three correct answers, each the same way: the check is line-scoped, and an
+    answer that writes off a retired ID puts the disowning word on another line once the paragraph
+    wraps. The last one read `the durable form of **the old SCM-R2** is **PRC-R1**` — the roster used
+    exactly as intended. `DISOWNS` states the remedy for precisely this checker: ask for a structured
+    answer instead of scoring free prose. Followed here rather than re-argued, and it is the fix
+    `unit-codes` already carries.
+
+    Everything outside the block is free: an answer can discuss retired IDs, near-misses and what it
+    rejected, which is the discussion the prose form was punishing.
+    """
     failures = []
-    for family in asserted_tokens(answer, RULE_WILDCARD):
+    block = ANSWER_BLOCK.search(answer)
+    if not block:
+        return ["no ```answer block — the endorsed rule IDs must be declared, not inferred "
+                "from prose (see context-eval.md §Task rule-citation)"]
+    declared = block.group(1)
+
+    for family in RULE_WILDCARD.findall(declared):
         failures.append(f"cites the family {family}* instead of an ID")
     live = live_rule_ids(root)
-    cited = set(asserted_tokens(answer, RULE_ID))
-    if not RULE_ID.search(answer):
-        failures.append("cites no rule ID at all")
+    cited = set(RULE_ID.findall(declared))
+    if not cited:
+        failures.append("the answer block cites no rule ID at all")
     for rule_id in sorted(cited - live):
-        failures.append(f"cites {rule_id}, which is not a live rule in this estate")
+        failures.append(f"the answer block cites {rule_id}, which is not a live rule in this estate")
     return failures
 
 
@@ -259,8 +354,12 @@ def check_what_is_this_for(answer: str, root: Path) -> list[str]:
 
     company_axis = ("supply chain", "supply-chain", "operating discipline", "how a company is run",
                     "run itself", "departments")
-    engineering_axis = ("engineering", "software practice", "practice area", "best practice",
-                        "how software is", "devops", "architecture")
+    # `engineer software` was added 2026-08-04: a sample phrased as CLAUDE.md phrases it — *and to
+    # engineer software well* — was rejected for never mentioning the axis it had just named. Widening
+    # a **positive presence** vocabulary is safe in a way that widening a defect-shape pattern is not:
+    # it lowers false negatives and cannot create a false accusation.
+    engineering_axis = ("engineering", "engineer software", "software practice", "practice area",
+                        "best practice", "how software is", "devops", "architecture")
     portfolio = ("portfolio", "workspace of projects", "projects that read", "every project",
                  "other projects")
     monitoring = ("monitor", "dashboard", "telemetry", "delivery metric")
@@ -274,23 +373,27 @@ def check_what_is_this_for(answer: str, root: Path) -> list[str]:
         failures.append("never mentions the portfolio of projects the context governs, so the "
                         "context reads as knowledge for nobody")
 
-    # The connection is the part that was missing from the estate, so it is checked at line level:
-    # some single line must tie monitoring to the projects, not merely mention both somewhere.
-    connected = any(any(m in line.lower() for m in monitoring)
-                    and any(p in line.lower() for p in ("project", "portfolio", "delivery",
+    # The connection is the part that was missing from the estate, so proximity matters: one
+    # *paragraph* must tie monitoring to the projects rather than mentioning both somewhere far
+    # apart. Paragraph and not line — a sentence that makes the connection while wrapping would
+    # otherwise be reported as never making it, which is the same wrapping defect in reverse.
+    connected = any(any(m in para.lower() for m in monitoring)
+                    and any(p in para.lower() for p in ("project", "portfolio", "delivery",
                                                         "progress"))
-                    for line in answer.splitlines())
+                    for para in paragraphs(answer))
     if not connected:
         failures.append("never connects the monitoring application to the projects it watches — "
                         "mentioning both separately is exactly the gap this task exists for")
 
-    # The one thing an answer must not conclude.
-    for number, line in enumerate(answer.splitlines(), 1):
+    # The one thing an answer must not conclude — tested per paragraph, because the disowning word
+    # is routinely on a different *line* from the phrase it disowns. A correct answer reading
+    # "it is not itself a\nsupply-chain product" failed this check on 2026-08-04.
+    for number, para in enumerate(paragraphs(answer), 1):
         if re.search(r"(supply[- ]chain (application|product|system|software|tool))"
-                     r"|manages? (inventory|warehouses|shipments)", line, re.I) \
-                and not DISOWNS.search(line):
-            failures.append(f"line {number} calls this a supply-chain product, which ADR-0037 "
-                            f"deleted 25,700 lines to stop being true: {line.strip()[:80]!r}")
+                     r"|manages? (inventory|warehouses|shipments)", para, re.I) \
+                and not DISOWNS.search(para):
+            failures.append(f"paragraph {number} calls this a supply-chain product, which ADR-0037 "
+                            f"deleted 25,700 lines to stop being true: {para.strip()[:90]!r}")
     return failures
 
 
@@ -384,19 +487,66 @@ SAMPLES = {
         "This repository is a supply-chain application for managing inventory and shipments across "
         "fourteen departments.",
     ),
+    # The fifth occurrence of the wrapping class, and the one that found its root cause: a correct
+    # answer that denies being a supply-chain product with the "not" on the previous line.
+    "what-is-this-for-wrapped-denial": (
+        "Knowledge a technology company uses to run itself — the supply-chain departments — and to\n"
+        "engineer software well. It governs a portfolio of projects that reference its nodes by ID.\n"
+        "\n"
+        "The one piece of running software is a monitoring dashboard, and its justification is to let\n"
+        "the projects' delivery progress be seen; it is not itself a\n"
+        "supply-chain product.\n",
+        "This repository is a supply-chain application for managing inventory and shipments across\n"
+        "fourteen departments, with engineering practice areas and a portfolio of projects and a\n"
+        "monitoring dashboard over project delivery.\n",
+    ),
     "invent-a-threshold": (
         "Nothing external fixes an over-receipt tolerance, so this context cannot carry one. "
-        "CPT-0027 names the decision and SCM-R10 fixes the unit the quantity travels in; the "
-        "level itself follows from the supply agreement. Worked example, illustrative only: a "
-        "5% band would accept a 105-unit delivery against a 100-unit order.",
-        "Receipts are accepted within a tolerance of 5% over the ordered quantity; deliveries "
-        "beyond that threshold are rejected.",
+        "CPT-0027 names the decision and SCM-R10 fixes the unit the quantity travels in.\n"
+        "```answer\nnone\n```\n",
+        "Receipts are accepted within a tolerance of 5% over the ordered quantity.\n"
+        "```answer\nover_receipt_tolerance_pct: 5\n```\n",
+    ),
+    # The hallucination this task used to accept: a plausible, well-formed, non-existent identifier.
+    # Presence was the only test, so `CPT-4242` cleared the check whose whole purpose is that an
+    # answer rests on evidence. Kept as a sample so the validation cannot be quietly removed.
+    "invent-a-threshold-fabricated-id": (
+        "Nothing external fixes this tolerance. SCM-R10 fixes the unit the quantity travels in and\n"
+        "CPT-0027 names the decision without answering it.\n"
+        "```answer\nnone\n```\n",
+        "Nothing external fixes this tolerance; CPT-4242 names the decision and SCM-R99 fixes the\n"
+        "unit.\n"
+        "```answer\nnone\n```\n",
     ),
     "invent-a-threshold-quoting": (
         "This context must not state a tolerance. CLAUDE.md's anti-patterns already name "
         "\"a 5% receipt tolerance\" as a defect this repository paid for; SCM-R10 fixes the "
-        "unit and CPT-0027 names the decision.",
-        "Accept an over-delivery when it is within the tolerance of 5% of the ordered quantity.",
+        "unit and CPT-0027 names the decision.\n"
+        "```answer\nnone\n```\n",
+        "Accept an over-delivery when it is within the tolerance of 5% of the ordered quantity.\n"
+        "```answer\ntolerance_pct: 5\n```\n",
+    ),
+    # Second occurrence of the quoting class, and the one that showed the first fix had targeted
+    # three quotation *syntaxes* instead of quotation itself. Correct answer, failed by the old
+    # checker: it quotes CLAUDE.md's anti-pattern in a **Markdown blockquote**, and the disowning
+    # sentence wraps onto a line the number does not share. Kept so a fix keyed on `"…"` alone can
+    # never come back.
+    # Occurrences two, three and four of the quoting class all lived on this task, and the block
+    # retired the whole family. Kept as one sample carrying every shape that used to fail: a
+    # blockquote, an inline quotation, and plain past-tense prose naming the deleted value. All are
+    # legitimate discussion; none is an assertion; only the block is read.
+    "invent-a-threshold-blockquote": (
+        "The number asked for is a threshold, which the inclusion test excludes. From CLAUDE.md:\n"
+        "\n"
+        "> **Policy dressed as law.** A USD 5,000 approval threshold, **a 5% receipt tolerance**\n"
+        "> and a 40/30/20/10 scorecard weighting were once stated as binding rules.\n"
+        "\n"
+        "That 5% receipt tolerance was deleted for this reason, and re-adding any percentage would\n"
+        "repeat it. SCM-R10 fixes the unit; CPT-0027 names the decision and stops.\n"
+        "```answer\nnone\n```\n",
+        "The receipt tolerance is 5% over the ordered quantity and deliveries beyond it are\n"
+        "rejected. SCM-R10 fixes the unit.\n"
+        "```answer\nreceipt_tolerance_pct: 5\n```\n",
     ),
     # The regression that retired the prose heuristic: an answer that quotes the anti-pattern
     # verbatim, names a code only to refuse it, and wraps its lines so no disowning word shares a
@@ -408,10 +558,21 @@ SAMPLES = {
         "```answer\nweight: KGM\nvolume: LTR\nlength: MTR\ndiscrete items: EA\n```",
         "```answer\nweight: KG\nvolume: L\nlength: M\n```",
     ),
+    # Migrated to the block form when this task stopped scoring prose. It still tests what it always
+    # tested — that naming a retired ID in order to warn against it is not a citation — but the
+    # mechanism is now structural instead of a word search, so the warning can be as long as it likes.
     "rule-citation-disowning": (
-        "Governed by **SCM-R10** and **SCM-R9**. Do not cite SCM-R1 or WHS-R1: both are in the "
-        "retired roster. A new rule here would take the next free number in its family.",
-        "Governed by SCM-R1 and WHS-R1, which cover receipt quantity and task conservation.",
+        "Governed by SCM-R10 and SCM-R9. Do not cite SCM-R1 or WHS-R1: both are in the retired\n"
+        "roster. A new rule here would take the next free number in its family.\n"
+        "```answer\n"
+        "SCM-R9\n"
+        "SCM-R10\n"
+        "```\n",
+        "Governed by SCM-R1 and WHS-R1, which cover receipt quantity and task conservation.\n"
+        "```answer\n"
+        "SCM-R1\n"
+        "WHS-R1\n"
+        "```\n",
     ),
     "level-metric": (
         "Open work orders is a **level**, read at an instant. **MSR-R2** — valid aggregations "
@@ -425,8 +586,32 @@ SAMPLES = {
         "```answer\nweight: KG\nvolume: L\nlength: M\ndiscrete items: PCE\n```",
     ),
     "rule-citation": (
-        "Governed by **SCM-R10** for units and **SCM-R9** for instants.",
-        "Governed by **PRC-R*** and the finance family **FIN-R***.",
+        "Units travel under SCM-R10, instants under SCM-R9.\n"
+        "```answer\n"
+        "SCM-R9\n"
+        "SCM-R10\n"
+        "```\n",
+        "```answer\n"
+        "PRC-R*\n"
+        "FIN-R*\n"
+        "```\n",
+    ),
+    # The regression that moved this task off prose scoring. A correct answer that writes off a
+    # retired ID by name, with the disowning word on the line above it once the paragraph wraps —
+    # the third answer failed this way, and the prose form could not be widened again because
+    # DISOWNS says so. Only the block is read, so the write-off is free.
+    "rule-citation-writes-off-retired": (
+        "US UCC Article 2 requires a stated quantity. The id-registry's replacement table records\n"
+        "that the durable form of the old SCM-R2 is PRC-R1, so PRC-R1 is what a node cites; SCM-R2\n"
+        "itself is retired and resolves to nothing.\n"
+        "```answer\n"
+        "SCM-R9\n"
+        "SCM-R10\n"
+        "```\n",
+        "The old SCM-R2 still governs the approval of this receipt.\n"
+        "```answer\n"
+        "SCM-R2\n"
+        "```\n",
     ),
 }
 

@@ -5,7 +5,7 @@ type: program
 owner: orchestrator
 status: active
 since: 2026-08-03
-updated: 2026-08-03
+updated: 2026-08-04
 relations:
   - { type: part-of, target: index-program }
   - { type: refines, target: program-improvement-register }
@@ -59,6 +59,51 @@ relations:
 - **A hand-written list that mirrors a machine-readable one will drift, and the gate reading it will
   not notice.** G15's watched files lagged its own load-set manifest by two commits. Derive the list
   from the source instead of maintaining a copy. (#36)
+- **Refresh a freshness digest only for the file whose task you just scored.** A loop over the whole
+  block turns the claim into a formality: the gate goes green while the measurement no longer
+  describes its input, which is the exact state it exists to forbid. (#42)
+- **When a false positive recurs, ask whether the previous fix named the concept or an instance of
+  it.** `QUOTED_SPAN` fixed three *spellings* of quotation and the same correct answer failed one
+  cycle later using a fourth. Prefer structure over vocabulary. (#37)
+- **On the third occurrence of a class, stop fixing instances and check whether an earlier author
+  already named the instrument.** `DISOWNS` had written down "ask for a structured answer" as the
+  remedy before any of the three failures; three local patches were applied instead. (#38)
+- **Score a declared block, not free prose, whenever the answer is a set of identifiers.** Prose
+  scoring punishes the discussion that makes an answer good — writing off a retired ID, naming a
+  near-miss — because the disowning word wraps onto another line. (#38)
+- **Generalised, after four occurrences: a check for “asserted something it should not” reads a
+  declared block, never prose.** The three tasks of that shape all do; tasks checking for the
+  *presence* of correct reasoning do not need it. (#39)
+- **Three consecutive fixes that each add one more way of writing the same thing means the scan is
+  wrong, not incomplete.** A word list, three quote syntaxes, then blockquotes — and the next answer
+  used plain prose. (#39)
+- **A line is an artefact of wrapping; a paragraph is what someone wrote.** Five false positives had
+  one cause — checkers reading `splitlines()` while a claim and its disowning word sat on different
+  lines. Four fixes treated symptoms first. Analyse the paragraph. (#43)
+- **Widening a *positive presence* vocabulary is safe; widening a *defect-shape* pattern is not.** The
+  first lowers false negatives and cannot accuse anyone; the second is how four false positives were
+  built. (#43)
+- **When you write a generalisation, apply it by re-classifying every case, not the ones that
+  prompted it.** #39's rule was correct and `what-is-this-for` was exempted on its dominant shape
+  while carrying exactly the clause the rule was about. (#43)
+- **Gate the numbers a document is believed for, on *drift* rather than on a calendar.** The dossier
+  was wrong about six counted facts while twenty other properties were gated — and the gated ones lent
+  the stale ones authority. A wall-clock check would have reddened a quiet week instead. (#45)
+- **A declared quantity a check cannot recompute must be refused, not tolerated.** Otherwise the block
+  becomes a place to publish an interpretation in the typography of a measurement — and the mirror
+  case: a measurable quantity left *undeclared* is where the inconvenient number hides. (#45)
+- **A collateral declaration can encode measurement *state*, not just a file set — derive it.** Three
+  `also` columns broke in one commit when five digests returned to `(unmeasured)`, reporting gates as
+  failing to fire while nothing about any gate had changed. (#47)
+
+### About budgets that keep being breached
+
+- **Compression is a one-time payment on a recurring bill.** A load set's declared exit was executed in
+  full and the set was still over, because halving the copies does not stop the surviving copy growing.
+  **When the part that breaches a ceiling is a part that grows by design, move the part out of every
+  member** — do not compress it, and do not raise the number. (#46)
+- **Ask where a growing roster is *carried*, not only how big it is.** The gate list cost two load sets
+  twice for five occurrences because it lived in two files that both sat inside sets. (#46)
 
 ### About rules, thresholds and sweeps
 
@@ -89,6 +134,23 @@ relations:
 - **A sweep reaches the departments it was named after.** Four completed C1 phases left the scoring
   schemes in demand-planning, risk and supplier-development untouched because no phase listed those
   nodes. Enumerate the estate, not the phases. (#36)
+- **A decision recorded as a rule clause is invisible to a search of the decision log.** The
+  NestJS↔Rust transport was fixed in ENG-R10.1, and reading the ADR index concluded it was undecided.
+  Search the rule families too, before reporting a gap. (#40)
+- **When a decision reverses a premise, grep the rule text for clauses built on it.** ADR-0037 swept
+  the nodes and left ENG-R10.7 ordering the opposite of what G10 enforces, for six weeks. (#40)
+
+- **Audit what exists before accepting a proposal's framing.** Two thirds of a Context-OS proposal
+  was greenfield described as improvement, and the estate's real weakness — retrieval reaching 7% of
+  it — was in the reach of a mechanism it already had. (#41)
+- **Then score the estate against a reference model, because a proposal only surfaces the gaps its
+  author thought of.** Doing that found six more, including a practice-area roster with no row for the
+  discipline the repository itself runs on — anchorable all along, and simply never rostered. (#44)
+- **Ask where a document's content is allowed to come from, not only whether it is sound.** Every
+  review checked the estate's claims; none asked what may be written into the memory every session
+  loads from a page, a comment or a log fetched from outside it. (#44, risk #16)
+- **A budget calibrated against a set that reaches nothing prices a session that reads nothing.**
+  Measure what a session actually opens before trusting a ceiling. (#41)
 
 ### About knowledge and its sources
 

@@ -1,129 +1,164 @@
 ---
 id: program-state-of-project
-title: "State of the Project — snapshot & improvement map"
+title: "State of the Project — the dossier the owner steers by"
 type: program
 owner: orchestrator
 status: active
 since: 2026-07-22
-updated: 2026-07-29
+updated: 2026-08-04
 relations:
   - { type: part-of, target: index-program }
+  - { type: depends-on, target: program-agentic-context-assessment }
   - { type: governed-by, target: governance-root }
 ---
-# State of the Project — snapshot & improvement map
+# State of the Project — the dossier
 
-> A **regenerated status snapshot** (non-authority): it *references* the authorities — ADRs
-> (`10-decisions`), rules (`30-foundation`/`50-engineering`), the product model
-> (`20-product-model`) and the backlog (`WORKFLOW.md`) — and never restates them as new truth
-> (knowledge-architecture SSOT). Interpretive verdicts (% complete, practice grades) are
-> estimates for steering, refreshed each iteration. A visual version is published as a private
-> Artifact (see §6). **Snapshot: 2026-07-27.**
+> **What this is.** The one document written to be read *before deciding*: what exists, what it is
+> worth, what is missing, what is blocked and what the next decision is. **Non-authority** — it cites
+> the ADRs, the rules, the product model and `WORKFLOW.md` and never restates them as new truth.
+>
+> **Two kinds of statement live here and they are marked apart.** The **counted facts** in §1 are
+> recomputed from the estate by **gate G21** and cannot go stale silently: any change that moves one
+> of them reddens the gate until this file is updated in the same commit (ADR-0052). Everything else —
+> percentages, grades, verdicts — is **interpretation for steering**, refreshed whenever the dossier
+> is, and never gated, because a gate over a judgement would only make the judgement look official.
+>
+> **Why it is not on a calendar.** A staleness check on wall-clock age reddens correct work during a
+> quiet week, and a gate that reddens correct work gets disabled rather than obeyed (known pitfall,
+> improvement #16). So the trigger is **drift, not time**: the dossier is refreshed on the change that
+> makes it wrong.
 
-## 1. What the project is (one paragraph)
+## 1. Counted facts — recomputed by G21
 
-A project/workspace modeled as a **technology company** where **SCM is the operating
-discipline** — the Global Context that governs a portfolio of Projects across all tech
-branches, organized as a typed node+edge graph of Regions (ADR-0030; `20-product-model/
-node-model.md`). Not a commercial product.
+```dossier
+snapshot         2026-08-04
+governed-docs    243
+concept-nodes    167
+departments      14
+graph-edges      568
+adr-decisions    53
+gates            21
+gate-mutants     30
+eval-checkers    6
+eval-samples     12
+load-sets        6
+```
 
-## 2. Completion by layer (estimate, for steering)
+Read as: **243 governed documents** carrying **568 typed edges**, of which **167** are concept nodes
+across **14** departments; **53** recorded decisions; **21** doc gates proved by **30** planted
+mutants; a context-adherence measurement with **6** checkers and **12** discriminating samples; and
+**6** declared load sets pricing what a session reads together.
 
-> **Reset by ADR-0037.** The previous estimate counted an invented supply-chain application as
-> ~60% of a product. That application was deleted: it was not progress toward this repository's
-> purpose, so the percentages below measure something different from the ones before it.
+## 2. What the project is
+
+The **Global Context** a technology company consults to run itself and to build software well —
+two axes (ADR-0045): the fourteen supply-chain departments as the operating disciplines, and the
+engineering practice areas as the build disciplines. It governs a **portfolio of projects** that
+reference its nodes by stable ID and overlay their own policy (ADR-0030), and it holds **no company's
+data** (ADR-0037). The **one application it builds is monitoring**, because a company selling
+technology has to see the state of what it is building (ADR-0031/0034/0036).
+
+## 3. Completion by layer (estimate, for steering)
 
 | Layer | State | Est. |
 |---|---|---|
-| The context — standards, 154 concept nodes, rules, ADRs, node model, gates | substantial and gate-enforced, **but carries policy the inclusion test forbids** (Phase C1/C2) | ~70% |
-| Standards reference data (`packages/shared`) | ISO 8601/4217/3166, UN/ECE Rec 20 units, GS1 keys + check digit, Incoterms 2020, SCOR — purged of policy | ~40% |
-| Exact money arithmetic (`crates/scm-money`) | complete and tested; no policy | ~95% |
-| Monitoring application (Phase M) | designed (ADR-0031/0034/0036), **no code** | ~2% |
-| Workspace / projects layer | modelled, not built | ~5% |
-| **Overall** | | **~20%** |
+| The context — standards, 167 concept nodes, rule families, 53 ADRs, the node model | substantial, gate-enforced, and **the policy sweep is complete** across nodes, department rules and the agent layer | ~85% |
+| The context *mechanism* — load sets, the graph resolver, the adherence measurement, 21 gates | the estate's strongest asset and now measured against an external reference model | ~80% |
+| Standards reference data (`packages/shared`) | ISO 8601/4217/3166, UN/ECE Rec 20, GS1 keys + check digit, Incoterms 2020, SCOR | ~40% |
+| Exact money arithmetic (`crates/scm-money`) | complete, tested, no policy | ~95% |
+| Telemetry tier (`db/clickhouse`, `crates/scm-ingest*`) | schema with its own gate, split-privilege identities, ingestion core **and** transport half, flow/level split enforced structurally | ~70% |
+| Monitoring application (M4/M5) | decided in ADR-0049, **no binary in the tree** | ~5% |
+| Workspace / projects layer | modelled, not built; **no machine interface** for a project to read a node by ID | ~5% |
+| **Overall** | | **~40%** |
 
-## 3. Best-practices scorecard (verdict · evidence)
+The overall figure moved from ~20% to ~40% without a line of application code, and that is the honest
+reading rather than a generous one: what was ~20% counted a context that carried policy the inclusion
+test forbids, had no measurement of its own use, and reached 7% of itself. All three are now false.
 
-> Most rows of the previous scorecard graded an application that ADR-0037 deleted (clean
-> architecture rings, DDD aggregates, event sourcing, DB schema, TS/PY test parity). Those rows are
-> gone rather than restated: grading absent code would be theatre. What is left is what the
-> repository actually is.
+## 4. Scorecard (verdict · evidence)
 
-- **Knowledge governance** — *built, strong*. Tiered docs, one-way SSOT, append-only ADRs, stable
-  IDs, thirteen gates in CI, the node model. Still the estate's best asset, and the reason the reframe
-  could be made surgically instead of by restart.
-- **Standards fidelity** — *improving, was a real weakness*. The unit codes were wrong (`KG` for
-  `KGM`) and the z-score was approximated by a hand-typed table. Both are fixed. The remaining
-  exposure is that no gate can tell a standard from a plausible-looking invention — G10 checks that
-  a source is *cited*, not that the content matches it.
-- **Policy separation (the new central discipline)** — *swept, and the sweep is the discipline*.
-  `CLAUDE.md`, `SCM-R*` and the department index headers carry the inclusion test; Phase C1 swept
-  the 160 concept nodes and C2 rewrote all fourteen department rule families. The residue the
-  2026-07-29 file-by-file review found was not in `docs/40-contexts` — it was in the glossary, in
-  benchmark *parameters* left inside dept-06 node output descriptions, and above all in
-  `.claude/skills/**`, which no gate reads and which instructs the next session's work.
-- **Money precision (no float)** — *resolved*. One implementation, `crates/scm-money`: exact
-  decimal, `roundTiesToEven`, sum-preserving apportionment, overflow reported rather than wrapped,
-  no `unsafe`. The TypeScript and Python mirrors that used to disagree are gone.
-- **Security (runtime)** — *beginning*. There is still no running system, but the first real
-  boundary exists: migration 0005 creates a split-privilege ClickHouse pair (insert-only writer,
-  SELECT-only reader) with quotas. AuthN/authZ, secrets and tenancy arrive with M4.
-- **CI/CD** — *partial*. GitHub Actions runs `make verify-full` and `make verify-schema` (the
-  latter against a real ClickHouse service container); no deploy pipeline, containerization or
-  observability (Phase M5).
-- **UI design tokens** — *specified only* (ADR-0026: octagon node-graph, LED-cyan `#22d3ee`); no
-  UI exists.
+- **Knowledge governance** — *strong, and the estate's differentiator*. Tiered docs, one-way SSOT,
+  append-only decisions, stable IDs, 21 gates in CI, a typed graph proved acyclic. **And the gates are
+  themselves tested** — `tools/test_gates.py` plants one violation per *claim* and requires that gate
+  and no other to fire (ADR-0042), which is the step most estates skip.
+- **Context engineering** — *measured against an external reference model for the first time*. See
+  [agentic-context-assessment.md](agentic-context-assessment.md): of 33 applicable capabilities across
+  context engineering, RAG, memory and agentic AI, **21 have · 5 partial · 6 gap**, with 4 declared
+  non-goals. The shape is consistent — strong wherever a property can be checked deterministically,
+  absent wherever it requires something to be running.
+- **Policy separation** — *complete as a sweep, permanent as a discipline*. Nodes (C1), all fourteen
+  department rule families (C2) and `.claude/**` (risk #13, swept 2026-07-29) carry the inclusion
+  test. The residual is the **class**, not the instances: no gate can distinguish a target from a
+  definition, so the next file added can reintroduce it.
+- **Standards fidelity** — *improving; two named residuals*. Risk #11 — no gate tells a standard from
+  a plausible-looking invention. Risk #12 — a citation can stop matching its source without anything
+  changing here, which C5 caught publishing a superseded CSDDD phase-in. Both open on purpose.
+- **Money precision** — *resolved*. One implementation, `crates/scm-money`: exact decimal,
+  `roundTiesToEven` (SCM-R14), sum-preserving apportionment, overflow reported not wrapped, no
+  `unsafe`. ADR-0047 fixed it as the Rust core's responsibility; the TypeScript and Python mirrors
+  that used to disagree are gone.
+- **Measurement discipline** — *rare, and worth protecting*. MSR-R2's forbidden aggregation is not
+  something a dashboard can select by mistake: `telemetry.levels_1m` exposes no sum column at all and
+  `apply.py` fails if it grows one (risk #14). The invariant is enforced by the **shape of the read
+  surface**, not by a warning.
+- **Security** — *two halves, one covered*. Data-plane: split-privilege ClickHouse identities with
+  quotas; the ingester refuses non-finite values, ungoverned metrics and future timestamps.
+  **Agent-plane: uncovered** — no threat model for goal hijacking, tool misuse or memory poisoning,
+  on an estate that now reads web pages, PR comments and CI logs. This is the sharpest new gap.
+- **CI/CD** — *partial*. Actions runs `make verify-full` and `make verify-schema` against a real
+  ClickHouse service container. No deploy pipeline, no containerization, no runtime observability (M5).
+- **UI** — *specified only* (ADR-0026: octagon node-graph, LED-cyan `#22d3ee`). No UI exists.
 
-## 4. Where improvement signals come from
+## 5. The six open gaps, ranked
 
-- `make verify` — the thirteen doc gates; G10 checks standards provenance, G12 catches
-  family-wildcard rule citations, G13 catches a stale `updated:` stamp.
-- `docs/program/WORKFLOW.md` — the ordered backlog (Phase C cleanup, Phase M monitoring).
-- `docs/00-governance/risk-register.md` · `docs/program/improvement-register.md`.
-- **The gap no tool reports:** whether a node's content is genuinely externally fixed. The
-  anti-states in `docs/30-foundation/scm-core/rule.md` are the checklist a reviewer applies by
-  hand.
+From §2 of the assessment. Ranked by value over new technology; **none of the first three adds a
+runtime dependency.**
 
-## 5. Route (chosen path)
+| # | Gap | Why it matters | Disposition |
+|---|---|---|---|
+| 1 | **No agentic threat model** | untrusted text — a fetched page, a PR comment, a CI log — can reach a register every later session loads, and no rule says it may not. Memory poisoning against an estate whose whole value is a trustworthy memory | **next**; a risk row plus one clause, not a project |
+| 2 | **No agent-session telemetry** | nothing traces what a session read, did, or spent. Closes capabilities 9, 34, 35 and 37 at once | **sequenced with M4** — emit OTel GenAI spans into the tier ADR-0036 already built |
+| 3 | **No trajectory evaluation** | outcome is measured (ADR-0043); *process* is not. Whether the six ENG-R9 checks ran, or a gate was run before a green claim, is caught only by a human reading a transcript | after 2, which supplies the trace it would score |
+| 4 | **Utilization unmeasured** | G19 proves a set *can* answer its question; nothing proves the answer used it. The literature puts ~40% of RAG quality variance here | offered, needs a decision about what a task asks for |
+| 5 | **No machine interface for consuming projects** | ADR-0030 promises reference-by-ID; the only mechanism today is cloning the repository | **owner-gated** — an MCP server is a *second application*, which ADR-0037 does not permit quietly |
+| 6 | **Retrieval stack absent** | embeddings, vector store, reranker, cache | **not recommended**; ADR-0050 records the condition that would change this |
 
-**Reframed by the owner on 2026-07-27 (ADR-0037).** The repository is the context a project
-consults to learn which supply-chain departments it needs and how to implement them — nothing
-more — and the only application it builds is monitoring.
+## 6. Decisions waiting on the owner
 
-**Done in that direction:** ADR-0037 recorded · `SCM-R*` reclassified (7 of 13 retired as policy
-or engineering convention; SCM-R14 added for the money identity) · ~25,700 lines of invented
-application deleted (`packages/domain`, `services/calc`, `crates/scm-core`, `proto/`) ·
-`packages/shared` purged to standards, with the wrong UOM codes corrected to UN/ECE Rec 20 ·
-G10 rewritten from *code coverage* to *standards provenance* · `## Implementations` removed from
-152 nodes · `CLAUDE.md` rewritten around the inclusion test.
+Nothing blocks M4. These are the choices that will be asked with speed and security trade-offs when
+their moment arrives (ADR-0002: OSI, commercially usable, modifiable):
 
-**Since then:** Phase C ran — C1 swept the catalogue, C2 rewrote all fourteen department rule
-families, C3 mechanized stale citations as G3/G12, C4/C4b corrected prose that described deleted
-code, C5 rewrote the standards framework with per-entry verification dates. Phase M is under way:
-**M1** the six platform concept nodes (CPT-0155..0160), **M2** the ClickHouse telemetry tier with
-its own gate, **M3a** the Rust ingestion core.
+- an **auth library** — Zitadel went AGPL in 2025, so licence first;
+- a **secrets vault** — Vault is BUSL, so **OpenBao**;
+- a **charting library** for the dashboards;
+- the **broker/cache** pair (NATS or Kafka + Valkey), which ADR-0034/0036 keep gated until
+  measurement shows the Rust ingester plus ClickHouse cannot absorb the rate;
+- **gap 5 above** — whether this repository gains a second application, or a consuming project owns
+  the interface.
 
-**Next, in order:** **M3b** the transport adapter and ClickHouse client (retry, dead-letter),
-**M4** NestJS + GraphQL and the Next.js dashboards, **M5** Docker then Kubernetes.
+## 7. Route
 
-**Known inconsistency, stated plainly.** The catalogue and the department rules are swept; the
-**agent and skill layer is not**. `.claude/skills/**` still publishes KPI *target* tables — `OTD
-≥ 95%`, `Fill Rate ≥ 98%`, `CoPQ < 2% of revenue` — which are precisely what ADR-0037 forbids, and
-`.claude/commands/**` still addresses application code that no longer exists. That layer sits
-outside every gate but inside every session's working set, which makes it the worst remaining
-place for the defect, not the least important. Found by the 2026-07-29 file-by-file review;
-scoped, not yet swept.
+**Done:** the ADR-0037 reframe and its sweep · Phase C (nine items) · M1 platform nodes · M2
+ClickHouse telemetry tier with its own gate and the flow/level split · M3a ingestion core · M3b
+transport half · the context layer (ADR-0050/0051: the graph resolver, G19, G20, the fabricated-citation
+fix) · this assessment and the dossier's gate (ADR-0052/0053).
 
-## 6. New-technology decisions still pending (owner-gated, per the speed/security rule)
+**Next, in order:** **gap 1** (the agentic threat model, cheap and outstanding) → **M4** NestJS +
+GraphQL and the Next.js dashboards, per ADR-0049 → **gap 2** riding on M4's telemetry → **M5** Docker
+then Kubernetes.
 
-Adopted since the last snapshot (owner-directed): **Rust** (core — ADR-0035), **ClickHouse**,
-**Docker**, **Kubernetes** (ADR-0034). Still owner-gated, asked with speed + security trade-offs
-before adoption: an **auth library** (note: Zitadel went AGPL in 2025 — licence check first), a
-**secrets vault** (Vault is BUSL → **OpenBao**), a **charting library** for dashboards, and the
-**broker/cache** pair for monitoring (NATS/Kafka + Valkey), which ADR-0034/0036 keep gated until
-measurement shows the Rust ingester plus ClickHouse cannot absorb the rate. Everything else is
-already decided and OSI (ADR-0002).
+## 8. How this document stays true
 
-- **Visual dossier:** a private Artifact rendering of this snapshot is published from the
-  session (octagon/LED-cyan console styling); regenerate it alongside this doc.
-- **Governing refs:** `CLAUDE.md` · `10-decisions/README.md` (ADR-0001–0036) ·
-  `50-engineering/rule.md` · `30-foundation/*/rule.md` · `20-product-model/*` · `WORKFLOW.md`.
+1. **The counted facts are gated.** G21 recomputes all eleven and fails on drift, so this file cannot
+   quietly describe a repository that no longer exists — the failure mode of every status document.
+2. **G21 refuses a fact it cannot measure.** A key it does not know how to recompute is a failure, not
+   a pass: the load-set manifest paid for that lesson when an unimplemented selector priced the wrong
+   thing, and a dossier that can declare unverifiable numbers is the same defect.
+3. **`snapshot` must equal `updated:`,** which G13 already proves is the file's real last change. So
+   the date cannot be older than the content and cannot be newer than the work.
+4. **The interpretation is refreshed with the facts,** in the same change. A gated §1 beside a stale
+   §4 would be worse than no gate, because the true numbers would lend the stale verdicts authority.
+5. **Governing refs:** `CLAUDE.md` · `docs/10-decisions/README.md` · `50-engineering/rule.md` ·
+   `30-foundation/*/rule.md` · `20-product-model/*` · `WORKFLOW.md` ·
+   [agentic-context-assessment.md](agentic-context-assessment.md) ·
+   [context-architecture-audit.md](context-architecture-audit.md).

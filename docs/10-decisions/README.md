@@ -5,7 +5,7 @@ type: adr
 owner: orchestrator
 status: active
 since: 2026-07-19
-updated: 2026-08-03
+updated: 2026-08-04
 relations:
   - { type: part-of, target: index-docs }
   - { type: governed-by, target: governance-root }
@@ -79,11 +79,32 @@ relations:
 - ADR-0046 — **The context is versioned per node by digest, and tagged by calendar:** ADR-0030 promised a "versioned substrate" and ADR-0011 proposed SemVer tags; **zero tags existed** and this was the last open decision. SemVer is rejected on substance — a retired ID is never reassigned and stays listed (G11/G16), so every prior citation resolves and **the corpus cannot produce a breaking change by construction**, leaving the major component with nothing to encode. Instead: a **per-node `sha256:12`** recorded by the project (what it relied on, not which repo state — the mechanism G15 already proves) plus an annotated **`YYYY.MM`** tag as a legible human reference that claims nothing about compatibility. The declaration is the project's artefact and the form is `templates/knowledge-selection.md`, because PLT-R2 keeps project material out of the context — **so no gate here can check a project declared anything**, which is stated rather than hidden. Narrows ADR-0011. (Accepted — owner-directed 2026-08-03)
 - ADR-0037 — **The Global Context holds only externally-fixed standards; the fictitious SCM application is retired.** The context is the source a project consults to learn *which departments it needs and how to implement them* — nothing more. It carries what a standards body, a regulator or an arithmetic identity fixes; it never carries what an organization chooses (thresholds, targets, weightings, rating bands, method mandates). Consequently **~25,700 lines of invented application code are deleted** (`packages/domain`, `services/calc`, `crates/scm-core`), concept nodes become **definitions without parameters**, and the **only application built here is the monitoring project**. Supersedes the two-language-SCM-application premise of ADR-0001; narrows ADR-0015 (nodes define, they do not own code) and ADR-0035 (the Rust core serves the monitoring platform, not 14 departments of invented rules). (Accepted — owner-directed 2026-07-27)
 
+- ADR-0047 — **Money in the Rust core: integer minor units, exact decimal computation:** ADR-0019 decided "arbitrary-precision Decimal end-to-end" and named an estate — TypeScript `Money { amount: Decimal }`, Python `decimal`, `NUMERIC(19,4)`, gRPC strings — of which **nothing survives**; `crates/scm-money` instead represents money as `i64` minor units and uses `Decimal` as the computation medium, a reversal never recorded, so the accepted decision and the shipped code had disagreed since the crate was written. Separates the two roles: **representation** is integer minor units (`i64`, because a credit is a first-class value), **computation** is exact decimal quantizing once with `roundTiesToEven` (IEEE 754-2019 §4.3.3) through the single `MONEY_ROUNDING` constant, and apportionment is largest-remainder because its sum-preserving property is the identity **SCM-R14**. The precision gain over ADR-0019 is in the failure modes it left open: every operation total, a typed `MoneyError`, **overflow reported and never wrapped** (`checked_add`/`checked_sub`), a non-positive divisor refused rather than saturated. `tests/golden/money.golden.json` stays as the canonical-answer fixture a second implementation must read. Carries no policy, which is why it survived ADR-0037 — and should be deleted outright if monitoring never handles money. Open follow-up: a currency type instead of `String`, owned by the standards module. (Accepted — owner-directed 2026-08-03)
+
+- ADR-0048 — **The exemplar is a department's knowledge, and a gate proves it whole:** ADR-0012 clause 3 declared an exemplar department whose shape siblings copy — *models imitate a real example more reliably than they deduce from prose* — and ended with "always real code, never fabricated samples"; ADR-0037 deleted every department's code, leaving the clause with neither option and unexecuted since, while the gap stayed measurable at **167 nodes and no declared pattern**. The exemplar becomes a department's **knowledge** (its `_index.md`, its concept nodes, its `rule.md`) — same reasoning, changed medium — and it is **`01-procurement`**, the candidate ADR-0012 named, upheld on measurement rather than continuity: 4 live rules (joint highest) and **the only one of fourteen already carrying the pitfall list**, chosen for complete shape over `03-demand-planning`'s larger volume. **Clause 4 is narrowed to the exemplar** because a legitimate pitfall comes from a correction that happened, and inventing thirteen lists is the defect ADR-0037 removed. **G18** makes it law and checks form, never quality: the exemplar declared in one machine-readable place, a `rule.md` with a live rule, the pitfall list present, and an `_index.md` listing every node — the last applied to all fourteen because measurement showed they already comply, so a true and unguarded property becomes guarded for free. (Accepted — owner-directed 2026-08-03)
+
+- ADR-0049 — **M4's architecture: no migrations, a Python build step, auth deferred:** a readiness check before the phase found four items, one of which was a misreading — the NestJS↔Rust transport **is** decided by **ENG-R10.1** (`napi-rs`), which a search of the decision log cannot see. Of the three real questions: the Postgres read model carries **no migrations**, because ADR-0024 already calls the tables *dropped-and-rebuilt* and the model *disposable*, and migrations exist to preserve data a disposable projection does not have — the **drift guard** matching rebuilt counts against `docs/` replaces a schema gate, and ClickHouse keeps its migrations because telemetry cannot be regenerated. The `docs/` → Postgres build step is **Python in `tools/`**, decided on reuse: `tools/verify.py` already parses every front-matter block, relation and rule ID, gate-tested, and a second parser could project a graph the gates never approved — not a lane breach, since ENG-R10's ingestion is the per-event hot path and NestJS was already forbidden as an ingester by ENG-R11's anti-states. **Authentication is deferred explicitly**, ending when the gateway becomes reachable from outside the workspace. (Accepted — owner-directed 2026-08-04)
+
+- ADR-0050 — **The context layer is improved by gates, not by a retrieval stack:** a Context-OS proposal was audited before any code and the repository turned out to have **no retrieval layer to improve** — zero embeddings, vector store, LLM SDK or caches, and `dependencies: {}`. The measurement that decided it: the six load sets reach **17 of 241 documents, with zero concept nodes and zero department rule files**, while **559 typed edges** already state what each node needs and are read by nothing. So retrieval becomes **graph-derived** through a `graph:` selector, the artefact is a **resolver** (`tools/context_set.py`) that assembles and prices what a session will actually open — closing G14's gap between the declaration and the session — and the retrieval stack is **deferred with a stated condition**: a corpus where traversal from a declared root cannot reach what a task needs. **No model judges the context** (ADR-0043's rejected judge), so reflection loops and model-scored confidence are out of scope rather than pending. Nine of the proposal's requirements were already satisfied deterministically; rebuilding them with a model would be a regression, and its own requirement 28 forbids adopting a technique merely because it is listed. **Narrows ADR-0041.** (Accepted — owner-directed 2026-08-04)
+
+- ADR-0051 — **Coverage, vocabulary hygiene, and a fabricated citation that used to pass:** building ADR-0050's remaining checks produced two gates and found a third defect nobody was looking for. **G19** asserts each evaluation task's `Must reach:` tokens appear in a member of its load set — tokens rather than semantics, because whether a set *suffices* is undecidable while whether an identifier is physically present is not; this makes improvement #34 mechanical, where two **correct** answers were failed by a set carrying no unit codes and the manifest was the defect. **G20** asserts the relation vocabulary is exercised or **declared reserved**, because an unused edge type is an *affordance* for the defect it was written for: **`implements` is retired** — zero documents used it while ADR-0037 forbade node-to-code links, G10 rejects them and ENG-R10.7 was still instructing them. That is also the honest form of contradiction detection: a semantic clash between prose and code is undecidable and four prose heuristics have already failed here, so G20 removes the affordance instead of guessing at the meaning. **The third find: a cited concept ID never had to resolve** — a fabricated `CPT-4242` satisfied the check whose whole purpose is that answers rest on evidence, the mirror of what `live_rule_ids` prevented for rules all along; now validated, with a regression sample. And **the resolver reaches the exemplar**, which ADR-0048 declared and no load set could read. (Accepted — owner-directed 2026-08-04)
+
+- ADR-0052 — **The dossier is gated on drift, never on a calendar:** `state-of-the-project.md` is the document read *before deciding*, and on 2026-08-04 it was wrong about six counted facts at once — 154 concept nodes against 167, thirteen gates against twenty, "ADR-0001–0036" against fifty-one — each load-bearing for a steering decision and none of them watched. So the dossier declares its counted facts in a fenced block and **G21** recomputes all eleven: any change that moves one reddens until the same commit refreshes it. **The trigger is drift, not wall-clock age**, because a calendar check reddens correct work during a quiet week and a gate that reddens correct work gets disabled rather than obeyed (improvement #16). Three further design choices carry the decision: **an unknown key fails** — the load-set manifest's unimplemented-selector lesson, so a dossier cannot launder interpretation as measurement; **a measurable key left undeclared fails too** — G16's both-directions rule, so the block cannot omit the inconvenient number; and **`snapshot` must equal `updated:`**, which G13 already proves is the real last change, so the date can be neither older than the content nor newer than the work. Percentages and grades stay in prose and stay ungated: a gate over a judgement only makes the judgement look official. (Accepted — owner-directed 2026-08-04)
+
+- ADR-0053 — **The engineering axis rosters the discipline this repository runs on:** measuring the estate against an external reference model for context engineering, RAG, memory and agentic AI surfaced a gap no proposal had raised — `practice-areas.md` anchors thirty-five areas including *AI and machine learning* (ISO/IEC 22989), *MLOps and LLMOps* (ISO/IEC 42001, NIST AI RMF) and *technology governance* (ISO/IEC 38500), and **building software with agents appears in none of them**. Every project in the portfolio this context governs will be built the way this repository is being built, and the axis that exists to state *how software is engineered* was silent about it. Area **#36, context engineering and agentic systems**, is added with anchor kind **Standard + Terminology** and six candidate anchors — ISO/IEC 42001, ISO/IEC 22989, NIST AI RMF, the OWASP LLM and Agentic top-ten threat classes, the OpenTelemetry GenAI semantic conventions, and the Model Context Protocol specification. An area with six published anchors is not a consensus area; it was simply never rostered. Status stays `—` like every other row: W5 forbids speculative pre-build, and what the roster fixes is the thing that cannot be improvised later — **which authority makes a statement in it admissible**. (Accepted — owner-directed 2026-08-04)
+
 ---
 
 ## ADR-0001 — Two-language split: TypeScript domain logic + Python analytics/ML
 
-**Status:** Accepted (retroactive)
+**Status:** **Superseded by ADR-0033/ADR-0035** (owner-directed 2026-08-03)
+
+> **Both halves of the split are gone.** ADR-0035 moved the core to **Rust** — rules, invariants,
+> exact arithmetic, the hot path, ingestion — and confined **TypeScript to NestJS and Next.js** plus
+> the standards module, where it is no longer a lane owner. ADR-0033 fixed that as exclusive lanes
+> (ENG-R8). Python survives as the **tools layer** (models, statistics, optimization, ML) and as this
+> repository's gate scripts, not as "analytics" beside a TypeScript domain. ADR-0037 then deleted the
+> domain logic this ADR was describing: two TypeScript files remain and they are reference data.
 
 **Context:** The system needs both auditable business-rule logic (aggregates, validations,
 state machines) and heavy mathematical/ML models (forecasting, optimization, deep
@@ -107,7 +128,7 @@ discipline for domain aggregates at the time of adoption).
 
 ## ADR-0002 — OSI open-source-only dependency policy
 
-**Status:** Accepted (retroactive)
+**Status:** Accepted (retroactive) · **ratified by the owner 2026-08-03**
 
 **Context:** The repo must remain buildable and distributable without proprietary
 services or non-OSI licenses.
@@ -132,7 +153,7 @@ redistribution risk).
 
 ## ADR-0003 — English-only for all repo artifacts
 
-**Status:** Accepted (retroactive)
+**Status:** Accepted (retroactive) · **ratified by the owner 2026-08-03**
 
 **Context:** The repo was partially written in Spanish; international standards, external
 collaboration and consistency demand one working language.
@@ -150,7 +171,7 @@ migration cost (already paid).
 
 ## ADR-0004 — 14-department structure aligned to SCOR-DS
 
-**Status:** Accepted (retroactive)
+**Status:** Accepted (retroactive) · **ratified by the owner 2026-08-03**
 
 **Context:** The domain needs an organizing principle that scales and maps to how real
 enterprises structure supply chains.
@@ -172,7 +193,14 @@ knowledge); ad-hoc module growth (rejected: no external grounding).
 
 ## ADR-0005 — Event-sourced inventory; state-based elsewhere
 
-**Status:** Accepted (retroactive)
+**Status:** **Superseded by ADR-0037** (owner-directed 2026-08-03)
+
+> **A persistence choice for an application this repository no longer contains.** ADR-0037 deleted
+> the invented estate and established that the context holds **no company's data** — so there is no
+> inventory to source, event-wise or otherwise. Nothing here is retained as law: whether to
+> event-source a store is exactly the kind of design decision a *project* makes and declares, and the
+> context names the decision without answering it. The durable fragment ADR-0007 shared with it —
+> that a financial record is corrected, never erased — lives on as **SCM-R3**.
 
 **Context:** Inventory demands a tamper-evident audit trail (GAAP/IFRS IAS 2); most other
 aggregates only need current state.
@@ -195,7 +223,21 @@ mutable stock balance column (rejected: no audit trail).
 
 ## ADR-0006 — Data conventions: integer-cent Money, ISO 8601/UTC, GS1 UOM, immutable SKU
 
-**Status:** Accepted (retroactive) · **money clause superseded by ADR-0019**
+**Status:** **Superseded** (owner-directed 2026-08-03) — clause by clause, below
+
+> **Its four clauses went four different ways, which is why a single supersession note is the honest
+> form and a partial one was not.**
+>
+> - **Money** → ADR-0019 replaced the integer-cent clause with Decimal-everywhere, and **ADR-0047**
+>   has now replaced *that* for the Rust core: representation is integer minor units after all, with
+>   exact decimal as the computation medium. The clause ends where it started and the route matters,
+>   because ADR-0047 fixes the failure modes neither earlier statement addressed.
+> - **ISO 8601 / UTC** → survives as **SCM-R9**, and is externally fixed, so it is law rather than
+>   convention.
+> - **GS1 / UN/ECE units** → survives as **SCM-R10**, likewise externally fixed. This is the clause
+>   whose invented shorthand (`KG` for `KGM`) `CLAUDE.md` still names as an anti-pattern.
+> - **Immutable SKU** → **retired, not inherited.** It was a sound data-modelling convention and a
+>   convention is a choice; it left with **SCM-R11** under ADR-0037.
 
 > **Superseded in part:** the integer-cent `Money` clause below is replaced by ADR-0019
 > (arbitrary-precision Decimal). The other three conventions — ISO 8601/UTC dates, GS1
@@ -215,7 +257,15 @@ arithmetic must round at defined points. Now citable as SCM-R14..R11
 
 ## ADR-0007 — Soft-delete for financial records + idempotent inventory transactions
 
-**Status:** Accepted (retroactive)
+**Status:** **Superseded by ADR-0037** (owner-directed 2026-08-03)
+
+> **One clause was law wearing an implementation's clothes; the other was the implementation.**
+> The duty not to erase a financial record is real and externally grounded — retention under CSDDD
+> (**SCM-R7**), and a record corrected rather than deleted (**SCM-R3**) — but *soft-delete* is one
+> mechanism for it among several, and naming the mechanism as the decision is what made this ADR
+> project policy. **Idempotent inventory transactions** went further: `SCM-R12` (an
+> `idempotencyKey` on every transaction) was **retired** by ADR-0037 as belonging to the write path,
+> i.e. the `ENG` family, not to supply-chain law. Retry safety is a project's engineering decision.
 
 **Decision:** POs, invoices, stock movements, shipments and scorecards are **never
 hard-deleted** (`isDeleted` flag); inventory transactions carry an `idempotencyKey` and
@@ -230,7 +280,7 @@ rows. Citable as SCM-R3; retry safety is an engineering concern (`ENG-R*`).
 
 ## ADR-0008 — Standards & regulatory grounding as a first-class feature
 
-**Status:** Accepted (retroactive)
+**Status:** Accepted (retroactive) · **ratified by the owner 2026-08-03**
 
 **Context:** The product's differentiator is that KPIs, algorithms and compliance logic
 are grounded in **named, versioned external standards**, not invented.
@@ -251,7 +301,15 @@ revs. (−) standards versions must be reviewed periodically.
 
 ## ADR-0009 — Testing stack: Jest (TS) + pytest (Python)
 
-**Status:** Accepted (retroactive)
+**Status:** **Superseded by ADR-0035/ADR-0037** (owner-directed 2026-08-03)
+
+> **The stack went with the code it tested,** and the `Makefile` header says so in as many words.
+> ADR-0037 deleted the application; ADR-0035 made **Rust the core**, so the tests that matter are
+> `cargo test` (71 today) plus the doc gates, the gate mutation harness (ADR-0042) and the
+> context-adherence checkers (ADR-0043). **TypeScript now lives only inside NestJS and Next.js** and
+> the standards module, so its test framework is a decision that belongs with **M4**, when there is
+> TypeScript worth testing — not a retroactive one to ratify now. The one cross-language artefact
+> that survived is `tests/golden/money.golden.json`, kept for the reason ADR-0047 gives.
 
 **Decision:** TypeScript tests run under **Jest** (`tests/unit`, `--runInBand`); Python
 under **pytest**, with the stated goal that Python mirrors TS test coverage.
@@ -835,8 +893,25 @@ and the SSOT principle; would immediately drift from `docs/`.
 
 ## ADR-0020 — The Python calculation core is a gRPC service
 
-**Status:** Accepted (owner-authorized 2026-07-20)
-**Extends:** ADR-0001, ADR-0019
+**Status:** **Superseded by ADR-0035/ADR-0037** (owner-directed 2026-08-03)
+**Extended:** ADR-0001, ADR-0019 — **both now superseded themselves**
+
+> **Every premise of this decision is gone, and it was found by asking what M4 needs on day one
+> rather than by any sweep.** Its opening sentence — *"ADR-0001 puts all math in Python"* — is false:
+> ADR-0035 made **Rust the complete core**, and ADR-0037 deleted the Python calculation service this
+> ADR was the contract for. `proto/` does not exist. It also escaped the retroactive review because
+> that batch was 0001–0009 and this is 0020: **a stale decision hides in the gap between the ranges
+> people think to check.**
+>
+> **What survives is the constraint, not the mechanism:** a monetary value must not cross a process
+> boundary as a binary float — protobuf `double` is IEEE-754 and would reintroduce exactly the error
+> being avoided. That duty is now carried by **SCM-R14** and **ENG-R4/R5**, and ADR-0047 states it for
+> the Rust core.
+>
+> **The successor question is open and belongs to M4:** how the NestJS gateway reaches the Rust core —
+> in-process (a Node addon or WASM), a local service, or the core reached only through data already
+> written to Postgres and ClickHouse. Nothing decides it today, and ENG-R8 forbids guessing at a lane
+> boundary, so it is a decision before it is code.
 
 **Context:** ADR-0001 puts all math in Python; the app is TypeScript (NestJS). The two must
 talk, and the payloads are **financial** — serialization must not lose precision (ADR-0019).
@@ -2226,6 +2301,436 @@ anything**. That limit is written into the template itself.
   ADR index, which is the honest answer.
 - (−) The declaration is unenforceable from here. Stated in the template, and it is the price of
   PLT-R2.
+
+## ADR-0047 — Money in the Rust core: integer minor units, exact decimal computation
+
+**Status:** Accepted (owner-directed 2026-08-03) · **Supersedes ADR-0019**
+**Materializes as:** `crates/scm-money`; **SCM-R14**; **ENG-R4/R5**; `tests/golden/money.golden.json`
+
+**Context.** ADR-0019 decided *"arbitrary-precision Decimal end-to-end"* and named the estate it
+applied to: `Money { amount: Decimal }` in TypeScript, `decimal.Decimal` in Python, `NUMERIC(19,4)`
+in `schema.sql`, strings over gRPC. **Every one of those is gone** — ADR-0037 deleted the
+application and ADR-0035 moved the core to Rust. What survived is `crates/scm-money`, and it does
+**not** implement ADR-0019's decision: the representation is `i64` minor units, with `Decimal` used
+as the *computation medium* rather than as the stored type. That reversal was never recorded, so the
+accepted decision and the shipped code have disagreed since the crate was written.
+
+**Decision — the two roles are separated, and that is the whole point.**
+
+- **Representation is integer minor units** (`i64`). A stored amount carries no scale ambiguity, no
+  trailing-zero question and no parse step; `Money { amount_cents: i64, currency: String }`.
+  `i64` and not an unsigned type because a **credit** — a refund, a reversal, a negative
+  adjustment — is a first-class value in this domain, not an error state.
+- **Computation is exact decimal.** Every multiply, divide and allocation runs in `Decimal`, never a
+  binary float, and quantizes **once**, at the boundary, with `roundTiesToEven` — IEEE 754-2019
+  §4.3.3, exposed as the single named constant `MONEY_ROUNDING`. A rate enters through
+  `Decimal::from_str_exact("0.0825")`, so no float ever reaches the calculation.
+- **Apportionment is largest-remainder**, whose defining property is the arithmetic identity
+  **SCM-R14**: the parts sum exactly to the whole. Independent rounding of each share does not have
+  that property, which is why the method is fixed rather than chosen.
+
+**Where this is more precise than ADR-0019, since that is the reason to replace it.** ADR-0019 fixed
+the *type* and left the failure modes open. This fixes the failures:
+
+- **Every operation is total.** `MoneyError` is a typed enum, so a caller matches a cause instead of
+  parsing a message: `CurrencyMismatch`, `NonPositiveDivisor`, `EmptyWeights`, `NegativeWeight`,
+  `NonPositiveWeightSum`, `Overflow`.
+- **Overflow is reported, never wrapped.** Addition and subtraction go through `checked_add` /
+  `checked_sub`. A silent wrap in money arithmetic is the worst available outcome, so it is an error
+  value and not a possibility.
+- **A non-positive divisor is an error, not a saturating result** — division by zero has no money
+  interpretation, and returning something plausible is worse than refusing.
+- **One rounding mode, one constant.** ADR-0019 said "explicit and banker's at defined boundaries";
+  here the boundaries are the four public functions and the mode is a `const` they all share, so
+  there is nowhere for a second convention to appear.
+
+**The cross-language mechanism is the reason the golden file survives.**
+`tests/golden/money.golden.json` was built when TypeScript and Python both had to agree; both are
+gone, and the fixture stays because it encodes the *canonical answers* — including the two-step
+refund quantization that a single round gets wrong by one minor unit. Today the Rust crate is its
+only consumer. **When the NestJS gateway or the Python tools layer next handle money they read this
+same file**, which is what keeps a second implementation from inventing its own rounding.
+
+**Why this carries no policy, and therefore belongs here at all.** Banker's rounding is fixed by
+IEEE 754; largest-remainder is a fixed method; the sum-preserving property is an identity. There is
+no threshold, tolerance or target anywhere in the crate, which is precisely why it survived the sweep
+that deleted ~25,700 lines. **If the monitoring application turns out never to handle money, the
+crate should be deleted rather than kept for its own sake** — a lane owner with no caller is not an
+asset.
+
+**Alternatives considered.**
+- *Keep ADR-0019 as written — `Decimal` as the stored representation.* Rejected on the ground that
+  killed it in practice: a stored `Decimal` needs a scale convention at every boundary it crosses
+  (DB column, wire format, telemetry row), and each convention is a place for the exactness to be
+  renegotiated. Integer minor units have one meaning everywhere.
+- *`i128` minor units.* Removes the overflow class outright. Rejected as unearned: `i64` minor units
+  reach ±9.2 × 10¹⁶, `checked_*` makes overflow an explicit error rather than a corruption, and the
+  wider type costs every downstream boundary a conversion. Revisit if a real amount approaches it.
+- *A dedicated currency type instead of `String`.* Genuinely better — ISO 4217 is a closed list and a
+  string admits `"EURO"`. Not adopted here because it belongs with the standards module that owns the
+  ISO 4217 table, and inventing a second source for it is the defect this repository exists to avoid.
+  **Recorded as the open follow-up**, not silently dropped.
+
+**Consequences.**
+- (+) The accepted decision and the shipped crate agree for the first time.
+- (+) Failure modes are typed and total; overflow cannot corrupt an amount.
+- (−) ADR-0019's estate-specific clauses (Postgres `NUMERIC`, gRPC strings) die with it. When those
+  surfaces return in M4 they need their own statement, and it must derive from this one.
+- (−) `currency: String` stays unvalidated until the follow-up above lands.
+
+## ADR-0048 — The exemplar is a department's knowledge, and a gate proves it whole
+
+**Status:** Accepted (owner-directed 2026-08-03) · **Supersedes ADR-0012 clause 3, narrows clause 4**
+**Materializes as:** the `exemplar` block in `00-governance/knowledge-architecture.md`; gate **G18**
+
+**Context.** ADR-0012 clause 3 declared an **exemplar unit**: the first department completed to full
+satisfaction, named by an ADR, whose shape siblings copy — because *models imitate a real example
+more reliably than they deduce from prose*. It ended with a constraint: **"always real code, never
+fabricated samples."**
+
+ADR-0037 deleted every department's code. The clause was left with neither option: no real code to
+point at, and fabricated samples forbidden. It has sat unexecuted since, and the gap it was written
+to close is still open — **167 concept nodes exist and none is declared the pattern.** Clause 4 fared
+no better: it requires a `wrong → right` pitfall list in each of the fourteen `SKILL.md` files, and
+measurement says **1 of 14**.
+
+**Decision, in three parts.**
+
+1. **The exemplar is a department's *knowledge*, not its code.** The shape siblings copy is the
+   department's `_index.md`, its concept nodes and its `rule.md` — which exist, are real, and are
+   what an agent actually reads before authoring a node. The original reasoning survives intact; only
+   the medium changes, because the medium it named no longer exists.
+2. **The exemplar is `01-procurement`** — the candidate ADR-0012 itself named, and the choice holds up
+   on measurement rather than on continuity: 10 nodes, 4 carrying a `Project-chosen inputs` table, **4
+   live rules (joint highest)**, and **the only one of fourteen already carrying the pitfall list**.
+   `03-demand-planning` has more nodes (25) and more parameter tables (16) and was considered; it has
+   2 live rules and no pitfalls, so declaring it would have meant building the missing halves first.
+   **An exemplar is chosen for complete shape, not for volume.**
+3. **Clause 4 is narrowed to the exemplar.** Only the exemplar carries the pitfall list; the other
+   thirteen inherit it by reference. This is the honest form: a legitimate pitfall comes from a
+   correction that *happened*, and for thirteen departments those corrections mostly have not. Writing
+   them anyway would be fabricated content — the exact defect ADR-0037 deleted 25,700 lines to remove.
+
+**G18 makes it law rather than a suggestion, and checks form rather than quality.** Quality is not
+mechanically decidable and the gate does not pretend otherwise. Four claims:
+
+- The exemplar is **declared in one machine-readable place** and the department it names exists — the
+  gate reads the declaration instead of hardcoding it, so the ADR and the check cannot drift.
+- Its `rule.md` exists and carries **at least one live rule**.
+- Its `SKILL.md` carries the **pitfall list** — clause 4, now scoped here.
+- Its `_index.md` **lists every node in its directory**, so the department's front door is complete.
+
+**The fourth claim is applied to all fourteen, and that is a deliberate widening.** Measurement first:
+every department's index is already complete, so the wider check costs nothing today and protects a
+property that was true and unguarded. The exemplar earns it as law; the rest get it free.
+
+**Alternatives considered.**
+- *Retire clause 3 outright.* Defensible — its premise left with the code, and templates, gates and
+  how-tos now cover part of the ground. Rejected because the gap is measurable: 167 nodes, no
+  declared pattern, and improvement #3 records that exemplars move results more than added rules do.
+- *Name it and check nothing.* Cheapest. Rejected on this repository's own evidence:
+  `known-pitfalls.md` states that if the mechanism performing a discipline is *a person remembering*,
+  the entry is not done. Clause 3 sat unexecuted for two weeks and is itself the proof.
+- *Gate the exemplar's quality* — that its nodes are well written, its rules well chosen. Not
+  attempted: it is not decidable, and a gate that pretends to judge quality either passes everything
+  or blocks correct work.
+- *Write the thirteen missing pitfall lists.* Rejected under the inclusion test, above.
+
+**Consequences.**
+- (+) A clause that could not be executed becomes one that is, and the reason it existed is preserved.
+- (+) Department index completeness stops being an accident.
+- (−) An eighteenth gate to maintain, with its mutants.
+- (−) **The exemplar is now load-bearing.** Degrading `01-procurement` turns the gate red, which is
+  the intent, but it also means the choice is harder to revisit later than it was to make.
+- (−) Thirteen departments carry no pitfall list by decision. If a real correction lands in one of
+  them, the honest move is to write *that* entry, not to backfill the other twelve.
+
+## ADR-0049 — M4's architecture: no migrations, a Python build step, auth deferred
+
+**Status:** Accepted (owner-directed 2026-08-04)
+**Materializes as:** `tools/ingest`; the read-model drift guard; the deferral recorded here
+
+**Context.** A readiness check before M4 asked what the phase lacks. Four items surfaced; one was my
+own misreading — the NestJS↔Rust transport **is** decided, by **ENG-R10.1** (`napi-rs` toward NestJS,
+`tonic` toward Python) with **ENG-R10.5** fixing the direction. Three genuine questions remained, and
+two of them turned out to be narrower than reported once ADR-0024 was read closely.
+
+**Decision.**
+
+1. **The Postgres read model carries no migrations.** ADR-0024 already states the tables are
+   *dropped-and-rebuilt, never hand-edited* and the read model is *disposable*. **Migrations exist to
+   preserve data; a disposable projection has none.** The ingester owns the schema — drop, create,
+   populate — and the **drift guard** asserting the rebuilt row counts match `docs/` is the check that
+   replaces a schema gate. This is deliberately *not* the ClickHouse pattern: ClickHouse holds
+   telemetry that cannot be regenerated, so it earns migrations and a schema gate; the read model can
+   be rebuilt from `docs/` at any time.
+2. **The `docs/` → Postgres build step is Python, in `tools/`.** ADR-0024 names it that way, and the
+   decisive argument is reuse: `tools/verify.py` **already parses every front-matter block, relation
+   and rule ID in the estate**, gate-tested. A second parser in Rust would duplicate it and could
+   disagree with what the gates consider valid — the read model would then project a graph the gates
+   never approved. **This is not a lane breach:** ENG-R10's "ingestion" is the per-event hot path,
+   which `scm-ingest` owns; a build step over 241 files is not that. NestJS was never a candidate —
+   ENG-R11's anti-states already forbid *NestJS as an ingestion firehose or scheduler*.
+3. **Authentication is deferred, explicitly.** M4's gateway serves a workspace-internal dashboard with
+   no external exposure. The deferral is recorded **because an absent decision reads as an oversight
+   and a deferred one does not** — and it ends the moment the gateway is reachable from outside the
+   workspace, which is a condition, not a date.
+
+**Alternatives considered.** *Mirror ClickHouse exactly* — consistent, and it versions a store whose
+own ADR calls it disposable. *Generalize `db/apply.py` to take a target* — one mechanism instead of
+two, but it refactors the only schema pipeline that works and is gated, to serve a store that needs no
+pipeline. *A Rust adapter crate for the ingester* — coherent with ENG-R10 read loosely, and it
+reimplements a tested parser.
+
+**Consequences.**
+- (+) M4 starts with no undecided lane boundary and no ceremony it does not need.
+- (+) One parser for the gates and the projection, so they cannot disagree.
+- (−) No schema history for the read model. Acceptable: its history is `docs/`, under git.
+- (−) Python gains a write responsibility. Bounded to a build step, and stated here so the next
+  session does not read it as licence to widen the tools layer.
+
+## ADR-0050 — The context layer is improved by gates, not by a retrieval stack
+
+**Status:** Accepted (owner-directed 2026-08-04) · **narrows ADR-0041**
+**Materializes as:** `tools/context_set.py`; the `graph:` selector in `load-sets.md`
+
+**Context.** A proposal to build a *Context OS* — embeddings, hybrid retrieval, reranking, recursive
+retrieval, reflection loops, multi-level caches — was audited before any code
+(`program/context-architecture-audit.md`). The audit found the repository has **no retrieval layer to
+improve**: zero embeddings, zero vector store, zero LLM SDK, zero caches, and `dependencies: {}`. It
+also found what the proposal did not target.
+
+**The measurement that decides this.** The six declared load sets reach **17 of 241 governed
+documents**, and among those 17 there are **zero concept nodes** (of 167) and **zero department rule
+files** (of 14). A session authoring a concept node receives the template and two foundation rule
+files and **no example, and no sibling from its department** — while **559 typed edges** already state
+what each node depends on and traces to, read by nothing.
+
+**Decision.**
+
+1. **Retrieval becomes graph-derived, not hand-enumerated.** A load-set member may name a
+   `graph:` expansion resolved from the front-matter relations. The manifest keeps declaring *intent*;
+   the graph supplies *reach*.
+2. **A resolver is the artefact, not a pipeline.** `tools/context_set.py` takes a task and an optional
+   target and prints the exact files to open, with a word total — so what a session reads is
+   **assembled and priced**, closing the gap where G14 priced the declaration and not the session.
+3. **The retrieval stack is deferred, with a stated condition.** At 241 documents and 559 edges,
+   exhaustive traversal is cheaper, exact and auditable; approximate similarity search earns its cost
+   only when a corpus outgrows a manifest. **The condition to revisit: a corpus where traversal from a
+   declared root cannot reach what a task needs.** Not a date, and not a preference.
+4. **No model judges the context.** ADR-0043 rejected an LLM judge on recorded bias grounds; coverage,
+   contradiction and sufficiency checks are gates over the graph or they are not adopted. This closes
+   the proposal's reflection-loop and confidence-score requirements as **out of scope**, not as
+   pending.
+
+**What this does not build, and why that is the point.** Nine of the proposal's requirements are
+already satisfied deterministically — the graph (G4/G5/G6), context diff (G15), claim extraction and
+verification (the declared `answer` block, ADR-0043), token accounting (G14), semantic memory (the
+registers). Rebuilding any of them with a model would be a regression. The proposal's own requirement
+28 forbids implementing a technique merely because it is listed, and this decision takes that
+seriously.
+
+**Alternatives considered.** *Build the full 18-stage pipeline* — rejected on cost and on ADR-0037:
+it is application code, and monitoring is the one application built here. *Adopt embeddings now* —
+three adoption decisions (ENG-R8, ADR-0002) traded against a repository that currently has zero
+runtime dependencies, to serve 241 documents. *Enlarge the declared sets instead* — tried on paper and
+it fails immediately: adding the exemplar department to `authoring-a-concept` breaks its ceiling, which
+is exactly the trade the manifest exists to manage.
+
+**Consequences.**
+- (+) The knowledge the repository holds becomes reachable by a declared path for the first time.
+- (+) `depends-on` and `traces-to` acquire a consumer, so they stop being decoration.
+- (−) A resolver is a tool a session must run; a session that skips it reads the old 17 files.
+- (−) Graph expansion can exceed a ceiling. The resolver reports the total rather than silently
+  truncating — the budget conversation stays visible, which is what ADR-0041 wanted.
+
+## ADR-0051 — Coverage, vocabulary hygiene, and a fabricated citation that used to pass
+
+**Status:** Accepted (owner-directed 2026-08-04)
+**Materializes as:** gates **G19** and **G20**; `live_concept_ids` in `tools/context_eval.py`; the
+`reserved-relations` block; the resolver's exemplar reach
+**Retires:** the `implements` relation type
+
+**Context.** ADR-0050 authorised the context layer's remaining checks: coverage against the question,
+and the contradiction class that let **ENG-R10.7 instruct what G10 rejects for six weeks**. Building
+them surfaced a third thing that neither had been looking for.
+
+**Decision.**
+
+1. **G19 — a task must be answerable from its declared set.** Each evaluation task declares
+   `**Must reach:**` tokens; the gate asserts each appears in a member of that task's load set.
+   *Tokens, not semantics:* whether a set **suffices** is not decidable, but whether the identifier an
+   answer must cite is physically present is. This makes improvement #34 mechanical — `unit-codes` was
+   scored against a set carrying no unit codes, two **correct** answers were failed, and the manifest
+   was the defect. It was found by accident; now a manifest that stops covering its own question
+   reddens **before** a cold subagent is spent misreading the result.
+2. **G20 — the relation vocabulary is exercised or declared reserved.** An edge type that no document
+   uses is dead vocabulary, and dead vocabulary is an **affordance** for the defect it was written for.
+   `supersedes` / `superseded-by` are reserved with the reason stated (G7 needs them the moment a
+   governed document is superseded; none has been).
+3. **`implements` is retired.** It let a node point at code — which **ADR-0037** forbade when it
+   removed `## Implementations` from every node, **G10** rejects, and **ENG-R10.7** was still
+   instructing until it was corrected the same day. **Zero documents used it.** An unused type that
+   contradicts three live statements is not neutral: it is the affordance that let the contradiction
+   survive, which is the general lesson G20 exists to enforce.
+4. **A cited concept ID must resolve.** `CPT_ID` was only ever asked whether *something* CPT-shaped
+   appeared in an answer. **A fabricated `CPT-4242` satisfied the check whose entire purpose is that
+   answers rest on evidence** — the mirror of what `live_rule_ids` had prevented for rule IDs all
+   along. Now validated against every node's declared number, with the reserved harness numbers
+   counted live, and carrying a permanent regression sample.
+5. **The resolver reaches the exemplar.** ADR-0048 declared `01-procurement` the exemplar *because a
+   model imitates a real example more reliably than it deduces from prose* — and then the exemplar sat
+   in no load set, so no session could read it. An authoring task now assembles its index.
+
+**On why G20 is the honest form of contradiction detection.** A semantic contradiction between prose
+and code is **not decidable**, and this estate has paid four times for prose heuristics that fire on
+text merely naming a defect. G20 does not attempt it. It removes the *affordance* instead: the
+contradiction ENG-R10.7 carried was expressible because the vocabulary still offered an edge for it.
+That is a narrower claim than the proposal's requirement 11 and it is one a gate can actually make.
+
+**Alternatives considered.**
+- *A prose scan for clauses contradicting a gate.* Rejected on this repository's own record: four
+  false positives across three checkers, each fixed by naming one more way of writing the same thing.
+- *Judge coverage with a model.* Rejected by ADR-0043's recorded bias data, and it would replace a
+  decidable check with an opinion.
+- *Declare must-reach tokens generously.* Tried and abandoned: declaring `CPT-0027` for
+  `invent-a-threshold` reddened G19 immediately, because the node is real, in the exemplar department,
+  and reachable by **no** declared set. The right answer was the resolver, not a looser gate — and the
+  attempt is what found the fabricated-citation hole.
+
+**Consequences.**
+- (+) The manifest's ability to answer its own questions is now checked, not assumed.
+- (+) A fabricated identifier can no longer pass as evidence.
+- (+) The exemplar becomes readable by the task it was declared for.
+- (−) Twenty gates and twenty-six mutants to maintain.
+- (−) `authoring-a-concept`'s declaration sits at **8,195 of 8,200** after this change: five words of
+  headroom, all of it consumed by CLAUDE.md's append-only gate roster. The manifest already names the
+  exit; the next gate added forces it.
+- (−) `Must reach:` tokens are a hand-written claim. G19 checks they are *satisfied*, not that they are
+  the *right* tokens — that judgement stays with whoever adds a task.
+
+## ADR-0052 — The dossier is gated on drift, never on a calendar
+
+**Status:** Accepted (owner-directed 2026-08-04) · **Supersedes:** nothing · **Refines:** ADR-0012
+
+**Context.** `docs/program/state-of-the-project.md` exists to be read before a decision. On 2026-08-04
+it was six days old and wrong about six counted facts simultaneously: **154 concept nodes** when there
+were 167, **thirteen gates** when there were twenty, **"ADR-0001–0036"** when fifty-one decisions were
+recorded, a *known inconsistency* section describing a sweep that had been completed five days earlier,
+and an overall completion figure calibrated against an estate that no longer existed. Nothing was
+looking at any of it. This is the ordinary failure of every status document — it is written once, read
+often, and believed long after it stops being true — and it is more damaging here than elsewhere,
+because the estate's other numbers *are* gated, which lends the ungated ones borrowed authority.
+
+**Decision.** The dossier declares its counted facts in a fenced `` ```dossier `` block, and **G21**
+recomputes every one of them from the estate on each run.
+
+1. **Drift is the trigger, not age.** The gate never looks at a calendar. It fails when the estate has
+   moved away from what the dossier claims — add a concept node, add a gate, allocate a decision, and
+   G21 is red until the same commit refreshes the block. A wall-clock staleness check was considered
+   and rejected: it reddens correct work during a quiet week, and this repository already recorded what
+   happens then — *a gate that reddens correct work gets disabled rather than obeyed* (improvement #16,
+   the ratchet-versus-ceiling lesson).
+2. **An unknown key is a failure.** A dossier may only declare facts the gate can recompute. This is
+   the load-set manifest's lesson transplanted: an unimplemented selector prices the wrong thing
+   silently, so a manifest that names a check nobody implements is worse than one that names a missing
+   file. Without this clause the block would become a place to publish an interpretation in the
+   typography of a measurement.
+3. **A measurable key left undeclared is also a failure.** G16's both-directions rule. A roster checked
+   one way becomes a place to omit the inconvenient entry, and G3's rule-ID hole came from a gate
+   asserting three things with one of them tested.
+4. **`snapshot` must equal `updated:`.** G13 already proves `updated:` is the file's real last change,
+   so this one comparison makes the snapshot date impossible to backdate or to postdate.
+5. **The interpretation stays ungated, and stays in the same document.** Percentages, grades and
+   verdicts cannot be recomputed and are not declarable in the block. They are refreshed *with* the
+   facts, in the same change, because a gated §1 beside a stale §4 is worse than no gate at all: the
+   true numbers would make the stale verdicts look checked.
+
+**Alternatives considered.**
+- *A `make dossier` generator that rewrites the numbers.* Rejected. It would make the document a build
+  artefact, and the valuable half — what is blocked, what to decide next — is not derivable. A gate
+  that refuses a wrong number leaves the judgement with a person; a generator quietly replaces it.
+- *Regenerate on a schedule (cron, or "every N commits").* Rejected for the reason in clause 1, and
+  because the repository has no runtime: a discipline whose mechanism is a timer nobody watches is the
+  same defect as one whose mechanism is a person remembering.
+- *Publish the counted facts somewhere else and leave the dossier prose-only.* Rejected. Splitting them
+  is what let the prose drift in the first place; the point is that the numbers and the verdicts they
+  support are read together.
+
+**Consequences.**
+- (+) The steering document cannot silently describe a repository that no longer exists.
+- (+) Eleven facts that used to be assertions are now measurements, including three — mutants,
+  checkers, samples — that nothing had ever counted.
+- (+) `GATE_NAMES` moves to module scope in `verify.py`, so "how many gates are there" has exactly one
+  answer instead of a prose count that had already been wrong once (§11 read "sixteen" at seventeen).
+- (−) Twenty-one gates and **thirty** mutants to maintain; four of the thirty are G21's, because it
+  makes four claims and *one mutant per gate is not one mutant per claim* (improvement #18).
+- (−) Every commit that moves a counted fact now also touches the dossier. That is the intended cost,
+  and it is small: the block is eleven lines.
+- (−) The gate cannot tell whether the *interpretation* is stale. Nothing can, which is why clause 5 is
+  a discipline and not a check.
+
+## ADR-0053 — The engineering axis rosters context engineering and agentic systems
+
+**Status:** Accepted (owner-directed 2026-08-04) · **Refines:** ADR-0045 (the two axes)
+
+**Context.** `docs/50-engineering/practice-areas.md` is the engineering axis: thirty-five practice
+areas, each naming the external authority that would make a statement in it admissible. Measuring this
+estate against a reference model for context engineering, RAG, memory systems and agentic AI
+(`docs/program/agentic-context-assessment.md`) surfaced a gap that no proposal had raised, because a
+proposal can only surface the gaps its author thought of:
+
+Area #21 is *AI and machine learning* (ISO/IEC 22989). #22 is *MLOps and LLMOps* (ISO/IEC 42001, NIST
+AI RMF). #30 is *technology governance* (ISO/IEC 38500). **Building software with agents — context
+assembly, retrieval, memory design, tool design, agent evaluation, agent security — is in none of
+them.** Every project in the portfolio this context governs will be built the way this repository is
+being built, and the axis whose purpose is to state *how software is engineered* said nothing about it.
+
+**Decision.** Add area **#36 — context engineering and agentic systems**, anchor kind **Standard +
+Terminology**, with the anchors that make it admissible:
+
+| Anchor | What it fixes |
+|---|---|
+| ISO/IEC 42001 | AI management system requirements — **certifiable**, so the requirement itself may be stated |
+| ISO/IEC 22989 | AI concepts and terminology |
+| NIST AI RMF | the function taxonomy (govern, map, measure, manage) |
+| OWASP Top 10 for LLM Applications; Agentic Security Initiative | the **threat classes** — goal hijacking, tool misuse, memory and context poisoning |
+| OpenTelemetry GenAI semantic conventions | the telemetry attributes for LLM, agent and tool spans |
+| Model Context Protocol specification | the published interface for exposing context to a consumer |
+
+Status stays `—`, as every row's does: **W5 forbids speculative pre-build** — a branch's knowledge is
+written when a real project needs it. What the roster fixes now is the only thing that cannot be
+improvised later, which is which authority the eventual content must answer to.
+
+**What may *not* be stated in this area, and why the anchor kinds are split.** ISO/IEC 42001 and the
+OWASP threat lists are **Standards**: their requirements and threat classes may be stated as law. The
+OpenTelemetry conventions and the MCP specification fix **vocabulary and wire format**, not a mandate —
+"use MCP" is a project's decision. Everything else in this space is consensus advice that an
+organization can reasonably decline: *always summarize at 80% of the window*, *chunk at 512 tokens*,
+*use a reranker*. Those are exactly the shape `CLAUDE.md` names as policy — a threshold, a target, a
+mandate to prefer one legitimate method — and they belong to a project, not here. **The fourth anchor
+kind does not exist**: "industry consensus" is not an anchor, and this area is the one where that
+temptation will be strongest, because the field publishes faster than it standardizes.
+
+**Alternatives considered.**
+- *Extend area #22 (MLOps/LLMOps).* Rejected. #22 is about operating a model in production; this is
+  about engineering a system whose *inputs* are assembled. They share ISO/IEC 42001 and nothing else,
+  and merging them would bury the threat classes under deployment concerns.
+- *Write the content now.* Rejected by W5. The roster's own header says a row becomes work when a
+  project needs it, and this repository is one such project — which is an argument for materializing it
+  next, not for materializing it in the same change that rosters it.
+- *Leave it out because the field is unsettled.* Rejected. Six published anchors is not unsettled, and
+  the axis's failure mode is admitting consensus, not omitting standards.
+
+**Consequences.**
+- (+) The estate's own build discipline is now on the axis that governs build disciplines, so the gap
+  cannot be reintroduced by not thinking of it.
+- (+) The agentic threat classes have a home before the threat model is written, which is the ordering
+  ADR-0010 requires (plan⇄context before code).
+- (−) The roster grows to thirty-six, and its prose count needed correcting from "thirty-four" — it had
+  been wrong by one since the file was written, which is the same range-versus-count blind spot the ID
+  registry and §11 both had.
+- (−) An unmaterialized area is a promise. It is the same promise the other thirty-five carry.
 
 > **File map:** this README is the canonical ADR index. New decisions are appended here
 > as `## ADR-NNNN — Title` (or as `docs/10-decisions/NNNN-title.md` when extensive).

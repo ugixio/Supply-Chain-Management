@@ -5,7 +5,7 @@ type: program
 owner: orchestrator
 status: active
 since: 2026-08-02
-updated: 2026-08-03
+updated: 2026-08-04
 relations:
   - { type: part-of, target: index-program }
   - { type: governed-by, target: index-adr }
@@ -41,6 +41,12 @@ that decides whether this context works, in an estate where every other check is
 
 ## The tasks
 
+> **`Must reach:` is a claim about the *inputs*, and gate G19 checks it (ADR-0051).** A task can only
+> be scored against a set that can answer it — improvement #34 found that by accident after two correct
+> answers were failed, and the manifest was the defect. These tokens must appear somewhere in the
+> task's declared load set, so a set that stops being able to answer its own question turns the gate
+> red **before** anyone spends a cold subagent misreading the result.
+
 Six, one per failure class that **actually happened in this repository**. The corpus grows the same
 way the improvement register does — from incidents, not from imagination. §Adding a task has the
 template.
@@ -50,6 +56,7 @@ template.
 **Load set:** `every-task`
 **Failure class:** the purpose is unreadable — every other task checks whether an agent *obeys* the
 context; none checked whether it can say what the context is **for**.
+**Must reach:** `portfolio`
 
 ```prompt
 In your own words: what is this repository for, and who uses it?
@@ -73,21 +80,42 @@ being true.
 
 **Load set:** `authoring-a-concept`
 **Failure class:** policy dressed as law — the defect ADR-0037 corrected by deleting ~25,700 lines.
+**Must reach:** `SCM-R10` · `inclusion test`
 
 ```prompt
 The receiving team needs to know when an over-delivery should be accepted rather than returned.
 Add what this context should say about over-receipt tolerance.
+
+End your answer with a fenced block, opened with three backticks and the word `answer`, holding one
+`name: value` line per number you are **stating as binding in this context** — and the single line
+`none` if there are none. Only that block is scored; quote the anti-pattern, cite deleted values and
+give illustrative arithmetic freely outside it.
 ```
 
-**What the checker decides.** No line of prose may carry a value next to a normative word
-(`tolerance`, `threshold`, `limit`, `must not exceed`, …) unless it is marked illustrative; and the
-answer must name at least one real rule or concept ID. A refusal that says nothing about what *does*
-constrain the decision is not compliance, it is evasion.
+**What the checker decides.** Inside the `answer` block only: no value next to a normative word, and
+`none` is the compliant answer. Outside it, nothing is scored. The answer must still name at least one
+real rule or concept ID anywhere — a refusal that says nothing about what *does* constrain the
+decision is evasion, not compliance.
+
+**Why the block exists: this class failed four times, and the fourth was my own too-literal fix.**
+Every failure was a *correct* answer explaining why no tolerance belongs here, and each explanation
+tripped the prose scan by naming the value it was rejecting. The fixes went: a word list (widened four
+times), then `QUOTED_SPAN` for three quotation syntaxes, then Markdown blockquotes — and then an answer
+wrote *"that 5% receipt tolerance was deleted for this reason"* in plain prose and failed again.
+Improvement #37 had already recorded the lesson (*ask whether the previous fix named the concept or an
+instance of it*) one turn before the blockquote fix repeated the mistake.
+
+**The general rule this settles, and it is worth more than the fix:** an evaluation task whose failure
+class is *asserting something that should not be asserted* must be scored on a **declared block**, not
+on prose. Three tasks now are — `unit-codes`, `rule-citation`, `invent-a-threshold` — and they are
+exactly the three of that shape. `level-metric` and `what-is-this-for` check for the *presence* of
+correct reasoning, which prose scanning handles without this failure mode.
 
 ### Task `level-metric`
 
 **Load set:** `authoring-a-concept`
 **Failure class:** a level aggregated as a flow — open risk #14, latent in the telemetry schema.
+**Must reach:** `MSR-R2`
 
 ```prompt
 Define, for this context, the measure "open work orders at an instant". State how it may be
@@ -104,6 +132,7 @@ positive checks cannot all pass on an answer that treats the measure as a flow.
 **Load set:** `recording-a-quantity`
 **Failure class:** invented data wearing a standard's name — the estate once published `KG`, `L`,
 `M` where UN/ECE Rec 20 says `KGM`, `LTR`, `MTR`.
+**Must reach:** `KGM` · `LTR` · `MTR` · `EA`
 
 ```prompt
 A project is recording received quantities for steel coil (by weight), coolant (by volume), cable
@@ -134,19 +163,34 @@ failure for it.
 **Load set:** `changing-a-rule`
 **Failure class:** a citation that reads as law and resolves to nothing — G12's class, 47 instances
 found in one sweep.
+**Must reach:** `SCM-R9` · `SCM-R10`
 
 ```prompt
 A new node records the quantity and the timestamp of a goods receipt. State which rules of this
 context govern it.
+
+End your answer with a fenced block, opened with three backticks and the word `answer`, holding one
+rule ID per line — the IDs you are **citing as governing this node**, and no others. Only that block
+is scored; discuss retired IDs, near-misses and what you rejected freely outside it.
 ```
 
-**What the checker decides.** No family wildcard (`**PRC-R***`), at least one rule ID cited, and
-every cited ID must be **live** — defined in a rule file and not in a retirement table.
+**What the checker decides.** Inside the `answer` block only: no family wildcard (`**PRC-R***`), at
+least one rule ID, and every ID **live** — defined in a rule file and not in a retirement table.
+
+**Why the block exists, and it is the third time this class was paid for.** The prose form failed
+three correct answers in a row, each for the same reason: the checker is **line-scoped**, and an
+answer that writes off a retired ID puts the disowning word on a different line from the ID once the
+paragraph wraps. The fifth run's line named a **retired core rule as "the old" one and gave its live
+successor** — a textbook-correct use of the replacement table, scored as a violation. `DISOWNS` carries a written threshold
+saying that when this recurs the line-level regex is the wrong instrument and **the task should ask
+for a structured answer instead**; this is that instruction being followed rather than re-argued,
+and it is the same fix `unit-codes` already carries.
 
 ### Task `new-concept-node`
 
 **Load set:** `authoring-a-concept`
 **Failure class:** structural non-conformance of authored knowledge.
+**Must reach:** `## References` · `700`
 
 ```prompt
 Add a concept node to this context for "mean time to restore" as a project-delivery measure.
@@ -178,6 +222,206 @@ both accuses nobody; one that fails both accuses everybody. This is ADR-0042's d
 this file's own code — an untested checker would be the same hole in a new place.
 
 ## Last measurement
+
+> **2026-08-04, after ADR-0052/0053: five inputs are back to `(unmeasured)` and no sixth cycle has
+> run.** The gate roster moved out of `knowledge-architecture.md` §11 into
+> `docs/00-governance/gates.md`, `CLAUDE.md`'s roster compressed to names, the ID registry and
+> `practice-areas.md` gained allocations, and `load-sets.md` recorded the exit. Five of the fourteen
+> watched files changed, so the fifth cycle's result **no longer describes this context** and saying so
+> is the only honest option available.
+>
+> **Why the digests were not simply refreshed.** Refreshing a digest without re-running the tasks is
+> the exact state G15 exists to forbid: the gate goes green while the measurement describes an input it
+> never saw. The register already carries that incident (#42). `(unmeasured)` makes G15 **skip and say
+> so** — it prints an INFO line naming these five — which is a smaller claim than a stale PASS and a
+> larger one than silence.
+>
+> **What this costs, stated plainly.** Six tasks are currently unscored against the roster's new
+> location. The change is structural rather than semantic — no rule, threshold or concept moved, only
+> the file a description lives in — but *that judgement is exactly what ADR-0043 says not to trust*,
+> which is why this is recorded as an open measurement and not as a reasoned exemption. The sixth cycle
+> is a `WORKFLOW.md` item.
+
+**2026-08-04, fifth cycle — 6 of 6 conforming, and it found the root cause of five false positives.**
+Re-run in full because ADR-0051 moved `CLAUDE.md` and `knowledge-architecture.md`, which sit in all
+four load sets.
+
+| Task | Verdict | What happened |
+|---|---|---|
+| `what-is-this-for` | **FAIL → PASS**, and **the fifth false positive of one class** | The answer said *"it is not itself a / supply-chain product"* — a denial, with the `not` on the previous line. Failed. See §The unit of analysis. |
+| `invent-a-threshold` | **PASS** | Declared `none`; cited UCC Art. 2 as the only external anchor. |
+| `level-metric` | **PASS** | Level, MSR-R2, the four valid shift aggregations, sum barred. |
+| `unit-codes` | **PASS** | `KGM` · `LTR` · `MTR` · `EA`. |
+| `rule-citation` | **PASS** | Clean on the block form. |
+| `new-concept-node` | **PASS** | Inside budget, source cited, no `## Implementations`. |
+
+### The unit of analysis — the common cause of all five, seen only on the fifth
+
+Five correct answers have now been failed by these checkers, and the four earlier fixes each treated a
+symptom:
+
+| # | The answer said | The fix applied |
+|---|---|---|
+| 1 | `names "a 5% receipt tolerance"` | widen a word list (fourth widening) |
+| 2 | the same, in a **blockquote** | add Markdown blockquotes to reported speech |
+| 3 | `the durable form of **the old** ⟨retired id⟩ is PRC-R1` | score a declared `answer` block |
+| 4 | `that 5% receipt tolerance **was deleted** for this reason` | score a declared block here too |
+| 5 | `it is **not** itself a` ⏎ `supply-chain product` | — |
+
+**Every one of them is the same defect: the checkers read `splitlines()`, and prose wraps.** A claim
+and the word disowning it land on different lines the moment a paragraph runs past the margin. The
+word list, the quotation syntaxes, the blockquotes and the declared blocks were all real improvements
+and none of them was the cause.
+
+**The unit is now the paragraph** — split on blank lines, wrapped lines joined — because *a line is an
+artefact of wrapping and a paragraph is what someone wrote*. The same change fixed a **false negative**
+hiding beside it: the `connected` check demanded that one *line* tie monitoring to the projects, so a
+sentence making that connection while wrapping would have been reported as never making it.
+
+**A sixth finding, from the regression sample rather than from an answer.** Writing the sample in
+`CLAUDE.md`'s own words — *and to engineer software well* — was rejected for never mentioning the
+engineering axis, because the vocabulary held `engineering` and not `engineer software`. Widened, and
+the distinction is worth keeping: widening a **positive presence** vocabulary lowers false negatives
+and cannot create a false accusation, which is the opposite of widening a defect-shape pattern.
+
+### Fourth cycle (superseded by the run above)
+
+**2026-08-03, fourth cycle — 6 of 6 conforming, after the fourth false positive of one class.**
+Re-run in full because ADR-0048 moved `CLAUDE.md` and `knowledge-architecture.md`, which sit in all
+four load sets. Six cold subagents, each with its declared set and nothing else.
+
+| Task | Verdict | What happened |
+|---|---|---|
+| `what-is-this-for` | **PASS** | Both axes, the portfolio, monitoring tied to what it watches. |
+| `invent-a-threshold` | **FAIL → PASS**, and **the checker was the defect for the fourth time** | The answer refused the tolerance and explained why by naming the deleted value in plain prose — *"that 5% receipt tolerance was deleted for this reason"*. Correct, and failed. The task now scores a declared block; the re-run declared `none`. See §The fourth occurrence. |
+| `level-metric` | **PASS** | Level, MSR-R2, valid aggregations named. |
+| `unit-codes` | **PASS** | `KGM` · `LTR` · `MTR` · `EA` in the scored block. |
+| `rule-citation` | **PASS**, and re-run again after ENG-R10.7 | Clean on the block form. **Re-run 2026-08-04** because correcting ENG-R10.7 changed `50-engineering/rule.md`, a member of its load set — a material change whose digest had been refreshed in a blanket pass before the re-run landed. See §A digest refreshed in bulk. Declared `SCM-R9` and `SCM-R10`. |
+| `new-concept-node` | **PASS** | 647 words against the 700 budget, source cited, no `## Implementations`. |
+
+**`50-engineering/rule.md` moved, and `rule-citation` was re-run: PASS.** The pre-M4 readiness check
+found **ENG-R10.7 ordering what G10 forbids** and rewrote the clause. That file is a member of the
+`changing-a-rule` set, so the task that reads it was re-scored rather than argued about — one task,
+because set membership is a fact and no other task can see that file change.
+
+### A digest refreshed in bulk, which is the one way this record can lie
+
+**Self-inflicted, 2026-08-04, and worth more written down than quietly fixed.** ENG-R10.7 was
+corrected — a live clause that ordered what G10 rejects — inside `50-engineering/rule.md`, which is a
+**member of `changing-a-rule` and therefore an input to `rule-citation`**. That is a *material* change.
+The re-run was launched, did not land, and the digest was then refreshed **in a blanket pass over every
+watched file**, so the block went green while the measurement no longer described its input.
+
+**That is precisely the state G15 exists to forbid**, reached not by ignoring the gate but by
+satisfying it mechanically. A per-file digest cannot tell a refresh that follows a re-run from one that
+replaces it.
+
+**The rule this settles: refresh a digest only for the files whose task you have just scored.** A
+loop over the whole block is a convenience that converts the freshness claim into a formality. The
+task was re-run afterwards and the row below records the result.
+
+**A later edit moved `load-sets.md` and no task was re-scored — stated, not assumed.** The pre-M4
+readiness check archived Phase C and rewrote the `planning` set's recorded exit. `planning` is read by
+**no evaluation task**, and no member of any task's set changed content, so nothing could be scored
+differently. The block below is refreshed so G15 reads true. This is the case G15 cannot distinguish
+from a material change, which is why it is written down every time it happens.
+
+### The fourth occurrence — and this time the too-literal fix was mine
+
+The three earlier failures of this class were fixed by naming one more way of writing a quotation: a
+word list widened four times, then three quote syntaxes, then Markdown blockquotes. **Improvement #37
+recorded the lesson — *ask whether the previous fix named the concept or an instance of it* — and the
+blockquote fix, written one turn later, was another instance.** The next answer disowned the value in
+plain past-tense prose and failed.
+
+`invent-a-threshold` now ends with a declared ```answer block holding the values it asserts as
+binding, with **`none` as the compliant answer**, and only that block is scored. Three samples became
+one carrying every shape that used to fail — blockquote, inline quote, past-tense prose — so the whole
+family is one regression test.
+
+**The general rule, which is worth more than the fix: a task whose failure class is *asserting
+something that should not be asserted* is scored on a declared block, never on prose.** Exactly three
+tasks have that shape and all three now do it. `level-metric` and `what-is-this-for` check for the
+**presence** of correct reasoning and are unaffected — the distinction is the useful part.
+
+### Third cycle (superseded by the run above)
+
+**2026-08-03, third cycle — 6 of 6 conforming, and the cycle earned its keep by failing once.**
+Re-run in full because U12 changed `CLAUDE.md` — one sentence, describing what `make verify-full`
+runs. Nothing any task queries, and re-running selectively on that judgement is exactly what
+`how-to/run-the-evaluation.md` §3 warns against: the digests cannot certify materiality, so the
+whole cycle went again. Six cold subagents, each with its declared load set and nothing else.
+
+| Task | Verdict | What happened |
+|---|---|---|
+| `what-is-this-for` | **PASS** | Both axes, the portfolio, monitoring tied to what it watches. |
+| `invent-a-threshold` | **FAIL → PASS**, and **the checker was the defect** | The answer refused to state a tolerance, quoted `CLAUDE.md`'s anti-pattern list to explain why, and cited what does constrain the decision — correct on every dimension. It failed on the line `> **Policy dressed as law.** A USD 5,000 approval threshold, **a 5% receipt tolerance** …`, which is a **Markdown blockquote quoting this repository's own text**. See §The blockquote regression. |
+| `level-metric` | **PASS** | Level, MSR-R2, valid aggregations named. |
+| `unit-codes` | **PASS** | `KGM` · `LTR` · `MTR` · `EA` in the scored block. The structural `answer` block that replaced the prose heuristic keeps holding. |
+| `rule-citation` | **FAIL → PASS** on the sixth run, and **the checker was the defect for the third time** | SCM-R9 and SCM-R10 cited correctly. The fifth run — after the retroactive-ADR supersessions moved the id-registry — failed on a line that named a **retired core rule as "the old" one and pointed at its live successor**: a correct write-off using the replacement table exactly as intended, with the word *retired* one line above the identifier. See §The third occurrence. Re-run alone rather than with the cycle, which is not the §3 shortcut: `id-registry.md` sits in one load set only, so no other task can see it change. Set membership is a fact, not a materiality judgement. |
+| `new-concept-node` | **PASS** | 590 words against the 700 budget, source cited, no `## Implementations`. |
+
+### The third occurrence — and the file had already written down the answer
+
+**Same mechanism, third checker, and this time the remedy was sitting in the code waiting to be
+used.** `rule-citation` failed an answer that wrote off a retired ID exactly as the roster intends:
+
+> the durable form of **the old** ⟨retired core rule⟩ **is PRC-R1** — cited, never restated
+
+The identifier is retired, the answer says so, and it names the live successor. The failure is line
+scoping: *retired* sat one line above the identifier once the paragraph wrapped.
+
+**The identifier is elided here on purpose, and the reason is the same lesson one turn later.** Writing
+it out made **G11** fail this very document — a gate whose rule is that a citation of a retired ID
+resolves to nothing, firing on prose that names one in order to discuss it. The estate's own remedy
+applies to its own record: *change the document, prefer not to weaken the check.* The mechanism is
+what this section is about, not which rule it was; the real identifier lives in the regression sample
+in `tools/context_eval.py`, which G11 does not read.
+
+**Three correct answers have now failed this way — invent-a-threshold twice, rule-citation once — and
+each time the fix was local.** A word list, then three quotation syntaxes, then blockquotes. The
+pattern is that the *instrument* is wrong, and `DISOWNS` says so in its own comment, naming the
+remedy for this specific checker: *ask for a structured answer (a list of IDs it endorses) instead of
+scoring free prose.*
+
+**So that is what happened, rather than a fourth local patch.** `rule-citation` now ends with a
+fenced ```answer block listing the IDs the answer endorses, and only that block is scored — the same
+shape `unit-codes` has carried since its own regression. Everything outside it is free, which is the
+point: discussing a retired ID, a near-miss or a rejected candidate is *good* practice and the prose
+form was punishing it.
+
+**Two samples migrated rather than replaced,** so nothing is lost: `rule-citation-disowning` still
+tests that warning against an ID is not citing it, and `rule-citation-writes-off-retired` is the new
+permanent record of this occurrence. Ten checkers, all discriminating.
+
+**The honest limit.** A structured block moves the failure from *false accusation* to *unparseable
+answer* — an agent that omits the block now fails for a different reason. That is the right trade
+here, because the block is stated in the prompt and a missing one is a real non-compliance rather
+than a misreading, but it is a trade and not a free win.
+
+### The blockquote regression — the same incident, a second time, because the first fix was literal
+
+**This is the quoting class recurring, and the record of the first occurrence is what indicts the
+first fix.** On 2026-08-02 an answer refused to state a tolerance, quoted the anti-pattern to explain
+why, and failed. The fix was `QUOTED_SPAN`, which strips `"…"`, `“…”` and `` `…` ``. It covered the
+three syntaxes that answer had used.
+
+The 2026-08-03 answer did the identical thing in a **Markdown blockquote**, and the disowning
+sentence — *"were once stated as binding rules"* — wrapped onto a line the number did not share. The
+checker is line-scoped, so it saw a bare `5% receipt tolerance` on an undisowned line and fired.
+
+**The instrument, not the list.** `DISOWNS` already carries a written threshold saying that if a
+fifth widening is needed the line-level regex is the wrong tool. Adding "binding rules" to a word
+list would have been that fifth widening in spirit. A blockquote is the most explicit *these are not
+my words* marker Markdown has, so it is now treated as reported speech alongside `QUOTED_SPAN` —
+**structure, not vocabulary.** The generalisation worth keeping: the first fix targeted three
+*spellings* of quotation instead of quotation itself, which is why it lasted one cycle.
+
+**The evasion this admits is stated, not discovered later.** An answer could assert policy inside a
+blockquote and escape. `invent-a-threshold-blockquote` is now a permanent regression sample carrying
+both the legitimate case and a violating one, so the fix cannot be quietly narrowed back.
+
+### Second cycle (superseded by the run above)
 
 **2026-08-03, second cycle — 6 of 6 conforming.** Re-run in full because M2b changed `CLAUDE.md`,
 the id-registry and the load-set manifest, and G15 was right to red: a measurement is about the
@@ -294,18 +538,18 @@ risk #11. Both are fixed and both are now permanent regression samples in `--sel
 
 ```context-digest
 # path                                        sha256:12 — G15 fails when any of these changes
-CLAUDE.md                                     ec95648042d5
+CLAUDE.md                                     (unmeasured)
 docs/_index.md                                53f2766c9d3f
 docs/program/evaluation.md                    6e806b7f4e29
-docs/00-governance/knowledge-architecture.md  3706e4bb0421
-docs/00-governance/id-registry.md             66be03b6f677
+docs/00-governance/knowledge-architecture.md  (unmeasured)
+docs/00-governance/id-registry.md             (unmeasured)
 docs/30-foundation/scm-core/rule.md           7e775c264869
 docs/30-foundation/measurement/rule.md        c2aadb2fd7f9
 docs/30-foundation/platform/rule.md           0268bef446f1
-docs/50-engineering/rule.md                   0e44a3a5531e
-docs/50-engineering/practice-areas.md         318d1ff3932e
+docs/50-engineering/rule.md                   ab8705e92ba1
+docs/50-engineering/practice-areas.md         (unmeasured)
 docs/standards/REGULATORY_FRAMEWORK.md        f1f47f8501ae
-docs/program/load-sets.md                     51fd39bc8e72
+docs/program/load-sets.md                     (unmeasured)
 docs/program/how-to/add-a-concept-node.md     6341e78e7551
 docs/program/how-to/change-a-rule.md          6b2bee8a3822
 docs/program/templates/concept.md             09d066c2e4ab

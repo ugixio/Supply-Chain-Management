@@ -5,7 +5,7 @@ type: governance
 owner: orchestrator
 status: active
 since: 2026-07-19
-updated: 2026-08-03
+updated: 2026-08-04
 relations:
   - { type: part-of, target: index-governance }
   - { type: governed-by, target: governance-root }
@@ -120,8 +120,21 @@ Every non-allowlisted `.md` carries YAML front-matter:
 - `owner` ∈ `human | orchestrator` (extend when agent lanes are formalized — see
   `program/operating-model.md`)
 - `status` ∈ `draft | active | superseded | deprecated | archived`
-- `relations[]`: `governed-by` · `implements` · `refines` · `depends-on` · `supersedes` /
-  `superseded-by` · `traces-to` · `part-of`.
+- `relations[]`: `governed-by` · `refines` · `depends-on` · `supersedes` /
+  `superseded-by` · `traces-to` · `part-of`. **Gate G20 keeps this list honest** (ADR-0051): a type
+  here is either in use or declared reserved below, because dead vocabulary is an affordance for the
+  defect it was written for.
+
+```reserved-relations
+supersedes      G7 needs it the moment a governed document is superseded; none has been yet.
+superseded-by   The other half of the same pair. ADR supersession lives in the index prose, not here.
+```
+
+> **`implements` was retired 2026-08-04 (ADR-0051).** It let a node point at code, which **ADR-0037**
+> forbade when it removed `## Implementations` from every node, **G10** rejects, and **ENG-R10.7** was
+> still instructing until it was corrected the same day. Zero documents used it. An unused edge type
+> that contradicts three live statements is not neutral — it is the affordance that let the
+> contradiction survive six weeks, which is why the gate now refuses to keep one.
 - `id` = `<type-slug>-<kebab-name>`; ADRs cited by number; unique estate-wide (gate G3).
 
 ## 9. Lifecycle and supersession
@@ -138,39 +151,37 @@ Every non-allowlisted `.md` carries YAML front-matter:
 - Every document has exactly one owner. **human** owns the contract and final approvals;
   **orchestrator** owns program/process and (until lanes are formalized) the docs tree.
 
+## 10b. The exemplar department (ADR-0048)
+
+**One department is declared the exemplar**, and its knowledge is the shape a sibling copies:
+its `_index.md`, its concept nodes, its `rule.md`. ADR-0012 clause 3 asked for *real code* and
+ADR-0037 deleted all of it; the medium changed, the reasoning did not — **a model imitates a real
+example more reliably than it deduces from prose.** The declaration lives in one fenced block so the
+ADR and gate **G18** cannot drift apart, exactly as `load-sets.md` does for G14:
+
+```exemplar
+01-procurement
+```
+
+**It is the only department required to carry a `wrong → right` pitfall list** in its `SKILL.md`
+(ADR-0012 clause 4, narrowed by ADR-0048): a legitimate pitfall records a correction that *happened*,
+and inventing twelve more would be the fabricated content ADR-0037 removed. The others inherit by
+reference.
+
 ## 11. Enforcement (gates)
 
-All sixteen are wired into `tools/verify.py` and run by `make verify` (ADR-0012):
-- **G1** no stray docs · **G2** front-matter validity · **G3** ID uniqueness ·
-  **G4** link integrity · **G5** no orphans (`part-of` traversal) · **G6** authority
-  acyclicity · **G7** status/supersession integrity · **G8** English-only, screened for
-  non-English function words (this repo's Language Policy, `CLAUDE.md`; ADR-0003) ·
-  **G9** context budget and ADR disclosure · **G10** standards provenance · **G11** retired
-  rules stay retired · **G12** a rule citation names an ID, never a family wildcard ·
-  **G13** `updated:` matches the file's real last change · **G14** a load set is priced as a
-  whole — what a session reads *together*, declared in `docs/program/load-sets.md` (ADR-0041) ·
-  **G15** the context-adherence measurement is not stale (`docs/program/context-eval.md`; ADR-0043) ·
-  **G16** the ID registry's retired roster equals the union of the retirement tables, both ways ·
-  **G17** every Markdown table row carries the cell count its header declares — a short row renders
-  as an empty cell, so a missing field is invisible (fourteen register rows lost their status that
-  way, and a catalogue column with an empty heading went unfilled by fourteen of fifteen rows).
+**Twenty-one gates, in [gates.md](gates.md).** The descriptions moved there and this section is a
+pointer on purpose: the roster is **append-only** — a gate ID is fixed forever, a retired gate would
+stay listed exactly as a retired rule does (`id-registry.md` §6) — and it used to live in two files
+that both sit inside load sets, so every gate added cost two sets twice. `load-sets.md` records that
+collision five times. `CLAUDE.md` keeps the names because a session must know what runs; the
+descriptions now live in a file no load set carries, where the roster can grow without pricing
+anything (ADR-0052).
 
-**A gate that cannot check must say so.** `tools/verify.py` distinguishes *passed* from *could not
-run*: where a check depends on the environment — G13 needs HEAD's parent present to diff against —
-it prints an INFO line naming the reason instead of letting a skip read as a pass. G13 was RED in CI
-three times before this, because a shallow checkout made its scope meaningless while the local run
-stayed green (improvement-register #12). **A new gate is proven by planting a violation in the
-environment CI uses, not by reading its code.** Since ADR-0042 that proof is automated rather than
-remembered: `tools/test_gates.py` plants one violation per gate in a throwaway worktree and requires
-that gate — and no other — to fire. It runs in `make verify-full`, and it contradicted its own
-author on its first green run.
-
-**What a gate can and cannot certify.** Each of these is a *mechanical* property. None of them
-can tell a standard from a plausible-looking invention — that is risk #11, it is open, and it is
-how ADR-0037's defect began. G8 and G13 were added on 2026-07-29 after a file-by-file review
-found a Spanish sentence and 164 stale `updated:` stamps that no gate was looking for; the
-lesson recorded with them is that **a gate over part of the estate certifies only that part**,
-which is why G8, G11, G12 and G13 read every tracked Markdown file, not only the governed tree.
+**What the gates do not certify** is the part worth repeating here: each is a *mechanical* property,
+and none can tell a standard from a plausible-looking invention. That is risk #11, it is open, and it
+is how ADR-0037's defect began. A gate over part of an estate certifies only that part — which is why
+G8, G11, G12 and G13 read every tracked Markdown file, not only the governed tree.
 
 ## 12. Evolution of this document
 

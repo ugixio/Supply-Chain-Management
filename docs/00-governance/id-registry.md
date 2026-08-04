@@ -5,7 +5,7 @@ type: governance
 owner: orchestrator
 status: active
 since: 2026-07-19
-updated: 2026-08-03
+updated: 2026-08-04
 relations:
   - { type: part-of, target: index-governance }
   - { type: governed-by, target: knowledge-architecture }
@@ -95,6 +95,12 @@ were built for them, and the operational-telemetry question is recorded as open 
 **CPT-0167 = deployment rework rate**, the fifth DORA delivery metric, added 2026-08-03 when the
 platform catalogue was checked against the current published grouping and found to carry four of five.
 
+> **CPT-0998 is RESERVED for `tools/test_gates.py`.** G18's fourth-claim mutant plants a node in a
+> department directory to prove the index-completeness check fires. The node needs a CPT number to be
+> well formed, and improvement #26 says a test draws identifiers from a pool the allocation authority
+> has reserved — so the reservation is recorded here, in the commit that first uses it, rather than
+> the harness borrowing a live number or the eval's 0999.
+
 > **CPT-0999 is RESERVED and never allocated to a real node.** The context-adherence evaluation
 > (ADR-0043) asks a cold subagent to author a node with a stated number, and its answer is scored by
 > running the gates over a throwaway worktree. If that number were a live allocation the task would
@@ -125,7 +131,15 @@ platform catalogue was checked against the current published grouping and found 
 ## 3. Decision (ADR) numbers
 
 - Format: `ADR-NNNN`, strictly increasing, allocated at proposal time.
-- Allocated: **ADR-0001 … ADR-0038** (see `docs/10-decisions/README.md`).
+- Allocated: **ADR-0001 … ADR-0053** (see `docs/10-decisions/README.md`).
+  This line read `ADR-0038` until 2026-08-03 while nine more existed — the same blind spot that let
+  `README.md` claim "G1-G16": a **range** is invisible to a sweep looking for a count beside a noun.
+- **Retroactive ADRs superseded 2026-08-03 by owner decision**, because their premises left with the
+  code ADR-0037 deleted: **0001** (two-language split → ADR-0033/0035), **0005** (event-sourced
+  inventory → ADR-0037), **0006** (data conventions → clause by clause: ADR-0047 · SCM-R9 · SCM-R10 ·
+  SCM-R11 retired), **0007** (soft-delete + idempotency → ADR-0037), **0009** (Jest + pytest →
+  ADR-0035/0037). **0013** was already superseded by ADR-0022. None was re-numbered and none was
+  deleted: a superseded ADR stays listed so every prior citation resolves.
   0001–0009 retroactive; 0010–0013 proposed at skeleton adoption; 0014 (MIT) accepted;
   0015 (concepts) / 0016 (business-context extraction) proposed; **0017–0021 proposed —
   the full-stack product decisions** (staging, Clean Architecture, Decimal money, gRPC
@@ -174,13 +188,13 @@ ADR-0037; the keys are unaffected.)*
 ## 6. Gate-invariant IDs (fixed)
 
 `G1`–`G8` name the knowledge-architecture §11 invariants. New gates append (G9+).
-Allocated: **G1–G17** (G9 context budget, ADR-0012; G10 **standards provenance** — was concept
+Allocated: **G1–G21** (G9 context budget, ADR-0012; G10 **standards provenance** — was concept
 coverage under ADR-0015, rewritten by ADR-0037 when the code it policed was deleted; **G11
 retired rules stay retired**, added at Phase C3 because a citation of a retired ID is invisible to
 G4 — it is not a broken link, it silently resolves to nothing and reads as law; **G12 a rule
 citation names an ID**, added at Phase C1d after 47 nodes were found citing family wildcards like
 `**FIN-R***` — invisible for the same reason, and most of them stood in for lifecycle rules
-retired with the deleted application; **G13** `updated:` truthfulness, **G14** load-set budgets, **G15** context-adherence freshness, **G16** this file's retired roster, **G17** table shape — added 2026-08-03 when a review for archivable register rows found fourteen rows with no status cell at all).
+retired with the deleted application; **G13** `updated:` truthfulness, **G14** load-set budgets, **G15** context-adherence freshness, **G16** this file's retired roster, **G17** table shape — added 2026-08-03 when a review for archivable register rows found fourteen rows with no status cell at all; **G18** exemplar completeness, **G19** task coverage, **G20** relation vocabulary; **G21** the dossier's counted facts, ADR-0052 — and that one closes the range-versus-count blind spot this section is named for, because the gate recomputes the roster's length instead of trusting a sentence).
 
 ### The retired roster — complete, and gated
 

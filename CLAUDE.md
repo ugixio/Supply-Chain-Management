@@ -164,19 +164,18 @@ Dependencies stay OSI-licensed, commercially usable and modifiable (ADR-0002).
 
 ## Gates
 
-`make verify` — doc gates G1–G17, typecheck, Rust tests. Run after **every** layer.
-`make verify-full` — the merge gate: adds the gate mutation tests, `cargo fmt --check` and
-`clippy -D warnings`.
+`make verify` — doc gates G1–G21, typecheck, Rust tests. Run after **every** layer.
+`make verify-full` — the merge gate: adds the gate mutation tests, the lockfile check,
+`cargo fmt --check`, `clippy -D warnings` and `eslint --max-warnings 0`.
 `make verify-schema` — the telemetry schema against a real ClickHouse. CI runs both gates.
 
-G1 no stray docs · G2 front-matter · G3 unique IDs · G4 link integrity · G5 no orphans ·
-G6 authority acyclicity · G7 status and supersession · G8 English-only (screened) ·
-G9 context budget · G10 standards provenance · G11 retired rules stay retired ·
-G12 a rule citation names an ID (never a family wildcard) · G13 `updated:` is true ·
-G14 a load set is priced as a whole (`docs/program/load-sets.md`) ·
-G15 the context-adherence measurement is not stale (`docs/program/context-eval.md`) ·
-G16 the retired roster in the ID registry is complete and true ·
-G17 a table row carries the cells its header declares.
+G1 stray docs · G2 front-matter · G3 unique IDs · G4 links · G5 orphans · G6 authority acyclicity ·
+G7 supersession · G8 English-only · G9 context budget · G10 standards provenance · G11 retired
+rules · G12 rule citations name an ID · G13 `updated:` is true · G14 load sets · G15 measurement
+freshness · G16 retired roster · G17 table shape · G18 exemplar department · G19 task coverage ·
+G20 relation vocabulary · G21 the dossier's counted facts.
+Names only: §11 of `docs/00-governance/knowledge-architecture.md` carries what each one checks —
+the structural exit `load-sets.md` declared for the sets holding both files.
 
 The gates themselves are tested: `tools/test_gates.py` plants one violation per gate and
 requires that gate — and no other — to fire (ADR-0042).

@@ -5,7 +5,7 @@ type: program
 owner: orchestrator
 status: active
 since: 2026-07-19
-updated: 2026-08-03
+updated: 2026-08-04
 relations:
   - { type: part-of, target: index-program }
   - { type: governed-by, target: governance-root }
@@ -45,6 +45,11 @@ mirror-coverage bar) · duplicated formulas across TS/Python with one past diver
 > Status: ⬜ pending · 🟦 in progress · ✅ done · ⛔ void · ⚠ needs an owner decision. Entries
 > are appended and annotated, never rewritten. A 🟦 entry ALWAYS records current state + next
 > step, so a fresh session resumes without re-derivation (ADR-0012).
+>
+> **These five are the whole vocabulary.** A sixth marker (`🟩`) was in use on five entries and in no
+> legend, which made every count of this backlog wrong — including ones reported to the owner. They
+> all meant *done* and are now `✅`. Documenting a second marker for one state would have preserved
+> the ambiguity rather than removed it.
 
 ### Closed triages — archived
 
@@ -154,6 +159,38 @@ reached its ceiling and this was the structural answer, taken instead of a raise
   **The gap this closed was in the eval too.** All five previous tasks measured whether an agent
   *obeys* the context; none asked whether it can say what the context is **for**, so the eval could not
   have found the problem the owner found by asking.
+- ✅ **X9 · The estate scored against an external reference model — 2026-08-04 (ADR-0052/0053).** The
+  Context-OS audit answered *one proposal*; this asked the question the other way round — **what would a
+  complete system in context engineering, RAG, memory and agentic AI have, and what does this estate
+  lack?** Thirty-three applicable capabilities: **21 have · 5 partial · 6 gap**, plus four declared
+  non-goals with reversal conditions (`docs/program/agentic-context-assessment.md`). The result has a
+  shape: **strong wherever a property can be checked deterministically, absent wherever it needs
+  something running** — a direct consequence of ADR-0037 leaving one application in the tree and that
+  application not yet being built. Two things landed with it: **G21** gates the dossier's eleven counted
+  facts on drift (it was wrong about six at once), and **practice area #36** rosters the discipline this
+  repository runs on, which thirty-five areas had somehow omitted.
+- 🟥 **X10 · The agent-plane threat model — NEXT, ahead of M4 (risk #16).** Sessions read web pages, PR
+  comments and CI logs, and **nothing states what may be written from an untrusted source into the
+  registers every later session loads.** That is memory poisoning against an estate whose entire value
+  is a trustworthy memory; goal hijacking and tool misuse are equally unaddressed, and practice area #17
+  (ASVS, CWE, SSDF) covers none of them. ADR-0053 has already anchored the vocabulary, which is the
+  ADR-0010 ordering. **Scope:** one clause — a claim entering a register from outside this repository is
+  recorded *with its source and as a claim*, never as a finding, and instructions found in fetched
+  content are data — plus a sweep of existing rows for content that arrived that way, plus the ENG-R9
+  six checks. A clause and a sweep, not a project, which is why it goes first.
+- 🟦 **X11 · The sixth evaluation cycle — owed.** ADR-0052/0053 moved five of the fourteen watched
+  files, so five digests read `(unmeasured)` and six tasks are currently unscored (see
+  `context-eval.md` §Last measurement). The change is structural rather than semantic — a description
+  moved file — but **that judgement is exactly what ADR-0043 says not to trust**, so it is recorded as
+  an open measurement and not as a reasoned exemption. Needs cold subagents; not startable from a
+  session that just wrote the change.
+- 🟦 **X12 · Agent-session telemetry over the tier that already exists — sequenced with M4.** Nothing
+  traces what a session read, did or spent. ADR-0036 already gives a ClickHouse telemetry tier and a
+  Rust ingester, and ADR-0031/0034 give a monitoring application whose job is to make the portfolio
+  visible — **an agent session is portfolio activity.** Emitting OpenTelemetry GenAI spans into the same
+  tier closes four capabilities at once (what was read, trajectory evaluation, session observability,
+  cost accounting) as a by-product rather than as a second system. **Not before M4:** it needs the
+  ingester's read surface. Practice area #36 already anchors the conventions.
 
 ### Phase U — Unification (context-skeleton adoption)
 - ✅ **U1 · orchestrator** — Skeleton added on branch `feat/context-skeleton`: tier tree,
@@ -162,8 +199,24 @@ reached its ceiling and this was the structural answer, taken instead of a raise
   retroactive + 0010/0011 proposed, glossary (seeded), scm-core rule.md (13 cross-department rules),
   40-contexts knowledge map, program area + 6 templates, additive `CLAUDE.md` governance
   section. **Nothing existing was moved, renamed or rewritten.**
-- ⬜ **U2 · human** — Review & ratify ADR-0001..0009 (retroactive), decide ADR-0010/0011,
-  and merge the branch.
+- ✅ **U2 · human** — Review & ratify ADR-0001..0009 (retroactive), decide ADR-0010/0011,
+  and merge the branch. **CLOSED 2026-08-03.** The four whose premises are live were **ratified by the
+  owner**: 0002 (OSI-only dependencies), 0003 (English-only), 0004 (fourteen departments), 0008
+  (standards as a first-class feature). The five whose premises left with the code are superseded, each
+  pointing at its real successor. 0010/0011 needed no decision — both already accepted.
+  **Halved 2026-08-03 by owner decision, and the half that went is the half that should not have been
+  ratified.** Reviewing the nine against the current tree found **five whose premise left with the
+  code ADR-0037 deleted** — ratifying those would have re-endorsed statements about an application
+  that no longer exists, which is the defect ADR-0037 was written to correct. **0001 · 0005 · 0006 ·
+  0007 · 0009 are now superseded**, each pointing at its real successor rather than carrying a generic
+  note (see the ADR index).
+  **Still open for the owner: 0002 · 0003 · 0004 · 0008** — OSI-only dependencies, English-only,
+  the fourteen departments, standards as a first-class feature. All four are load-bearing today and
+  none describes deleted code. **0010/0011 need no decision** — both already read `Accepted
+  (owner-authorized 2026-07-20)`; 0011's tag clause is narrowed by ADR-0046.
+  **One ADR was written rather than ratified:** the owner directed that money precision in the Rust
+  core get its own decision, and it did not have one — `crates/scm-money` had been contradicting
+  ADR-0019's `Decimal`-as-representation since it was written. That is **ADR-0047**.
 - ✅ **U3 · orchestrator** — Dedup pass: `CLAUDE.md` §Critical Business Rules /
   §Code Standards cite the rule IDs instead of restating them (SSOT).
 - ✅ **U4 · WHAT lane** — Per-department `rule.md` × 14: extract each department's
@@ -226,9 +279,32 @@ reached its ceiling and this was the structural answer, taken instead of a raise
   **Resolved 2026-07-19: keep grandfathered** (allowlisted in knowledge-architecture §3
   and enforced as such by `tools/verify.py`); typing it would shoehorn the closed `type`
   vocabulary. Revisit only if a standards/ document class is ever justified.
-- ⬜ **U10 · human** — Review & ratify ADR-0012 (context economics + gates) and ADR-0013
+- ✅ **U10 · human** — Review & ratify ADR-0012 (context economics + gates) and ADR-0013
   (npm + lockfile) together with U2; ratifying ADR-0012 includes declaring the exemplar
   department (candidate: `01-procurement`).
+  **This entry asked for something incoherent and nobody noticed for two weeks: ADR-0013 has read
+  `Superseded by ADR-0022` since the pnpm decision.** Ratifying a superseded ADR means nothing.
+  Confirmed by the owner 2026-08-03 — pnpm only — and the entry is corrected rather than quietly
+  satisfied. **ADR-0012 stands and needs no re-ratification**; its two moved specifics (the gate
+  roster, the CI invocation) now carry an amendment note in the ADR itself.
+  **✅ The exemplar is resolved 2026-08-03 by ADR-0048** — owner-directed, all four points taken as
+  recommended: the exemplar is a department's **knowledge** rather than its code, it is
+  **`01-procurement`** (upheld on measurement, not continuity — joint-highest live rules and the only
+  one of fourteen already carrying the pitfall list), it is **law via gate G18** rather than a
+  citation nobody checks, and **clause 4 is narrowed to the exemplar** because inventing thirteen
+  pitfall lists is the fabricated content ADR-0037 removed. G18 checks **form, never quality**, and
+  its fourth claim — every department's index lists every node behind it — was widened to all
+  fourteen after measuring that all fourteen already comply, so a true and unguarded property became
+  guarded at no cost. Three mutants, and `CPT-0998` reserved in the registry for the one that plants
+  a node (improvement #26: a test draws identifiers from a reserved pool).
+  **The former text, kept because it states the problem better than the fix does:** ADR-0012 clause 3 says the
+  exemplar is *"always real code, never fabricated samples"* — and ADR-0037 deleted all department
+  code, so **the clause is unsatisfiable as written**. Two ways out and both are the owner's:
+  reinterpret the exemplar as one of **knowledge** (a department's concept nodes plus its `rule.md`
+  as the shape siblings copy — which exists, is real, and is what an agent actually reads before
+  authoring a node), or **retire the clause** because its premise left with the code. Whichever is
+  chosen needs an ADR naming it; the reason the clause existed is worth keeping either way —
+  *models imitate a real example more reliably than they deduce from prose.*
 - ⛔ **U11 · WHAT lane** — **order-management numbering collision RESOLVED by ADR-0029** (dir dissolved → dept 13 namespace; census fixed). Remaining: fine split of 3 agility/VaR fns → dept 10, blocked on a Python env. Rest of U11 below stands.
 - ⛔ **U11b · WHAT lane** — Domain dedup & modeling follow-ups surfaced by the toolchain
   repair: `Shipment.ts` redefines `TransportMode`/`TrackingEvent` already owned by
@@ -236,8 +312,27 @@ reached its ceiling and this was the structural answer, taken instead of a raise
   `python/07_order_management/` vs `python/13_order_management/` numbering collision
   (risk register #4); REACH: model ECHA-notification tracking so compliance can reflect
   a submitted notification (currently conservative: required ⇒ not yet compliant).
-- 🟦 **U12 · HOW lane** — eslint 9 flat config (`eslint.config.mjs`) + wire `lint` into
+- ✅ **U12 · HOW lane** — eslint flat config (`eslint.config.mjs`) + wire `lint` into
   `make verify-full` (QA warnings-as-errors bar).
+  **Landed 2026-08-03:** `make lint-ts` in the merge gate, mirroring `lint-rs` —
+  `pnpm -s exec eslint . --max-warnings 0`. **The bar lives at the invocation, not in the config:** a
+  severity written into the config can be argued down one rule at a time, a count on the command line
+  cannot.
+  **Two things this entry got wrong, corrected rather than quietly satisfied.** The version is
+  **eslint 10**, not 9 — 10 makes flat config the only format, so the intent stands. And no ADR is
+  needed: a library inside an adopted lane. ESLint and `typescript-eslint` are MIT, dev-only, zero
+  runtime surface; ENG-R9's six checks were stated at handoff.
+  **Type-aware linting is deliberately off, as a decision rather than an omission.** It needs a full
+  program build per run and the estate has **two** TypeScript files, so it would cost real time to
+  find nothing. It belongs to **M4**, when `apps/api` and `apps/web` bring code worth reasoning about
+  — recorded inside `eslint.config.mjs` so the next session inherits the reason rather than the gap.
+  **Proven by planting a violation** (ADR-0042's discipline, applied to a lint bar rather than a
+  gate): an `any` signature made `make lint-ts` exit 2, and removing it returned 0. `make deps-locked`
+  re-run because the lockfile moved — improvement #6's exact failure mode.
+  **Found while doing it:** `README.md` claimed `verify` runs "doc gates G1-G16" when they are
+  **G1–G17**, and `CLAUDE.md` and `README.md` each described `verify-full` partially, omitting a
+  different step. Yesterday's file-by-file review missed the G16 claim because its numeric sweep
+  looked for counts beside the word *gates*, and `G1-G16` is a range.
 - ⛔ **U13 · HOW lane** — Enforce LOG-R3 in code: `Shipment` types `hazmatClass` as
   optional and does not reject an `isHazmat` line missing its IMDG/ADR class, UN number,
   proper shipping name or packing group, though the README mandates it. Add the guard +
@@ -569,7 +664,7 @@ reached its ceiling and this was the structural answer, taken instead of a raise
 > a project's development produces the signal, and every metric is defined as a `CPT-*` node before
 > it is computed.
 
-- 🟩 **M1 · WHAT — the delivery metrics defined (2026-07-27).** Six nodes, **CPT-0155..0160**, in a
+- ✅ **M1 · WHAT — the delivery metrics defined (2026-07-27).** Six nodes, **CPT-0155..0160**, in a
   new `00-platform` group of the *same* catalogue — one place a project looks up what a number means,
   as the product statement fixes, rather than a second catalogue for the platform.
   **The four keys** (deployment frequency, lead time for changes, change failure rate,
@@ -741,6 +836,57 @@ reached its ceiling and this was the structural answer, taken instead of a raise
   is unrun locally; `python3 db/clickhouse/apply.py --check-only` fails as designed rather than
   skipping. CI's `verify-schema` job is what proves the DDL. A duration metric still has no correct
   kind — recorded as risk #15 rather than guessed at.
+#### Pre-M4 readiness check — 2026-08-03
+
+**Asked before starting M4: does anything M4 needs on day one lack a live decision?** The nine ADRs
+M4 rests on (0024 · 0025 · 0026 · 0033 · 0034 · 0035 · 0036 · 0041 · 0047) all have bodies and are
+accepted. **Four gaps surfaced, and the first was found by asking the question — not by any sweep.**
+
+1. **~~BLOCKER~~ — CORRECTED the same day: the boundary was already decided, and I had not read the
+   rule.** `ADR-0020` was indeed stale and is superseded (a Python gRPC calculation core: ADR-0035
+   made Rust the core, ADR-0037 deleted the service, `proto/` does not exist, and it "extends"
+   ADR-0001 which was superseded an hour earlier). **But the successor is not missing.**
+   **ENG-R10.1 names it:** *transport lives in adapters (`napi-rs` toward NestJS, `tonic` toward
+   Python)*, with **ENG-R10.5** fixing the direction NestJS → core → Python tools. I reported "nothing
+   decides it today" after reading the ADR index and ADR-0020 and **not** clause 1 of the rule the
+   ADR index points at. **The lesson is the one this estate keeps paying for: a decision recorded as a
+   rule clause is invisible to a search of the decision log.** Nothing was built on the wrong reading,
+   because the check ran before M4 started rather than after.
+   **Why it hid:** the retroactive review covered 0001–0009 and this is 0020. A stale decision lives in
+   the gap between the ranges people think to check — the third form of the range blind spot after
+   `G1-G16` and `ADR-0038`.
+2. **⚠ No Postgres runtime exists at all.** ClickHouse has `db/clickhouse/` — migrations, `apply.py`,
+   compose, and its own gate. The Postgres knowledge read model (**ADR-0024**, **ENG-R7**) has
+   **none of it**: no migrations, no compose, no schema gate. Whether it mirrors the ClickHouse pattern
+   is undecided, and M4 cannot serve the knowledge surface without it.
+3. **⚠ The ingester's lane is ambiguous, and ENG-R8 makes ambiguity a stop.** ENG-R7 says the read
+   model is *rebuilt one-way from `docs/`*; **ENG-R10 gives Rust ingestion**; P3 wrote `tools/ingest`
+   and **Python is the tools layer**. A `docs/` → Postgres builder is a build step, not the hot path,
+   so both readings are defensible — which is exactly why it must be decided rather than discovered.
+4. **⚠ ENG-R10.7 was a live rule ordering what a gate forbids** — found while reading ENG-R10 to
+   correct the item above, and the most consequential thing this check turned up. It said *"a `pub fn`
+   implementing a `CPT-*` concept is **linked from that node** (G10)"*, while G10's third check is
+   *"**no node carries an `## Implementations` section**"* and ADR-0037 §3 removed that section from
+   every node. The clause came from ADR-0035 on 22 July; ADR-0037 reversed its premise on the 29th and
+   the clause was never updated — **so for six weeks a compliant author following ENG-R10 would have
+   failed the gates, with the clause citing that very gate as its enforcer.** No gate can catch this:
+   it is a semantic contradiction between prose and code. Now reads *Citation is one-way — code may
+   name a `CPT-*`; a node links to no implementation (ADR-0037, G10)*, at 999/1000 words because the
+   `ENG` family has no headroom.
+   **Related, and left open:** ENG-R10.4 requires *one contract, generated both sides, from the same
+   `.proto`* — that contract's ADR was 0020, now superseded, so the clause is forward-looking but
+   unanchored. It binds nothing until a Python tools service exists, and it should acquire an ADR when
+   one does.
+5. **⚠ Auth is neither decided nor declared deferred.** No ADR names authentication or tenancy; W3
+   lists *tenancy/auth* but that is a later phase. For a monitoring dashboard deferral may be right —
+   it should be **stated**, because an absent decision reads as an oversight and a deferred one does
+   not.
+
+**Verified ready, so M4 is not blocked on these:** the ClickHouse read identity exists
+(`telemetry_reader`, SELECT on `samples` and the rollups, migration 0005) · the telemetry schema is
+applied and gated · the Rust ingestion core is real with 71 tests passing · the delivery metrics are
+defined (CPT-0155..0160) · money has a decision that matches its code (ADR-0047).
+
 - ⬜ **M4 · HOW** — NestJS + GraphQL as the only counterpart the frontend has; Next.js dashboards.
   **Scope confirmed 2026-08-02:** with P3/P4 kept alive, the gateway serves **two** read surfaces —
   the knowledge read model (ADR-0024/0025) and the telemetry tier (ADR-0036) — and the octagon
@@ -831,237 +977,12 @@ the index slice only 2,427, so the exit addressed the wrong term. These blocks w
 instead. **The structural answer when it recurs is a `WORKFLOW-archive.md`** for closed phases, the
 same instrument the risk register already uses — not another raise.
 
-### Phase C — Clean the context after ADR-0037
+### Phase C — archived
 
-> The deletion is done; making the remaining knowledge consistent with it is not.
-
-- ✅ **C1 · WHAT** — **Sweep the concept nodes for policy.**
-  **C1a landed 2026-07-27 — the numeric policy is out.** Method: a detector for lines carrying a
-  number *and* a normative word (target, threshold, tolerance, weight, band, default), minus
-  citations, narrowed 169 flagged nodes to **47 real candidate lines in 37 nodes**, each then judged
-  by hand. Removed: every "world-class ≥ X" bar (13 of them, one citing a `CLAUDE.md` section that
-  no longer exists) · matching tolerances (0%/1%/2%) · the 25% carrying rate and its 20–30% "band" ·
-  the 85–90% space-utilization band · warehouse throughput and dock-to-stock benchmarks ·
-  MPS stability > 0.85 · fill ≥ 98% / backorder ≤ 2% · the 15% restocking default · compliance-score
-  weightings · C2C rating bands · the 0.5% tracking dead band · α = 0.3 smoothing · the 85%
-  capacity-strain onset.
-  **Kept, because a regulator fixes them:** REACH 0.1% w/w (Reg. 1907/2006), CSDDD >5,000
-  employees ∧ >€1.5B from 26 Jul 2029 (Directive 2026/470), CBAM 50% quarterly holding. Worked
-  examples keep their illustrative numbers; mathematical domains (`α ∈ (0,1)`, `n ≥ 1`) are not
-  policy.
-  **Two nodes were policy end to end and were rewritten as definitions:** CPT-0060 (scorecard) now
-  states only `Σwᵢ = 1` and why a compensatory composite must keep gates outside it; CPT-0061
-  (rating bands) states only that a partition must be exhaustive, non-overlapping and explicit
-  about boundary inclusivity.
-  **C1b landed 2026-07-27 — no node compares deleted implementations any more.** All `(PY)`/`(TS)`
-  annotations are gone, and several were hiding a real question rather than a formatting wart:
-  · **HHI** never said which input scale it used. The published index is computed on **percentage
-  points** (0–10,000) — that is definitional, not conventional, and computing it on fractions
-  makes every published reference value read a factor of 10,000 off. Stated once, with the
-  consequence.
-  · **CV/XYZ** hid the **estimator** choice: population versus sample standard deviation differs
-  by ~5% on ten observations, enough to move a borderline SKU across a class boundary. Now named
-  as a project decision that must be applied consistently, because two SKUs measured differently
-  are not comparable. Its 0.10/0.25 class table also survived C1a — the detector missed it
-  because the number and the normative word sat in different table rows. **Detector blind spot
-  worth remembering.**
-  · **Safety stock "days of supply"** was two different formulas under one name (a flat day count
-  versus the lead-time spread `LT_max − LT_avg`). Both survive as legitimate definitions; the node
-  now insists the project say which it means, and the worked example shows the same SKU getting
-  250 or 150 units.
-  · **EAL** allowed impacts in currency and as a fraction of revenue in the same sum, and summed
-  correlated scenarios. Both now stated as errors.
-  · **Stock-balance projection** — where the non-negativity check belongs is recorded as a real
-  choice: refusing the movement keeps the ledger always-valid, letting the projection report a
-  negative surfaces the upstream gap. A *reader* of an event log can only do the latter.
-  · **ABC slotting**, **risk matrix 5×5** and **Kraljic** had their break-points, bands and axis
-  midpoints removed; what remains is the structure (rank-then-cut; an ordinal product is not an
-  interval scale; a 2×2 on two dimensions).
-  · **AQL** large-lot behaviour is ISO 2859-1 table data and is cited as such rather than
-  described as a fallback.
-  Also: the two department "Divergences" sections became **Regulatory drift to watch**, keeping
-  the CSDDD/CBAM/REACH/EUDR movements and dropping the code-gap notes.
-  **Lesson recorded:** three scripted line replacements produced broken prose that the gates
-  cannot see. Prose edits get read back; only structural edits get scripted.
-  **C1c remaining:** a **Project-chosen inputs** section on every node that needs values — about
-  a dozen have one now, out of 154.
-- ✅ **C2 · WHAT** — **All 14 department rule families swept and rewritten (2026-07-27).** This was
-  where the bulk of the remaining problem sat, as suspected: the families had been extracted from
-  the `throw` guards of the deleted code, so most "invariants" were invented workflows or field
-  checks citing `.ts` files. Of **70** rules, **45 retired**, **25 survived**, **13 new IDs**
-  allocated for externally-fixed statements that had never been written down.
-  **What the sweep surfaced as genuinely fixed and previously unstated:** IAS 2's
-  lower-of-cost-and-NRV rule and its **LIFO prohibition** (FIN-R4) · that only *non-recoverable*
-  tax capitalizes into inventory cost (FIN-R5) · the Incoterms **sea-only** restriction on FAS/FOB/
-  CFR/CIF, so naming one for an air movement is an error not a shorthand (LOG-R1) · dangerous-goods
-  declaration per mode, a criminal matter rather than a data-quality one (LOG-R3) · chargeable
-  weight as the greater of actual and volumetric (LOG-R4) · that an **ISO 2859-1 plan is read from
-  the table, never interpolated**, because its operating-characteristic curve only holds for the
-  tabulated combinations (QMS-R5) · that accepting a *sample* is not accepting a lot (QMS-R6) ·
-  that a defect rate needs its **opportunity base** or PPM and DPMO get compared (QMS-R7) · that
-  EUDR country risk is **read from the Commission benchmark**, so a hardcoded list is wrong the
-  moment it is revised (SDV-R6) · that **absence of evidence is not evidence of compliance** — an
-  unevidenced supplier is *unknown*, and flooring it at a mid-range score converts silence into
-  adequacy (SDV-R5) · that a BOM must be **acyclic** or explosion never terminates (SPL-R1) · that
-  a reorder point **contains** its safety stock by definition (INV-R1) · that a perfect-order rate,
-  being a conjunction, is at most its worst component (ORD-R6) · and that an **ordinal product
-  stays ordinal**, so risk scores may not be averaged (RSK-R5).
-  **What was retired, by kind:** ~20 invented status machines and lifecycle guards · ~15 field
-  range checks (`confidencePct ∈ [0,100]`, priority `∈ [1,5]`, horizon `∈ [1,52]`) · 4 money
-  representation rules that belong to **ENG-R4** · the over-receipt tolerance and the
-  mandated-safety-stock-method rules, which were policy.
-  **Two corrections made during the sweep:** an ID must never be redefined — I first reused
-  a retired ID for a new statement and had to reallocate it — three times over — and my first
-  count of the retirements was wrong. The reallocations are recorded in the id-registry, which is
-  the one place allowed to name a retired ID; the registry now carries the
-  verified figures.
-- ✅ **C2b · WHAT** — Several retired rules named a principle worth keeping *somewhere*: FIFO/FEFO
-  picking discipline, corrective-action effectiveness verification, immutability of a committed
-  plan. Each belongs to a concept node or a project's own process, not to a rule file — place them
-  deliberately rather than letting them vanish.
-- ✅ **C3 · WHAT** — **Stale rule citations swept, and mechanized so it cannot recur (2026-07-27).**
-  ADR-0037 and Phase C2 retired **52** rule IDs; the estate carried **141 citations** of them across
-  82 files. A citation of a retired ID is invisible to G4 — it is not a broken link, it silently
-  resolves to nothing and reads as law — so this was worth a gate, not just a pass.
-  **New gate G11:** no document cites a withdrawn rule ID. The retirement tables are the
-  machine-readable source, read from the **first column only** (an ID named in the *why retired*
-  prose is a live rule being pointed at). Exempt, on principle rather than convenience: the rule
-  file that declares the retirement, the **id-registry** (a retirement is an allocation fact), and
-  the **ADRs** (append-only history — editing an old decision to remove an ID would falsify it).
-  **Substitutions were judged, not blanket-renamed** — a money rule split into an identity and a
-  code duty; an inventory rule kept its physical impossibility and shed its policy exception;
-  non-negativity bullets were deleted outright because a mean of absolute values is non-negative by
-  arithmetic; invented lifecycles became "the project's own lifecycle". The full old→new map lives
-  in the **id-registry**, which is the allocation authority and the one place allowed to name a
-  withdrawn ID.
-  **I repeated my own recorded mistake.** I ran broad regex substitutions over prose again and
-  corrupted five places — including, with some irony, the registry line that *declares* the
-  retirements, which came out asserting that a live inventory rule had been retired. Caught by
-  reading the diff, fixed by hand. **G11 then caught 36 citations the sweep had missed**, and
-  finally caught this very backlog entry naming withdrawn IDs while explaining them. That is the
-  argument for the gate: the script was neither sufficient nor safe, and only the gate was
-  reliable.
-- ✅ **C4 · WHAT** — **Prose that still described deleted code (2026-07-27).**
-  **The agent definitions came first, because they instruct future work** — an agent told to build
-  `packages/domain` aggregates would have sent the next session straight back into the mistake.
-  Four rewritten: `calc-engineer` (Python is the tools layer, and it now carries the lesson that a
-  policy default in a signature is how one company's habits get inherited), `domain-knowledge`
-  (leads with the inclusion test), `backend-engineer` (the only door to the frontend, serving
-  monitoring), and the agents README.
-  **A defect that would have propagated:** `templates/concept.md` still instructed authors to add
-  an `## Implementations` section — which **G10 now rejects** — so every node created from it would
-  have failed the build. It now teaches the current contract: unique CPT number, non-empty
-  `## References`, no implementations, a **Project-chosen inputs** section, illustrative worked
-  numbers, and a warning that G11 fails on a retired rule ID.
-  **Risk register reconciled:** seven of eleven risks were **closed by the deletion itself** —
-  the untested Python tree, the TS/PY divergence, the duplicate order-management packages, the
-  heavy ML toolchain, the 84% of prose sitting outside the governed tree, the `IMPLEMENTATION.md`
-  files specifying a different system (SAP/Superset/Airflow — itself evidence of the drift), and
-  the spec-versus-code z-score contradiction. G10's structural blindness is superseded.
-  **And the risk ADR-0037 created is now recorded as #11:** no gate can tell a standard from a
-  plausible-looking invention. G10 checks that a source is *cited*, not that the content matches
-  it. That is the residual, and it is how the original problem started.
-  **ENG-R2 retired** — it governed `packages/domain`, which no longer exists; its intent survives
-  as ENG-R10.1. ENG-R1's ring names updated to `apps → adapters → core`.
-  Structural indices corrected: the knowledge-architecture allowlist, `docs/_index.md`,
-  `40-contexts/_index.md`, the operating-model lane diagram, and the dept-03 section that framed
-  two concepts as "specified but not implemented" (a code-state claim) rather than as measures of
-  the planning process.
-- 🟩 **C4b · WHAT — the operating layer swept (2026-07-27).** The 22 `.claude/skills/`, the four
-  `.claude/commands/`, the agent definitions and the root `README.md`. They are the department
-  know-how a project consults for *how* to implement, so they stay — but under the inclusion test.
-  Measured first: only **13** policy lines by the number-plus-normative-word detector, far fewer
-  than feared, because most of the drift was **stale paths**, not stated policy.
-  **G11 had been giving a false green.** It only scanned front-matter documents, so the skills
-  tree cited retired rules unseen; extended to `.claude/**` and `CLAUDE.md`, it immediately found
-  **13** more (10 in agents/skills, then 3 in `testing-quality` alone). *A gate over part of the
-  estate certifies the part it can see.*
-  **The two worst files were the two most-read.** `supply-chain-core/SKILL.md` carried
-  `Money = { amount: number }`, the `KG`/`L`/`M` codes `CLAUDE.md` names as an anti-pattern, the
-  $5,000 threshold, a "World-Class KPI Benchmarks" table, a `service_level: float = 0.98` default
-  in a signature, and a test **asserting round-half-up** against SCM-R14 — rewritten. The root
-  `README.md` — the front door — still opened with a `src/departments/` tree, `npm test`, a
-  "World Benchmark" KPI table and 26 "Algorithms Implemented" naming deleted `.ts` files;
-  rewritten around the inclusion test.
-  **Half-edits found by reading the diff back** (the third time this lesson has paid): the ABC
-  and defect-classification tables had policy stripped from the *first* row and left in the rows
-  below, which reads as though those numbers were the standard. Also fixed: a known-pitfalls entry
-  left dangling mid-sentence around a deleted constant and a deleted test path.
-  **Dead JS test estate removed:** `jest.config.js` still mapped the deleted `@scm/domain`, and
-  `package.json` declared `test`/`test:unit`/`test:integration` over a `tests/` tree holding only
-  the Rust golden fixture. Jest, ts-jest, eslint (never configured), `ts-node` and `@types/uuid`
-  dropped; lockfile regenerated. `turbo.json` and `tsconfig.json` paths cleaned. **A runner that
-  passes because it found nothing is worse than no runner — it reads as coverage.**
-- 🟩 **C1d · WHAT — the divergence sections were a hiding place for policy (2026-07-27).**
-  47 concept nodes still described differences between the **two deleted implementations**. That
-  framing is why C1a missed real policy: its detector needed a number and a normative word on the
-  same line, and `PY bands: <0 EXCELLENT · ≤30 GOOD` matches neither pattern. Removed here — the
-  cash-to-cash rating bands, the bullwhip severity thresholds, the 5×5 risk-matrix level cuts,
-  three competing AP matching tolerances, the 10% budget-variance bar, `Cpk ≥ 1.33 capable`, the
-  0.5% bias dead band C1a had *reported removing*, and the 5% over-receipt default — the original
-  ADR-0037 example, still sitting in a symbol table.
-  **Questions the divergences were avoiding, now answered:** the σ estimate decides *which index
-  you computed* (within-subgroup → Cp/Cpk, total-sample → Pp/Ppk — different names for exactly
-  this reason); consensus forecasting is **two stages**, not two implementations; days-of-supply
-  safety stock is two formulas, one of which collapses to zero on stable lead times; excluding
-  in-transit shipments flatters OTD and the two bases never reconcile.
-  **A correctness fix:** the statistical safety-stock example still used `z = 1.65` from the lookup
-  table ADR-0028 retired in favour of the exact inverse normal.
-  **G12 added — a rule citation names an ID.** `**FIN-R***` reads as law and resolves to nothing;
-  it was invisible to G4 (not a broken link), G3 (not a duplicate) and G11 (not a retired ID). Most
-  of the 47 stood in for *lifecycle* rules retired with the deleted application, so the wildcard
-  was concealing precisely what it appeared to cover. The gate found one more in the core rule file
-  itself, and was verified by planting a wildcard and watching it go red.
-  **Eight `## Governing rules` sections were empty** — a heading promising law and delivering none.
-  Filled with what actually governs each forecasting method (DMD-R6 on undefined percentage error,
-  DMD-R9 on horizon and bucket, and Holt-Winters' two-season requirement as arithmetic).
-  **The scripted-edit lesson paid for the fourth time:** four replacements left dangling tails
-  because the original line continued onto the next. Caught by reading the diff, fixed by hand.
-- 🟩 **C1c · WHAT — the questions a project must answer, named (2026-07-27).** Every node that
-  leaves a value to the project now carries a **Project-chosen inputs** table: **58 of 154**, up from
-  9. The rest are pure identities (conservation, a sum, a ratio of two given quantities) and
-  correctly have no free parameter — the section is omitted rather than filled with "none".
-  Measured by cue phrase rather than guessed: 49 nodes said "the project must choose this" in prose
-  while giving the reader nothing to scan.
-  **A recurring second row nobody thinks of:** the *population, period or basis*. Two teams
-  computing the same formula over different denominators disagree while both being right — labour
-  productivity per paid/present/on-task hour, PPM over received/inspected/shipped units, OTD against
-  requested/promised/confirmed dates, LTIFR per 200,000 or 1,000,000 hours (a factor of five).
-  **Three more surviving targets, found only because the table forced the question:** MPS stability
-  "below the 0.85 bar", a PPM target of 500, and `PO_APPROVAL_THRESHOLD_CENTS = 500,000` still shown
-  as *the* worked example while the prose above it said the threshold was project-chosen. Showing
-  the invented number is how it gets copied.
-  **And two more stale z-values:** `z = 1.65` from the lookup table ADR-0028 retired, in the
-  Average-Max and combined-variability examples. Correcting the combined example changed its
-  conclusion (93 units of under-buffering, not 95).
-  `templates/concept.md` aligned to the table form so new nodes inherit it.
-- 🟩 **C5 · WHAT — the regulatory framework was stating superseded law (2026-07-27).** Verified
-  against the instruments themselves, not against the repository's own summaries — and the document
-  was **wrong about CSDDD on three separate points**:
-  it published the original three-phase scope (2027/2028/2029 at 5,000/3,000/1,000 employees), which
-  **Directive (EU) 2026/470** replaced with a **single band — >5,000 employees ∧ >€1.5bn, from
-  26 Jul 2029** (transposition 26 Jul 2028; roughly 13,000 undertakings became roughly 6,000);
-  it stated penalties of **up to 5%** of worldwide turnover, now capped at **3%**;
-  and it did not record that the **harmonised EU-wide civil liability regime was deleted**, so
-  exposure now genuinely differs by Member State.
-  **The catalogue was better than its own reference document** — CPT-0093 already recorded the
-  Omnibus supersession — but it was *structured around the superseded test*, with the current law in
-  a drift note underneath. A project reading its Formula section would have implemented the wrong
-  directive. Current law now leads; the old phasing is kept below it, labelled as superseded and
-  marked do-not-implement.
-  **Rewritten around what the document is for:** the reference list behind the `CLAUDE.md` standards
-  table, with a **verification date per entry** and a warning that the EU entries have changed three
-  times in eighteen months. Added the instruments the catalogue cites but the framework had never
-  listed — CBAM, EUDR, CSRD, IAS 2, ISO 2859-1, UN/ECE Rec 20, the ISO date/currency/country
-  standards, IEEE 754 and the per-mode dangerous-goods regimes. Removed every `src/…` implementation
-  reference and field name, and dropped the Gartner and McKinsey sections: a consultancy maturity
-  model is not a standard, since an organisation can reasonably decline to use one.
-  **Two more surviving thresholds found in passing:** the 85% space-utilization band C1a reported
-  removing (still in an output description) and a 5%-of-exposure recommendation band in the SCOR
-  agility node.
-  **G12 had a blind spot of its own**, found while fixing a citation it should have caught:
-  `**SCM-R7 / CMP-R***` escaped because the bold span opened on the *other* rule in the sentence.
-  Narrowed to the bold citation form and widened to catch that shape; verified against both.
+Nine items, all closed: the context cleaned after ADR-0037 — policy swept from the nodes, the
+divergence sections removed, the operating layer checked, the regulatory framework re-verified. Moved
+verbatim to [WORKFLOW-archive.md](WORKFLOW-archive.md) when `planning` reached its ceiling, which is
+the exit that manifest declares. Nothing deleted.
 
 ### Phase 1 — Product evolution (owner-defined)
 - ⬜ Resolve the open decisions in `10-decisions/README.md` (runtime/persistence, API

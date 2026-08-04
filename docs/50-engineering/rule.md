@@ -5,7 +5,7 @@ type: rule
 owner: orchestrator
 status: active
 since: 2026-07-20
-updated: 2026-08-02
+updated: 2026-08-04
 relations:
   - { type: part-of, target: index-engineering }
   - { type: governed-by, target: index-adr }
@@ -75,8 +75,8 @@ relations:
   5. **Call direction fixed** — NestJS → core → Python tools; never reversed, never short-cut.
   6. **Ports prove themselves against existing fixtures** — golden vectors and department tests
      pass **unchanged**; editing a fixture to make a port pass is a violation.
-  7. **The catalogue stays honest** — a `pub fn` implementing a `CPT-*` concept is linked from that
-     node (G10).
+  7. **Citation is one-way** — code may name a `CPT-*`; a node links to no implementation
+     (ADR-0037, G10).
 
 - **ENG-R11 — Integration model (ADR-0040 carries the evidence and the check commands):**
   1. **`main` is the single long-lived line** and the default branch; every PR bases on it.

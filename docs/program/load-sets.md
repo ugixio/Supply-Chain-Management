@@ -5,7 +5,7 @@ type: program
 owner: orchestrator
 status: active
 since: 2026-08-02
-updated: 2026-08-03
+updated: 2026-08-04
 relations:
   - { type: part-of, target: index-program }
   - { type: governed-by, target: index-adr }
@@ -87,10 +87,14 @@ every-task = 3400
 # term that was not the problem. Named as not fitting rather than executed (known pitfall #29), and
 # the instrument used instead was the risk register's: the two closed triages (2026-07-29, 2026-08-02)
 # moved verbatim to WORKFLOW-archive.md, nothing deleted, 20,142 -> 18,338.
-#   NEXT TIME, ask which member grew before reaching for either exit. WORKFLOW.md is the dominant
-# term and its closed phases are the supply: Phase U, Phase P and the closed half of Phase C are all
-# complete records that a "what next?" session does not read. Shortening the ADR entries remains
-# available and is the smaller lever. Do not raise this.
+#   REACHED AGAIN 2026-08-03 at 20,035, during the pre-M4 readiness check, and this time the exit
+# recorded above was the right one and was simply taken: **Phase C — nine items, all closed, 3,010
+# words — moved verbatim to WORKFLOW-archive.md.** 20,035 -> ~17,000. The check that made it possible
+# was measuring which member grew before choosing, which is what the previous occurrence added here.
+#   NEXT TIME the supply is the same: Phase X and Phase P are the next largest with few open items,
+# and moving an open item out of a phase before archiving it is legitimate — an open item belongs to
+# the live backlog, not to the phase that happened to raise it. Shortening the ADR entries remains
+# the smaller lever. Do not raise this.
 planning = 20000
   CLAUDE.md
   docs/_index.md
@@ -98,10 +102,35 @@ planning = 20000
   docs/program/WORKFLOW.md
   docs/10-decisions/README.md#adr-index
 
-# CEILING — contains CLAUDE.md (its gate roster) and knowledge-architecture.md (the same roster in
-# full), both append-only in the part that matters. When 8200 is reached the answer is the same one
-# `every-task` names, taken in the other direction: §11 keeps the descriptions, CLAUDE.md keeps only
-# the names, and this set pays for one copy instead of two.
+# CEILING — REACHED 2026-08-04 by adding G21, and the declared exit was taken and was NOT ENOUGH,
+# which is the finding worth more than the fix. The exit read: "§11 keeps the descriptions, CLAUDE.md
+# keeps only the names, and this set pays for one copy instead of two." Both halves were done and the
+# set was still 17 words over — because halving the copies does not stop the *surviving* copy growing,
+# and the growth is structural: a gate ID is fixed forever and a retired gate stays listed (id-registry
+# §6). Compressing a monotonic term twice buys the same headroom twice and never buys it again.
+#   So the term left the equation instead: the roster moved to `docs/00-governance/gates.md`, a file
+# NO load set carries, §11 became a pointer, CLAUDE.md kept the names a session needs. 8,217 -> 7,745,
+# and every future gate now costs this set nothing. **The general form, which the ratchet/ceiling rule
+# did not yet say: when a member's growing part is what breaches a ceiling, move the part out of every
+# member — do not compress it, and do not raise the number.** Compression is a one-time payment on a
+# recurring bill.
+#   MEASURED 2026-08-04 with `tools/context_set.py` before the move, and the number told on itself:
+# 8,200 bought the template and two foundation rule files and **no knowledge**. Aim the same task at a
+# real node — `--target docs/25-concepts/06-warehouse-management/goods-receipt-throughput.md` — and the
+# session needed 9,147 words, 947 over, for one node and its department index. The ceiling was
+# calibrated against a set that reaches zero concept nodes (ADR-0050's audit), so it priced a session
+# that reads no examples. **Do not raise it on that argument alone**: the resolver reports the real
+# total, so the trade is visible per session, and whether an authoring session should carry an example
+# is a decision with evidence behind it rather than a number to nudge. The 455 words the move freed are
+# headroom for that decision, not permission to skip it.
+#   MEASURED 2026-08-04 with `tools/context_set.py`, and the number tells on itself: 8,200 buys the
+# template and two foundation rule files and **no knowledge**. Aim the same task at a real node —
+# `--target docs/25-concepts/06-warehouse-management/goods-receipt-throughput.md` — and the session
+# needs 9,147 words, **947 over**, for one node and its department index. The ceiling was calibrated
+# against a set that reaches zero concept nodes (ADR-0050's audit), so it prices a session that reads
+# no examples. **Do not raise it on that argument alone**: the resolver now reports the real total, so
+# the trade is visible per session, and whether an authoring session should carry an example at all is
+# a decision with evidence behind it rather than a number to nudge.
 authoring-a-concept = 8200
   CLAUDE.md
   docs/_index.md

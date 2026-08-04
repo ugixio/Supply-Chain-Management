@@ -67,9 +67,9 @@ technology has to see the state of what it is building (ADR-0031/0034/0036).
 | Standards reference data (`packages/shared`) | ISO 8601/4217/3166, UN/ECE Rec 20, GS1 keys + check digit, Incoterms 2020, SCOR | ~40% |
 | Exact money arithmetic (`crates/scm-money`) | complete, tested, no policy | ~95% |
 | Telemetry tier (`db/clickhouse`, `crates/scm-ingest*`) | schema with its own gate, split-privilege identities, ingestion core **and** transport half, flow/level split enforced structurally | ~70% |
-| Monitoring application (M4/M5) | decided in ADR-0049, **no binary in the tree** | ~5% |
-| Workspace / projects layer | modelled, not built; **no machine interface** for a project to read a node by ID | ~5% |
-| **Overall** | | **~40%** |
+| Monitoring application (M4/M5) | **M4a landed 2026-08-04**: `tools/ingest.py` projects the estate into the knowledge read model (245 nodes, 574 edges) with a drift guard checked against G21's declared counts, no migrations (ADR-0024/0049), no server connection, zero new dependencies. The gateway and the dashboards (M4b) are still unwritten | ~15% |
+| Workspace / projects layer | modelled, not built; **no machine interface** for a project to read a node by ID — though M4a's projection is now the substrate one would sit on | ~8% |
+| **Overall** | | **~43%** |
 
 The overall figure moved from ~20% to ~40% without a line of application code, and that is the honest
 reading rather than a generous one: what was ~20% counted a context that carried policy the inclusion

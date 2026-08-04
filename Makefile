@@ -20,10 +20,10 @@
 #
 # CI runs: make verify-full  &&  make verify-schema
 
-.PHONY: verify verify-full verify-schema doc-gates gate-mutants typecheck deps-locked test-rs \
-        lint-rs lint-ts
+.PHONY: verify verify-full verify-schema verify-read-model doc-gates gate-mutants typecheck \
+        deps-locked test-rs lint-rs lint-ts
 
-verify: doc-gates typecheck test-rs
+verify: doc-gates verify-read-model typecheck test-rs
 
 verify-full: verify gate-mutants deps-locked lint-rs lint-ts
 
@@ -69,5 +69,13 @@ lint-ts:
 # applying them twice, then asserts the sort key, partitioning, codecs, TTLs, aggregate states and
 # the materialized-view cascade. FAILS if no server is reachable — it never skips.
 #   docker compose -f db/clickhouse/docker-compose.yml up -d
+# The knowledge read model's drift guard (ADR-0024/0049). Unlike `verify-schema` this needs **no
+# server**: the projection is generated from `docs/` and checked against the dossier's declared counts,
+# which G21 independently holds to the estate. That third-party oracle is what stops the check being a
+# comparison of the estate with itself. So it belongs in `verify`, not beside the ClickHouse gate.
+verify-read-model:
+	python3 tools/ingest.py --check
+	python3 tools/ingest.py --self-test
+
 verify-schema:
 	python3 db/clickhouse/apply.py

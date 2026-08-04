@@ -72,6 +72,7 @@ db/clickhouse      The telemetry schema (ADR-0036): migrations, apply.py, the sc
 tools/verify.py    The doc gates
 tools/test_gates.py  Mutation tests: does each gate still catch what it claims to? (ADR-0042)
 tools/context_eval.py  Does an agent *reading* this context comply with it? (ADR-0043)
+tools/ingest.py    docs/ -> the knowledge read model: emit SQL, and the drift guard (ADR-0024/0049)
 ```
 
 ## Standards this context carries
@@ -168,6 +169,8 @@ Dependencies stay OSI-licensed, commercially usable and modifiable (ADR-0002).
 `make verify-full` — the merge gate: adds the gate mutation tests, the lockfile check,
 `cargo fmt --check`, `clippy -D warnings` and `eslint --max-warnings 0`.
 `make verify-schema` — the telemetry schema against a real ClickHouse. CI runs both gates.
+`make verify-read-model` — the projection of `docs/` matches the dossier's declared counts. In
+`verify`, because it needs no server (ADR-0049).
 
 G1 stray docs · G2 front-matter · G3 unique IDs · G4 links · G5 orphans · G6 authority acyclicity ·
 G7 supersession · G8 English-only · G9 context budget · G10 standards provenance · G11 retired

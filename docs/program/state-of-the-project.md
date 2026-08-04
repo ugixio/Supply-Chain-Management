@@ -32,11 +32,11 @@ relations:
 
 ```dossier
 snapshot         2026-08-04
-governed-docs    244
+governed-docs    245
 concept-nodes    167
 departments      14
-graph-edges      571
-adr-decisions    54
+graph-edges      574
+adr-decisions    55
 gates            22
 gate-mutants     33
 eval-checkers    6
@@ -44,8 +44,8 @@ eval-samples     12
 load-sets        6
 ```
 
-Read as: **244 governed documents** carrying **571 typed edges**, of which **167** are concept nodes
-across **14** departments; **54** recorded decisions; **22** doc gates proved by **33** planted
+Read as: **245 governed documents** carrying **574 typed edges**, of which **167** are concept nodes
+across **14** departments; **55** recorded decisions; **22** doc gates proved by **33** planted
 mutants; a context-adherence measurement with **6** checkers and **12** discriminating samples; and
 **6** declared load sets pricing what a session reads together.
 
@@ -62,7 +62,7 @@ technology has to see the state of what it is building (ADR-0031/0034/0036).
 
 | Layer | State | Est. |
 |---|---|---|
-| The context — standards, 167 concept nodes, rule families, 54 ADRs, the node model | substantial, gate-enforced, and **the policy sweep is complete** across nodes, department rules and the agent layer | ~85% |
+| The context — standards, 167 concept nodes, rule families, 55 ADRs, the node model | substantial, gate-enforced, and **the policy sweep is complete** across nodes, department rules and the agent layer | ~85% |
 | The context *mechanism* — load sets, the graph resolver, the adherence measurement, 22 gates | the estate's strongest asset and now measured against an external reference model | ~80% |
 | Standards reference data (`packages/shared`) | ISO 8601/4217/3166, UN/ECE Rec 20, GS1 keys + check digit, Incoterms 2020, SCOR | ~40% |
 | Exact money arithmetic (`crates/scm-money`) | complete, tested, no policy | ~95% |

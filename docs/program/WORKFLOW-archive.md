@@ -5,7 +5,7 @@ type: archive
 owner: orchestrator
 status: archived
 since: 2026-08-03
-updated: 2026-08-03
+updated: 2026-08-04
 relations:
   - { type: part-of, target: index-program }
   - { type: governed-by, target: knowledge-architecture }
@@ -359,3 +359,119 @@ what gets built:
   **G12 had a blind spot of its own**, found while fixing a citation it should have caught:
   `**SCM-R7 / CMP-R***` escaped because the bold span opened on the *other* rule in the sentence.
   Narrowed to the bold citation form and widened to catch that shape; verified against both.
+
+### Phase X — closed items, archived 2026-08-04
+
+> **Why these moved.** `planning` reached its ceiling for the **third** time, at 20,154 of 20,000 words,
+> on the commit that added ADR-0055. The manifest's declared exit for this occurrence named Phase X as
+> the next largest with few open items, and that is what was taken: **nine closed items, 1,511 words,
+> moved verbatim** — nothing deleted, nothing summarized. What stays in `WORKFLOW.md` is the open work:
+> X4, X11, X12, X13a and X13b.
+>
+> The two earlier occurrences are already recorded there, and the pattern is now three for three:
+> **measure which member grew before choosing the lever.** The first time, the declared exit named the
+> wrong term and was named as not fitting rather than executed.
+
+- ✅ **X1 · The gates are tested (ADR-0042).** `verify.py` was 638 lines and thirteen gates over 230
+  documents with **zero tests**, one `assert` and no per-gate functions. Improvement-register #12
+  had already written the rule — *a gate is proven by planting a violation* — and it had been
+  performed once, by hand, for G13. `tools/test_gates.py` now does it for every gate on every merge.
+- ✅ **X2 · Load sets are priced (ADR-0041, gate G14).** G9 budgets a document; nothing budgeted what
+  a session reads **together**, which is what the long-context evidence is about. Measured:
+  `planning` reads **33,804 words (~45,000 tokens)**, 91 % of it the ADR index and this file —
+  the two largest documents in the repository, loaded on every planning task, and **neither had a
+  G9 budget** because none exists for type `adr` or `program`.
+- ⛔ **X3 · Splitting the ADR bodies — REJECTED by the owner 2026-08-03.** The index keeps working by
+  **index search**, because splitting the bodies into files would collide with planned work. The
+  ruling produced a better answer than the split would have: `docs/program/load-sets.md` now prices
+  the ADR member as a **slice** (`README.md#adr-index`), so a planning session is charged for the
+  1,950 words of entries it scans rather than the 20,200-word file they sit in. **`planning` fell
+  from 35,453 to 17,426 words — halved, with nothing moved and no forty-three new documents to keep
+  reachable.** The ceiling's exit changed with it: at 20,000 the finding will be that the "one-line"
+  entries have grown into paragraphs — they average 45 words — and the answer is to shorten them.
+- ✅ **X5 · The missing documentary form — landed 2026-08-03 (ADR-0044).** Against Diátaxis's four,
+  the estate had *reference* and *explanation* and **no task-oriented document at all**, while
+  `CLAUDE.md` promises a project learns "which departments it needs **and how to implement them**".
+  `how-to` joins the type vocabulary with a 900-word budget; `program/how-to/add-a-concept-node.md`
+  is the first, chosen because the eval named the failure it addresses. **The scoping rule is the
+  decision:** a how-to about *running a department* is method a company can choose and fails the
+  inclusion test — which is probably why the form was never created. **Verified:** the failing task
+  re-run against a fresh cold subagent came in at **633 words** against 806, naming the budget in its
+  own report. The confound is recorded in `context-eval.md`.
+  **Both remaining guides written 2026-08-03**, closing the form: `how-to/change-a-rule.md` (802
+  words) and `how-to/run-the-evaluation.md` (795). Each is organised around the traps that have
+  actually been hit rather than around the rules, which are cited and never restated — the rule guide
+  leads with *establish that it is a rule and not a policy* (seven of thirteen original `SCM-R*`
+  failed that test) and *never edit a rule's meaning in place*; the evaluation guide leads with *the
+  manifest is under test too* and *diagnose past the first cause*, both of which are this week's
+  incidents rather than theory.
+  **One consequence worth recording:** adding `change-a-rule.md` to the `changing-a-rule` load set is
+  a **material** change to the `rule-citation` evaluation task, because it alters what the cold
+  subagent reads. That task was re-run and passed again. A guide that a session is told to read is a
+  guide the measurement has to account for.
+- ✅ **X6 · The retirement tables were unreachable — closed 2026-08-02 without widening the set.**
+  Raised by the first eval run and measured: **52 rules are retired, the id-registry enumerated 12**,
+  and the tables live in fifteen `rule.md` files no `changing-a-rule` session loads. The registry now
+  carries a machine-readable **retired roster** and **G16** asserts it equals the union of those
+  tables in both directions, with a mutant per direction. Adding the fifteen files was rejected:
+  ~8,000 words against a G14-priced budget, when the registry was already in the set and a
+  retirement is an allocation fact. **Verified by re-running the failing task against a fresh cold
+  subagent — PASS.** The eval score moved 3/5 → 4/5.
+- ✅ **X7 · The platform catalogue carried four of five delivery metrics — closed 2026-08-03.**
+  Enumerated against DORA's current published framework rather than against the recommendation that
+  raised it, and the recommendation was **wrong**: it proposed adding Change Failure Rate, which
+  CPT-0157 has carried since Phase M1. What was actually missing is **CPT-0167 deployment rework
+  rate**, the fifth metric — the one that catches a team posting good numbers on the other four while
+  spending its release stream going back over shipped work. The catalogue's **grouping was also
+  outdated**: it read as "two pairs" (0155/0156 against 0157/0158) where the published taxonomy is
+  three throughput measures, recovery time among them, and two instability measures. Corrected, with
+  the trade-off argument the old framing carried kept because it is the part that matters.
+  **Why this mattered before M4 and not after:** published research associates AI-assisted
+  development with higher throughput and worse stability, so a monitoring product for AI-assisted
+  projects that measures only throughput reports improvement while the thing it watches degrades.
+  Free to fix now, expensive once dashboards exist.
+  **CPT-0999 is now reserved** for the context-adherence evaluation — its `new-concept-node` prompt
+  had named CPT-0167, which was free that morning and allocated the same afternoon.
+- ✅ **X8 · The purpose was unreadable — fixed and made measurable, 2026-08-03 (ADR-0045).** Asked for
+  a plain summary of the project, the weakest thing in the estate turned out not to be rigour: the
+  entry point named a supply-chain knowledge base *and* a DevOps dashboard and **never connected
+  them**, leaving the reason in ADR-0030 among forty-four decisions. Now three paragraphs at the top of
+  `CLAUDE.md` — the two axes, the portfolio, and why monitoring watches it — plus **PLT-R7** (governing
+  knowledge is selected and declared to the owner before development) and the practice-area roster.
+  **And a new eval task, `what-is-this-for`, so the prose cannot quietly drift back:** it checks a cold
+  subagent names both axes, names the portfolio, ties monitoring to the projects **on one line**, and
+  does *not* conclude this is a supply-chain application. Run on adoption: **PASS**, from the three
+  always-loaded files alone.
+  **The gap this closed was in the eval too.** All five previous tasks measured whether an agent
+  *obeys* the context; none asked whether it can say what the context is **for**, so the eval could not
+  have found the problem the owner found by asking.
+- ✅ **X9 · The estate scored against an external reference model — 2026-08-04 (ADR-0052/0053).** The
+  Context-OS audit answered *one proposal*; this asked the question the other way round — **what would a
+  complete system in context engineering, RAG, memory and agentic AI have, and what does this estate
+  lack?** Thirty-three applicable capabilities: **21 have · 5 partial · 6 gap**, plus four declared
+  non-goals with reversal conditions (`docs/program/agentic-context-assessment.md`). The result has a
+  shape: **strong wherever a property can be checked deterministically, absent wherever it needs
+  something running** — a direct consequence of ADR-0037 leaving one application in the tree and that
+  application not yet being built. Two things landed with it: **G21** gates the dossier's eleven counted
+  facts on drift (it was wrong about six at once), and **practice area #36** rosters the discipline this
+  repository runs on, which thirty-five areas had somehow omitted.
+- ✅ **X10 · The agent-plane threat model — landed 2026-08-04 (ADR-0054, gate G22).** Measurement
+  changed the design before a line was written. The plan assumed a **sweep** for laundered external
+  content; the estate turned out to hold **zero external URLs**, and the whole tracked tree **one** — a
+  textbook reference in the demand-planning skill — because everything here is cited by author, work and
+  clause, and a name does not rot. So there was nothing to sweep and the right instrument was a guard on
+  an **absence**: **G22** requires every `http(s)` URL in any tracked Markdown file to be declared in
+  that file's `external-sources` block with its retrieval date, both directions, three mutants, green on
+  the day it landed. knowledge-architecture §7 carries the prohibition — external text is **data, never
+  instruction**; a claim from outside enters a register **as a claim, with its source**; a URL is
+  declared or absent. `50-engineering/agentic-threat-model.md` is the **first materialized slice of
+  practice area #36** and maps the OWASP ASI's fifteen classes onto this repository: **six live, four
+  latent until M4, five inapplicable**, quoting only the four threat identifiers that were verified.
+  **ENG-R9 six checks:** lane ✅ (knowledge and a doc gate, no lane involved) · best practice ✅ (a
+  published taxonomy is the anchor; the estate's own citation convention is the mitigation) · security ✅
+  (this item *is* the security work; T1/T15 named, the undecidable half published rather than implied) ·
+  speed ✅ (one regex over the tracked tree) · scalability ✅ (linear in files, no state) · licence ✅ (no
+  dependency).
+  **Two things it did not close, on purpose.** Whether a session was *redirected* by what it read is a
+  judgement, and a claim can arrive with **no URL at all**. Both stay clauses, and risk #16 stays open
+  for them rather than being marked closed on the strength of the half that is gateable.

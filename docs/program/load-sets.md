@@ -91,10 +91,14 @@ every-task = 3400
 # recorded above was the right one and was simply taken: **Phase C — nine items, all closed, 3,010
 # words — moved verbatim to WORKFLOW-archive.md.** 20,035 -> ~17,000. The check that made it possible
 # was measuring which member grew before choosing, which is what the previous occurrence added here.
-#   NEXT TIME the supply is the same: Phase X and Phase P are the next largest with few open items,
-# and moving an open item out of a phase before archiving it is legitimate — an open item belongs to
-# the live backlog, not to the phase that happened to raise it. Shortening the ADR entries remains
-# the smaller lever. Do not raise this.
+#   REACHED A THIRD TIME 2026-08-04 at 20,154, on the commit that added ADR-0055, and the exit named
+# above was taken exactly as written: **Phase X's nine closed items, 1,511 words, moved verbatim to
+# WORKFLOW-archive.md**, leaving the open work (X4, X11, X12, X13a, X13b) in place. Three for three on
+# the same discipline — measure which member grew before choosing the lever — and the only occurrence
+# that went wrong was the first, where the declared exit named a term that was not the problem.
+#   NEXT TIME: Phase P is the next largest with few open items. Moving an open item out of a phase
+# before archiving it is legitimate — an open item belongs to the live backlog, not to the phase that
+# happened to raise it. Shortening the ADR entries remains the smaller lever. Do not raise this.
 planning = 20000
   CLAUDE.md
   docs/_index.md

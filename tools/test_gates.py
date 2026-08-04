@@ -257,7 +257,7 @@ def mutate_g9_adr_orphan_entry(wt: Path) -> list[str]:
 
 def mutate_g18_no_exemplar(wt: Path) -> list[str]:
     """The exemplar block naming a department that does not exist (G18's first claim)."""
-    text = read(wt, ARCH)
+    text = restamp(read(wt, ARCH))
     write(wt, ARCH, re.sub(r"(?m)^```exemplar$\n.*?\n```$",
                            "```exemplar\n99-nonexistent\n```", text, count=1, flags=re.S))
     return [ARCH]

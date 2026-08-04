@@ -5,7 +5,7 @@ type: program
 owner: orchestrator
 status: active
 since: 2026-07-19
-updated: 2026-08-03
+updated: 2026-08-04
 relations:
   - { type: part-of, target: index-program }
   - { type: governed-by, target: governance-root }
@@ -810,12 +810,16 @@ reached its ceiling and this was the structural answer, taken instead of a raise
 M4 rests on (0024 · 0025 · 0026 · 0033 · 0034 · 0035 · 0036 · 0041 · 0047) all have bodies and are
 accepted. **Four gaps surfaced, and the first was found by asking the question — not by any sweep.**
 
-1. **⚠ BLOCKER — no live decision on the NestJS↔Rust boundary.** `ADR-0020` was still `Accepted` and
-   prescribed a **Python gRPC service** as the calculation core: its opening sentence claimed all math
-   lives in Python, ADR-0035 made Rust the complete core, ADR-0037 deleted the service, and `proto/`
-   does not exist. **Now superseded.** What replaces it is open — in-process (Node addon / WASM), a
-   local service, or the core reached only through data already in Postgres and ClickHouse. ENG-R8
-   forbids guessing at a lane boundary, so this is a decision before it is code.
+1. **~~BLOCKER~~ — CORRECTED the same day: the boundary was already decided, and I had not read the
+   rule.** `ADR-0020` was indeed stale and is superseded (a Python gRPC calculation core: ADR-0035
+   made Rust the core, ADR-0037 deleted the service, `proto/` does not exist, and it "extends"
+   ADR-0001 which was superseded an hour earlier). **But the successor is not missing.**
+   **ENG-R10.1 names it:** *transport lives in adapters (`napi-rs` toward NestJS, `tonic` toward
+   Python)*, with **ENG-R10.5** fixing the direction NestJS → core → Python tools. I reported "nothing
+   decides it today" after reading the ADR index and ADR-0020 and **not** clause 1 of the rule the
+   ADR index points at. **The lesson is the one this estate keeps paying for: a decision recorded as a
+   rule clause is invisible to a search of the decision log.** Nothing was built on the wrong reading,
+   because the check ran before M4 started rather than after.
    **Why it hid:** the retroactive review covered 0001–0009 and this is 0020. A stale decision lives in
    the gap between the ranges people think to check — the third form of the range blind spot after
    `G1-G16` and `ADR-0038`.
@@ -827,7 +831,21 @@ accepted. **Four gaps surfaced, and the first was found by asking the question �
    model is *rebuilt one-way from `docs/`*; **ENG-R10 gives Rust ingestion**; P3 wrote `tools/ingest`
    and **Python is the tools layer**. A `docs/` → Postgres builder is a build step, not the hot path,
    so both readings are defensible — which is exactly why it must be decided rather than discovered.
-4. **⚠ Auth is neither decided nor declared deferred.** No ADR names authentication or tenancy; W3
+4. **⚠ ENG-R10.7 was a live rule ordering what a gate forbids** — found while reading ENG-R10 to
+   correct the item above, and the most consequential thing this check turned up. It said *"a `pub fn`
+   implementing a `CPT-*` concept is **linked from that node** (G10)"*, while G10's third check is
+   *"**no node carries an `## Implementations` section**"* and ADR-0037 §3 removed that section from
+   every node. The clause came from ADR-0035 on 22 July; ADR-0037 reversed its premise on the 29th and
+   the clause was never updated — **so for six weeks a compliant author following ENG-R10 would have
+   failed the gates, with the clause citing that very gate as its enforcer.** No gate can catch this:
+   it is a semantic contradiction between prose and code. Now reads *Citation is one-way — code may
+   name a `CPT-*`; a node links to no implementation (ADR-0037, G10)*, at 999/1000 words because the
+   `ENG` family has no headroom.
+   **Related, and left open:** ENG-R10.4 requires *one contract, generated both sides, from the same
+   `.proto`* — that contract's ADR was 0020, now superseded, so the clause is forward-looking but
+   unanchored. It binds nothing until a Python tools service exists, and it should acquire an ADR when
+   one does.
+5. **⚠ Auth is neither decided nor declared deferred.** No ADR names authentication or tenancy; W3
    lists *tenancy/auth* but that is a later phase. For a monitoring dashboard deferral may be right —
    it should be **stated**, because an absent decision reads as an oversight and a deferred one does
    not.

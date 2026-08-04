@@ -5,7 +5,7 @@ type: program
 owner: orchestrator
 status: active
 since: 2026-08-02
-updated: 2026-08-03
+updated: 2026-08-04
 relations:
   - { type: part-of, target: index-program }
   - { type: governed-by, target: index-adr }
@@ -223,6 +223,11 @@ four load sets. Six cold subagents, each with its declared set and nothing else.
 | `unit-codes` | **PASS** | `KGM` · `LTR` · `MTR` · `EA` in the scored block. |
 | `rule-citation` | **PASS** | Clean on the block form introduced one cycle earlier. |
 | `new-concept-node` | **PASS** | 647 words against the 700 budget, source cited, no `## Implementations`. |
+
+**`50-engineering/rule.md` moved, and `rule-citation` was re-run: PASS.** The pre-M4 readiness check
+found **ENG-R10.7 ordering what G10 forbids** and rewrote the clause. That file is a member of the
+`changing-a-rule` set, so the task that reads it was re-scored rather than argued about — one task,
+because set membership is a fact and no other task can see that file change.
 
 **A later edit moved `load-sets.md` and no task was re-scored — stated, not assumed.** The pre-M4
 readiness check archived Phase C and rewrote the `planning` set's recorded exit. `planning` is read by
@@ -450,7 +455,7 @@ docs/00-governance/id-registry.md             3e9411d2d669
 docs/30-foundation/scm-core/rule.md           7e775c264869
 docs/30-foundation/measurement/rule.md        c2aadb2fd7f9
 docs/30-foundation/platform/rule.md           0268bef446f1
-docs/50-engineering/rule.md                   0e44a3a5531e
+docs/50-engineering/rule.md                   ab8705e92ba1
 docs/50-engineering/practice-areas.md         318d1ff3932e
 docs/standards/REGULATORY_FRAMEWORK.md        f1f47f8501ae
 docs/program/load-sets.md                     d873a9337fe2

@@ -5,7 +5,7 @@ type: adr
 owner: orchestrator
 status: active
 since: 2026-07-19
-updated: 2026-08-03
+updated: 2026-08-04
 relations:
   - { type: part-of, target: index-docs }
   - { type: governed-by, target: governance-root }

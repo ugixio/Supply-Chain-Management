@@ -5,7 +5,7 @@ type: program
 owner: orchestrator
 status: active
 since: 2026-08-03
-updated: 2026-08-03
+updated: 2026-08-04
 relations:
   - { type: part-of, target: index-program }
   - { type: refines, target: program-improvement-register }
@@ -104,6 +104,11 @@ relations:
 - **A sweep reaches the departments it was named after.** Four completed C1 phases left the scoring
   schemes in demand-planning, risk and supplier-development untouched because no phase listed those
   nodes. Enumerate the estate, not the phases. (#36)
+- **A decision recorded as a rule clause is invisible to a search of the decision log.** The
+  NestJS↔Rust transport was fixed in ENG-R10.1, and reading the ADR index concluded it was undecided.
+  Search the rule families too, before reporting a gap. (#40)
+- **When a decision reverses a premise, grep the rule text for clauses built on it.** ADR-0037 swept
+  the nodes and left ENG-R10.7 ordering the opposite of what G10 enforces, for six weeks. (#40)
 
 ### About knowledge and its sources
 

@@ -131,7 +131,7 @@ platform catalogue was checked against the current published grouping and found 
 ## 3. Decision (ADR) numbers
 
 - Format: `ADR-NNNN`, strictly increasing, allocated at proposal time.
-- Allocated: **ADR-0001 … ADR-0053** (see `docs/10-decisions/README.md`).
+- Allocated: **ADR-0001 … ADR-0054** (see `docs/10-decisions/README.md`).
   This line read `ADR-0038` until 2026-08-03 while nine more existed — the same blind spot that let
   `README.md` claim "G1-G16": a **range** is invisible to a sweep looking for a count beside a noun.
 - **Retroactive ADRs superseded 2026-08-03 by owner decision**, because their premises left with the
@@ -188,13 +188,13 @@ ADR-0037; the keys are unaffected.)*
 ## 6. Gate-invariant IDs (fixed)
 
 `G1`–`G8` name the knowledge-architecture §11 invariants. New gates append (G9+).
-Allocated: **G1–G21** (G9 context budget, ADR-0012; G10 **standards provenance** — was concept
+Allocated: **G1–G22** (G9 context budget, ADR-0012; G10 **standards provenance** — was concept
 coverage under ADR-0015, rewritten by ADR-0037 when the code it policed was deleted; **G11
 retired rules stay retired**, added at Phase C3 because a citation of a retired ID is invisible to
 G4 — it is not a broken link, it silently resolves to nothing and reads as law; **G12 a rule
 citation names an ID**, added at Phase C1d after 47 nodes were found citing family wildcards like
 `**FIN-R***` — invisible for the same reason, and most of them stood in for lifecycle rules
-retired with the deleted application; **G13** `updated:` truthfulness, **G14** load-set budgets, **G15** context-adherence freshness, **G16** this file's retired roster, **G17** table shape — added 2026-08-03 when a review for archivable register rows found fourteen rows with no status cell at all; **G18** exemplar completeness, **G19** task coverage, **G20** relation vocabulary; **G21** the dossier's counted facts, ADR-0052 — and that one closes the range-versus-count blind spot this section is named for, because the gate recomputes the roster's length instead of trusting a sentence).
+retired with the deleted application; **G13** `updated:` truthfulness, **G14** load-set budgets, **G15** context-adherence freshness, **G16** this file's retired roster, **G17** table shape — added 2026-08-03 when a review for archivable register rows found fourteen rows with no status cell at all; **G18** exemplar completeness, **G19** task coverage, **G20** relation vocabulary; **G21** the dossier's counted facts, ADR-0052 — and that one closes the range-versus-count blind spot this section is named for, because the gate recomputes the roster's length instead of trusting a sentence; **G22** external-source provenance, ADR-0054).
 
 ### The retired roster — complete, and gated
 

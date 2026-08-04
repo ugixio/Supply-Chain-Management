@@ -32,20 +32,20 @@ relations:
 
 ```dossier
 snapshot         2026-08-04
-governed-docs    243
+governed-docs    244
 concept-nodes    167
 departments      14
-graph-edges      568
-adr-decisions    53
-gates            21
-gate-mutants     30
+graph-edges      571
+adr-decisions    54
+gates            22
+gate-mutants     33
 eval-checkers    6
 eval-samples     12
 load-sets        6
 ```
 
-Read as: **243 governed documents** carrying **568 typed edges**, of which **167** are concept nodes
-across **14** departments; **53** recorded decisions; **21** doc gates proved by **30** planted
+Read as: **244 governed documents** carrying **571 typed edges**, of which **167** are concept nodes
+across **14** departments; **54** recorded decisions; **22** doc gates proved by **33** planted
 mutants; a context-adherence measurement with **6** checkers and **12** discriminating samples; and
 **6** declared load sets pricing what a session reads together.
 
@@ -62,8 +62,8 @@ technology has to see the state of what it is building (ADR-0031/0034/0036).
 
 | Layer | State | Est. |
 |---|---|---|
-| The context — standards, 167 concept nodes, rule families, 53 ADRs, the node model | substantial, gate-enforced, and **the policy sweep is complete** across nodes, department rules and the agent layer | ~85% |
-| The context *mechanism* — load sets, the graph resolver, the adherence measurement, 21 gates | the estate's strongest asset and now measured against an external reference model | ~80% |
+| The context — standards, 167 concept nodes, rule families, 54 ADRs, the node model | substantial, gate-enforced, and **the policy sweep is complete** across nodes, department rules and the agent layer | ~85% |
+| The context *mechanism* — load sets, the graph resolver, the adherence measurement, 22 gates | the estate's strongest asset and now measured against an external reference model | ~80% |
 | Standards reference data (`packages/shared`) | ISO 8601/4217/3166, UN/ECE Rec 20, GS1 keys + check digit, Incoterms 2020, SCOR | ~40% |
 | Exact money arithmetic (`crates/scm-money`) | complete, tested, no policy | ~95% |
 | Telemetry tier (`db/clickhouse`, `crates/scm-ingest*`) | schema with its own gate, split-privilege identities, ingestion core **and** transport half, flow/level split enforced structurally | ~70% |
@@ -78,7 +78,7 @@ test forbids, had no measurement of its own use, and reached 7% of itself. All t
 ## 4. Scorecard (verdict · evidence)
 
 - **Knowledge governance** — *strong, and the estate's differentiator*. Tiered docs, one-way SSOT,
-  append-only decisions, stable IDs, 21 gates in CI, a typed graph proved acyclic. **And the gates are
+  append-only decisions, stable IDs, 22 gates in CI, a typed graph proved acyclic. **And the gates are
   themselves tested** — `tools/test_gates.py` plants one violation per *claim* and requires that gate
   and no other to fire (ADR-0042), which is the step most estates skip.
 - **Context engineering** — *measured against an external reference model for the first time*. See
@@ -103,8 +103,12 @@ test forbids, had no measurement of its own use, and reached 7% of itself. All t
   surface**, not by a warning.
 - **Security** — *two halves, one covered*. Data-plane: split-privilege ClickHouse identities with
   quotas; the ingester refuses non-finite values, ungoverned metrics and future timestamps.
-  **Agent-plane: uncovered** — no threat model for goal hijacking, tool misuse or memory poisoning,
-  on an estate that now reads web pages, PR comments and CI logs. This is the sharpest new gap.
+  **Agent-plane: opened 2026-08-04 (ADR-0054).** `50-engineering/agentic-threat-model.md` maps the
+  OWASP Agentic Security Initiative's fifteen classes onto this repository — **six live, four latent
+  until M4, five inapplicable** — and knowledge-architecture §7 now prohibits undeclared external
+  content, with **G22** gating the one part a gate can decide. **What is still open is the
+  undecidable half**: whether a session was *redirected* by something it read, and a claim that
+  arrives with no URL at all. Risk #16 stays open for those.
 - **CI/CD** — *partial*. Actions runs `make verify-full` and `make verify-schema` against a real
   ClickHouse service container. No deploy pipeline, no containerization, no runtime observability (M5).
 - **UI** — *specified only* (ADR-0026: octagon node-graph, LED-cyan `#22d3ee`). No UI exists.
@@ -116,7 +120,7 @@ runtime dependency.**
 
 | # | Gap | Why it matters | Disposition |
 |---|---|---|---|
-| 1 | **No agentic threat model** | untrusted text — a fetched page, a PR comment, a CI log — can reach a register every later session loads, and no rule says it may not. Memory poisoning against an estate whose whole value is a trustworthy memory | **next**; a risk row plus one clause, not a project |
+| 1 | ~~No agentic threat model~~ | **closed 2026-08-04 (ADR-0054, G22).** The estate had zero external URLs and the tree had one, so the guard is on an *absence*: no sweep, green on landing. The residual is the undecidable half — intent, and a claim with no URL | **done**; risk #16 narrowed, not closed |
 | 2 | **No agent-session telemetry** | nothing traces what a session read, did, or spent. Closes capabilities 9, 34, 35 and 37 at once | **sequenced with M4** — emit OTel GenAI spans into the tier ADR-0036 already built |
 | 3 | **No trajectory evaluation** | outcome is measured (ADR-0043); *process* is not. Whether the six ENG-R9 checks ran, or a gate was run before a green claim, is caught only by a human reading a transcript | after 2, which supplies the trace it would score |
 | 4 | **Utilization unmeasured** | G19 proves a set *can* answer its question; nothing proves the answer used it. The literature puts ~40% of RAG quality variance here | offered, needs a decision about what a task asks for |

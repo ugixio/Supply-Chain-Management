@@ -151,6 +151,36 @@ MUST_REACH = re.compile(r"^### Task `([a-z-]+)`(.*?)(?=^### |\Z)", re.M | re.S)
 MUST_REACH_LINE = re.compile(r"^\*\*Must reach:\*\*\s*(.+)$", re.M)
 TASK_LOAD_SET = re.compile(r"^\*\*Load set:\*\*\s*`([^`]+)`", re.M)
 
+# --- G22 — an external source is declared, or absent (ADR-0054) -----------------------------
+#
+# The agent plane had no guard at all: sessions read web pages, pull-request comments and CI logs, and
+# nothing said what may be written from them into the registers **every later session loads**. That is
+# T1 memory poisoning in the OWASP Agentic Security Initiative's taxonomy, against an estate whose
+# entire value is that its memory can be trusted.
+#
+# **This gate guards an absence, which is why it is cheap.** Measured before it was written: the
+# governed estate contains **zero** external URLs and the whole tracked tree contains **one** — a
+# textbook reference in a skill file. So there is nothing to sweep, and the gate is green from the day
+# it exists. Guarding a property that is already true costs nothing and stops it becoming false, which
+# is the same move `levels_1m` makes by exposing no sum column and G20 makes by retiring an edge type.
+#
+# **What it does not do.** Whether a session was *redirected* by something it read is a judgement, and
+# four prose heuristics have already failed here by firing on text that merely names a defect. G22
+# checks the carrier — a URL is declared with a date, or it is not there — and the two clauses about
+# intent stay disciplines in knowledge-architecture §7. A gate that claimed more would be believed
+# rather than run.
+#
+# Scope is every tracked Markdown file, not the governed tree: the one real URL lives in `.claude/**`,
+# which is loaded into every session's working set and was read by no gate until 2026-07-29 (risk #13).
+EXTERNAL_URL = re.compile(r"https?://[^\s<>()\[\]\"'`|]+")
+SOURCES_FENCE = re.compile(r"^```external-sources$(.*?)^```$", re.M | re.S)
+
+
+def strip_sources_block(text: str) -> str:
+    """The document without its provenance block, so a declaration cannot vouch for itself."""
+    return SOURCES_FENCE.sub("", text)
+
+
 # --- G21 — the dossier's counted facts are true (ADR-0052) ----------------------------------
 #
 # `state-of-the-project.md` is the document read *before deciding*, and on 2026-08-04 it was six days
@@ -435,6 +465,7 @@ GATE_NAMES = {
     "G19": "an evaluation task can be answered from its declared set",
     "G20": "the relation vocabulary is exercised or declared reserved",
     "G21": "the dossier's counted facts are true",
+    "G22": "an external source is declared with its date, or absent",
 }
 
 
@@ -963,6 +994,45 @@ def main() -> int:
                                      f"'{word}' — ADR-0003 makes English the single working "
                                      f"language for every artifact in this repository")
                     break
+
+    # G22 — an external source is declared with its date, or absent (ADR-0054).
+    for path, (_meta, text) in sorted(checked.items()):
+        fence = SOURCES_FENCE.search(text)
+        declared = {}
+        if fence:
+            for number, line in enumerate(fence.group(1).splitlines(), 1):
+                stripped = line.strip()
+                if not stripped or stripped.startswith("#"):
+                    continue
+                parts = stripped.split(None, 2)
+                if len(parts) < 3:
+                    gates.fail("G22", f"{path}: external-sources entry '{stripped}' is not "
+                                      f"'<url> <YYYY-MM-DD> <what it is>' — a provenance record "
+                                      f"without a date or a label records nothing useful")
+                    continue
+                url, date, _label = parts
+                if not EXTERNAL_URL.fullmatch(url):
+                    gates.fail("G22", f"{path}: external-sources entry starts with '{url}', which is "
+                                      f"not a URL")
+                    continue
+                if not DATE_PATTERN.match(date) or date > TODAY:
+                    gates.fail("G22", f"{path}: '{url}' is declared as retrieved {date} — the date "
+                                      f"must be ISO 8601 and not in the future, or the provenance "
+                                      f"claim is worth less than no claim")
+                    continue
+                declared[url] = date
+        body = strip_sources_block(text)
+        cited = {url.rstrip(".,;:") for url in EXTERNAL_URL.findall(body)}
+        for url in sorted(cited - set(declared)):
+            gates.fail("G22", f"{path}: cites '{url}' with no external-sources declaration. Content "
+                              f"from outside this repository is data with a provenance, never a "
+                              f"finding (knowledge-architecture §7; ADR-0054) — declare it with the "
+                              f"date it was retrieved, or cite the work by name and clause as the "
+                              f"rest of the estate does")
+        for url in sorted(set(declared) - cited):
+            gates.fail("G22", f"{path}: declares '{url}' in external-sources but cites it nowhere — "
+                              f"a provenance record for something no one references is drift, the "
+                              f"same failure G16 checks in both directions")
 
     # G13 — `updated:` tells the truth. The field is only worth having if it moves when the file
     # does, and a reader who cannot trust it will not read it: a 2026-07-19 stamp on a file

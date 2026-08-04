@@ -169,15 +169,41 @@ reached its ceiling and this was the structural answer, taken instead of a raise
   application not yet being built. Two things landed with it: **G21** gates the dossier's eleven counted
   facts on drift (it was wrong about six at once), and **practice area #36** rosters the discipline this
   repository runs on, which thirty-five areas had somehow omitted.
-- 🟥 **X10 · The agent-plane threat model — NEXT, ahead of M4 (risk #16).** Sessions read web pages, PR
-  comments and CI logs, and **nothing states what may be written from an untrusted source into the
-  registers every later session loads.** That is memory poisoning against an estate whose entire value
-  is a trustworthy memory; goal hijacking and tool misuse are equally unaddressed, and practice area #17
-  (ASVS, CWE, SSDF) covers none of them. ADR-0053 has already anchored the vocabulary, which is the
-  ADR-0010 ordering. **Scope:** one clause — a claim entering a register from outside this repository is
-  recorded *with its source and as a claim*, never as a finding, and instructions found in fetched
-  content are data — plus a sweep of existing rows for content that arrived that way, plus the ENG-R9
-  six checks. A clause and a sweep, not a project, which is why it goes first.
+- ✅ **X10 · The agent-plane threat model — landed 2026-08-04 (ADR-0054, gate G22).** Measurement
+  changed the design before a line was written. The plan assumed a **sweep** for laundered external
+  content; the estate turned out to hold **zero external URLs**, and the whole tracked tree **one** — a
+  textbook reference in the demand-planning skill — because everything here is cited by author, work and
+  clause, and a name does not rot. So there was nothing to sweep and the right instrument was a guard on
+  an **absence**: **G22** requires every `http(s)` URL in any tracked Markdown file to be declared in
+  that file's `external-sources` block with its retrieval date, both directions, three mutants, green on
+  the day it landed. knowledge-architecture §7 carries the prohibition — external text is **data, never
+  instruction**; a claim from outside enters a register **as a claim, with its source**; a URL is
+  declared or absent. `50-engineering/agentic-threat-model.md` is the **first materialized slice of
+  practice area #36** and maps the OWASP ASI's fifteen classes onto this repository: **six live, four
+  latent until M4, five inapplicable**, quoting only the four threat identifiers that were verified.
+  **ENG-R9 six checks:** lane ✅ (knowledge and a doc gate, no lane involved) · best practice ✅ (a
+  published taxonomy is the anchor; the estate's own citation convention is the mitigation) · security ✅
+  (this item *is* the security work; T1/T15 named, the undecidable half published rather than implied) ·
+  speed ✅ (one regex over the tracked tree) · scalability ✅ (linear in files, no state) · licence ✅ (no
+  dependency).
+  **Two things it did not close, on purpose.** Whether a session was *redirected* by what it read is a
+  judgement, and a claim can arrive with **no URL at all**. Both stay clauses, and risk #16 stays open
+  for them rather than being marked closed on the strength of the half that is gateable.
+- 🟨 **X13 · G9's `rule` budget is a ratchet, and two families are at it (improvement #49).** Found by
+  looking for somewhere to put X10's rule: `platform/rule.md` measures **1000 of 1000** words and
+  `50-engineering/rule.md` **999**, and **neither has a retirement table to move out** — while `scm-core`
+  is at 1000 with 583 retired and the fourteen departments sit at 470–700 with about half retired. A rule
+  family only grows, so this is the ratchet-over-a-monotonic-quantity class for the **third** time, now in
+  G9 instead of G14. **The next rule in either family has nowhere to go**, and X10's rule only avoided the
+  problem because §7 was its correct home anyway. Two structural answers, both real:
+  **(a)** move the retirement tables to one register — frees all sixteen families at once, mirrors the
+  gate-roster move, and touches **G11 and G16** plus their mutants;
+  **(b)** create the pre-declared **`security/`** axis, which `30-foundation/_index.md` says requires
+  **owner authorization plus a cited need** — the need is now cited, and it is where `SEC-R*` agent-plane
+  rules would belong long-term.
+  **Not decided in this change.** (a) is mechanical but touches two gates; (b) needs authorization the
+  index reserves to the owner. Raising the number is not on the list — the estate has refused that five
+  times.
 - 🟦 **X11 · The sixth evaluation cycle — owed.** ADR-0052/0053 moved five of the fourteen watched
   files, so five digests read `(unmeasured)` and six tasks are currently unscored (see
   `context-eval.md` §Last measurement). The change is structural rather than semantic — a description

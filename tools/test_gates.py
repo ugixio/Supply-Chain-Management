@@ -56,6 +56,7 @@ EXEMPLAR_SKILL = ".claude/skills/procurement/SKILL.md"
 DEPT_INDEX = "docs/25-concepts/06-warehouse-management/_index.md"
 UNLISTED_NODE = "docs/25-concepts/06-warehouse-management/__planted-node.md"
 DOSSIER = "docs/program/state-of-the-project.md"
+SOURCED_SKILL = ".claude/skills/demand-planning/SKILL.md"
 
 # A well-formed concept node, so G18's fourth-claim mutant fires **G18 and nothing else**: valid
 # front-matter (G2), reachable by `part-of` (G5), governed upward (G6), a cited source and no
@@ -92,7 +93,7 @@ RETIRED_RULE_ID = "SCM-R1"    # retired by ADR-0037; declared in 30-foundation/s
 # mutants, so this list must stay in step with the mutations below.
 TOUCHABLE = (CONCEPT, CONCEPT_B, STRAY, MANIFEST, EVAL_RECORD, DEPT_RULE, REGISTRY,
              ADR_INDEX, ARCH, EXEMPLAR_SKILL, DEPT_INDEX, UNLISTED_NODE, NODE_MODEL,
-             DOSSIER)
+             DOSSIER, SOURCED_SKILL)
 
 
 # --- worktree plumbing ----------------------------------------------------------------
@@ -498,6 +499,48 @@ def mutate_g21_missing_key(wt: Path) -> list[str]:
     return [DOSSIER]
 
 
+def mutate_g22_undeclared(wt: Path) -> list[str]:
+    """A URL in the body that the provenance block does not vouch for.
+
+    The carrier of T1 memory poisoning: content arriving from outside with nothing recording where it
+    came from. `.claude/**` is the target on purpose — it is loaded into every session's working set,
+    and it is where the estate's one real external URL actually lives.
+    """
+    text = read(wt, SOURCED_SKILL)
+    write(wt, SOURCED_SKILL,
+          text + "\n- An undeclared source: https://example.invalid/planted-by-the-harness\n")
+    return [SOURCED_SKILL]
+
+
+def mutate_g22_uncited(wt: Path) -> list[str]:
+    """A provenance record for a URL the document no longer cites — the other direction.
+
+    Planted for G16's reason: a roster checked one way becomes a place where a stale entry survives,
+    and a declaration that vouches for nothing is exactly that.
+    """
+    text = read(wt, SOURCED_SKILL)
+    broken = text.replace("3rd ed. OTexts. https://otexts.com/fpp3/", "3rd ed. OTexts.", 1)
+    if broken == text:
+        raise RuntimeError("G22 uncited mutant planted nothing: the body citation was not found")
+    write(wt, SOURCED_SKILL, broken)
+    return [SOURCED_SKILL]
+
+
+def mutate_g22_future_date(wt: Path) -> list[str]:
+    """A retrieval date in the future (G22's third claim).
+
+    The date is the half of the declaration that does the work — it is what makes risk #12's staleness
+    visible — so a date nobody could have retrieved on makes the record worth less than no record.
+    """
+    text = read(wt, SOURCED_SKILL)
+    dated = text.replace("https://otexts.com/fpp3/  2026-08-04",
+                         "https://otexts.com/fpp3/  2099-01-01", 1)
+    if dated == text:
+        raise RuntimeError("G22 date mutant planted nothing: no declared date to move")
+    write(wt, SOURCED_SKILL, dated)
+    return [SOURCED_SKILL]
+
+
 MUTANTS = [
     ("G1", "tracked .md outside docs/", mutate_g1, set()),
     ("G2", "type outside the vocabulary", mutate_g2, set()),
@@ -553,6 +596,12 @@ MUTANTS = [
      mutate_g21_unmeasurable_key, set()),
     ("G21", "a measurable fact left undeclared (the other direction)",
      mutate_g21_missing_key, set()),
+    # `.claude/**` carries no front matter, so these three trip neither G13 nor G21: the skill files
+    # are outside the governed tree that the counted facts describe, and inside every session's
+    # working set. That combination is why G22's scope is every tracked file (risk #13).
+    ("G22", "a URL the provenance block does not vouch for", mutate_g22_undeclared, set()),
+    ("G22", "a declaration citing nothing (the other direction)", mutate_g22_uncited, set()),
+    ("G22", "a retrieval date in the future (G22's third claim)", mutate_g22_future_date, set()),
 ]
 # The `also` column declares collateral that is real rather than tolerated. G14's and G16's mutants
 # edit `load-sets.md` and `id-registry.md`, both of which the context-adherence measurement is

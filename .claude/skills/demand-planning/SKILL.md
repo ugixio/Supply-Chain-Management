@@ -267,3 +267,13 @@ interface ForecastResult {
 - Chopra & Meindl, Ch.7 — Demand Forecasting in a Supply Chain (Pearson, 2016)
 - APICS/ASCM Dictionary, 17th ed. (2024) — *demand forecast*, *order backlog*, *S&OP*
 - APICS CPIM 9.0 — Fundamentals of Demand Management
+
+**External sources** — every reference above is cited by author, work and clause, which is the
+estate's convention because a name does not rot. One carries a URL, so it is declared here with the
+date it was last reachable (gate **G22**, knowledge-architecture §7, ADR-0054). The date is the useful
+part: it is what makes risk #12 — a source that stops saying what was quoted — visible instead of
+invisible.
+
+```external-sources
+https://otexts.com/fpp3/  2026-08-04  Hyndman & Athanasopoulos, Forecasting: Principles and Practice, 3rd ed. (OTexts, open access)
+```

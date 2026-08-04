@@ -102,6 +102,10 @@ relations:
   full and the set was still over, because halving the copies does not stop the surviving copy growing.
   **When the part that breaches a ceiling is a part that grows by design, move the part out of every
   member** — do not compress it, and do not raise the number. (#46)
+- **A per-file word budget over an append-only roster is a ratchet wearing a ceiling's clothes.** G9's
+  1,000-word `rule` budget was never classified: two families now measure 1000 and 999, with no movable
+  part, so the next rule in either has nowhere to go. Ask the ratchet/ceiling question of **every**
+  budget, not only the load sets that taught it. (#49)
 - **Ask where a growing roster is *carried*, not only how big it is.** The gate list cost two load sets
   twice for five occurrences because it lived in two files that both sat inside sets. (#46)
 
@@ -146,6 +150,10 @@ relations:
 - **Then score the estate against a reference model, because a proposal only surfaces the gaps its
   author thought of.** Doing that found six more, including a practice-area roster with no row for the
   discipline the repository itself runs on — anchorable all along, and simply never rostered. (#44)
+- **Measure the surface before designing the guard — the cheapest guard is on a property already true.**
+  Risk #16's plan assumed a sweep for laundered external content; measurement found zero external URLs in
+  the governed estate and one in the tree, so the instrument became a gate on an **absence**: no sweep,
+  green on landing, and the property cannot quietly become false. (#48)
 - **Ask where a document's content is allowed to come from, not only whether it is sound.** Every
   review checked the estate's claims; none asked what may be written into the memory every session
   loads from a page, a comment or a log fetched from outside it. (#44, risk #16)

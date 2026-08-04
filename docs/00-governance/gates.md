@@ -31,7 +31,7 @@ relations:
 
 ## The roster
 
-All twenty-one are wired into `tools/verify.py` and run by `make verify` (ADR-0012) — the count read
+All twenty-two are wired into `tools/verify.py` and run by `make verify` (ADR-0012) — the count read
 "sixteen" while seventeen existed, the same range-versus-count blind spot the ID registry had, and
 since ADR-0052 the roster is `GATE_NAMES` at module scope and G21 recomputes its length:
 
@@ -75,6 +75,18 @@ claims, four planted mutants:
 
 Percentages, grades and verdicts are deliberately **not** declarable: a gate over a judgement would
 only make the judgement look official.
+
+**G22 — an external source is declared with its date, or absent (ADR-0054).** Any `http(s)` URL in a
+tracked Markdown file must appear in that file's fenced `` ```external-sources `` block as
+`<url> <YYYY-MM-DD> <what it is>`. Three claims, three planted mutants: an undeclared URL fails, a
+declaration the document cites nowhere fails (G16's both-directions rule — a provenance record for
+something no one references is drift), and a malformed or future retrieval date fails, because the date
+is the half that does the work. **It guards an absence:** measured before it was written, the governed
+estate had zero external URLs and the whole tracked tree had one, so the gate cost no sweep and was
+green on the day it landed. What it deliberately does **not** check is whether a session was
+*redirected* by something it read — that is a judgement, and four prose heuristics have already failed
+here by firing on text that merely names a defect. Scope is every tracked file because `.claude/**`
+holds the one real URL and is loaded into every session's working set (risk #13).
 
 ## A gate that cannot check must say so
 

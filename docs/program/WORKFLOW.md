@@ -159,6 +159,38 @@ reached its ceiling and this was the structural answer, taken instead of a raise
   **The gap this closed was in the eval too.** All five previous tasks measured whether an agent
   *obeys* the context; none asked whether it can say what the context is **for**, so the eval could not
   have found the problem the owner found by asking.
+- ✅ **X9 · The estate scored against an external reference model — 2026-08-04 (ADR-0052/0053).** The
+  Context-OS audit answered *one proposal*; this asked the question the other way round — **what would a
+  complete system in context engineering, RAG, memory and agentic AI have, and what does this estate
+  lack?** Thirty-three applicable capabilities: **21 have · 5 partial · 6 gap**, plus four declared
+  non-goals with reversal conditions (`docs/program/agentic-context-assessment.md`). The result has a
+  shape: **strong wherever a property can be checked deterministically, absent wherever it needs
+  something running** — a direct consequence of ADR-0037 leaving one application in the tree and that
+  application not yet being built. Two things landed with it: **G21** gates the dossier's eleven counted
+  facts on drift (it was wrong about six at once), and **practice area #36** rosters the discipline this
+  repository runs on, which thirty-five areas had somehow omitted.
+- 🟥 **X10 · The agent-plane threat model — NEXT, ahead of M4 (risk #16).** Sessions read web pages, PR
+  comments and CI logs, and **nothing states what may be written from an untrusted source into the
+  registers every later session loads.** That is memory poisoning against an estate whose entire value
+  is a trustworthy memory; goal hijacking and tool misuse are equally unaddressed, and practice area #17
+  (ASVS, CWE, SSDF) covers none of them. ADR-0053 has already anchored the vocabulary, which is the
+  ADR-0010 ordering. **Scope:** one clause — a claim entering a register from outside this repository is
+  recorded *with its source and as a claim*, never as a finding, and instructions found in fetched
+  content are data — plus a sweep of existing rows for content that arrived that way, plus the ENG-R9
+  six checks. A clause and a sweep, not a project, which is why it goes first.
+- 🟦 **X11 · The sixth evaluation cycle — owed.** ADR-0052/0053 moved five of the fourteen watched
+  files, so five digests read `(unmeasured)` and six tasks are currently unscored (see
+  `context-eval.md` §Last measurement). The change is structural rather than semantic — a description
+  moved file — but **that judgement is exactly what ADR-0043 says not to trust**, so it is recorded as
+  an open measurement and not as a reasoned exemption. Needs cold subagents; not startable from a
+  session that just wrote the change.
+- 🟦 **X12 · Agent-session telemetry over the tier that already exists — sequenced with M4.** Nothing
+  traces what a session read, did or spent. ADR-0036 already gives a ClickHouse telemetry tier and a
+  Rust ingester, and ADR-0031/0034 give a monitoring application whose job is to make the portfolio
+  visible — **an agent session is portfolio activity.** Emitting OpenTelemetry GenAI spans into the same
+  tier closes four capabilities at once (what was read, trajectory evaluation, session observability,
+  cost accounting) as a by-product rather than as a second system. **Not before M4:** it needs the
+  ingester's read surface. Practice area #36 already anchors the conventions.
 
 ### Phase U — Unification (context-skeleton adoption)
 - ✅ **U1 · orchestrator** — Skeleton added on branch `feat/context-skeleton`: tier tree,

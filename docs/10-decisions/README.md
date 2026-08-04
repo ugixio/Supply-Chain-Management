@@ -89,6 +89,10 @@ relations:
 
 - ADR-0051 — **Coverage, vocabulary hygiene, and a fabricated citation that used to pass:** building ADR-0050's remaining checks produced two gates and found a third defect nobody was looking for. **G19** asserts each evaluation task's `Must reach:` tokens appear in a member of its load set — tokens rather than semantics, because whether a set *suffices* is undecidable while whether an identifier is physically present is not; this makes improvement #34 mechanical, where two **correct** answers were failed by a set carrying no unit codes and the manifest was the defect. **G20** asserts the relation vocabulary is exercised or **declared reserved**, because an unused edge type is an *affordance* for the defect it was written for: **`implements` is retired** — zero documents used it while ADR-0037 forbade node-to-code links, G10 rejects them and ENG-R10.7 was still instructing them. That is also the honest form of contradiction detection: a semantic clash between prose and code is undecidable and four prose heuristics have already failed here, so G20 removes the affordance instead of guessing at the meaning. **The third find: a cited concept ID never had to resolve** — a fabricated `CPT-4242` satisfied the check whose whole purpose is that answers rest on evidence, the mirror of what `live_rule_ids` prevented for rules all along; now validated, with a regression sample. And **the resolver reaches the exemplar**, which ADR-0048 declared and no load set could read. (Accepted — owner-directed 2026-08-04)
 
+- ADR-0052 — **The dossier is gated on drift, never on a calendar:** `state-of-the-project.md` is the document read *before deciding*, and on 2026-08-04 it was wrong about six counted facts at once — 154 concept nodes against 167, thirteen gates against twenty, "ADR-0001–0036" against fifty-one — each load-bearing for a steering decision and none of them watched. So the dossier declares its counted facts in a fenced block and **G21** recomputes all eleven: any change that moves one reddens until the same commit refreshes it. **The trigger is drift, not wall-clock age**, because a calendar check reddens correct work during a quiet week and a gate that reddens correct work gets disabled rather than obeyed (improvement #16). Three further design choices carry the decision: **an unknown key fails** — the load-set manifest's unimplemented-selector lesson, so a dossier cannot launder interpretation as measurement; **a measurable key left undeclared fails too** — G16's both-directions rule, so the block cannot omit the inconvenient number; and **`snapshot` must equal `updated:`**, which G13 already proves is the real last change, so the date can be neither older than the content nor newer than the work. Percentages and grades stay in prose and stay ungated: a gate over a judgement only makes the judgement look official. (Accepted — owner-directed 2026-08-04)
+
+- ADR-0053 — **The engineering axis rosters the discipline this repository runs on:** measuring the estate against an external reference model for context engineering, RAG, memory and agentic AI surfaced a gap no proposal had raised — `practice-areas.md` anchors thirty-five areas including *AI and machine learning* (ISO/IEC 22989), *MLOps and LLMOps* (ISO/IEC 42001, NIST AI RMF) and *technology governance* (ISO/IEC 38500), and **building software with agents appears in none of them**. Every project in the portfolio this context governs will be built the way this repository is being built, and the axis that exists to state *how software is engineered* was silent about it. Area **#36, context engineering and agentic systems**, is added with anchor kind **Standard + Terminology** and six candidate anchors — ISO/IEC 42001, ISO/IEC 22989, NIST AI RMF, the OWASP LLM and Agentic top-ten threat classes, the OpenTelemetry GenAI semantic conventions, and the Model Context Protocol specification. An area with six published anchors is not a consensus area; it was simply never rostered. Status stays `—` like every other row: W5 forbids speculative pre-build, and what the roster fixes is the thing that cannot be improvised later — **which authority makes a statement in it admissible**. (Accepted — owner-directed 2026-08-04)
+
 ---
 
 ## ADR-0001 — Two-language split: TypeScript domain logic + Python analytics/ML
@@ -2604,6 +2608,129 @@ That is a narrower claim than the proposal's requirement 11 and it is one a gate
   exit; the next gate added forces it.
 - (−) `Must reach:` tokens are a hand-written claim. G19 checks they are *satisfied*, not that they are
   the *right* tokens — that judgement stays with whoever adds a task.
+
+## ADR-0052 — The dossier is gated on drift, never on a calendar
+
+**Status:** Accepted (owner-directed 2026-08-04) · **Supersedes:** nothing · **Refines:** ADR-0012
+
+**Context.** `docs/program/state-of-the-project.md` exists to be read before a decision. On 2026-08-04
+it was six days old and wrong about six counted facts simultaneously: **154 concept nodes** when there
+were 167, **thirteen gates** when there were twenty, **"ADR-0001–0036"** when fifty-one decisions were
+recorded, a *known inconsistency* section describing a sweep that had been completed five days earlier,
+and an overall completion figure calibrated against an estate that no longer existed. Nothing was
+looking at any of it. This is the ordinary failure of every status document — it is written once, read
+often, and believed long after it stops being true — and it is more damaging here than elsewhere,
+because the estate's other numbers *are* gated, which lends the ungated ones borrowed authority.
+
+**Decision.** The dossier declares its counted facts in a fenced `` ```dossier `` block, and **G21**
+recomputes every one of them from the estate on each run.
+
+1. **Drift is the trigger, not age.** The gate never looks at a calendar. It fails when the estate has
+   moved away from what the dossier claims — add a concept node, add a gate, allocate a decision, and
+   G21 is red until the same commit refreshes the block. A wall-clock staleness check was considered
+   and rejected: it reddens correct work during a quiet week, and this repository already recorded what
+   happens then — *a gate that reddens correct work gets disabled rather than obeyed* (improvement #16,
+   the ratchet-versus-ceiling lesson).
+2. **An unknown key is a failure.** A dossier may only declare facts the gate can recompute. This is
+   the load-set manifest's lesson transplanted: an unimplemented selector prices the wrong thing
+   silently, so a manifest that names a check nobody implements is worse than one that names a missing
+   file. Without this clause the block would become a place to publish an interpretation in the
+   typography of a measurement.
+3. **A measurable key left undeclared is also a failure.** G16's both-directions rule. A roster checked
+   one way becomes a place to omit the inconvenient entry, and G3's rule-ID hole came from a gate
+   asserting three things with one of them tested.
+4. **`snapshot` must equal `updated:`.** G13 already proves `updated:` is the file's real last change,
+   so this one comparison makes the snapshot date impossible to backdate or to postdate.
+5. **The interpretation stays ungated, and stays in the same document.** Percentages, grades and
+   verdicts cannot be recomputed and are not declarable in the block. They are refreshed *with* the
+   facts, in the same change, because a gated §1 beside a stale §4 is worse than no gate at all: the
+   true numbers would make the stale verdicts look checked.
+
+**Alternatives considered.**
+- *A `make dossier` generator that rewrites the numbers.* Rejected. It would make the document a build
+  artefact, and the valuable half — what is blocked, what to decide next — is not derivable. A gate
+  that refuses a wrong number leaves the judgement with a person; a generator quietly replaces it.
+- *Regenerate on a schedule (cron, or "every N commits").* Rejected for the reason in clause 1, and
+  because the repository has no runtime: a discipline whose mechanism is a timer nobody watches is the
+  same defect as one whose mechanism is a person remembering.
+- *Publish the counted facts somewhere else and leave the dossier prose-only.* Rejected. Splitting them
+  is what let the prose drift in the first place; the point is that the numbers and the verdicts they
+  support are read together.
+
+**Consequences.**
+- (+) The steering document cannot silently describe a repository that no longer exists.
+- (+) Eleven facts that used to be assertions are now measurements, including three — mutants,
+  checkers, samples — that nothing had ever counted.
+- (+) `GATE_NAMES` moves to module scope in `verify.py`, so "how many gates are there" has exactly one
+  answer instead of a prose count that had already been wrong once (§11 read "sixteen" at seventeen).
+- (−) Twenty-one gates and **thirty** mutants to maintain; four of the thirty are G21's, because it
+  makes four claims and *one mutant per gate is not one mutant per claim* (improvement #18).
+- (−) Every commit that moves a counted fact now also touches the dossier. That is the intended cost,
+  and it is small: the block is eleven lines.
+- (−) The gate cannot tell whether the *interpretation* is stale. Nothing can, which is why clause 5 is
+  a discipline and not a check.
+
+## ADR-0053 — The engineering axis rosters context engineering and agentic systems
+
+**Status:** Accepted (owner-directed 2026-08-04) · **Refines:** ADR-0045 (the two axes)
+
+**Context.** `docs/50-engineering/practice-areas.md` is the engineering axis: thirty-five practice
+areas, each naming the external authority that would make a statement in it admissible. Measuring this
+estate against a reference model for context engineering, RAG, memory systems and agentic AI
+(`docs/program/agentic-context-assessment.md`) surfaced a gap that no proposal had raised, because a
+proposal can only surface the gaps its author thought of:
+
+Area #21 is *AI and machine learning* (ISO/IEC 22989). #22 is *MLOps and LLMOps* (ISO/IEC 42001, NIST
+AI RMF). #30 is *technology governance* (ISO/IEC 38500). **Building software with agents — context
+assembly, retrieval, memory design, tool design, agent evaluation, agent security — is in none of
+them.** Every project in the portfolio this context governs will be built the way this repository is
+being built, and the axis whose purpose is to state *how software is engineered* said nothing about it.
+
+**Decision.** Add area **#36 — context engineering and agentic systems**, anchor kind **Standard +
+Terminology**, with the anchors that make it admissible:
+
+| Anchor | What it fixes |
+|---|---|
+| ISO/IEC 42001 | AI management system requirements — **certifiable**, so the requirement itself may be stated |
+| ISO/IEC 22989 | AI concepts and terminology |
+| NIST AI RMF | the function taxonomy (govern, map, measure, manage) |
+| OWASP Top 10 for LLM Applications; Agentic Security Initiative | the **threat classes** — goal hijacking, tool misuse, memory and context poisoning |
+| OpenTelemetry GenAI semantic conventions | the telemetry attributes for LLM, agent and tool spans |
+| Model Context Protocol specification | the published interface for exposing context to a consumer |
+
+Status stays `—`, as every row's does: **W5 forbids speculative pre-build** — a branch's knowledge is
+written when a real project needs it. What the roster fixes now is the only thing that cannot be
+improvised later, which is which authority the eventual content must answer to.
+
+**What may *not* be stated in this area, and why the anchor kinds are split.** ISO/IEC 42001 and the
+OWASP threat lists are **Standards**: their requirements and threat classes may be stated as law. The
+OpenTelemetry conventions and the MCP specification fix **vocabulary and wire format**, not a mandate —
+"use MCP" is a project's decision. Everything else in this space is consensus advice that an
+organization can reasonably decline: *always summarize at 80% of the window*, *chunk at 512 tokens*,
+*use a reranker*. Those are exactly the shape `CLAUDE.md` names as policy — a threshold, a target, a
+mandate to prefer one legitimate method — and they belong to a project, not here. **The fourth anchor
+kind does not exist**: "industry consensus" is not an anchor, and this area is the one where that
+temptation will be strongest, because the field publishes faster than it standardizes.
+
+**Alternatives considered.**
+- *Extend area #22 (MLOps/LLMOps).* Rejected. #22 is about operating a model in production; this is
+  about engineering a system whose *inputs* are assembled. They share ISO/IEC 42001 and nothing else,
+  and merging them would bury the threat classes under deployment concerns.
+- *Write the content now.* Rejected by W5. The roster's own header says a row becomes work when a
+  project needs it, and this repository is one such project — which is an argument for materializing it
+  next, not for materializing it in the same change that rosters it.
+- *Leave it out because the field is unsettled.* Rejected. Six published anchors is not unsettled, and
+  the axis's failure mode is admitting consensus, not omitting standards.
+
+**Consequences.**
+- (+) The estate's own build discipline is now on the axis that governs build disciplines, so the gap
+  cannot be reintroduced by not thinking of it.
+- (+) The agentic threat classes have a home before the threat model is written, which is the ordering
+  ADR-0010 requires (plan⇄context before code).
+- (−) The roster grows to thirty-six, and its prose count needed correcting from "thirty-four" — it had
+  been wrong by one since the file was written, which is the same range-versus-count blind spot the ID
+  registry and §11 both had.
+- (−) An unmaterialized area is a promise. It is the same promise the other thirty-five carry.
 
 > **File map:** this README is the canonical ADR index. New decisions are appended here
 > as `## ADR-NNNN — Title` (or as `docs/10-decisions/NNNN-title.md` when extensive).

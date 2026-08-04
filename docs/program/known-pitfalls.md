@@ -86,6 +86,24 @@ relations:
 - **When you write a generalisation, apply it by re-classifying every case, not the ones that
   prompted it.** #39's rule was correct and `what-is-this-for` was exempted on its dominant shape
   while carrying exactly the clause the rule was about. (#43)
+- **Gate the numbers a document is believed for, on *drift* rather than on a calendar.** The dossier
+  was wrong about six counted facts while twenty other properties were gated — and the gated ones lent
+  the stale ones authority. A wall-clock check would have reddened a quiet week instead. (#45)
+- **A declared quantity a check cannot recompute must be refused, not tolerated.** Otherwise the block
+  becomes a place to publish an interpretation in the typography of a measurement — and the mirror
+  case: a measurable quantity left *undeclared* is where the inconvenient number hides. (#45)
+- **A collateral declaration can encode measurement *state*, not just a file set — derive it.** Three
+  `also` columns broke in one commit when five digests returned to `(unmeasured)`, reporting gates as
+  failing to fire while nothing about any gate had changed. (#47)
+
+### About budgets that keep being breached
+
+- **Compression is a one-time payment on a recurring bill.** A load set's declared exit was executed in
+  full and the set was still over, because halving the copies does not stop the surviving copy growing.
+  **When the part that breaches a ceiling is a part that grows by design, move the part out of every
+  member** — do not compress it, and do not raise the number. (#46)
+- **Ask where a growing roster is *carried*, not only how big it is.** The gate list cost two load sets
+  twice for five occurrences because it lived in two files that both sat inside sets. (#46)
 
 ### About rules, thresholds and sweeps
 
@@ -125,6 +143,12 @@ relations:
 - **Audit what exists before accepting a proposal's framing.** Two thirds of a Context-OS proposal
   was greenfield described as improvement, and the estate's real weakness — retrieval reaching 7% of
   it — was in the reach of a mechanism it already had. (#41)
+- **Then score the estate against a reference model, because a proposal only surfaces the gaps its
+  author thought of.** Doing that found six more, including a practice-area roster with no row for the
+  discipline the repository itself runs on — anchorable all along, and simply never rostered. (#44)
+- **Ask where a document's content is allowed to come from, not only whether it is sound.** Every
+  review checked the estate's claims; none asked what may be written into the memory every session
+  loads from a page, a comment or a log fetched from outside it. (#44, risk #16)
 - **A budget calibrated against a set that reaches nothing prices a session that reads nothing.**
   Measure what a session actually opens before trusting a ceiling. (#41)
 

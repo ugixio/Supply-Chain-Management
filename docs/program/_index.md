@@ -16,9 +16,10 @@ relations:
 - **Exists today:**
   - [WORKFLOW.md](WORKFLOW.md) — the ordered backlog: unification follow-ups + gaps
     surfaced by the adoption audit.
-  - [state-of-the-project.md](state-of-the-project.md) — regenerated status snapshot:
-    completion by layer, best-practice scorecard, security posture, and the chosen
-    improvement route (references the authorities; non-authority itself).
+  - [state-of-the-project.md](state-of-the-project.md) — **the dossier**: the document read
+    *before deciding*. Completion by layer, the scorecard, the ranked open gaps, what waits on the
+    owner, and the route. Its **counted facts are gated by G21** and refreshed on drift, not on a
+    calendar (ADR-0052); the verdicts around them are interpretation and stay ungated.
   - [operating-model.md](operating-model.md) — how AI-driven work is executed here
     (knowledge layers; the repo already implements the area-skill layer via
     `.claude/skills/`; §4 communication contract).
@@ -36,6 +37,12 @@ relations:
     deterministic gates), the five measured weaknesses, and which of a 28-point proposal this estate
     needs. **Headline: the declared load sets reach 17 of 240 governed documents and zero concept
     nodes.**
+  - [agentic-context-assessment.md](agentic-context-assessment.md) — the same estate measured against
+    an **external reference model** for context engineering, RAG, memory systems and agentic AI,
+    rather than against one proposal. 33 applicable capabilities: **21 have · 5 partial · 6 gap**,
+    plus 4 declared non-goals with a reversal condition. **Headline: strong wherever a property can
+    be checked deterministically, absent wherever it needs something running** — and the engineering
+    axis had no practice area for the discipline this repository runs on (ADR-0053).
   - [how-to/](how-to/) — task-shaped guides for **using this context** (ADR-0044):
     [add a concept node](how-to/add-a-concept-node.md) ·
     [change a rule](how-to/change-a-rule.md) ·

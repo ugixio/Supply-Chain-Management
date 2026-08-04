@@ -223,6 +223,25 @@ this file's own code — an untested checker would be the same hole in a new pla
 
 ## Last measurement
 
+> **2026-08-04, after ADR-0052/0053: five inputs are back to `(unmeasured)` and no sixth cycle has
+> run.** The gate roster moved out of `knowledge-architecture.md` §11 into
+> `docs/00-governance/gates.md`, `CLAUDE.md`'s roster compressed to names, the ID registry and
+> `practice-areas.md` gained allocations, and `load-sets.md` recorded the exit. Five of the fourteen
+> watched files changed, so the fifth cycle's result **no longer describes this context** and saying so
+> is the only honest option available.
+>
+> **Why the digests were not simply refreshed.** Refreshing a digest without re-running the tasks is
+> the exact state G15 exists to forbid: the gate goes green while the measurement describes an input it
+> never saw. The register already carries that incident (#42). `(unmeasured)` makes G15 **skip and say
+> so** — it prints an INFO line naming these five — which is a smaller claim than a stale PASS and a
+> larger one than silence.
+>
+> **What this costs, stated plainly.** Six tasks are currently unscored against the roster's new
+> location. The change is structural rather than semantic — no rule, threshold or concept moved, only
+> the file a description lives in — but *that judgement is exactly what ADR-0043 says not to trust*,
+> which is why this is recorded as an open measurement and not as a reasoned exemption. The sixth cycle
+> is a `WORKFLOW.md` item.
+
 **2026-08-04, fifth cycle — 6 of 6 conforming, and it found the root cause of five false positives.**
 Re-run in full because ADR-0051 moved `CLAUDE.md` and `knowledge-architecture.md`, which sit in all
 four load sets.
@@ -519,18 +538,18 @@ risk #11. Both are fixed and both are now permanent regression samples in `--sel
 
 ```context-digest
 # path                                        sha256:12 — G15 fails when any of these changes
-CLAUDE.md                                     ebd5922f5dd9
+CLAUDE.md                                     (unmeasured)
 docs/_index.md                                53f2766c9d3f
 docs/program/evaluation.md                    6e806b7f4e29
-docs/00-governance/knowledge-architecture.md  b28b1be054b8
-docs/00-governance/id-registry.md             a73e6e21d7d4
+docs/00-governance/knowledge-architecture.md  (unmeasured)
+docs/00-governance/id-registry.md             (unmeasured)
 docs/30-foundation/scm-core/rule.md           7e775c264869
 docs/30-foundation/measurement/rule.md        c2aadb2fd7f9
 docs/30-foundation/platform/rule.md           0268bef446f1
 docs/50-engineering/rule.md                   ab8705e92ba1
-docs/50-engineering/practice-areas.md         318d1ff3932e
+docs/50-engineering/practice-areas.md         (unmeasured)
 docs/standards/REGULATORY_FRAMEWORK.md        f1f47f8501ae
-docs/program/load-sets.md                     97eb256e258a
+docs/program/load-sets.md                     (unmeasured)
 docs/program/how-to/add-a-concept-node.md     6341e78e7551
 docs/program/how-to/change-a-rule.md          6b2bee8a3822
 docs/program/templates/concept.md             09d066c2e4ab

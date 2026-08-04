@@ -5,7 +5,7 @@ type: engineering
 owner: orchestrator
 status: active
 since: 2026-08-03
-updated: 2026-08-03
+updated: 2026-08-04
 relations:
   - { type: part-of, target: index-engineering }
   - { type: governed-by, target: index-adr }
@@ -18,7 +18,7 @@ relations:
 > exist for the projects that read the context, across every technology branch: AI, machine learning,
 > data engineering, DevOps, databases, web.
 >
-> **What this is not.** It is **not** thirty-four sections of content. Nothing here is materialized
+> **What this is not.** It is **not** thirty-six sections of content. Nothing here is materialized
 > yet, on purpose: W5 forbids speculative pre-build — a branch's knowledge is written **when a real
 > project needs it**. What the roster fixes is the thing that cannot be improvised later: **which
 > external authority anchors each area**, so the day someone writes it, they cannot invent it.
@@ -85,6 +85,7 @@ becomes work only when a project needs it (W5).
 | 33 | Design for high availability | Identity | Nines arithmetic and its budget consequences; redundancy formulas |
 | 34 | Design for maintainability and evolution | Standard | ISO/IEC 25010 maintainability characteristics; coupling and cohesion measures |
 | 35 | Technology strategy and roadmaps | **None found** | See below — this row is deliberately unanchored |
+| 36 | Context engineering and agentic systems | Standard + Terminology | ISO/IEC 42001 (AI management systems — **certifiable**); ISO/IEC 22989 for the vocabulary; NIST AI RMF for the function taxonomy; OWASP Top 10 for LLM Applications and the Agentic Security Initiative for the **threat classes**; OpenTelemetry GenAI semantic conventions for the telemetry attributes; the Model Context Protocol specification for the interface (ADR-0053) |
 
 ## The rows that will fight the inclusion test
 

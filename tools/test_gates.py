@@ -36,6 +36,8 @@ from pathlib import Path
 TODAY = datetime.date.today().isoformat()
 STALE = "2020-01-01"          # a date no document could honestly carry
 FAIL_LINE = re.compile(r"^FAIL (G\d+)", re.M)
+DIGEST_BLOCK = re.compile(r"^```context-digest$(.*?)^```$", re.M | re.S)
+UNMEASURED = "(unmeasured)"
 
 # Documents the mutants operate on. Chosen for stability: each has been in the tree since
 # before this harness and none is a gate-configuration file, so a mutation here exercises
@@ -53,6 +55,7 @@ NODE_MODEL = "docs/20-product-model/node-model.md"
 EXEMPLAR_SKILL = ".claude/skills/procurement/SKILL.md"
 DEPT_INDEX = "docs/25-concepts/06-warehouse-management/_index.md"
 UNLISTED_NODE = "docs/25-concepts/06-warehouse-management/__planted-node.md"
+DOSSIER = "docs/program/state-of-the-project.md"
 
 # A well-formed concept node, so G18's fourth-claim mutant fires **G18 and nothing else**: valid
 # front-matter (G2), reachable by `part-of` (G5), governed upward (G6), a cited source and no
@@ -88,7 +91,8 @@ RETIRED_RULE_ID = "SCM-R1"    # retired by ADR-0037; declared in 30-foundation/s
 # Every path any mutant may create or modify. The harness restores all of them between
 # mutants, so this list must stay in step with the mutations below.
 TOUCHABLE = (CONCEPT, CONCEPT_B, STRAY, MANIFEST, EVAL_RECORD, DEPT_RULE, REGISTRY,
-             ADR_INDEX, ARCH, EXEMPLAR_SKILL, DEPT_INDEX, UNLISTED_NODE, NODE_MODEL)
+             ADR_INDEX, ARCH, EXEMPLAR_SKILL, DEPT_INDEX, UNLISTED_NODE, NODE_MODEL,
+             DOSSIER)
 
 
 # --- worktree plumbing ----------------------------------------------------------------
@@ -121,6 +125,28 @@ def populate_from_index(repo: Path, worktree: Path) -> None:
         if existing not in tracked:
             (worktree / existing).unlink(missing_ok=True)
     git("add", "-A", cwd=worktree)
+
+
+def measured_watch_set(worktree: Path) -> set[str]:
+    """Watched context files carrying a REAL digest — the ones a mutation genuinely makes G15 fire on.
+
+    **Derived, not declared, and that is the point.** The `also` column named G15 by hand for every
+    mutant that edited a watched file, which is a hand-written mirror of a machine-readable list — the
+    shape `known-pitfalls.md` says will drift. It drifted the day five digests went back to
+    `(unmeasured)`: three declarations correct for a week became wrong in one commit, and the harness
+    reported *gates failing to fire* when nothing about any gate had changed. A digest that reads
+    `(unmeasured)` makes G15 skip, so touching that file is no longer collateral — and the harness now
+    computes that instead of being told.
+    """
+    fence = DIGEST_BLOCK.search(read(worktree, EVAL_RECORD))
+    if not fence:
+        return set()
+    measured = set()
+    for line in fence.group(1).splitlines():
+        parts = line.split()
+        if len(parts) == 2 and not line.lstrip().startswith("#") and parts[1] != UNMEASURED:
+            measured.add(parts[0])
+    return measured
 
 
 def run_gates(worktree: Path) -> tuple[set[str], str]:
@@ -418,13 +444,69 @@ def mutate_g16_extra(wt: Path) -> list[str]:
     return [REGISTRY]
 
 
+def mutate_g21_drift(wt: Path) -> list[str]:
+    """A counted fact the estate has moved away from — the failure the dossier had for six days.
+
+    `concept-nodes` is decremented rather than incremented so the mutation cannot accidentally
+    become true: the count only ever grows.
+    """
+    text = restamp(read(wt, DOSSIER))
+    drifted = re.sub(r"^(concept-nodes\s+)(\d+)$",
+                     lambda m: f"{m.group(1)}{int(m.group(2)) - 1}", text, count=1, flags=re.M)
+    if drifted == text:
+        raise RuntimeError("G21 drift mutant planted nothing: no 'concept-nodes' line to move")
+    write(wt, DOSSIER, drifted)
+    return [DOSSIER]
+
+
+def mutate_g21_stale_snapshot(wt: Path) -> list[str]:
+    """A snapshot date older than the content it claims to describe.
+
+    `restamp` sets `updated:` to today, so G13 is satisfied and the *only* inconsistency left is
+    between the stamp and the snapshot — which is the claim under test.
+    """
+    text = restamp(read(wt, DOSSIER))
+    write(wt, DOSSIER, re.sub(r"^(snapshot\s+)\S+$", rf"\g<1>{STALE}", text, count=1, flags=re.M))
+    return [DOSSIER]
+
+
+def mutate_g21_unmeasurable_key(wt: Path) -> list[str]:
+    """A fact declared in the gated block that no gate can recompute.
+
+    This is the load-set manifest's lesson transplanted: an unimplemented selector prices the wrong
+    thing silently, and a dossier that may declare unverifiable numbers launders interpretation as
+    measurement. Planting it proves the gate refuses rather than ignores.
+    """
+    text = restamp(read(wt, DOSSIER))
+    write(wt, DOSSIER, re.sub(r"^(snapshot\s+\S+)$", r"\1\nvelocity         42",
+                              text, count=1, flags=re.M))
+    return [DOSSIER]
+
+
+def mutate_g21_missing_key(wt: Path) -> list[str]:
+    """A measurable fact left out of the block — the other direction.
+
+    Both directions are planted for G16's reason: a roster checked one way becomes a place to omit
+    the inconvenient entry, and G3's rule-ID hole came from a gate asserting three things with one
+    of them tested.
+    """
+    text = restamp(read(wt, DOSSIER))
+    stripped = re.sub(r"^load-sets\s+\d+\n", "", text, count=1, flags=re.M)
+    if stripped == text:
+        raise RuntimeError("G21 missing-key mutant planted nothing: no 'load-sets' line to remove")
+    write(wt, DOSSIER, stripped)
+    return [DOSSIER]
+
+
 MUTANTS = [
     ("G1", "tracked .md outside docs/", mutate_g1, set()),
     ("G2", "type outside the vocabulary", mutate_g2, set()),
     ("G3", "duplicate document id", mutate_g3, set()),
     ("G3", "duplicate rule ID (G3's second claim)", mutate_g3_rule, set()),
     ("G4", "relation to an unknown id", mutate_g4, set()),
-    ("G5", "no part-of edge (orphan)", mutate_g5, set()),
+    # G21 fires too, and honestly: removing a `part-of` edge lowers the edge count the dossier
+    # declares. A gate that counts the graph is collateral for every mutation that changes it.
+    ("G5", "no part-of edge (orphan)", mutate_g5, {"G21"}),
     ("G6", "governed-by pointing sideways", mutate_g6, set()),
     ("G7", "superseded with no superseded-by", mutate_g7, set()),
     ("G8", "non-English prose", mutate_g8, set()),
@@ -434,19 +516,25 @@ MUTANTS = [
     ("G11", "citation to a retired rule", mutate_g11, set()),
     ("G12", "rule family wildcard as a citation", mutate_g12, set()),
     ("G13", "change stamped with an old date", mutate_g13, set()),
+    # G15 fires on both, and NOT for the digest reason the derivation covers: G15's second claim is
+    # that every member of every evaluation task's load set is watched. Both mutants add a member to
+    # the manifest, so a file appears in a scored set that the digest block does not watch. That
+    # coupling holds whether or not `load-sets.md` itself is currently measured, which is exactly why
+    # it stays a declaration while the digest half became derived.
     ("G14", "load set reading past its budget", mutate_g14, {"G15"}),
     ("G14", "graph: member naming an undeclared id", mutate_g14_bad_graph_member, {"G15"}),
     ("G15", "measurement recorded against a changed context", mutate_g15, set()),
-    ("G16", "roster fallen behind the retirement tables", mutate_g16_missing, {"G15"}),
-    ("G16", "roster claiming a retirement nobody declared", mutate_g16_extra, {"G15"}),
+    ("G16", "roster fallen behind the retirement tables", mutate_g16_missing, set()),
+    ("G16", "roster claiming a retirement nobody declared", mutate_g16_extra, set()),
     ("G17", "table row one cell short of its header", mutate_g17, set()),
     # G15 fires too: knowledge-architecture.md is a watched context file, so touching it invalidates
     # the recorded measurement. That is the gate working, not collateral damage.
-    ("G18", "exemplar block naming no real department", mutate_g18_no_exemplar, {"G15"}),
+    ("G18", "exemplar block naming no real department", mutate_g18_no_exemplar, set()),
     ("G18", "exemplar SKILL.md with no pitfall list (G18's third claim)",
      mutate_g18_no_pitfalls, set()),
+    # ...and G21, because planting a node moves two counted facts at once (governed-docs, graph-edges).
     ("G18", "a node its department index does not list (G18's fourth claim)",
-     mutate_g18_unlisted_node, set()),
+     mutate_g18_unlisted_node, {"G21"}),
     # G15 does not fire: its digest block lists other files, not `context-eval.md` itself.
     ("G19", "task must-reach token no member carries", mutate_g19_unanswerable_task, set()),
     # G14 fires too, and the reason is worth leaving visible: `knowledge-architecture.md` sits in
@@ -454,7 +542,17 @@ MUTANTS = [
     # breaks the ceiling — the append-only roster pressure the manifest already records.
     # ...and G15, because that file is also a watched context file: touching it invalidates the
     # recorded measurement. Both are the gates working, not collateral damage.
-    ("G20", "a relation type reserved while in use", mutate_g20_dead_relation, {"G14", "G15"}),
+    ("G20", "a relation type reserved while in use", mutate_g20_dead_relation, set()),
+    # The dossier sits in no load set and in no digest block, so these four fire G21 alone — which is
+    # what makes it the cheapest gate in the harness to plant against, and worth saying because the
+    # coupling that drags G14 and G15 into other mutants is not a law, it is a property of the file.
+    ("G21", "a counted fact the estate has moved away from", mutate_g21_drift, set()),
+    ("G21", "a snapshot older than the content (G21's second claim)",
+     mutate_g21_stale_snapshot, set()),
+    ("G21", "a declared fact no gate can recompute (G21's third claim)",
+     mutate_g21_unmeasurable_key, set()),
+    ("G21", "a measurable fact left undeclared (the other direction)",
+     mutate_g21_missing_key, set()),
 ]
 # The `also` column declares collateral that is real rather than tolerated. G14's and G16's mutants
 # edit `load-sets.md` and `id-registry.md`, both of which the context-adherence measurement is
@@ -500,15 +598,20 @@ def main() -> int:
             pristine = {rel: (worktree / rel).read_bytes() if (worktree / rel).exists()
                         else None for rel in TOUCHABLE}
 
+            measured = measured_watch_set(worktree)
+
             failures = []
             for gate, description, mutate, also in MUTANTS:
-                mutate(worktree)
+                touched = set(mutate(worktree) or ())
                 git("add", "-A", cwd=worktree)
                 caught, output = run_gates(worktree)
 
-                expected = {gate} | also
+                derived = {"G15"} if touched & measured else set()
+                expected = {gate} | also | derived
                 if caught == expected:
-                    extra = f" (+{'+'.join(sorted(also))} as declared)" if also else ""
+                    notes = [f"+{one} as declared" for one in sorted(also)]
+                    notes += [f"+{one} derived from the digest block" for one in sorted(derived)]
+                    extra = f" ({', '.join(notes)})" if notes else ""
                     print(f"  ok    {gate:<4} caught: {description}{extra}")
                 else:
                     missed = expected - caught

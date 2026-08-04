@@ -151,6 +151,44 @@ MUST_REACH = re.compile(r"^### Task `([a-z-]+)`(.*?)(?=^### |\Z)", re.M | re.S)
 MUST_REACH_LINE = re.compile(r"^\*\*Must reach:\*\*\s*(.+)$", re.M)
 TASK_LOAD_SET = re.compile(r"^\*\*Load set:\*\*\s*`([^`]+)`", re.M)
 
+# --- G21 — the dossier's counted facts are true (ADR-0052) ----------------------------------
+#
+# `state-of-the-project.md` is the document read *before deciding*, and on 2026-08-04 it was six days
+# stale and wrong about six counted facts at once: 154 concept nodes when there were 167, thirteen
+# gates when there were twenty, ADRs "0001–0036" when there were fifty-one. Every one of those numbers
+# was load-bearing for a steering decision, and nothing was looking at any of them.
+#
+# **Drift, never wall-clock age.** A staleness check on calendar days reddens correct work during a
+# quiet week, and a gate that reddens correct work gets disabled rather than obeyed (improvement #16).
+# So the trigger is the estate moving underneath the claim: add a concept node without refreshing the
+# dossier and this gate is red until the same commit fixes it.
+#
+# **An unknown key is a failure, not a pass.** The load-set manifest paid for this exact lesson — a
+# selector nobody implements prices the wrong thing silently — so a dossier may only declare facts this
+# gate knows how to recompute. That also bounds the gate honestly: percentages and verdicts are *not*
+# declarable here, because a gate over a judgement would only make the judgement look official.
+DOSSIER = f"{DOCS_DIR}/program/state-of-the-project.md"
+DOSSIER_FENCE = re.compile(r"^```dossier$(.*?)^```$", re.M | re.S)
+TEST_GATES = "tools/test_gates.py"
+CONTEXT_EVAL_TOOL = "tools/context_eval.py"
+MUTANT_ENTRY = re.compile(r'^\s*\("G\d+",', re.M)
+CHECKER_ENTRY = re.compile(r'^\s{4}"[a-z0-9-]+": check_', re.M)
+SAMPLE_ENTRY = re.compile(r'^\s{4}"[a-z0-9-]+": \($', re.M)
+
+
+def count_lines(path: str, pattern: re.Pattern) -> int:
+    """How many times `pattern` matches in `path`; -1 when the file cannot be read.
+
+    A registry declared as a Python list is counted by matching its entries rather than by importing
+    the module: the gate must not execute the code it audits, and a regex over the literal entries
+    fails loudly if the shape changes instead of quietly returning a stale number.
+    """
+    try:
+        return len(pattern.findall(open(path, encoding="utf-8").read()))
+    except OSError:
+        return -1
+
+
 # --- G20 — the relation vocabulary is exercised or declared reserved (ADR-0051) -------------
 #
 # `RELATION_TYPES` is the closed edge vocabulary. A type declared and used by nothing is dead
@@ -376,6 +414,30 @@ def path_links(text: str):
 
 # --- Gate engine ----------------------------------------------------------------------
 
+# The roster, at module scope because it is the answer to "how many gates are there" — a question the
+# dossier declares and G21 recomputes. Two places claiming that count would drift; this one is the
+# count, and everything else cites it.
+GATE_NAMES = {
+    "G1": "no stray docs", "G2": "front-matter validity",
+    "G3": "ID uniqueness", "G4": "link integrity", "G5": "no orphans",
+    "G6": "authority acyclicity", "G7": "status & supersession",
+    "G9": "context budget & disclosure",
+    "G10": "standards provenance (source cited, no owned code)",
+    "G11": "retired rules stay retired",
+    "G12": "rule citations name an ID",
+    "G8": "English-only (screened)",
+    "G13": "`updated:` matches the real last change",
+    "G14": "load-set budgets (what is read together)",
+    "G15": "the context-adherence measurement is not stale",
+    "G16": "the retired roster is complete and true",
+    "G17": "every table row has the cells its header declares",
+    "G18": "the exemplar department is whole",
+    "G19": "an evaluation task can be answered from its declared set",
+    "G20": "the relation vocabulary is exercised or declared reserved",
+    "G21": "the dossier's counted facts are true",
+}
+
+
 class Gates:
     def __init__(self):
         self.failures = {}
@@ -389,24 +451,7 @@ class Gates:
         self.notes.append(message)
 
     def report(self, docs_count: int) -> int:
-        names = {
-            "G1": "no stray docs", "G2": "front-matter validity",
-            "G3": "ID uniqueness", "G4": "link integrity", "G5": "no orphans",
-            "G6": "authority acyclicity", "G7": "status & supersession",
-            "G9": "context budget & disclosure",
-            "G10": "standards provenance (source cited, no owned code)",
-            "G11": "retired rules stay retired",
-            "G12": "rule citations name an ID",
-            "G8": "English-only (screened)",
-            "G13": "`updated:` matches the real last change",
-            "G14": "load-set budgets (what is read together)",
-            "G15": "the context-adherence measurement is not stale",
-            "G16": "the retired roster is complete and true",
-            "G17": "every table row has the cells its header declares",
-            "G18": "the exemplar department is whole",
-            "G19": "an evaluation task can be answered from its declared set",
-            "G20": "the relation vocabulary is exercised or declared reserved",
-        }
+        names = GATE_NAMES
         ok = True
         for gate in sorted(names, key=lambda name: int(name[1:])):
             issues = self.failures.get(gate, [])
@@ -418,7 +463,7 @@ class Gates:
             else:
                 print(f"PASS {gate} ({names[gate]})")
         print("INFO G8 screens for non-English function words; judging whether prose reads as "
-              "English is still a reviewer's job (knowledge-architecture §11)")
+              "English is still a reviewer's job (docs/00-governance/gates.md)")
         for note in self.notes:
             print(f"INFO {note}")
         print(f"{'GREEN' if ok else 'RED'} — {docs_count} governed docs checked")
@@ -1063,6 +1108,82 @@ def main() -> int:
                 gates.note(f"G14 largest load set is '{worst}' at {measured[worst]:,} words "
                            f"(~{int(measured[worst] * 1.33):,} tokens); "
                            + " · ".join(f"{n} {w:,}" for n, w in sorted(measured.items())))
+
+    # G21 — the dossier's counted facts are true (ADR-0052).
+    #
+    # Three claims: every declared quantity equals the measured one; `snapshot` equals the document's
+    # own `updated:` stamp, which G13 already proves is the real last change; and every declared key is
+    # one this gate can recompute.
+    try:
+        dossier_text = open(DOSSIER, encoding="utf-8").read()
+    except OSError:
+        gates.fail("G21", f"{DOSSIER} is missing — the document the owner steers by is the input")
+    else:
+        measurable = {
+            "governed-docs": len(docs),
+            "concept-nodes": sum(
+                1 for path in docs
+                if path.startswith(f"{CONCEPTS_DIR}/") and not path.endswith("_index.md")
+            ),
+            "departments": sum(
+                1 for path in docs
+                if path.startswith(f"{DOCS_DIR}/40-contexts/") and path.endswith("/rule.md")
+            ),
+            "graph-edges": sum(len(meta["relations"]) for meta, _text in docs.values()),
+            # Bodies, not index entries: G9 already proves the two agree in both directions, so
+            # counting either is counting both — and the body is the decision.
+            "adr-decisions": sum(
+                len(ADR_HEADING.findall(text))
+                for meta, text in docs.values() if meta.get("type") == "adr"
+            ),
+            "gates": len(GATE_NAMES),
+            "gate-mutants": count_lines(TEST_GATES, MUTANT_ENTRY),
+            "eval-checkers": count_lines(CONTEXT_EVAL_TOOL, CHECKER_ENTRY),
+            "eval-samples": count_lines(CONTEXT_EVAL_TOOL, SAMPLE_ENTRY),
+            "load-sets": len(parse_load_sets()),
+        }
+        fence = DOSSIER_FENCE.search(dossier_text)
+        if not fence:
+            gates.fail("G21", f"{DOSSIER}: no ```dossier block — the counted facts are declared there "
+                              f"so that drift in the estate reddens instead of going unnoticed")
+        else:
+            declared = {}
+            for line in fence.group(1).splitlines():
+                if not line.strip() or line.lstrip().startswith("#"):
+                    continue
+                parts = line.split()
+                if len(parts) != 2:
+                    gates.fail("G21", f"{DOSSIER}: '{line.strip()}' is not '<key> <value>'")
+                    continue
+                declared[parts[0]] = parts[1]
+            stamped = docs.get(DOSSIER, ({}, ""))[0].get("updated", "")
+            snapshot = declared.pop("snapshot", None)
+            if snapshot is None:
+                gates.fail("G21", f"{DOSSIER}: the dossier block declares no 'snapshot' date")
+            elif snapshot != stamped:
+                gates.fail("G21", f"{DOSSIER}: snapshot {snapshot} but updated: {stamped} — the "
+                                  f"snapshot date cannot be older than the content it describes, and "
+                                  f"G13 already proves 'updated:' is the real last change")
+            for key in sorted(set(declared) - set(measurable)):
+                gates.fail("G21", f"{DOSSIER}: '{key}' is declared but this gate cannot recompute it. "
+                                  f"A fact nobody measures is worse than one nobody states; "
+                                  f"interpretation (percentages, grades) belongs in prose, not here. "
+                                  f"Measurable: {', '.join(sorted(measurable))}")
+            for key in sorted(set(measurable) - set(declared)):
+                gates.fail("G21", f"{DOSSIER}: '{key}' is measurable and undeclared — the dossier "
+                                  f"reports every fact this gate can hold it to, or the roster becomes "
+                                  f"a place to hide the inconvenient ones")
+            for key, actual in sorted(measurable.items()):
+                if key not in declared:
+                    continue
+                if actual < 0:
+                    gates.fail("G21", f"{DOSSIER}: '{key}' cannot be measured — its source file is "
+                                      f"unreadable, which is a skip and not a pass")
+                elif declared[key] != str(actual):
+                    gates.fail("G21", f"{DOSSIER}: declares {key} = {declared[key]}, measured "
+                                      f"{actual} — refresh the dossier in this change. It is the "
+                                      f"document read before deciding, and a stale number there is "
+                                      f"evidence for a wrong decision")
 
     # G15 — the context-adherence measurement still describes this context (ADR-0043).
     try:

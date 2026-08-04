@@ -5,7 +5,7 @@ type: governance
 owner: orchestrator
 status: active
 since: 2026-07-19
-updated: 2026-07-19
+updated: 2026-08-04
 relations:
   - { type: part-of, target: index-docs }
   - { type: governed-by, target: governance-root }
@@ -17,6 +17,8 @@ relations:
 - **Exists today:**
   - [knowledge-architecture.md](knowledge-architecture.md) — the normative rules for all
     knowledge, instantiated for this repo (allowlist included).
+  - [gates.md](gates.md) — **the gate roster**: what each of the twenty-one checks, what none of
+    them can certify, and why the roster lives in a file no load set carries (ADR-0052).
   - [id-registry.md](id-registry.md) — the stable-ID namespace: rule families (one per
     department + the cross-cutting SCM core), ADR numbers, department keys.
   - [out-of-scope.md](out-of-scope.md) — explicit exclusions register.

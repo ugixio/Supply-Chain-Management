@@ -5,7 +5,7 @@ type: program
 owner: orchestrator
 status: active
 since: 2026-08-02
-updated: 2026-08-03
+updated: 2026-08-04
 relations:
   - { type: part-of, target: index-program }
   - { type: governed-by, target: index-adr }
@@ -106,6 +106,14 @@ planning = 20000
 # full), both append-only in the part that matters. When 8200 is reached the answer is the same one
 # `every-task` names, taken in the other direction: §11 keeps the descriptions, CLAUDE.md keeps only
 # the names, and this set pays for one copy instead of two.
+#   MEASURED 2026-08-04 with `tools/context_set.py`, and the number tells on itself: 8,200 buys the
+# template and two foundation rule files and **no knowledge**. Aim the same task at a real node —
+# `--target docs/25-concepts/06-warehouse-management/goods-receipt-throughput.md` — and the session
+# needs 9,147 words, **947 over**, for one node and its department index. The ceiling was calibrated
+# against a set that reaches zero concept nodes (ADR-0050's audit), so it prices a session that reads
+# no examples. **Do not raise it on that argument alone**: the resolver now reports the real total, so
+# the trade is visible per session, and whether an authoring session should carry an example at all is
+# a decision with evidence behind it rather than a number to nudge.
 authoring-a-concept = 8200
   CLAUDE.md
   docs/_index.md

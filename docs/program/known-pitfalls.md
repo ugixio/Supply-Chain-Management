@@ -59,6 +59,9 @@ relations:
 - **A hand-written list that mirrors a machine-readable one will drift, and the gate reading it will
   not notice.** G15's watched files lagged its own load-set manifest by two commits. Derive the list
   from the source instead of maintaining a copy. (#36)
+- **Refresh a freshness digest only for the file whose task you just scored.** A loop over the whole
+  block turns the claim into a formality: the gate goes green while the measurement no longer
+  describes its input, which is the exact state it exists to forbid. (#42)
 - **When a false positive recurs, ask whether the previous fix named the concept or an instance of
   it.** `QUOTED_SPAN` fixed three *spellings* of quotation and the same correct answer failed one
   cycle later using a fourth. Prefer structure over vocabulary. (#37)
@@ -109,6 +112,12 @@ relations:
   Search the rule families too, before reporting a gap. (#40)
 - **When a decision reverses a premise, grep the rule text for clauses built on it.** ADR-0037 swept
   the nodes and left ENG-R10.7 ordering the opposite of what G10 enforces, for six weeks. (#40)
+
+- **Audit what exists before accepting a proposal's framing.** Two thirds of a Context-OS proposal
+  was greenfield described as improvement, and the estate's real weakness — retrieval reaching 7% of
+  it — was in the reach of a mechanism it already had. (#41)
+- **A budget calibrated against a set that reaches nothing prices a session that reads nothing.**
+  Measure what a session actually opens before trusting a ceiling. (#41)
 
 ### About knowledge and its sources
 

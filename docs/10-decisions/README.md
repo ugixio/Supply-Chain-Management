@@ -83,6 +83,10 @@ relations:
 
 - ADR-0048 — **The exemplar is a department's knowledge, and a gate proves it whole:** ADR-0012 clause 3 declared an exemplar department whose shape siblings copy — *models imitate a real example more reliably than they deduce from prose* — and ended with "always real code, never fabricated samples"; ADR-0037 deleted every department's code, leaving the clause with neither option and unexecuted since, while the gap stayed measurable at **167 nodes and no declared pattern**. The exemplar becomes a department's **knowledge** (its `_index.md`, its concept nodes, its `rule.md`) — same reasoning, changed medium — and it is **`01-procurement`**, the candidate ADR-0012 named, upheld on measurement rather than continuity: 4 live rules (joint highest) and **the only one of fourteen already carrying the pitfall list**, chosen for complete shape over `03-demand-planning`'s larger volume. **Clause 4 is narrowed to the exemplar** because a legitimate pitfall comes from a correction that happened, and inventing thirteen lists is the defect ADR-0037 removed. **G18** makes it law and checks form, never quality: the exemplar declared in one machine-readable place, a `rule.md` with a live rule, the pitfall list present, and an `_index.md` listing every node — the last applied to all fourteen because measurement showed they already comply, so a true and unguarded property becomes guarded for free. (Accepted — owner-directed 2026-08-03)
 
+- ADR-0049 — **M4's architecture: no migrations, a Python build step, auth deferred:** a readiness check before the phase found four items, one of which was a misreading — the NestJS↔Rust transport **is** decided by **ENG-R10.1** (`napi-rs`), which a search of the decision log cannot see. Of the three real questions: the Postgres read model carries **no migrations**, because ADR-0024 already calls the tables *dropped-and-rebuilt* and the model *disposable*, and migrations exist to preserve data a disposable projection does not have — the **drift guard** matching rebuilt counts against `docs/` replaces a schema gate, and ClickHouse keeps its migrations because telemetry cannot be regenerated. The `docs/` → Postgres build step is **Python in `tools/`**, decided on reuse: `tools/verify.py` already parses every front-matter block, relation and rule ID, gate-tested, and a second parser could project a graph the gates never approved — not a lane breach, since ENG-R10's ingestion is the per-event hot path and NestJS was already forbidden as an ingester by ENG-R11's anti-states. **Authentication is deferred explicitly**, ending when the gateway becomes reachable from outside the workspace. (Accepted — owner-directed 2026-08-04)
+
+- ADR-0050 — **The context layer is improved by gates, not by a retrieval stack:** a Context-OS proposal was audited before any code and the repository turned out to have **no retrieval layer to improve** — zero embeddings, vector store, LLM SDK or caches, and `dependencies: {}`. The measurement that decided it: the six load sets reach **17 of 241 documents, with zero concept nodes and zero department rule files**, while **559 typed edges** already state what each node needs and are read by nothing. So retrieval becomes **graph-derived** through a `graph:` selector, the artefact is a **resolver** (`tools/context_set.py`) that assembles and prices what a session will actually open — closing G14's gap between the declaration and the session — and the retrieval stack is **deferred with a stated condition**: a corpus where traversal from a declared root cannot reach what a task needs. **No model judges the context** (ADR-0043's rejected judge), so reflection loops and model-scored confidence are out of scope rather than pending. Nine of the proposal's requirements were already satisfied deterministically; rebuilding them with a model would be a regression, and its own requirement 28 forbids adopting a technique merely because it is listed. **Narrows ADR-0041.** (Accepted — owner-directed 2026-08-04)
+
 ---
 
 ## ADR-0001 — Two-language split: TypeScript domain logic + Python analytics/ML
@@ -2434,6 +2438,105 @@ property that was true and unguarded. The exemplar earns it as law; the rest get
   the intent, but it also means the choice is harder to revisit later than it was to make.
 - (−) Thirteen departments carry no pitfall list by decision. If a real correction lands in one of
   them, the honest move is to write *that* entry, not to backfill the other twelve.
+
+## ADR-0049 — M4's architecture: no migrations, a Python build step, auth deferred
+
+**Status:** Accepted (owner-directed 2026-08-04)
+**Materializes as:** `tools/ingest`; the read-model drift guard; the deferral recorded here
+
+**Context.** A readiness check before M4 asked what the phase lacks. Four items surfaced; one was my
+own misreading — the NestJS↔Rust transport **is** decided, by **ENG-R10.1** (`napi-rs` toward NestJS,
+`tonic` toward Python) with **ENG-R10.5** fixing the direction. Three genuine questions remained, and
+two of them turned out to be narrower than reported once ADR-0024 was read closely.
+
+**Decision.**
+
+1. **The Postgres read model carries no migrations.** ADR-0024 already states the tables are
+   *dropped-and-rebuilt, never hand-edited* and the read model is *disposable*. **Migrations exist to
+   preserve data; a disposable projection has none.** The ingester owns the schema — drop, create,
+   populate — and the **drift guard** asserting the rebuilt row counts match `docs/` is the check that
+   replaces a schema gate. This is deliberately *not* the ClickHouse pattern: ClickHouse holds
+   telemetry that cannot be regenerated, so it earns migrations and a schema gate; the read model can
+   be rebuilt from `docs/` at any time.
+2. **The `docs/` → Postgres build step is Python, in `tools/`.** ADR-0024 names it that way, and the
+   decisive argument is reuse: `tools/verify.py` **already parses every front-matter block, relation
+   and rule ID in the estate**, gate-tested. A second parser in Rust would duplicate it and could
+   disagree with what the gates consider valid — the read model would then project a graph the gates
+   never approved. **This is not a lane breach:** ENG-R10's "ingestion" is the per-event hot path,
+   which `scm-ingest` owns; a build step over 241 files is not that. NestJS was never a candidate —
+   ENG-R11's anti-states already forbid *NestJS as an ingestion firehose or scheduler*.
+3. **Authentication is deferred, explicitly.** M4's gateway serves a workspace-internal dashboard with
+   no external exposure. The deferral is recorded **because an absent decision reads as an oversight
+   and a deferred one does not** — and it ends the moment the gateway is reachable from outside the
+   workspace, which is a condition, not a date.
+
+**Alternatives considered.** *Mirror ClickHouse exactly* — consistent, and it versions a store whose
+own ADR calls it disposable. *Generalize `db/apply.py` to take a target* — one mechanism instead of
+two, but it refactors the only schema pipeline that works and is gated, to serve a store that needs no
+pipeline. *A Rust adapter crate for the ingester* — coherent with ENG-R10 read loosely, and it
+reimplements a tested parser.
+
+**Consequences.**
+- (+) M4 starts with no undecided lane boundary and no ceremony it does not need.
+- (+) One parser for the gates and the projection, so they cannot disagree.
+- (−) No schema history for the read model. Acceptable: its history is `docs/`, under git.
+- (−) Python gains a write responsibility. Bounded to a build step, and stated here so the next
+  session does not read it as licence to widen the tools layer.
+
+## ADR-0050 — The context layer is improved by gates, not by a retrieval stack
+
+**Status:** Accepted (owner-directed 2026-08-04) · **narrows ADR-0041**
+**Materializes as:** `tools/context_set.py`; the `graph:` selector in `load-sets.md`
+
+**Context.** A proposal to build a *Context OS* — embeddings, hybrid retrieval, reranking, recursive
+retrieval, reflection loops, multi-level caches — was audited before any code
+(`program/context-architecture-audit.md`). The audit found the repository has **no retrieval layer to
+improve**: zero embeddings, zero vector store, zero LLM SDK, zero caches, and `dependencies: {}`. It
+also found what the proposal did not target.
+
+**The measurement that decides this.** The six declared load sets reach **17 of 241 governed
+documents**, and among those 17 there are **zero concept nodes** (of 167) and **zero department rule
+files** (of 14). A session authoring a concept node receives the template and two foundation rule
+files and **no example, and no sibling from its department** — while **559 typed edges** already state
+what each node depends on and traces to, read by nothing.
+
+**Decision.**
+
+1. **Retrieval becomes graph-derived, not hand-enumerated.** A load-set member may name a
+   `graph:` expansion resolved from the front-matter relations. The manifest keeps declaring *intent*;
+   the graph supplies *reach*.
+2. **A resolver is the artefact, not a pipeline.** `tools/context_set.py` takes a task and an optional
+   target and prints the exact files to open, with a word total — so what a session reads is
+   **assembled and priced**, closing the gap where G14 priced the declaration and not the session.
+3. **The retrieval stack is deferred, with a stated condition.** At 241 documents and 559 edges,
+   exhaustive traversal is cheaper, exact and auditable; approximate similarity search earns its cost
+   only when a corpus outgrows a manifest. **The condition to revisit: a corpus where traversal from a
+   declared root cannot reach what a task needs.** Not a date, and not a preference.
+4. **No model judges the context.** ADR-0043 rejected an LLM judge on recorded bias grounds; coverage,
+   contradiction and sufficiency checks are gates over the graph or they are not adopted. This closes
+   the proposal's reflection-loop and confidence-score requirements as **out of scope**, not as
+   pending.
+
+**What this does not build, and why that is the point.** Nine of the proposal's requirements are
+already satisfied deterministically — the graph (G4/G5/G6), context diff (G15), claim extraction and
+verification (the declared `answer` block, ADR-0043), token accounting (G14), semantic memory (the
+registers). Rebuilding any of them with a model would be a regression. The proposal's own requirement
+28 forbids implementing a technique merely because it is listed, and this decision takes that
+seriously.
+
+**Alternatives considered.** *Build the full 18-stage pipeline* — rejected on cost and on ADR-0037:
+it is application code, and monitoring is the one application built here. *Adopt embeddings now* —
+three adoption decisions (ENG-R8, ADR-0002) traded against a repository that currently has zero
+runtime dependencies, to serve 241 documents. *Enlarge the declared sets instead* — tried on paper and
+it fails immediately: adding the exemplar department to `authoring-a-concept` breaks its ceiling, which
+is exactly the trade the manifest exists to manage.
+
+**Consequences.**
+- (+) The knowledge the repository holds becomes reachable by a declared path for the first time.
+- (+) `depends-on` and `traces-to` acquire a consumer, so they stop being decoration.
+- (−) A resolver is a tool a session must run; a session that skips it reads the old 17 files.
+- (−) Graph expansion can exceed a ceiling. The resolver reports the total rather than silently
+  truncating — the budget conversation stays visible, which is what ADR-0041 wanted.
 
 > **File map:** this README is the canonical ADR index. New decisions are appended here
 > as `## ADR-NNNN — Title` (or as `docs/10-decisions/NNNN-title.md` when extensive).

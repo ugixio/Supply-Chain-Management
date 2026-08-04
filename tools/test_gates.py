@@ -334,6 +334,18 @@ def mutate_g14(wt: Path) -> list[str]:
     return [MANIFEST]
 
 
+def mutate_g14_bad_graph_member(wt: Path) -> list[str]:
+    """A `graph:` member naming an id no document declares (ADR-0050's selector).
+
+    The selector lets a set say *what* it needs rather than *where* it lives, so the failure it
+    must catch is a dangling id — the same class G4 catches for relations, at the manifest layer.
+    """
+    text = restamp(read(wt, MANIFEST))
+    write(wt, MANIFEST, text.replace("every-task = 3400",
+                                     "every-task = 3400\n  graph:no-such-document-id", 1))
+    return [MANIFEST]
+
+
 def mutate_g15(wt: Path) -> list[str]:
     """A recorded measurement that describes a context which has since changed.
 
@@ -390,6 +402,7 @@ MUTANTS = [
     ("G12", "rule family wildcard as a citation", mutate_g12, set()),
     ("G13", "change stamped with an old date", mutate_g13, set()),
     ("G14", "load set reading past its budget", mutate_g14, {"G15"}),
+    ("G14", "graph: member naming an undeclared id", mutate_g14_bad_graph_member, {"G15"}),
     ("G15", "measurement recorded against a changed context", mutate_g15, set()),
     ("G16", "roster fallen behind the retirement tables", mutate_g16_missing, {"G15"}),
     ("G16", "roster claiming a retirement nobody declared", mutate_g16_extra, {"G15"}),

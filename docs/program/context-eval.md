@@ -221,13 +221,29 @@ four load sets. Six cold subagents, each with its declared set and nothing else.
 | `invent-a-threshold` | **FAIL → PASS**, and **the checker was the defect for the fourth time** | The answer refused the tolerance and explained why by naming the deleted value in plain prose — *"that 5% receipt tolerance was deleted for this reason"*. Correct, and failed. The task now scores a declared block; the re-run declared `none`. See §The fourth occurrence. |
 | `level-metric` | **PASS** | Level, MSR-R2, valid aggregations named. |
 | `unit-codes` | **PASS** | `KGM` · `LTR` · `MTR` · `EA` in the scored block. |
-| `rule-citation` | **PASS** | Clean on the block form introduced one cycle earlier. |
+| `rule-citation` | **PASS**, and re-run again after ENG-R10.7 | Clean on the block form. **Re-run 2026-08-04** because correcting ENG-R10.7 changed `50-engineering/rule.md`, a member of its load set — a material change whose digest had been refreshed in a blanket pass before the re-run landed. See §A digest refreshed in bulk. Declared `SCM-R9` and `SCM-R10`. |
 | `new-concept-node` | **PASS** | 647 words against the 700 budget, source cited, no `## Implementations`. |
 
 **`50-engineering/rule.md` moved, and `rule-citation` was re-run: PASS.** The pre-M4 readiness check
 found **ENG-R10.7 ordering what G10 forbids** and rewrote the clause. That file is a member of the
 `changing-a-rule` set, so the task that reads it was re-scored rather than argued about — one task,
 because set membership is a fact and no other task can see that file change.
+
+### A digest refreshed in bulk, which is the one way this record can lie
+
+**Self-inflicted, 2026-08-04, and worth more written down than quietly fixed.** ENG-R10.7 was
+corrected — a live clause that ordered what G10 rejects — inside `50-engineering/rule.md`, which is a
+**member of `changing-a-rule` and therefore an input to `rule-citation`**. That is a *material* change.
+The re-run was launched, did not land, and the digest was then refreshed **in a blanket pass over every
+watched file**, so the block went green while the measurement no longer described its input.
+
+**That is precisely the state G15 exists to forbid**, reached not by ignoring the gate but by
+satisfying it mechanically. A per-file digest cannot tell a refresh that follows a re-run from one that
+replaces it.
+
+**The rule this settles: refresh a digest only for the files whose task you have just scored.** A
+loop over the whole block is a convenience that converts the freshness claim into a formality. The
+task was re-run afterwards and the row below records the result.
 
 **A later edit moved `load-sets.md` and no task was re-scored — stated, not assumed.** The pre-M4
 readiness check archived Phase C and rewrote the `planning` set's recorded exit. `planning` is read by
@@ -458,7 +474,7 @@ docs/30-foundation/platform/rule.md           0268bef446f1
 docs/50-engineering/rule.md                   ab8705e92ba1
 docs/50-engineering/practice-areas.md         318d1ff3932e
 docs/standards/REGULATORY_FRAMEWORK.md        f1f47f8501ae
-docs/program/load-sets.md                     d873a9337fe2
+docs/program/load-sets.md                     97eb256e258a
 docs/program/how-to/add-a-concept-node.md     6341e78e7551
 docs/program/how-to/change-a-rule.md          6b2bee8a3822
 docs/program/templates/concept.md             09d066c2e4ab

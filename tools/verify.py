@@ -928,6 +928,22 @@ def main() -> int:
             for name, (budget, members) in sets.items():
                 total = 0
                 for member in members:
+                    # `graph:<doc-id>` names a document by its front-matter id rather than its path,
+                    # so a set can declare *what* it needs without pinning *where* it lives
+                    # (ADR-0050). Priced as the whole file it resolves to; `tools/context_set.py`
+                    # is what expands its neighbourhood at assembly time, and the expansion is
+                    # deliberately not priced here — G14 prices the declaration, the resolver
+                    # prices the session, and conflating them is what hid the gap the audit found.
+                    if member.startswith("graph:"):
+                        wanted = member.split(":", 1)[1]
+                        resolved = next((p_ for p_, (m_, _) in docs.items()
+                                         if m_.get("id") == wanted), None)
+                        if not resolved:
+                            gates.fail("G14", f"load set '{name}' names graph:{wanted}, which no "
+                                              f"document declares as its id")
+                            continue
+                        total += len(open(resolved, encoding="utf-8").read().split())
+                        continue
                     target, _, selector = member.partition("#")
                     if selector and selector not in SLICES:
                         gates.fail("G14", f"load set '{name}' names slice '{selector}', which no "

@@ -123,6 +123,12 @@ relations:
 - **Before adding words to a document, check how many load sets contain it.** Placement is a budget
   decision even when it does not feel like one. (#32)
 - **If the mechanism performing a discipline is "a person remembering", the entry is not done.** (#15)
+- **A decision may reserve an identifier, but only through the registry that allocates it.** ADR-0024
+  named the drift guard "future gate G11"; G11 was later allocated to something else, so the
+  prescription pointed at a live gate doing different work. Prose cannot hold a namespace. (#50)
+- **A guard over a generated artefact must check it against something that did not generate it.**
+  Comparing a projection to the source it was built from in one pass proves nothing; the read model's
+  counts are checked against the dossier's declared facts, which G21 holds independently. (#50)
 - **A prescribed mechanism is re-derived at implementation time, not executed as written.** A
   mitigation column is prose that no gate evaluates, so it can carry a technical error for days —
   and quoting it forward gives the error a second appearance that reads as corroboration. (#29)

@@ -821,7 +821,29 @@ accepted. **Four gaps surfaced, and the first was found by asking the question �
 applied and gated · the Rust ingestion core is real with 71 tests passing · the delivery metrics are
 defined (CPT-0155..0160) · money has a decision that matches its code (ADR-0047).
 
-- ⬜ **M4 · HOW** — NestJS + GraphQL as the only counterpart the frontend has; Next.js dashboards.
+- 🟦 **M4a · The knowledge read model's build step and drift guard — landed 2026-08-04.**
+  ADR-0049 named `tools/ingest` and the drift guard as what M4 materializes first, and this is it.
+  **245 nodes, 574 edges** projected into two tables, emitted as a rebuild script; **no migrations**,
+  because ADR-0024 calls the projection disposable and a disposable store has no data to preserve —
+  its history is `docs/`, under git.
+  **The guard is not a comparison of the estate with itself.** A projection generated in one pass
+  trivially matches its source. So the counts are checked against the **dossier's declared facts**,
+  which **G21** independently holds to the estate: a parser that silently dropped a document would pass
+  a self-comparison and fails this. That is what makes it worth running.
+  **It opens no connection, and that is the design.** No Postgres exists here, so a connecting version
+  could not be tested — and an untested writer is worse than none. The write identity is a security
+  decision belonging to M4's deployment. **Zero new dependencies**, so the repository's
+  zero-runtime-dependency position is spent deliberately rather than by default.
+  **ENG-R9 six checks:** lane ✅ (ADR-0049 clause 2 — Python in `tools/`, explicitly not a lane breach)
+  · best practice ✅ (it **imports** `verify.py`'s parser, so the gates and the projection cannot
+  disagree — the argument that chose Python) · security ✅ (emits a script, binds no values, one
+  escaping function, no credentials) · speed ✅ (one pass) · scalability ✅ (rebuilt wholesale) · licence
+  ✅ (no dependency).
+  **Declared partial:** ADR-0024 clause 3 lists **`body`** among the projected columns and this slice
+  omits it — the graph is what the octagon renders first (ADR-0026), and the two counts G21 declares are
+  about nodes and edges, so the guard can be exact today. The body column belongs to the slice that
+  renders body text. Named here so it is a deferral and not an omission.
+- ⬜ **M4b · HOW** — NestJS + GraphQL as the only counterpart the frontend has; Next.js dashboards.
   **Scope confirmed 2026-08-02:** with P3/P4 kept alive, the gateway serves **two** read surfaces —
   the knowledge read model (ADR-0024/0025) and the telemetry tier (ADR-0036) — and the octagon
   front end (ADR-0026) sits above it. The drift guard asserting the ingested counts match `docs/`
